@@ -1,0 +1,14 @@
+#!/usr/bin/python
+
+import yaml
+
+from stakr.builder import StackBuilder
+
+with open('conf/stack.yaml') as fd:
+    config = yaml.load(fd)
+
+builder = StackBuilder('us-east-1',
+                       domain=config['default_config']['base_domain'],
+                       mappings=config['mappings'])
+
+#builder.build(config['stacks'])

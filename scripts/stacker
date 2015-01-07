@@ -2,7 +2,7 @@
 
 import yaml
 
-from stakr.builder import StackBuilder
+from stacker.builder import StackBuilder
 
 with open('conf/stack.yaml') as fd:
     config = yaml.load(fd)

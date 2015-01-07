@@ -96,9 +96,13 @@ class StackBuilder(object):
         key.set_contents_from_string(stack.rendered)
         return template_url
 
-    def resolve_parameters(self, parameters, stack_map):
+    def resolve_parameters(self, parameters, stack_map, template):
         params = {}
         for k, v in parameters.items():
+            if k not in template.template.parameters:
+                logger.info("Template %s does not use parameter %s.",
+                            template, k)
+                continue
             value = v
             if isinstance(value, basestring) and '::' in value:
                 # Get from the Output of another stack in the stack_map
@@ -149,7 +153,7 @@ class StackBuilder(object):
             safe_stack_name = cf_safe_name(template.name)
             template_url = self.s3_stack_push(template)
             parameters = self.resolve_parameters(
-                stack_def.get('parameters', {}), stack_map)
+                stack_def.get('parameters', {}), stack_map, template)
             depends = self.resolve_depends(stack_def, stack_map)
             stack_obj = Stack(safe_stack_name, TemplateURL=template_url,
                               Parameters=parameters, DependsOn=depends)

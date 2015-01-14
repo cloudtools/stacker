@@ -37,6 +37,7 @@ def find_subnetable_zones(region):
                 raise
     finally:
         vpc_conn.delete_vpc(vpc.id)
+    logger.debug("Subnettable zones: %s", ', '.join(good_zones))
     return good_zones
 
 
@@ -114,6 +115,7 @@ def load_object_from_string(fqcn):
         module_path, object_name = fqcn.rsplit('.', 1)
         importlib.import_module(module_path)
     return getattr(sys.modules[module_path], object_name)
+
 
 def cf_safe_name(name):
     """ Given a string, returns a name that is safe for use as a CloudFormation

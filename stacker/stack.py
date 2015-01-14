@@ -23,10 +23,8 @@ class StackTemplateBase(object):
     :param config: A dictionary which is used to pass in configuration info
         to the stack.
     """
-    def __init__(self, region, name=None, mappings=None, config=None):
+    def __init__(self, region, name, mappings=None, config=None):
         self.region = region
-        if not name:
-            name = self.__class__.__name__.lower()
         self.name = name
         self.mappings = mappings
         self.config = config or {}
@@ -60,7 +58,6 @@ class StackTemplateBase(object):
         self._version = None
 
     def render_template(self):
-        self.reset_template()
         self.create_template()
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]

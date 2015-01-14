@@ -1,25 +1,63 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+""" Launches AWS Cloudformation stacks from config.
+"""
 
+import argparse
 import logging
-
-LOG_FORMAT = ('[%(asctime)s] %(levelname)s %(name)s '
-              '%(module)s(%(funcName)s):%(lineno)d - %(message)s')
-TIME_FORMAT = '%Y/%m/%d %H:%M:%S %Z'
-
-logging.basicConfig(format=LOG_FORMAT, time_format=TIME_FORMAT,
-                    level=logging.DEBUG)
-
-logging.getLogger('boto').setLevel(logging.INFO)
+import code
 
 import yaml
-
 from stacker.builder import StackBuilder
 
-with open('conf/stack.yaml') as fd:
-    config = yaml.load(fd)
 
-builder = StackBuilder('us-east-1',
-                       domain=config['default_config']['base_domain'],
-                       mappings=config['mappings'])
+DEBUG_FORMAT = ('[%(asctime)s] %(levelname)s %(name)s:%(lineno)d'
+                '(%(funcName)s) - %(message)s')
+INFO_FORMAT = ('[%(asctime)s] %(message)s')
 
-#builder.build(config['stacks'])
+ISO_8601 = '%Y-%m-%dT%H:%M:%S'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-r', '--region', default='us-east-1',
+                        help="The AWS region to launch in. Default: "
+                             "%(default)s")
+    parser.add_argument('-m', '--max-zones', type=int,
+                        help="Gives you the ability to limit the # of zones "
+                             "that resources will be launched in. If not "
+                             "given, then resources will be launched in all "
+                             "available availability zones.")
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='Increase output verbosity. May be specified up '
+                             'to twice.')
+    parser.add_argument('-d', '--domain', help="The domain to run in.")
+    parser.add_argument('config',
+                        help="The config file where stack configuration is "
+                             "located. Must be in yaml format.")
+
+    return parser.parse_args()
+
+
+def setup_logging(verbosity):
+    log_level = logging.INFO
+    log_format = INFO_FORMAT
+    if verbosity > 0:
+        log_level = logging.DEBUG
+        log_format = DEBUG_FORMAT
+    if verbosity < 2:
+        logging.getLogger('boto').setLevel(logging.CRITICAL)
+
+    return logging.basicConfig(format=log_format, datefmt=ISO_8601,
+                               level=log_level)
+
+if __name__ == '__main__':
+    args = parse_args()
+    setup_logging(args.verbose)
+
+    with open(args.config) as fd:
+        config = yaml.load(fd)
+
+    builder = StackBuilder(args.region, domain=args.domain,
+                           mappings=config['mappings'], config=config)
+    print "Dropping into interactive console..."
+    code.InteractiveConsole(locals()).interact()

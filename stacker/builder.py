@@ -32,7 +32,6 @@ class StackRecord(object):
         self._requires = set(requires)
 
         self.template = None
-        self.outputs = {}
         self.status = None
 
     def __repr__(self):
@@ -162,6 +161,7 @@ class StackBuilder(object):
 
     def reset(self):
         self.stacks = TaskTracker()
+        self.outputs = {}
 
     def get_stack_full_name(self, stack_name):
         return "%s-%s" % (self.cfn_domain, stack_name)
@@ -231,7 +231,8 @@ class StackBuilder(object):
             if isinstance(value, basestring) and '::' in value:
                 # Get from the Output of another stack in the stack_map
                 stack_name, output = value.split('::')
-                value = self.stacks[stack_name].outputs[output]
+                self.get_outputs(stack_name)
+                value = self.outputs[stack_name][output]
             params.append((k, value))
         return params
 
@@ -279,15 +280,20 @@ class StackBuilder(object):
                     return
                 raise
 
-    def get_outputs(self, stack_name):
+    def get_outputs(self, stack_name, force=False):
         logger.debug("Getting outputs from stack %s.", stack_name)
+        if stack_name in self.outputs and not force:
+            # Already have the stack's outputs and not forcing
+            return
+
         full_name = self.get_stack_full_name(stack_name)
         cf = self.conn.cloudformation
         stack = cf.describe_stacks(full_name)[0]
-        stack_record = self.stacks[stack_name]
+        stack_outputs = {}
+        self.outputs[stack_name] = stack_outputs
         for output in stack.outputs:
             logger.debug("    %s: %s", output.key, output.value)
-            stack_record.outputs[output.key] = output.value
+            stack_outputs[output.key] = output.value
 
     def update_stack_status(self):
         for stack_name in self.stacks.list_pending():
@@ -306,7 +312,6 @@ class StackBuilder(object):
             if cf_status in COMPLETE_STATUSES:
                 logger.info("Stack %s complete: %s", stack_name, cf_status)
                 stack_record.complete()
-                self.get_outputs(stack_name)
 
     def build(self, stack_definitions):
         self.reset()

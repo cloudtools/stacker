@@ -7,10 +7,15 @@
 # the VPC you must first SSH to a bastion host, and then SSH from that host to
 # another inside the VPC.
 
+from base64 import b64encode
+
+import yaml
+
 from troposphere import Ref, ec2, autoscaling, Parameter, FindInMap
 from troposphere.autoscaling import Tag as ASTag
 
 from ..stack import StackTemplateBase
+from ..keys import SSH_KEYS
 
 CLUSTER_SG_NAME = "BastionSecurityGroup"
 
@@ -82,6 +87,11 @@ class Bastion(StackTemplateBase):
                 SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
                 GroupId=Ref('DefaultSG')))
 
+    def generate_user_data(self):
+        user_data = {'ssh_authorized_keys': SSH_KEYS}
+        user_data_str = "#cloud-config\n\n" + yaml.dump(user_data)
+        return b64encode(user_data_str)
+
     def create_autoscaling_group(self):
         t = self.template
         t.add_resource(
@@ -91,6 +101,7 @@ class Bastion(StackTemplateBase):
                 ImageId=FindInMap('AmiMap', Ref("AWS::Region"), 'bastion'),
                 InstanceType=Ref("InstanceType"),
                 KeyName=Ref("SshKeyName"),
+                UserData=self.generate_user_data(),
                 SecurityGroups=[Ref("DefaultSG"), Ref(CLUSTER_SG_NAME)]))
         t.add_resource(
             autoscaling.AutoScalingGroup(

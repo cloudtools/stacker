@@ -254,11 +254,14 @@ class StackBuilder(object):
         params = record.parameters
         parameters = self.resolve_parameters(params, template)
         requires = [self.get_stack_full_name(s) for s in record.requires]
+        logger.debug("Stack %s required stacks: %s", stack_name, requires)
         tags = {'template_url': template_url}
         if requires:
-            tags['required_stacks'] = ', '.join(requires)
+            tags['required_stacks'] = ':'.join(requires)
         if not stack:
             logger.info("Stack %s not found, creating.", full_name)
+            logger.debug("Using parameters: %s", parameters)
+            logger.debug("Using tags: %s", tags)
             cf.create_stack(full_name, template_url=template_url,
                             parameters=parameters,
                             tags=tags,

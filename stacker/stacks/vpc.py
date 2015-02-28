@@ -4,7 +4,6 @@ This includes the VPC, it's subnets, availability zones, etc.
 """
 
 from collections import OrderedDict
-import itertools
 
 from troposphere import Ref, Output, Join, FindInMap, Parameter
 from troposphere import ec2
@@ -14,7 +13,6 @@ import netaddr
 from ..stack import StackTemplateBase
 
 NAT_INSTANCE_NAME = "NatInstance%s"
-CONSUL_AGENT_PORTS = [8301, 8302]
 
 
 class VPC(StackTemplateBase):
@@ -44,16 +42,6 @@ class VPC(StackTemplateBase):
             'DefaultSG',
             VpcId=self.vpc_ref,
             GroupDescription='Default Security Group'))
-        # Add default consul agent ports
-        consul_port_proto_list = list(
-            itertools.product(*[CONSUL_AGENT_PORTS, ['udp', 'tcp']]))
-        for port, proto in consul_port_proto_list:
-            t.add_resource(
-                ec2.SecurityGroupIngress(
-                    "ConsulAgent%s%d" % (proto.capitalize(), port),
-                    IpProtocol=proto, FromPort=port, ToPort=port,
-                    SourceSecurityGroupId=Ref(self.default_sg),
-                    GroupId=Ref(self.default_sg)))
         t.add_output(
             Output('DefaultSG',
                    Value=Ref(self.default_sg)))
@@ -93,6 +81,7 @@ class VPC(StackTemplateBase):
         networks = {'private': self.cidr_block.subnet(22)}
         # Give /24's to the public networks from the first /22
         networks['public'] = next(networks['private']).subnet(24)
+        network_prefixes = []
 
         self.nat_sg = self.create_nat_security_groups()
 
@@ -100,12 +89,15 @@ class VPC(StackTemplateBase):
             name_prefix = subnet_type.capitalize()
             for z, zone in enumerate(self.zones):
                 name_suffix = zone[-1].upper()
+                cidr_block = str(next(networks[subnet_type]))
+                # Used by other templates to pick static IPs
+                network_prefixes.append('.'.join(cidr_block.split('.')[:-1]))
                 subnet = t.add_resource(ec2.Subnet(
                     '%sSubnet%s' % (name_prefix, name_suffix),
                     AvailabilityZone=zone,
                     VpcId=self.vpc_ref,
                     DependsOn=self.gw_attach.title,
-                    CidrBlock=str(next(networks[subnet_type]))))
+                    CidrBlock=cidr_block))
                 self.subnets[subnet_type].append(subnet)
                 route_table = t.add_resource(ec2.RouteTable(
                     "%sRouteTable%s" % (name_prefix, name_suffix),
@@ -141,6 +133,9 @@ class VPC(StackTemplateBase):
             t.add_output(
                 Output("%sSubnets" % name_prefix,
                        Value=Join(",", subnet_refs)))
+            t.add_output(
+                Output("%sNetworkPrefixes" % name_prefix,
+                       Value=Join(",", network_prefixes)))
 
     def create_nat_security_groups(self):
         t = self.template

@@ -1,5 +1,5 @@
 aws_helper>=0.2.0
-troposphere>=0.3.4
+troposphere>=0.7.1
 netaddr>=0.7.10
 boto>=2.25.0
 cloudconf>=0.1.1

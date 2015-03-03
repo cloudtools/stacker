@@ -88,8 +88,10 @@ class PostgresRDS(StackTemplateBase):
         endpoint = GetAtt(db_name, 'Endpoint.Address')
         user = Ref("MasterUser")
         passwd = Ref("MasterUserPassword")
+        dbname = Ref("DBName")
         t.add_output(Output('DBAddress', Value=endpoint))
-        db_url = Join("", ["postgres://", user, ":", passwd, "@", endpoint])
+        db_url = Join("", ["postgres://", user, ":", passwd, "@", endpoint,
+                           "/", dbname])
         t.add_output(Output('DBURL', Value=db_url))
 
     def create_template(self):

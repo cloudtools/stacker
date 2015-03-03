@@ -8,24 +8,11 @@ from troposphere.autoscaling import Tag as ASTag
 from ..stack import StackTemplateBase
 from ..keys import SSH_KEYS
 
-CLUSTER_INSTANCE_NAME = "EmpireClusterInstance%d"
-CLUSTER_SG_NAME = "EmpireClusterSecurityGroup"
-
-USER_DATA = {
-    'coreos': {
-        'units': [
-            {'command': 'start', 'name': 'etcd.service'},
-            {'command': 'start', 'name': 'fleet.service'}
-        ],
-        'etcd': {
-            'addr': '$private_ipv4:4001',
-            'peer-addr': '$private_ipv4:7001'
-        }
-    }
-}
+CLUSTER_INSTANCE_NAME = "EmpireDemoInstance%d"
+CLUSTER_SG_NAME = "EmpireDemoSecurityGroup"
 
 
-class EmpireCluster(StackTemplateBase):
+class EmpireDemo(StackTemplateBase):
     PARAMETERS = {
         'VpcId': {'type': 'AWS::EC2::VPC::Id', 'description': 'Vpc Id'},
         'DefaultSG': {'type': 'AWS::EC2::SecurityGroup::Id',
@@ -38,7 +25,7 @@ class EmpireCluster(StackTemplateBase):
                                              'instances in.'},
         'InstanceType': {'type': 'String',
                          'description': 'Empire AWS Instance Type',
-                         'default': 'm3.xlarge'},
+                         'default': 'c4.2xlarge'},
         'MinSize': {'type': 'Number',
                     'description': 'Minimum # of coreos instances.',
                     'default': '1'},
@@ -77,7 +64,7 @@ class EmpireCluster(StackTemplateBase):
         for port in ports:
             t.add_resource(
                 ec2.SecurityGroupIngress(
-                    "EmpireClusterPeerPort%d" % port,
+                    "EmpireDemoPeerPort%d" % port,
                     IpProtocol='tcp', FromPort=port, ToPort=port,
                     SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
                     GroupId=Ref(CLUSTER_SG_NAME)))
@@ -121,7 +108,7 @@ class EmpireCluster(StackTemplateBase):
             "        ExecStart=/bin/docker run ",
             "--name empire_migrate ",
             "quay.io/remind/empire migrate ",
-            "--db '", Ref('DBURL'), "/empire?sslmode=disable'\n",
+            "--db '", Ref('DBURL'), "?sslmode=disable'\n",
             "    - name: empire.service\n",
             "      command: start\n",
             "      content: |\n",
@@ -138,7 +125,7 @@ class EmpireCluster(StackTemplateBase):
             "/var/run/docker.sock:/var/run/docker.sock --name empire ",
             "quay.io/remind/empire server --docker.registry quay.io ",
             "--fleet.api 'http://$private_ipv4:49153' ",
-            "--db '", Ref('DBURL'), "/empire?sslmode=disable'\n",
+            "--db '", Ref('DBURL'), "?sslmode=disable'\n",
 
             "ssh_authorized_keys:\n",
             key_string,
@@ -152,8 +139,10 @@ class EmpireCluster(StackTemplateBase):
             "      permissions: 0600\n",
             "      owner: core\n",
             "      content: |\n",
-            "        {\"quay.io\":{\"auth\":\"bWlrZTA6dTg0VSFTcVNlZlIjOEghZA==\",\"email\":\"mike@remind101.com\"}}\n",
-            "    - path: /etc/systemd/system/fleet.socket.d/30-ListenStream.conf\n",
+            "        {\"quay.io\":{\"auth\":\"bWlrZTA6dTg0VSFTcVNlZlIjOEghZA=",
+            "=\",\"email\":\"mike@remind101.com\"}}\n",
+            "    - path: /etc/systemd/system/fleet.socket.d/30-ListenStream",
+            ".conf\n",
             "      permissions: 0644\n",
             "      owner: root\n",
             "      content: |\n",

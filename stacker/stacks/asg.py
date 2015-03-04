@@ -1,0 +1,76 @@
+from troposphere import Ref, FindInMap, Parameter
+from troposphere import ec2, autoscaling
+from troposphere.autoscaling import Tag as ASTag
+
+from stacker.stack import StackTemplateBase
+
+CLUSTER_SG_NAME = "%sSG"
+
+
+class AutoscalingGroup(StackTemplateBase):
+    PARAMETERS = {
+        'VpcId': {'type': 'AWS::EC2::VPC::Id', 'description': 'Vpc Id'},
+        'DefaultSG': {'type': 'AWS::EC2::SecurityGroup::Id',
+                      'description': 'Top level security group.'},
+        'PrivateSubnets': {'type': 'List<AWS::EC2::Subnet::Id>',
+                           'description': 'Subnets to deploy private '
+                                          'instances in.'},
+        'AvailabilityZones': {'type': 'CommaDelimitedList',
+                              'description': 'Availability Zones to deploy '
+                                             'instances in.'},
+        'InstanceType': {'type': 'String',
+                         'description': 'EC2 Instance Type',
+                         'default': 'm3.medium'},
+        'MinSize': {'type': 'Number',
+                    'description': 'Minimum # of instances.',
+                    'default': '1'},
+        'MaxSize': {'type': 'Number',
+                    'description': 'Maximum # of instances.',
+                    'default': '5'},
+        'SshKeyName': {'type': 'AWS::EC2::KeyPair::KeyName'},
+    }
+
+    def create_parameters(self):
+        # TODO: Probably should make this standard in StackTemplateBase
+        t = self.template
+        for param, attrs in self.PARAMETERS.items():
+            p = Parameter(param,
+                          Type=attrs.get('type'),
+                          Description=attrs.get('description', ''))
+            if 'default' in attrs:
+                p.Default = attrs['default']
+            t.add_parameter(p)
+
+    def create_security_groups(self):
+        t = self.template
+        t.add_resource(
+            ec2.SecurityGroup(CLUSTER_SG_NAME % self.name,
+                              VpcId=Ref("VpcId")))
+        # Add SG rules here
+
+    def create_autoscaling_group(self):
+        name = "%sASG" % self.name
+        sg_name = CLUSTER_SG_NAME % self.name
+        launch_config = "%sLaunchConfig" % name
+        t = self.template
+        t.add_resource(
+            autoscaling.LaunchConfiguration(
+                launch_config,
+                ImageId=FindInMap('AmiMap', Ref("AWS::Region"), 'ubuntu'),
+                InstanceType=Ref("InstanceType"),
+                KeyName=Ref("SshKeyName"),
+                SecurityGroups=[Ref("DefaultSG"), Ref(sg_name)]))
+        t.add_resource(
+            autoscaling.AutoScalingGroup(
+                '%sAutoScalingGroup' % name,
+                AvailabilityZones=Ref("AvailabilityZones"),
+                LaunchConfigurationName=Ref(launch_config),
+                MinSize=Ref("MinSize"),
+                MaxSize=Ref("MaxSize"),
+                VPCZoneIdentifier=Ref("PrivateSubnets"),
+                Tags=[ASTag('Name', self.name, True)]))
+
+    def create_template(self):
+        self.create_parameters()
+        self.create_security_groups()
+        self.create_autoscaling_group()

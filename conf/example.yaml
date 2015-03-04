@@ -1,0 +1,64 @@
+mappings:
+  AmiMap:
+    us-east-1:
+      NAT: ami-ad227cc4
+      ubuntu1404: &ubuntu1404 ami-74e27e1c
+      bastion: *ubuntu1404
+
+default_config: &default_config
+  cidr_block: 10.128.0.0/16
+  base_domain: phobo.example.com
+  office_ip: &office_ip 177.222.203.28/32
+  db_passwd: &db_passwd ExamplePassword!
+  db_user: &db_user dbuser
+  db_name: &db_name db1
+  ssh_key: &ssh_key default
+
+vpc_parameters: &vpc_parameters
+  VpcId: vpc::VpcId
+  DefaultSG: vpc::DefaultSG
+  PublicSubnets: vpc::PublicSubnets
+  PrivateSubnets: vpc::PrivateSubnets
+  AvailabilityZones: vpc::AvailabilityZones
+
+stacks:
+  - name: vpc
+    class_path: stacker.stacks.vpc.VPC
+    config:
+      << : *default_config
+    parameters:
+      NatInstanceType: m3.medium
+      SshKeyName: *ssh_key
+  - name: bastion
+    class_path: stacker.stacks.bastion.Bastion
+    config:
+      << : *default_config
+    parameters:
+      << : *vpc_parameters
+      InstanceType: m3.medium
+      OfficeIP: *office_ip
+      MinSize: 2
+      MaxSize: 2
+      SshKeyName: *ssh_key
+  - name: myDB
+    class_path: stacker.stacks.postgres.PostgresRDS
+    config:
+      << : *default_config
+    parameters:
+      << : *vpc_parameters
+      InstanceType: db.m3.large
+      AllocatedStorage: 10
+      MasterUser: *db_user
+      MasterUserPassword: *db_passwd
+      DBName: *db_name
+  - name: myWeb
+    class_path: stacker.stacks.asg.AutoscalingGroup
+    config:
+      << : *default_config
+    parameters:
+      << : *vpc_parameters
+      InstanceType: m3.medium
+      ImageName: ubuntu1404
+      MinSize: 2
+      MaxSize: 2
+      SshKeyName: *ssh_key

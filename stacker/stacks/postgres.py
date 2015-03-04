@@ -23,7 +23,7 @@ class PostgresRDS(StackTemplateBase):
                              'default': '10'},
         'MasterUser': {'type': 'String',
                        'description': 'Name of the master user in the db.',
-                       'default': 'admin'},
+                       'default': 'dbuser'},
         'MasterUserPassword': {'type': 'String',
                                'description': 'Master user password.'},
         'PreferredBackupWindow': {

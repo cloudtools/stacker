@@ -28,6 +28,10 @@ class AutoscalingGroup(StackTemplateBase):
                     'description': 'Maximum # of instances.',
                     'default': '5'},
         'SshKeyName': {'type': 'AWS::EC2::KeyPair::KeyName'},
+        'ImageName': {
+            'type': 'String',
+            'description': 'The image name to use from the AMIMap (usually '
+                           'found in the config file.)'},
     }
 
     def create_parameters(self):
@@ -45,6 +49,7 @@ class AutoscalingGroup(StackTemplateBase):
         t = self.template
         t.add_resource(
             ec2.SecurityGroup(CLUSTER_SG_NAME % self.name,
+                              GroupDescription=CLUSTER_SG_NAME % self.name,
                               VpcId=Ref("VpcId")))
         # Add SG rules here
 
@@ -56,7 +61,8 @@ class AutoscalingGroup(StackTemplateBase):
         t.add_resource(
             autoscaling.LaunchConfiguration(
                 launch_config,
-                ImageId=FindInMap('AmiMap', Ref("AWS::Region"), 'ubuntu'),
+                ImageId=FindInMap('AmiMap', Ref("AWS::Region"),
+                                  Ref('ImageName')),
                 InstanceType=Ref("InstanceType"),
                 KeyName=Ref("SshKeyName"),
                 SecurityGroups=[Ref("DefaultSG"), Ref(sg_name)]))

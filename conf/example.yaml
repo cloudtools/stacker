@@ -8,7 +8,7 @@ mappings:
 default_config: &default_config
   cidr_block: 10.128.0.0/16
   base_domain: phobo.example.com
-  office_ip: &office_ip 177.222.203.28/32
+  office_ip: &office_ip 192.0.2.34/32
   db_passwd: &db_passwd ExamplePassword!
   db_user: &db_user dbuser
   db_name: &db_name db1

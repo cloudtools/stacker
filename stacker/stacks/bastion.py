@@ -82,6 +82,7 @@ class Bastion(StackTemplateBase):
                     'AmiMap', Ref("AWS::Region"), Ref("ImageName")),
                 InstanceType=Ref("InstanceType"),
                 KeyName=Ref("SshKeyName"),
+                UserData=self.generate_user_data(),
                 SecurityGroups=[Ref("DefaultSG"), Ref(CLUSTER_SG_NAME)]))
         t.add_resource(
             autoscaling.AutoScalingGroup(
@@ -92,6 +93,9 @@ class Bastion(StackTemplateBase):
                 MaxSize=Ref("MaxSize"),
                 VPCZoneIdentifier=Ref("PublicSubnets"),
                 Tags=[ASTag('Name', 'bastion', True)]))
+
+    def generate_user_data(self):
+        return ''
 
     def create_template(self):
         self.create_security_groups()

@@ -1,4 +1,4 @@
-from troposphere import Ref, FindInMap, Parameter
+from troposphere import Ref, FindInMap
 from troposphere import ec2, autoscaling
 from troposphere.autoscaling import Tag as ASTag
 
@@ -34,17 +34,6 @@ class AutoscalingGroup(StackTemplateBase):
                            'found in the config file.)'},
     }
 
-    def create_parameters(self):
-        # TODO: Probably should make this standard in StackTemplateBase
-        t = self.template
-        for param, attrs in self.PARAMETERS.items():
-            p = Parameter(param,
-                          Type=attrs.get('type'),
-                          Description=attrs.get('description', ''))
-            if 'default' in attrs:
-                p.Default = attrs['default']
-            t.add_parameter(p)
-
     def create_security_groups(self):
         t = self.template
         t.add_resource(
@@ -77,6 +66,5 @@ class AutoscalingGroup(StackTemplateBase):
                 Tags=[ASTag('Name', self.name, True)]))
 
     def create_template(self):
-        self.create_parameters()
         self.create_security_groups()
         self.create_autoscaling_group()

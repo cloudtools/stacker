@@ -5,7 +5,7 @@ This includes the VPC, it's subnets, availability zones, etc.
 
 from collections import OrderedDict
 
-from troposphere import Ref, Output, Join, FindInMap, Parameter
+from troposphere import Ref, Output, Join, FindInMap
 from troposphere import ec2
 from troposphere.route53 import RecordSetType
 import netaddr
@@ -16,20 +16,33 @@ NAT_INSTANCE_NAME = "NatInstance%s"
 
 
 class VPC(StackTemplateBase):
-    def create_parameters(self):
-        t = self.template
-        t.add_parameter(
-            Parameter("NatInstanceType",
-                      Type="String"))
-        t.add_parameter(
-            Parameter("SshKeyName",
-                      Type="AWS::EC2::KeyPair::KeyName"))
+    PARAMETERS = {
+        "InstanceType": {
+            "type": "String",
+            "description": "NAT EC2 instance type.",
+            "default": "m3.medium"},
+        "SshKeyName": {
+            "type": "AWS::EC2::KeyPair::KeyName",
+            "default": "default"},
+        "BaseDomain": {
+            "type": "String",
+            "description": "Base domain for the stack."},
+        "CidrBlock": {
+            "type": "String",
+            "description": "Base CIDR block for subnets.",
+            "default": "10.128.0.0/16"},
+        "ImageName": {
+            "type": "String",
+            "description": "The image name to use from the AMIMap (usually "
+                           "found in the config file.)",
+            "default": "NAT"},
+    }
 
     def create_vpc(self):
         t = self.template
         vpc = t.add_resource(ec2.VPC(
             'VPC',
-            CidrBlock=str(self.cidr_block), EnableDnsSupport=True,
+            CidrBlock=Ref("CidrBlock"), EnableDnsSupport=True,
             EnableDnsHostnames=True))
 
         # Just about everything needs this, so storing it on the object
@@ -50,7 +63,7 @@ class VPC(StackTemplateBase):
         t = self.template
         dhcp_options = t.add_resource(ec2.DHCPOptions(
             'DHCPOptions',
-            DomainName=self.config['base_domain'],
+            DomainName=Ref("BaseDomain"),
             DomainNameServers=['AmazonProvidedDNS', ]))
         t.add_resource(ec2.VPCDHCPOptionsAssociation(
             'DHCPAssociation',
@@ -166,10 +179,10 @@ class VPC(StackTemplateBase):
         suffix = zone[-1].upper()
         nat_instance = t.add_resource(ec2.Instance(
             NAT_INSTANCE_NAME % suffix,
-            ImageId=FindInMap('AmiMap', Ref("AWS::Region"), 'NAT'),
+            ImageId=FindInMap('AmiMap', Ref("AWS::Region"), Ref("ImageName")),
             SecurityGroupIds=[Ref(self.default_sg), Ref(self.nat_sg)],
             SubnetId=Ref(subnet),
-            InstanceType=Ref('NatInstanceType'),
+            InstanceType=Ref('InstanceType'),
             SourceDestCheck=False,
             KeyName=Ref('SshKeyName'),
             Tags=[ec2.Tag('Name', 'nat-gw%s' % suffix.lower())],
@@ -184,26 +197,25 @@ class VPC(StackTemplateBase):
         return nat_instance
 
     def create_nat_dns(self, zone, ip):
-        base_domain = self.config['base_domain']
         t = self.template
         suffix = zone[-1].upper()
+        name = "gw%s" % suffix
         return t.add_resource(RecordSetType(
             "NatEIPDNS%s" % suffix,
-            HostedZoneName=base_domain + '.',
+            HostedZoneName=Join("", [Ref("BaseDomain"), "."]),
             Comment='NAT gateway A record.',
-            Name="gw%s.%s" % (suffix, 'int.' + base_domain),
+            Name=Join(".", [name, 'int', Ref("BaseDomain")]),
             Type='A',
             TTL='120',
             ResourceRecords=[Ref(ip)]))
 
     def create_template(self):
         self.cidr_block = netaddr.IPNetwork(
-            self.config.get('cidr_block', '10.128.0.0/16'))
-        self.zones = self.config['zones']
+            self.config.parameters['CidrBlock'])
+        self.zones = self.config.parameters['Zones']
         self.template.add_output(
             Output("AvailabilityZones",
                    Value=Join(",", self.zones)))
-        self.create_parameters()
         self.create_vpc()
         self.create_default_security_group()
         self.create_dhcp_options()

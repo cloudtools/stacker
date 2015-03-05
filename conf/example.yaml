@@ -33,7 +33,7 @@ stacks:
     class_path: stacker.stacks.postgres.PostgresRDS
     parameters:
       << : *vpc_parameters
-      InstanceType: db.m3.large
+      InstanceType: db.m3.medium
       AllocatedStorage: 10
       MasterUser: dbuser
       MasterUserPassword: ExamplePassword!

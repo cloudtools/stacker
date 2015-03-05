@@ -45,7 +45,11 @@ class StackTemplateBase(object):
 
     def setup_parameters(self):
         t = self.template
-        for param, attrs in self.PARAMETERS.items():
+        parameters = getattr(self, 'PARAMETERS')
+        if not parameters:
+            logger.debug("No parameters defined.")
+            return
+        for param, attrs in parameters.items():
             p = Parameter(param,
                           Type=attrs.get('type'),
                           Description=attrs.get('description', ''))

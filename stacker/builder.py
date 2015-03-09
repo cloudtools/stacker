@@ -22,12 +22,10 @@ STATUS_SUBMITTED = 1
 STATUS_COMPLETE = 2
 
 
-class StackRecord(object):
-    def __init__(self, name, class_path, requires=[], config=None,
-                 parameters=None):
+class StackConfig(object):
+    def __init__(self, name, class_path, requires=[], parameters=None):
         self.name = name
         self.class_path = class_path
-        self.config = config or {}
         self.parameters = parameters or {}
         self._requires = set(requires)
 
@@ -70,8 +68,8 @@ class StackRecord(object):
 
 
 class TaskTracker(OrderedDict):
-    def add(self, defintion):
-        self[defintion['name']] = StackRecord(**defintion)
+    def add(self, definition):
+        self[definition['name']] = StackConfig(**definition)
 
     def _parse_items(self, items):
         if isinstance(items, Iterable) and not isinstance(items, basestring):
@@ -117,20 +115,19 @@ class TaskTracker(OrderedDict):
 
 
 class StackBuilder(object):
-    def __init__(self, region, domain, mappings=None, config=None):
+    def __init__(self, region, mappings=None, config=None,
+                 parameters=None, max_zone_count=None):
         self.region = region
-        self.domain = domain
+        self.domain = parameters["BaseDomain"]
         self.mappings = mappings or {}
         self.config = config or {}
+        self.parameters = parameters or {}
         self._conn = None
-        if 'zones' not in self.config:
-            self.config['zones'] = self.verify_zone_availability()
-        max_zone_count = self.config.get('max_zone_count',
-                                         len(self.config['zones']))
-        self.config['zones'] = self.config['zones'][:max_zone_count]
+        self.parameters['Zones'] = \
+            self.verify_zone_availability()[:max_zone_count]
 
         self._cfn_bucket = None
-        self.cfn_domain = domain.replace('.', '-')
+        self.cfn_domain = self.domain.replace('.', '-')
 
         self.reset()
 
@@ -203,20 +200,22 @@ class StackBuilder(object):
                 result[stack] = self.stacks[stack].status
         return result
 
-    def build_template(self, stack_name, class_path, stack_config):
-        if stack_name in self.stacks:
+    def build_template(self, stack_config):
+        stack_name = stack_config.name
+        try:
             template = self.stacks[stack_name].template
             if template:
                 return template
+        except (KeyError, AttributeError):
+            pass
+        class_path = stack_config.class_path
         cls = load_object_from_string(class_path)
-        conf = copy.deepcopy(self.config)
-        conf.update(stack_config)
         if not hasattr(cls, 'rendered'):
             raise AttributeError("Stack class %s does not have a "
                                  "'rendered' "
                                  "attribute." % (class_path))
         template = cls(self.region, name=stack_name, mappings=self.mappings,
-                       config=conf)
+                       config=stack_config)
         self.stacks[stack_name].template = template
         return template
 
@@ -239,7 +238,7 @@ class StackBuilder(object):
     def launch_stack(self, stack_name, template):
         cf = self.conn.cloudformation
         full_name = self.get_stack_full_name(stack_name)
-        record = self.stacks[stack_name]
+        stack_config = self.stacks[stack_name]
         stack = None
         try:
             stack = cf.describe_stacks(full_name)[0]
@@ -251,9 +250,9 @@ class StackBuilder(object):
                          full_name, stack.stack_status)
             return
         template_url = self.s3_stack_push(template)
-        params = record.parameters
+        params = stack_config.parameters
         parameters = self.resolve_parameters(params, template)
-        requires = [self.get_stack_full_name(s) for s in record.requires]
+        requires = [self.get_stack_full_name(s) for s in stack_config.requires]
         logger.debug("Stack %s required stacks: %s", stack_name, requires)
         tags = {'template_url': template_url}
         if requires:
@@ -266,7 +265,7 @@ class StackBuilder(object):
                             parameters=parameters,
                             tags=tags,
                             capabilities=['CAPABILITY_IAM'])
-            record.submit()
+            stack_config.submit()
         else:
             try:
                 logger.info("Attempting to update stack %s.", full_name)
@@ -274,19 +273,18 @@ class StackBuilder(object):
                                 parameters=parameters,
                                 tags=tags,
                                 capabilities=['CAPABILITY_IAM'])
-                record.submit()
+                stack_config.submit()
             except BotoServerError as e:
                 if 'No updates are to be performed.' in e.message:
                     logger.info("Stack %s did not change, not updating.",
                                 stack_name)
-                    record.submit()
+                    stack_config.submit()
                     return
                 raise
 
     def get_outputs(self, stack_name, force=False):
         logger.debug("Getting outputs from stack %s.", stack_name)
         if stack_name in self.outputs and not force:
-            # Already have the stack's outputs and not forcing
             return
 
         full_name = self.get_stack_full_name(stack_name)
@@ -320,6 +318,8 @@ class StackBuilder(object):
         self.reset()
         self.setup_prereqs()
         for stack_def in stack_definitions:
+            # Combine the Builder parameters with the stack parameters
+            stack_def['parameters'].update(self.parameters)
             self.stacks.add(stack_def)
         logger.info("Launching stacks: %s", ', '.join(self.stacks.keys()))
 
@@ -333,8 +333,8 @@ class StackBuilder(object):
                 logger.info("Waiting on stacks: %s",
                             ', '.join(submitted_stacks))
             for stack_name in pending_stacks:
-                stack_record = self.stacks[stack_name]
-                requires = stack_record.requires
+                stack_config = self.stacks[stack_name]
+                requires = stack_config.requires
                 pending_required = self.get_pending_stacks(requires)
                 if pending_required:
                     logger.debug("Stack %s still waiting on required stacks: "
@@ -342,9 +342,6 @@ class StackBuilder(object):
                     continue
                 logger.debug("All required stacks are finished, building %s "
                              "now.", stack_name)
-                stack_class = stack_record.class_path
-                stack_config = stack_record.config
-                template = self.build_template(stack_name, stack_class,
-                                               stack_config)
+                template = self.build_template(stack_config)
                 self.launch_stack(stack_name, template)
             time.sleep(5)

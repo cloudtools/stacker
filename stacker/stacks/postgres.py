@@ -1,4 +1,4 @@
-from troposphere import Ref, ec2, Parameter, Output, GetAtt, Join
+from troposphere import Ref, ec2, Output, GetAtt, Join
 from troposphere.rds import DBInstance, DBSubnetGroup
 
 from ..stack import StackTemplateBase
@@ -35,16 +35,6 @@ class PostgresRDS(StackTemplateBase):
             'type': 'String',
             'description': 'Initial db to create in database.'},
     }
-
-    def create_parameters(self):
-        t = self.template
-        for param, attrs in self.PARAMETERS.items():
-            p = Parameter(param,
-                          Type=attrs.get('type'),
-                          Description=attrs.get('description', ''))
-            if 'default' in attrs:
-                p.Default = attrs['default']
-            t.add_parameter(p)
 
     def create_subnet_group(self):
         t = self.template
@@ -95,7 +85,6 @@ class PostgresRDS(StackTemplateBase):
         t.add_output(Output('DBURL', Value=db_url))
 
     def create_template(self):
-        self.create_parameters()
         self.create_subnet_group()
         self.create_security_group()
         self.create_rds()

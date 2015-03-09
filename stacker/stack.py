@@ -3,7 +3,7 @@ import hashlib
 
 logger = logging.getLogger(__name__)
 
-from troposphere import Template
+from troposphere import Template, Parameter
 
 
 class StackTemplateBase(object):
@@ -23,11 +23,11 @@ class StackTemplateBase(object):
     :param config: A dictionary which is used to pass in configuration info
         to the stack.
     """
-    def __init__(self, region, name, mappings=None, config=None):
+    def __init__(self, region, name, config, mappings=None):
         self.region = region
         self.name = name
         self.mappings = mappings
-        self.config = config or {}
+        self.config = config
         self.outputs = {}
         self.reset_template()
 
@@ -36,12 +36,26 @@ class StackTemplateBase(object):
         params = []
         for param in self.template.parameters:
             try:
-                params.append((param, self.config[param]))
+                params.append((param, self.config.parameters[param]))
             except KeyError:
                 logger.debug("Parameter '%s' not found in config, skipping.",
                              param)
                 continue
         return params
+
+    def setup_parameters(self):
+        t = self.template
+        parameters = getattr(self, 'PARAMETERS')
+        if not parameters:
+            logger.debug("No parameters defined.")
+            return
+        for param, attrs in parameters.items():
+            p = Parameter(param,
+                          Type=attrs.get('type'),
+                          Description=attrs.get('description', ''))
+            if 'default' in attrs:
+                p.Default = attrs['default']
+            t.add_parameter(p)
 
     def import_mappings(self):
         if not self.mappings:
@@ -59,6 +73,7 @@ class StackTemplateBase(object):
 
     def render_template(self):
         self.create_template()
+        self.setup_parameters()
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)

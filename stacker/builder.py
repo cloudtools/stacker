@@ -23,10 +23,11 @@ STATUS_COMPLETE = 2
 
 
 class StackConfig(object):
-    def __init__(self, name, class_path, requires=[], parameters=None):
+    def __init__(self, name, class_path, requires=None, parameters=None):
         self.name = name
         self.class_path = class_path
         self.parameters = parameters or {}
+        requires = requires or []
         self._requires = set(requires)
 
         self.template = None
@@ -51,7 +52,7 @@ class StackConfig(object):
         parameters = self.parameters
         for value in parameters.values():
             if isinstance(value, basestring) and '::' in value:
-                stack_name, output = value.split('::')
+                stack_name, _ = value.split('::')
             else:
                 continue
             if stack_name not in requires:

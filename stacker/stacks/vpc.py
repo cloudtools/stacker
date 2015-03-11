@@ -98,9 +98,9 @@ class VPC(StackTemplateBase):
 
         self.nat_sg = self.create_nat_security_groups()
 
-        for i, subnet_type in enumerate(self.subnets):
+        for _, subnet_type in enumerate(self.subnets):
             name_prefix = subnet_type.capitalize()
-            for z, zone in enumerate(self.zones):
+            for _, zone in enumerate(self.zones):
                 name_suffix = zone[-1].upper()
                 cidr_block = str(next(networks[subnet_type]))
                 # Used by other templates to pick static IPs

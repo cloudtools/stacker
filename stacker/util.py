@@ -12,14 +12,14 @@ from boto.route53.record import ResourceRecordSets
 from aws_helper.connection import ConnectionManager
 
 
-def find_subnetable_zones(region):
+def find_subnetable_zones(region=None):
     """ Using an AWS VPC Connection object determine which AZs are allowed.
 
     Unfortunately AWS doesn't provide a way to determine which AZs are
     actually allowed in a VPC via a simple API call.  This function does so
     by creating a VPC then trying to create a subnet in each zone.
     """
-    vpc_conn = ConnectionManager().vpc
+    vpc_conn = ConnectionManager(region).vpc
     all_zones = [zone.name for zone in vpc_conn.get_all_zones()]
     good_zones = []
     vpc = vpc_conn.create_vpc('192.168.0.0/16')
@@ -41,9 +41,11 @@ def find_subnetable_zones(region):
     return good_zones
 
 
-def retry_with_backoff(function, args=[], kwargs={}, attempts=5, min_delay=1,
-                       max_delay=3, exc_list=None):
+def retry_with_backoff(function, args=None, kwargs=None, attempts=5,
+                       min_delay=1, max_delay=3, exc_list=None):
     """ Retries function, catching expected Exceptions. """
+    args = args or []
+    kwargs = kwargs or {}
     attempt = 0
     if not exc_list:
         exc_list = (Exception, )

@@ -123,9 +123,7 @@ class StackBuilder(object):
         self.config = config or {}
         self.parameters = parameters or {}
         self._conn = None
-        self.parameters['Zones'] = \
-            self.verify_zone_availability()[:max_zone_count]
-
+        self.max_zone_count = max_zone_count
         self._cfn_bucket = None
         self.cfn_domain = self.domain.replace('.', '-')
 
@@ -316,6 +314,8 @@ class StackBuilder(object):
 
     def build(self, stack_definitions):
         self.reset()
+        self.parameters['Zones'] = \
+            self.verify_zone_availability()[:self.max_zone_count]
         self.setup_prereqs()
         for stack_def in stack_definitions:
             # Combine the Builder parameters with the stack parameters

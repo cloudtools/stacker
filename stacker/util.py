@@ -9,26 +9,24 @@ import sys
 
 from boto.exception import EC2ResponseError
 from boto.route53.record import ResourceRecordSets
-from aws_helper.connection import ConnectionManager
 
 
-def find_subnetable_zones(region=None):
+def find_subnetable_zones(conn):
     """ Using an AWS VPC Connection object determine which AZs are allowed.
 
     Unfortunately AWS doesn't provide a way to determine which AZs are
     actually allowed in a VPC via a simple API call.  This function does so
     by creating a VPC then trying to create a subnet in each zone.
     """
-    vpc_conn = ConnectionManager(region).vpc
-    all_zones = [zone.name for zone in vpc_conn.get_all_zones()]
+    all_zones = [zone.name for zone in conn.get_all_zones()]
     good_zones = []
-    vpc = vpc_conn.create_vpc('192.168.0.0/16')
+    vpc = conn.create_vpc('192.168.0.0/16')
     try:
         for i, zone in enumerate(all_zones):
             try:
-                subnet = vpc_conn.create_subnet(
+                subnet = conn.create_subnet(
                     vpc.id, '192.168.%d.0/24' % (i), zone)
-                vpc_conn.delete_subnet(subnet.id)
+                conn.delete_subnet(subnet.id)
                 good_zones.append(zone)
             except EC2ResponseError, e:
                 if ('Subnets can currently only be created in the following '
@@ -36,7 +34,7 @@ def find_subnetable_zones(region=None):
                     continue
                 raise
     finally:
-        vpc_conn.delete_vpc(vpc.id)
+        conn.delete_vpc(vpc.id)
     logger.debug("Subnettable zones: %s", ', '.join(good_zones))
     return good_zones
 

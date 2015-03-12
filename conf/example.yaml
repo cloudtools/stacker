@@ -2,11 +2,11 @@ mappings:
   AmiMap:
     us-east-1:
       NAT: ami-ad227cc4
-      ubuntu1404: &ubuntu1404 ami-74e27e1c
-      bastion: *ubuntu1404
+      ubuntu1404: &ubuntu1404 ami-74e27e1c # Setting an anchor
+      bastion: *ubuntu1404 # Using the anchor above
 
 vpc_parameters: &vpc_parameters
-  VpcId: vpc::VpcId
+  VpcId: vpc::VpcId # parametrs with ::'s in them refer to <stack>::<Output>
   DefaultSG: vpc::DefaultSG
   PublicSubnets: vpc::PublicSubnets
   PrivateSubnets: vpc::PrivateSubnets
@@ -22,6 +22,12 @@ stacks:
   - name: bastion
     class_path: stacker.stacks.bastion.Bastion
     parameters:
+      # Extends the parameters dict with the contents of the vpc_parameters
+      # anchor. Basically we're including all VPC Outputs in the parameters
+      # of the bastion stack. Note: Stacker figures out, automatically, which
+      # parameters the stack actually needs and only submits those to each
+      # stack. For example, most stacks are in the PrivateSubnets, but not
+      # the PublicSubnets, but stacker deals with it for you.
       << : *vpc_parameters
       InstanceType: m3.medium
       OfficeNetwork: 203.0.113.0/24

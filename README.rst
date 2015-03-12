@@ -35,39 +35,39 @@ installing stacker and loading your AWS API keys in your environment
 
     stacker -v -r us-east-1 -d example.com -p CidrBlock=10.128.0.0/16 conf/example.yaml
 
-Here's the syntax help from the command:
+Here's the syntax help from the command::
 
-|   # stacker -h
-|   usage: stacker [-h] [-r REGION] [-m MAX_ZONES] [-v] [-d DOMAIN]
-|                  [-p PARAMETER=VALUE] [--prompt]
-|                  config
-|
-|   Launches AWS Cloudformation stacks from config.
-|
-|   positional arguments:
-|     config                The config file where stack configuration is located.
-|                           Must be in yaml format.
-|
-|   optional arguments:
-|     -h, --help            show this help message and exit
-|     -r REGION, --region REGION
-|                           The AWS region to launch in. Default: us-east-1
-|     -m MAX_ZONES, --max-zones MAX_ZONES
-|                           Gives you the ability to limit the # of zones that
-|                           resources will be launched in. If not given, then
-|                           resources will be launched in all available
-|                           availability zones.
-|     -v, --verbose         Increase output verbosity. May be specified up to
-|                           twice.
-|     -d DOMAIN, --domain DOMAIN
-|                           The domain to run in. Gets converted into the
-|                           BaseDomain Parameter for use in stack templates.
-|     -p PARAMETER=VALUE, --parameter PARAMETER=VALUE
-|                           Adds parameters from the command line that can be used
-|                           inside any of the stacks being built. Can be specified
-|                           more than once.
-|     --prompt              Drop to python prompt rather than kicking off build of
-|                           the stack.
+   # stacker -h
+   usage: stacker [-h] [-r REGION] [-m MAX_ZONES] [-v] [-d DOMAIN]
+                  [-p PARAMETER=VALUE] [--prompt]
+                  config
+
+   Launches AWS Cloudformation stacks from config.
+
+   positional arguments:
+     config                The config file where stack configuration is located.
+                           Must be in yaml format.
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     -r REGION, --region REGION
+                           The AWS region to launch in. Default: us-east-1
+     -m MAX_ZONES, --max-zones MAX_ZONES
+                           Gives you the ability to limit the # of zones that
+                           resources will be launched in. If not given, then
+                           resources will be launched in all available
+                           availability zones.
+     -v, --verbose         Increase output verbosity. May be specified up to
+                           twice.
+     -d DOMAIN, --domain DOMAIN
+                           The domain to run in. Gets converted into the
+                           BaseDomain Parameter for use in stack templates.
+     -p PARAMETER=VALUE, --parameter PARAMETER=VALUE
+                           Adds parameters from the command line that can be used
+                           inside any of the stacks being built. Can be specified
+                           more than once.
+     --prompt              Drop to python prompt rather than kicking off build of
+                           the stack.
 
 As of now there is no option to tear down the stack in the tool (we plan to
 add it), so you'll need to tear the stacks it creates down manually. When doing

@@ -1,13 +1,15 @@
+=======
 stacker
 =======
 
-# About
+About
+=====
 
 stacker is a tool and library used to create & update multiple CloudFormation
-stacks. It was originally written at [Remind](https://www.remind.com/) and
+stacks. It was originally written at Remind_ and
 released to the open source community.
 
-stacker StackTemplates are written in [troposphere][], though the purpose of
+stacker StackTemplates are written in troposphere_, though the purpose of
 most templates is to keep them as generic as possible and then use
 configuration (and CloudFormation Parameters/Outputs) to modify them.
 
@@ -15,7 +17,8 @@ At this point this is very much alpha software - it is still in heavy
 development, and interfaces/configuration/etc may/will likely/most definitely
 change :)
 
-# Example
+Example
+=======
 
 We've provided an example stack in *conf/example.yaml* that can be launched
 in your account.  It creates 4 stacks:
@@ -30,22 +33,14 @@ if you'd like to play with something smaller. To launch the stacks, after
 installing stacker and loading your AWS API keys in your environment
 (AWS\_ACCESS\_KEY\_ID & AWS\_SECRET\_ACCESS\_KEY), call the following:
 
-```
-stacker -v -r us-east-1 -d example.com -p CidrBlock=10.128.0.0/16 conf/example.yaml
-```
+    stacker -v -r us-east-1 -d example.com -p CidrBlock=10.128.0.0/16 conf/example.yaml
 
 Here's some explanation of what each argument does:
 
-```
-stacker -v -r us-east-1          # Launch with verbose set, in the us-east-1
-                                 # region
-    -d example.com               # Setup the example.com domain in Route53,
-                                 # gets used as BaseDomain in the parameter
-                                 # list of all stacks
-    -p CidrBlock=10.128.0.0/16   # This network will be split up into the
-                                 # various subnets
-    conf/example.yaml            # The yaml stack definition file
-```
+    stacker -v -r us-east-1          # Launch with verbose set, in the us-east-1 region
+        -d example.com               # Setup the example.com domain in Route53, gets used as BaseDomain in the parameter list of all stacks
+        -p CidrBlock=10.128.0.0/16   # This network will be split up into the various subnets
+        conf/example.yaml            # The yaml stack definition file
 
 As of now there is no option to tear down the stack in the tool (we plan to
 add it), so you'll need to tear the stacks it creates down manually. When doing
@@ -55,4 +50,5 @@ tear down the VPC stack. If you try deleting them all (including VPC) in one
 swoop, you'll see that VPC stack gets hung up while waiting for the others to
 tear down.
 
-[troposphere]: https://github.com/cloudtools/troposphere
+.. _Remind: http://www.remind.com/
+.. _troposphere: https://github.com/cloudtools/troposphere

@@ -31,7 +31,7 @@ in your account.  It creates 4 stacks:
 The size of most of these is m3.medium, but you can change that in the config
 if you'd like to play with something smaller. To launch the stacks, after
 installing stacker and loading your AWS API keys in your environment
-(AWS\_ACCESS\_KEY\_ID & AWS\_SECRET\_ACCESS\_KEY), call the following:
+(AWS\_ACCESS\_KEY\_ID & AWS\_SECRET\_ACCESS\_KEY), call the following::
 
     stacker -v -r us-east-1 -d example.com -p CidrBlock=10.128.0.0/16 conf/example.yaml
 

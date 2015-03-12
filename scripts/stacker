@@ -66,6 +66,9 @@ def parse_args():
                         help="Adds parameters from the command line "
                              "that can be used inside any of the stacks "
                              "being built. Can be specified more than once.")
+    parser.add_argument("--prompt", action="store_true",
+                        help="Drop to python prompt rather than kicking off "
+                             "build of the stack.")
     parser.add_argument('config',
                         help="The config file where stack configuration is "
                              "located. Must be in yaml format.")
@@ -96,5 +99,8 @@ if __name__ == '__main__':
 
     builder = StackBuilder(args.region, mappings=config['mappings'],
                            config=config, parameters=parameters)
-    print "Dropping into interactive console..."
-    code.InteractiveConsole(locals()).interact()
+    if args.prompt:
+        print "Dropping into interactive console..."
+        code.InteractiveConsole(locals()).interact()
+    else:
+        builder.build(config['stacks'])

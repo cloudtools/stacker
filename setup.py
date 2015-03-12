@@ -14,7 +14,7 @@ def read(filename):
 if __name__ == '__main__':
     setup(
         name='stacker',
-        version='0.1.0',
+        version='0.1.1',
         author='Michael Barrett',
         author_email='loki77@gmail.com',
         license="New BSD license",

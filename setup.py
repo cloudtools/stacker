@@ -20,7 +20,7 @@ if __name__ == '__main__':
         license="New BSD license",
         url="https://github.com/remind101/stacker",
         description='Opinionated AWS CloudFormation Stack manager',
-        long_description=read('README.md'),
+        long_description=read('README.rst'),
         packages=find_packages(),
         scripts=glob.glob(os.path.join(src_dir, 'scripts', '*')),
     )

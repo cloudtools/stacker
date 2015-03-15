@@ -11,12 +11,23 @@ import copy
 import yaml
 from stacker.builder import StackBuilder
 
+logger = logging.getLogger()
 
 DEBUG_FORMAT = ('[%(asctime)s] %(levelname)s %(name)s:%(lineno)d'
                 '(%(funcName)s) - %(message)s')
 INFO_FORMAT = ('[%(asctime)s] %(message)s')
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S'
+
+
+def get_stack_config(config, stack_list):
+    """ If given a stack list, extract the stack config for each in config.
+
+    If no stack list given, return stack config as is.
+    """
+    if not stack_list:
+        return config['stacks']
+    return {k: v for k, v in config['stacks'] if k in stack_list}
 
 
 class KeyValueAction(argparse.Action):
@@ -66,6 +77,12 @@ def parse_args():
                         help="Adds parameters from the command line "
                              "that can be used inside any of the stacks "
                              "being built. Can be specified more than once.")
+    parser.add_argument("--stacks", action="append",
+                        metavar="STACKNAME", type=str,
+                        help="Only work on the stacks given. Can be "
+                             "specified more than once. If not specified "
+                             "then stacker will work on all stacks in the "
+                             "config file.")
     parser.add_argument("--prompt", action="store_true",
                         help="Drop to python prompt rather than kicking off "
                              "build of the stack.")
@@ -103,4 +120,6 @@ if __name__ == '__main__':
         print "Dropping into interactive console..."
         code.InteractiveConsole(locals()).interact()
     else:
-        builder.build(config['stacks'])
+        stacks = get_stack_config(config, args.stacks)
+        logger.info("Working on stacks: %s", ', '.join(stacks))
+        builder.build(stacks)

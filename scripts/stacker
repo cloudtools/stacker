@@ -47,7 +47,7 @@ class KeyValueAction(argparse.Action):
 
 def key_value_arg(string):
     try:
-        k, v = string.split("=")
+        k, v = string.split("=", 1)
     except ValueError:
         raise argparse.ArgumentTypeError(
             "%s does not match KEY=VALUE format." % string)

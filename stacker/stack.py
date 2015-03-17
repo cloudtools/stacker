@@ -9,9 +9,6 @@ from troposphere import Template, Parameter
 class StackTemplateBase(object):
     """Base implementation for dealing with a troposphere template.
 
-    :type region: string, AWS region
-    :param region: The AWS region where this stack will be deployed.
-
     :type name: string
     :param name: A name for the stack template. If not provided, one
         will be created from the class name automatically.
@@ -23,8 +20,7 @@ class StackTemplateBase(object):
     :param config: A dictionary which is used to pass in configuration info
         to the stack.
     """
-    def __init__(self, region, name, config, mappings=None):
-        self.region = region
+    def __init__(self, name, config, mappings=None):
         self.name = name
         self.mappings = mappings
         self.config = config

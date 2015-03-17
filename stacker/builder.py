@@ -213,7 +213,7 @@ class StackBuilder(object):
             raise AttributeError("Stack class %s does not have a "
                                  "'rendered' "
                                  "attribute." % (class_path))
-        template = cls(self.region, name=stack_name, mappings=self.mappings,
+        template = cls(name=stack_name, mappings=self.mappings,
                        config=stack_config)
         self.stacks[stack_name].template = template
         return template

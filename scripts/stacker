@@ -31,11 +31,13 @@ def get_stack_config(config, stack_list):
 
 
 class KeyValueAction(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+    def __init__(self, option_strings, dest, default=None, nargs=None,
+                 **kwargs):
         if nargs:
             raise ValueError("nargs not allowed")
+        default = default or {}
         super(KeyValueAction, self).__init__(option_strings, dest, nargs,
-                                             **kwargs)
+                                             default=default, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         if not isinstance(values, Mapping):
@@ -73,7 +75,7 @@ def parse_args():
                              "templates.")
     parser.add_argument("-p", "--parameter", dest="parameters",
                         metavar="PARAMETER=VALUE", type=key_value_arg,
-                        action=KeyValueAction,
+                        action=KeyValueAction, default={},
                         help="Adds parameters from the command line "
                              "that can be used inside any of the stacks "
                              "being built. Can be specified more than once.")

@@ -2,12 +2,12 @@ from troposphere import Ref, FindInMap
 from troposphere import ec2, autoscaling
 from troposphere.autoscaling import Tag as ASTag
 
-from stacker.stack import StackTemplateBase
+from .base import Blueprint
 
 CLUSTER_SG_NAME = "%sSG"
 
 
-class AutoscalingGroup(StackTemplateBase):
+class AutoscalingGroup(Blueprint):
     PARAMETERS = {
         'VpcId': {'type': 'AWS::EC2::VPC::Id', 'description': 'Vpc Id'},
         'DefaultSG': {'type': 'AWS::EC2::SecurityGroup::Id',

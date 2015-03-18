@@ -4,12 +4,11 @@
 
 import argparse
 import logging
-import code
 from collections import Mapping
 import copy
 
 import yaml
-from stacker.builder import StackBuilder
+from stacker.builder import Builder
 
 logger = logging.getLogger()
 
@@ -20,10 +19,10 @@ INFO_FORMAT = ('[%(asctime)s] %(message)s')
 ISO_8601 = '%Y-%m-%dT%H:%M:%S'
 
 
-def get_stack_config(config, stack_list):
-    """ If given a stack list, extract the stack config for each in config.
+def get_stack_definitions(config, stack_list):
+    """ Extract stack definitions from the config.
 
-    If no stack list given, return stack config as is.
+    If no stack_list given, return stack config as is.
     """
     if not stack_list:
         return config['stacks']
@@ -85,9 +84,6 @@ def parse_args():
                              "specified more than once. If not specified "
                              "then stacker will work on all stacks in the "
                              "config file.")
-    parser.add_argument("--prompt", action="store_true",
-                        help="Drop to python prompt rather than kicking off "
-                             "build of the stack.")
     parser.add_argument('config',
                         help="The config file where stack configuration is "
                              "located. Must be in yaml format.")
@@ -116,12 +112,9 @@ if __name__ == '__main__':
     with open(args.config) as fd:
         config = yaml.load(fd)
 
-    builder = StackBuilder(args.region, mappings=config['mappings'],
-                           config=config, parameters=parameters)
-    if args.prompt:
-        print "Dropping into interactive console..."
-        code.InteractiveConsole(locals()).interact()
-    else:
-        stacks = get_stack_config(config, args.stacks)
-        logger.info("Working on stacks: %s", ', '.join(stacks))
-        builder.build(stacks)
+    builder = Builder(args.region, mappings=config['mappings'],
+                      parameters=parameters)
+
+    stacks = get_stack_definitions(config, args.stacks)
+    logger.info("Working on stacks: %s", ', '.join(stacks))
+    builder.build(stacks)

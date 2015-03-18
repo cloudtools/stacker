@@ -6,24 +6,26 @@ logger = logging.getLogger(__name__)
 from troposphere import Template, Parameter
 
 
-class StackTemplateBase(object):
+class Blueprint(object):
     """Base implementation for dealing with a troposphere template.
 
     :type name: string
-    :param name: A name for the stack template. If not provided, one
+    :param name: A name for the blueprint. If not provided, one
         will be created from the class name automatically.
+
+    :type context: BlueprintContext object
+    :param config: Used for configuring the Blueprint.
 
     :type mappings: dict
     :param mappings: Cloudformation Mappings to be used in the template.
 
-    :type config: dict
-    :param config: A dictionary which is used to pass in configuration info
-        to the stack.
     """
-    def __init__(self, name, config, mappings=None):
+    def __init__(self, name, context, mappings=None):
         self.name = name
         self.mappings = mappings
-        self.config = config
+        # TODO: This is only, currently, used for parameters. should probably
+        #       just pass parameters alone.
+        self.context = context
         self.outputs = {}
         self.reset_template()
 
@@ -32,9 +34,9 @@ class StackTemplateBase(object):
         params = []
         for param in self.template.parameters:
             try:
-                params.append((param, self.config.parameters[param]))
+                params.append((param, self.context.parameters[param]))
             except KeyError:
-                logger.debug("Parameter '%s' not found in config, skipping.",
+                logger.debug("Parameter '%s' not found in context, skipping.",
                              param)
                 continue
         return params

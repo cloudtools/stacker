@@ -10,12 +10,12 @@ from troposphere import ec2
 from troposphere.route53 import RecordSetType
 import netaddr
 
-from ..stack import StackTemplateBase
+from .base import Blueprint
 
 NAT_INSTANCE_NAME = "NatInstance%s"
 
 
-class VPC(StackTemplateBase):
+class VPC(Blueprint):
     PARAMETERS = {
         "InstanceType": {
             "type": "String",

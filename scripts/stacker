@@ -27,7 +27,7 @@ def get_stack_config(config, stack_list):
     """
     if not stack_list:
         return config['stacks']
-    return {k: v for k, v in config['stacks'] if k in stack_list}
+    return [s for s in config['stacks'] if s['name'] in stack_list]
 
 
 class KeyValueAction(argparse.Action):
@@ -123,5 +123,6 @@ if __name__ == '__main__':
         code.InteractiveConsole(locals()).interact()
     else:
         stacks = get_stack_config(config, args.stacks)
-        logger.info("Working on stacks: %s", ', '.join(stacks))
+        stack_names = [s['name'] for s in stacks]
+        logger.info("Working on stacks: %s", ', '.join(stack_names))
         builder.build(stacks)

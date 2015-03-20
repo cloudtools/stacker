@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 from troposphere import Ref, Output, Join, FindInMap
 from troposphere import ec2
-from troposphere.route53 import RecordSetType
 import netaddr
 
 from ..stack import StackTemplateBase
@@ -181,26 +180,12 @@ class VPC(StackTemplateBase):
             Tags=[ec2.Tag('Name', 'nat-gw%s' % suffix.lower())],
             DependsOn=self.gw_attach.title))
 
-        eip = t.add_resource(ec2.EIP(
+        t.add_resource(ec2.EIP(
             'NATExternalIp%s' % suffix,
             Domain='vpc',
             InstanceId=Ref(nat_instance),
             DependsOn=self.gw_attach.title))
-        self.create_nat_dns(zone, eip)
         return nat_instance
-
-    def create_nat_dns(self, zone, ip):
-        t = self.template
-        suffix = zone[-1].upper()
-        name = "gw%s" % suffix
-        return t.add_resource(RecordSetType(
-            "NatEIPDNS%s" % suffix,
-            HostedZoneName=Join("", [Ref("BaseDomain"), "."]),
-            Comment='NAT gateway A record.',
-            Name=Join(".", [name, 'int', Ref("BaseDomain")]),
-            Type='A',
-            TTL='120',
-            ResourceRecords=[Ref(ip)]))
 
     def create_template(self):
         self.cidr_block = netaddr.IPNetwork(

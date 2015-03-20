@@ -160,18 +160,11 @@ class VPC(StackTemplateBase):
         nat_public_out_all_rule = ec2.SecurityGroupRule(
             IpProtocol='-1', FromPort='-1', ToPort='-1', CidrIp='0.0.0.0/0')
 
-        # XXX Need to update to specific IPs eventually.
-        ssh_ingress_rule = ec2.SecurityGroupRule(
-            IpProtocol='tcp',
-            FromPort='22',
-            ToPort='22',
-            CidrIp='0.0.0.0/0')
-
         return t.add_resource(ec2.SecurityGroup(
             'NATSG',
             VpcId=self.vpc_ref,
             GroupDescription='NAT Instance Security Group',
-            SecurityGroupIngress=[ssh_ingress_rule, nat_private_in_all_rule],
+            SecurityGroupIngress=[nat_private_in_all_rule],
             SecurityGroupEgress=[nat_public_out_all_rule, ]))
 
     def create_nat_instance(self, zone, subnet):

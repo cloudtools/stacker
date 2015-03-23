@@ -26,7 +26,7 @@ def get_stack_definitions(config, stack_list):
     """
     if not stack_list:
         return config['stacks']
-    return {k: v for k, v in config['stacks'] if k in stack_list}
+    return [s for s in config['stacks'] if s['name'] in stack_list]
 
 
 class KeyValueAction(argparse.Action):
@@ -115,6 +115,7 @@ if __name__ == '__main__':
     builder = Builder(args.region, mappings=config['mappings'],
                       parameters=parameters)
 
-    stacks = get_stack_definitions(config, args.stacks)
-    logger.info("Working on stacks: %s", ', '.join(stacks))
-    builder.build(stacks)
+    stack_definitions = get_stack_definitions(config, args.stacks)
+    stack_names = [s['name'] for s in stack_definitions]
+    logger.info("Working on stacks: %s", ', '.join(stack_names))
+    builder.build(stack_definitions)

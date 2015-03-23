@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 from troposphere import Ref, Output, Join, FindInMap
 from troposphere import ec2
-from troposphere.route53 import RecordSetType
 import netaddr
 
 from .base import Blueprint
@@ -22,8 +21,7 @@ class VPC(Blueprint):
             "description": "NAT EC2 instance type.",
             "default": "m3.medium"},
         "SshKeyName": {
-            "type": "AWS::EC2::KeyPair::KeyName",
-            "default": "default"},
+            "type": "AWS::EC2::KeyPair::KeyName"},
         "BaseDomain": {
             "type": "String",
             "description": "Base domain for the stack."},
@@ -160,18 +158,11 @@ class VPC(Blueprint):
         nat_public_out_all_rule = ec2.SecurityGroupRule(
             IpProtocol='-1', FromPort='-1', ToPort='-1', CidrIp='0.0.0.0/0')
 
-        # XXX Need to update to specific IPs eventually.
-        ssh_ingress_rule = ec2.SecurityGroupRule(
-            IpProtocol='tcp',
-            FromPort='22',
-            ToPort='22',
-            CidrIp='0.0.0.0/0')
-
         return t.add_resource(ec2.SecurityGroup(
             'NATSG',
             VpcId=self.vpc_ref,
             GroupDescription='NAT Instance Security Group',
-            SecurityGroupIngress=[ssh_ingress_rule, nat_private_in_all_rule],
+            SecurityGroupIngress=[nat_private_in_all_rule],
             SecurityGroupEgress=[nat_public_out_all_rule, ]))
 
     def create_nat_instance(self, zone, subnet):
@@ -188,26 +179,12 @@ class VPC(Blueprint):
             Tags=[ec2.Tag('Name', 'nat-gw%s' % suffix.lower())],
             DependsOn=self.gw_attach.title))
 
-        eip = t.add_resource(ec2.EIP(
+        t.add_resource(ec2.EIP(
             'NATExternalIp%s' % suffix,
             Domain='vpc',
             InstanceId=Ref(nat_instance),
             DependsOn=self.gw_attach.title))
-        self.create_nat_dns(zone, eip)
         return nat_instance
-
-    def create_nat_dns(self, zone, ip):
-        t = self.template
-        suffix = zone[-1].upper()
-        name = "gw%s" % suffix
-        return t.add_resource(RecordSetType(
-            "NatEIPDNS%s" % suffix,
-            HostedZoneName=Join("", [Ref("BaseDomain"), "."]),
-            Comment='NAT gateway A record.',
-            Name=Join(".", [name, 'int', Ref("BaseDomain")]),
-            Type='A',
-            TTL='120',
-            ResourceRecords=[Ref(ip)]))
 
     def create_template(self):
         self.cidr_block = netaddr.IPNetwork(

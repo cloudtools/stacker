@@ -21,8 +21,7 @@ class VPC(StackTemplateBase):
             "description": "NAT EC2 instance type.",
             "default": "m3.medium"},
         "SshKeyName": {
-            "type": "AWS::EC2::KeyPair::KeyName",
-            "default": "default"},
+            "type": "AWS::EC2::KeyPair::KeyName"},
         "BaseDomain": {
             "type": "String",
             "description": "Base domain for the stack."},

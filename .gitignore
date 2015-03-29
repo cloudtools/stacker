@@ -50,6 +50,7 @@ build/
 objdir/
 dist/
 *.egg-info
+.eggs/
 
 # nosetest --with-coverage dumps these in CWD
 .coverage

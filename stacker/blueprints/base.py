@@ -41,6 +41,15 @@ class Blueprint(object):
                 continue
         return params
 
+    @property
+    def required_parameters(self):
+        """ Returns all parameters that do not have a default value. """
+        required = []
+        for k, v in self.parameters:
+            if not hasattr(v, 'Default'):
+                required.append((k, v))
+        return required
+
     def setup_parameters(self):
         t = self.template
         parameters = getattr(self, 'PARAMETERS')

@@ -144,7 +144,7 @@ class Builder(object):
         self.plan[stack_name].blueprint = blueprint
         return blueprint
 
-    def resolve_parameters(self, parameters, blueprint):
+    def resolve_parameters(self, parameters, blueprint, existing_stack=None):
         """ Resolves parameters for a given blueprint.
 
         Given a list of parameters, first discard any parameters that the
@@ -152,9 +152,10 @@ class Builder(object):
         <stack_name>::<output_name>, pull that output from the foreign
         stack.
         """
-        params = []
+        params = {}
+        bp_params = blueprint.template.parameters
         for k, v in parameters.items():
-            if k not in blueprint.template.parameters:
+            if k not in blueprint_params:
                 logger.debug("Template %s does not use parameter %s.",
                              blueprint.name, k)
                 continue
@@ -164,8 +165,13 @@ class Builder(object):
                 stack_name, output = value.split('::')
                 self.get_outputs(stack_name)
                 value = self.outputs[stack_name][output]
-            params.append((k, value))
-        return params
+            params[k] = value
+        required_params = [k for kv in blueprint.required_parameters]
+        missing_params = list(set(required_params) - set(params.keys()))
+        if existing_stack:
+            for p in missing_params:
+                # TODO: CONTINUE HERE                
+        return params.items()
 
     def get_stack(self, stack_full_name):
         """ Give a stacks full name, query for the boto Stack object.

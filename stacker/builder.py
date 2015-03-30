@@ -392,6 +392,15 @@ class Builder(object):
                 logger.info("Stack %s complete: %s", stack_name, cf_status)
                 stack_context.complete()
 
+    def build_plan(self, stack_definitions):
+        """ Creates the plan for building out the defined stacks. """
+        plan = Plan()
+        for stack_def in stack_definitions:
+            # Combine the Builder parameters with the stack parameters
+            stack_def['parameters'].update(self.parameters)
+            plan.add(stack_def)
+        return plan
+
     def build(self, stack_definitions):
         """ Kicks off the build/update of the stacks in the stack_definitions.
 
@@ -401,10 +410,7 @@ class Builder(object):
         self.parameters['Zones'] = \
             self.verify_zone_availability()[:self.max_zone_count]
         self.setup_prereqs()
-        for stack_def in stack_definitions:
-            # Combine the Builder parameters with the stack parameters
-            stack_def['parameters'].update(self.parameters)
-            self.plan.add(stack_def)
+        self.plan = self.build_plan(stack_definitions)
         logger.info("Launching stacks: %s", ', '.join(self.plan.keys()))
 
         attempts = 0
@@ -421,7 +427,7 @@ class Builder(object):
                 requires = stack_context.requires
                 pending_required = self.get_pending_stacks(requires)
                 if pending_required:
-                    logger.debug("Stack %s still waiting on required stacks: "
+                    logger.debug("Stack %s waiting on required stacks: "
                                  "%s", stack_name, ', '.join(pending_required))
                     continue
                 logger.debug("All required stacks are finished, building %s "

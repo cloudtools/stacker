@@ -243,8 +243,8 @@ class Builder(object):
             raise AttributeError("Stack class %s does not have a "
                                  "'rendered' "
                                  "attribute." % (stack_context.class_path))
-        blueprint = cls(name=stack_name, mappings=self.mappings,
-                        context=stack_context)
+        blueprint = cls(name=stack_name, context=stack_context,
+                        mappings=self.mappings)
         self.plan[stack_name].blueprint = blueprint
         return blueprint
 

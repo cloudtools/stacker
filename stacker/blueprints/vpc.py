@@ -188,8 +188,8 @@ class VPC(Blueprint):
 
     def create_template(self):
         self.cidr_block = netaddr.IPNetwork(
-            self.config.parameters['CidrBlock'])
-        self.zones = self.config.parameters['Zones']
+            self.context.parameters['CidrBlock'])
+        self.zones = self.context.parameters['Zones']
         self.template.add_output(
             Output("AvailabilityZones",
                    Value=Join(",", self.zones)))

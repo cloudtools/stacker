@@ -6,38 +6,41 @@ logger = logging.getLogger(__name__)
 from troposphere import Template, Parameter
 
 
-class StackTemplateBase(object):
+class Blueprint(object):
     """Base implementation for dealing with a troposphere template.
 
     :type name: string
-    :param name: A name for the stack template. If not provided, one
+    :param name: A name for the blueprint. If not provided, one
         will be created from the class name automatically.
+
+    :type context: BlueprintContext object
+    :param config: Used for configuring the Blueprint.
 
     :type mappings: dict
     :param mappings: Cloudformation Mappings to be used in the template.
 
-    :type config: dict
-    :param config: A dictionary which is used to pass in configuration info
-        to the stack.
     """
-    def __init__(self, name, config, mappings=None):
+    def __init__(self, name, context, mappings=None):
         self.name = name
         self.mappings = mappings
-        self.config = config
+        # TODO: This is only, currently, used for parameters. should probably
+        #       just pass parameters alone.
+        self.context = context
         self.outputs = {}
         self.reset_template()
 
     @property
     def parameters(self):
-        params = []
-        for param in self.template.parameters:
-            try:
-                params.append((param, self.config.parameters[param]))
-            except KeyError:
-                logger.debug("Parameter '%s' not found in config, skipping.",
-                             param)
-                continue
-        return params
+        return self.template.parameters
+
+    @property
+    def required_parameters(self):
+        """ Returns all parameters that do not have a default value. """
+        required = []
+        for k, v in self.parameters.items():
+            if not hasattr(v, 'Default'):
+                required.append((k, v))
+        return required
 
     def setup_parameters(self):
         t = self.template

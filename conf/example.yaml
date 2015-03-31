@@ -14,13 +14,13 @@ vpc_parameters: &vpc_parameters
 
 stacks:
   - name: vpc
-    class_path: stacker.stacks.vpc.VPC
+    class_path: stacker.blueprints.vpc.VPC
     parameters:
       InstanceType: m3.medium
       SshKeyName: default
       ImageName: NAT
   - name: bastion
-    class_path: stacker.stacks.bastion.Bastion
+    class_path: stacker.blueprints.bastion.Bastion
     parameters:
       # Extends the parameters dict with the contents of the vpc_parameters
       # anchor. Basically we're including all VPC Outputs in the parameters
@@ -36,7 +36,7 @@ stacks:
       SshKeyName: default
       ImageName: bastion
   - name: myDB
-    class_path: stacker.stacks.postgres.PostgresRDS
+    class_path: stacker.blueprints.postgres.PostgresRDS
     parameters:
       << : *vpc_parameters
       InstanceType: db.m3.medium
@@ -45,7 +45,7 @@ stacks:
       MasterUserPassword: ExamplePassword!
       DBName: db1
   - name: myWeb
-    class_path: stacker.stacks.asg.AutoscalingGroup
+    class_path: stacker.blueprints.asg.AutoscalingGroup
     parameters:
       << : *vpc_parameters
       InstanceType: m3.medium

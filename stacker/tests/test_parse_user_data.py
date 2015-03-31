@@ -2,7 +2,7 @@ import unittest
 
 import yaml
 
-from ..parse_user_data import cf_tokenize
+from ..tokenize_userdata import cf_tokenize
 
 
 class TestCfTokenize(unittest.TestCase):

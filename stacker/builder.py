@@ -13,6 +13,17 @@ from .plan import (Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED,
                    COMPLETE_STATUSES)
 
 
+class MissingParameterException(Exception):
+    def __init__(self, blueprint, parameters):
+        self.blueprint = blueprint
+        self.parameter = parameters
+        self.message = "Blueprint %s missing required parameters: %s" % (
+            blueprint, ', '.join(parameters))
+
+    def __str__(self):
+        return self.message
+
+
 class Builder(object):
     """ Responsible for building & coordinating CloudFormation stacks.
 
@@ -153,7 +164,7 @@ class Builder(object):
         stack.
         """
         params = {}
-        bp_params = blueprint.template.parameters
+        blueprint_params = blueprint.parameters
         for k, v in parameters.items():
             if k not in blueprint_params:
                 logger.debug("Template %s does not use parameter %s.",
@@ -166,11 +177,21 @@ class Builder(object):
                 self.get_outputs(stack_name)
                 value = self.outputs[stack_name][output]
             params[k] = value
-        required_params = [k for kv in blueprint.required_parameters]
+        # Deal w/ missing parameters
+        required_params = [k for k, v in blueprint.required_parameters]
         missing_params = list(set(required_params) - set(params.keys()))
         if existing_stack:
+            stack_params = {p.key: p.value for p in existing_stack.parameters}
             for p in missing_params:
-                # TODO: CONTINUE HERE                
+                if p in stack_params:
+                    value = stack_params[p]
+                    logger.debug("Using parameter %s from existing stack: %s",
+                                 p, value)
+                    params[p] = value
+        final_missing = list(set(required_params) - set(params.keys()))
+        if final_missing:
+            raise MissingParameterException(blueprint.name, final_missing)
+
         return params.items()
 
     def get_stack(self, stack_full_name):
@@ -238,7 +259,7 @@ class Builder(object):
         template_url = self.s3_stack_push(blueprint)
         tags = self.build_stack_tags(stack_context, template_url)
         parameters = self.resolve_parameters(stack_context.parameters,
-                                             blueprint)
+                                             blueprint, stack)
         submitted = False
         if not stack:
             submitted = self.create_stack(full_name, template_url, parameters,
@@ -255,9 +276,9 @@ class Builder(object):
 
         Updates the local output cache with the values it finds.
         """
-        logger.debug("Getting outputs from stack %s.", stack_name)
         if stack_name in self.outputs and not force:
             return
+        logger.debug("Getting outputs from stack %s.", stack_name)
 
         full_name = self.get_stack_full_name(stack_name)
         stack = self.conn.cloudformation.describe_stacks(full_name)[0]

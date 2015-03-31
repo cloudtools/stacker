@@ -31,21 +31,13 @@ class Blueprint(object):
 
     @property
     def parameters(self):
-        params = []
-        for param in self.template.parameters:
-            try:
-                params.append((param, self.context.parameters[param]))
-            except KeyError:
-                logger.debug("Parameter '%s' not found in context, skipping.",
-                             param)
-                continue
-        return params
+        return self.template.parameters
 
     @property
     def required_parameters(self):
         """ Returns all parameters that do not have a default value. """
         required = []
-        for k, v in self.parameters:
+        for k, v in self.parameters.items():
             if not hasattr(v, 'Default'):
                 required.append((k, v))
         return required

@@ -11,7 +11,9 @@ import netaddr
 
 from .base import Blueprint
 
-NAT_INSTANCE_NAME = "NatInstance%s"
+NAT_INSTANCE_NAME = 'NatInstance%s'
+GATEWAY = 'InternetGateway'
+GW_ATTACH = 'GatewayAttach'
 
 
 class VPC(Blueprint):
@@ -68,20 +70,17 @@ class VPC(Blueprint):
             VpcId=self.vpc_ref,
             DhcpOptionsId=Ref(dhcp_options)))
 
+    def create_gateway(self):
+        t = self.template
+        t.add_resource(ec2.InternetGateway(GATEWAY))
+        t.add_resource(ec2.VPCGatewayAttachment(
+            GW_ATTACH,
+            VpcId=self.vpc_ref,
+            InternetGatewayId=Ref(GATEWAY)))
+
     def create_network(self):
         t = self.template
-        # First create the gateway
-        gateway = t.add_resource(
-            ec2.InternetGateway('InternetGateway'))
-        # Make this an instance variable because a lot of other stuff
-        # has to depend on this in order to ensure the stack can delete
-        # properly every time.
-        self.gw_attach = t.add_resource(ec2.VPCGatewayAttachment(
-            'GatewayAttach',
-            VpcId=self.vpc_ref,
-            InternetGatewayId=Ref(gateway)))
-
-        # Create the default ACL
+        self.create_gateway()
         t.add_resource(ec2.NetworkAcl('DefaultACL',
                                       VpcId=self.vpc_ref))
 
@@ -107,7 +106,7 @@ class VPC(Blueprint):
                     '%sSubnet%s' % (name_prefix, name_suffix),
                     AvailabilityZone=zone,
                     VpcId=self.vpc_ref,
-                    DependsOn=self.gw_attach.title,
+                    DependsOn=GW_ATTACH,
                     CidrBlock=cidr_block))
                 self.subnets[subnet_type].append(subnet)
                 route_table = t.add_resource(ec2.RouteTable(
@@ -128,22 +127,22 @@ class VPC(Blueprint):
                         ec2.Route("%sRoute%s" % (name_prefix, name_suffix),
                                   RouteTableId=Ref(route_table),
                                   DestinationCidrBlock='0.0.0.0/0',
-                                  GatewayId=Ref(gateway)))
+                                  GatewayId=Ref(GATEWAY)))
 
                     self.create_nat_instance(zone, subnet)
                 else:
                     # Private subnets are where actual instances will live
                     # so their gateway needs to be through the nat instances
-                    nat_instance_name = NAT_INSTANCE_NAME % name_suffix
-                    t.add_resource(
-                        ec2.Route('%sRoute%s' % (name_prefix, name_suffix),
-                                  RouteTableId=Ref(route_table),
-                                  DestinationCidrBlock='0.0.0.0/0',
-                                  InstanceId=Ref(nat_instance_name)))
-            subnet_refs = [Ref(sn) for sn in self.subnets[subnet_type]]
+                    t.add_resource(ec2.Route(
+                        '%sRoute%s' % (name_prefix, name_suffix),
+                        RouteTableId=Ref(route_table),
+                        DestinationCidrBlock='0.0.0.0/0',
+                        InstanceId=Ref(NAT_INSTANCE_NAME % name_suffix)))
             t.add_output(
-                Output("%sSubnets" % name_prefix,
-                       Value=Join(",", subnet_refs)))
+                Output(
+                    "%sSubnets" % name_prefix,
+                    Value=Join(",",
+                               [Ref(sn) for sn in self.subnets[subnet_type]])))
             t.add_output(
                 Output("%sNetworkPrefixes" % name_prefix,
                        Value=Join(",", network_prefixes)))
@@ -177,13 +176,13 @@ class VPC(Blueprint):
             SourceDestCheck=False,
             KeyName=Ref('SshKeyName'),
             Tags=[ec2.Tag('Name', 'nat-gw%s' % suffix.lower())],
-            DependsOn=self.gw_attach.title))
+            DependsOn=GW_ATTACH))
 
         t.add_resource(ec2.EIP(
             'NATExternalIp%s' % suffix,
             Domain='vpc',
             InstanceId=Ref(nat_instance),
-            DependsOn=self.gw_attach.title))
+            DependsOn=GW_ATTACH))
         return nat_instance
 
     def create_template(self):

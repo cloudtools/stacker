@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-""" Launches AWS Cloudformation stacks from config.
+""" Launches or updates cloudformation stacks based on the given config.
+
+The script is smart enough to figure out if anything (the template, or
+parameters) has changed for a given stack. If not, it will skip that stack.
+
+Can also pull parameters from other stack's outputs.
 """
 
 import argparse

@@ -66,7 +66,6 @@ class PostgresRDS(Blueprint):
                 BackupRetentionPeriod=30,
                 DBName=Ref('DBName'),
                 DBInstanceClass=Ref('InstanceType'),
-                DBInstanceIdentifier=self.name,
                 DBSubnetGroupName=Ref(RDS_SUBNET_GROUP % self.name),
                 Engine='postgres',
                 EngineVersion='9.3.5',

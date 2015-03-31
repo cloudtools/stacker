@@ -10,12 +10,12 @@
 from troposphere import Ref, ec2, autoscaling, FindInMap
 from troposphere.autoscaling import Tag as ASTag
 
-from ..stack import StackTemplateBase
+from .base import Blueprint
 
 CLUSTER_SG_NAME = "BastionSecurityGroup"
 
 
-class Bastion(StackTemplateBase):
+class Bastion(Blueprint):
     PARAMETERS = {
         "VpcId": {"type": "AWS::EC2::VPC::Id", "description": "Vpc Id"},
         "DefaultSG": {"type": "AWS::EC2::SecurityGroup::Id",

@@ -9,12 +9,12 @@ from troposphere import Ref, Output, Join, FindInMap
 from troposphere import ec2
 import netaddr
 
-from ..stack import StackTemplateBase
+from .base import Blueprint
 
 NAT_INSTANCE_NAME = "NatInstance%s"
 
 
-class VPC(StackTemplateBase):
+class VPC(Blueprint):
     PARAMETERS = {
         "InstanceType": {
             "type": "String",
@@ -188,8 +188,8 @@ class VPC(StackTemplateBase):
 
     def create_template(self):
         self.cidr_block = netaddr.IPNetwork(
-            self.config.parameters['CidrBlock'])
-        self.zones = self.config.parameters['Zones']
+            self.context.parameters['CidrBlock'])
+        self.zones = self.context.parameters['Zones']
         self.template.add_output(
             Output("AvailabilityZones",
                    Value=Join(",", self.zones)))

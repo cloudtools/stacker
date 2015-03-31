@@ -1,14 +1,14 @@
 from troposphere import Ref, ec2, Output, GetAtt, Join
 from troposphere.rds import DBInstance, DBSubnetGroup
 
-from ..stack import StackTemplateBase
+from .base import Blueprint
 
 RDS_INSTANCE_NAME = "PostgresRDS%s"
 RDS_SUBNET_GROUP = "%sSubnetGroup"
 RDS_SG_NAME = "RdsSG%s"
 
 
-class PostgresRDS(StackTemplateBase):
+class PostgresRDS(Blueprint):
     PARAMETERS = {
         'VpcId': {'type': 'AWS::EC2::VPC::Id', 'description': 'Vpc Id'},
         'PrivateSubnets': {'type': 'List<AWS::EC2::Subnet::Id>',

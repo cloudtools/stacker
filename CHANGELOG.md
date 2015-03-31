@@ -1,5 +1,8 @@
 ## pending
 
+## 0.2.1 (2015-03-31)
+- Bah, typo in version string, fixing
+
 ## 0.2.0 (2015-03-31)
 
 - New taxonomy (GH-18)

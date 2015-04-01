@@ -53,3 +53,8 @@ stacks:
       MinSize: 2
       MaxSize: 2
       SshKeyName: default
+      # If commented out, no load balancer will be created.
+      ELBHostName: mysite
+      # Uncomment if you have a cert loaded in EC2 already and want to enable
+      # SSL on the load balancer.
+      #ELBCertName: mycert

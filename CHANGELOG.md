@@ -1,5 +1,9 @@
 ## pending
 
+## 0.2.2 (2015-03-31)
+
+- Allow AWS to generate the DBInstanceIdentifier
+
 ## 0.2.1 (2015-03-31)
 - Bah, typo in version string, fixing
 

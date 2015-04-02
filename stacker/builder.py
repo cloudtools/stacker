@@ -62,6 +62,21 @@ class Builder(object):
             self._conn = ConnectionManager(self.region)
         return self._conn
 
+    def get_bucket_location(self):
+        """ Determines what region the S3 bucket should be created in.
+
+        This is annoying - rather than creating the bucket in the region that
+        you are connected to, create_bucket needs a special extra argument.
+
+        Even worse, it uses the region for everywhere BUT us-east-1, which
+        is instead blank.
+        """
+        if self.region == 'us-east-1':
+            location = ''
+        else:
+            location = self.region
+        return location
+
     @property
     def cfn_bucket(self):
         if not getattr(self, '_cfn_bucket', None):
@@ -71,7 +86,9 @@ class Builder(object):
             except S3ResponseError, e:
                 if e.error_code == 'NoSuchBucket':
                     logger.debug("Creating bucket %s.", self.cfn_domain)
-                    self._cfn_bucket = s3.create_bucket(self.cfn_domain)
+                    self._cfn_bucket = s3.create_bucket(
+                        self.cfn_domain,
+                        location=self.get_bucket_location())
                 else:
                     logger.exception("Error creating bucket %s.",
                                      self.cfn_domain)

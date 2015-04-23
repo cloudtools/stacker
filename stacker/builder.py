@@ -7,8 +7,8 @@ from aws_helper.connection import ConnectionManager
 
 from boto.exception import S3ResponseError, BotoServerError
 
-from .util import (create_route53_zone, load_object_from_string,
-                   find_subnetable_zones)
+from .util import create_route53_zone, load_object_from_string
+
 from .plan import (Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED,
                    COMPLETE_STATUSES)
 
@@ -42,13 +42,11 @@ class Builder(object):
     allowing you to pull information from one stack and use it in another.
     """
 
-    def __init__(self, region, mappings=None, parameters=None,
-                 max_zone_count=None):
+    def __init__(self, region, mappings=None, parameters=None):
         self.region = region
         self.domain = parameters["BaseDomain"]
         self.mappings = mappings or {}
         self.parameters = parameters or {}
-        self.max_zone_count = max_zone_count
         self.cfn_domain = self.domain.replace('.', '-')
 
         self._conn = None
@@ -94,9 +92,6 @@ class Builder(object):
                                      self.cfn_domain)
                     raise
         return self._cfn_bucket
-
-    def verify_zone_availability(self):
-        return find_subnetable_zones(self.conn.vpc)
 
     def reset(self):
         self.plan = Plan()
@@ -347,8 +342,6 @@ class Builder(object):
         This is the main entry point for the Builder.
         """
         self.reset()
-        self.parameters['Zones'] = \
-            self.verify_zone_availability()[:self.max_zone_count]
         self.setup_prereqs()
         self.plan = self.build_plan(stack_definitions)
         logger.info("Launching stacks: %s", ', '.join(self.plan.keys()))

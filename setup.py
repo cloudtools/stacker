@@ -7,7 +7,6 @@ src_dir = os.path.dirname(__file__)
 install_requires = [
     'aws_helper>=0.2.0',
     'troposphere>=0.7.1',
-    'netaddr>=0.7.10',
     'boto>=2.25.0',
     'PyYAML>=3.11',
 ]

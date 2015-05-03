@@ -19,6 +19,14 @@ stacks:
       InstanceType: m3.medium
       SshKeyName: default
       ImageName: NAT
+      # Only build 2 AZs, can be overridden with -p on the command line
+      # Note: If you want more than 4 AZs you should add more subnets below
+      #       Also you need at least 2 AZs in order to use the DB because
+      #       of the fact that the DB blueprint uses MultiAZ
+      AZCount: 2
+      # Enough subnets for 4 AZs
+      PublicSubnets: 10.128.0.0/24,10.128.1.0/24,10.128.2.0/24,10.128.3.0/24
+      PrivateSubnets: 10.128.8.0/22,10.128.12.0/22,10.128.16.0/22,10.128.20.0/22
   - name: bastion
     class_path: stacker.blueprints.bastion.Bastion
     parameters:

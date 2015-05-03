@@ -8,7 +8,8 @@ from aws_helper.connection import ConnectionManager
 from boto.exception import S3ResponseError, BotoServerError
 
 from .util import (create_route53_zone, load_object_from_string,
-                   find_subnetable_zones)
+                   get_bucket_location)
+
 from .plan import (Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED,
                    COMPLETE_STATUSES)
 
@@ -22,6 +23,19 @@ class MissingParameterException(Exception):
 
     def __str__(self):
         return self.message
+
+
+def get_stack_full_name(cfn_domain, stack_name):
+    return "%s-%s" % (cfn_domain, stack_name)
+
+
+def stack_template_key_name(blueprint):
+    return "%s-%s.json" % (blueprint.name, blueprint.version)
+
+
+def stack_template_url(cfn_domain, blueprint):
+    key_name = stack_template_key_name(blueprint)
+    return "https://s3.amazonaws.com/%s/%s" % (cfn_domain, key_name)
 
 
 class Builder(object):
@@ -42,13 +56,11 @@ class Builder(object):
     allowing you to pull information from one stack and use it in another.
     """
 
-    def __init__(self, region, mappings=None, parameters=None,
-                 max_zone_count=None):
+    def __init__(self, region, mappings=None, parameters=None):
         self.region = region
         self.domain = parameters["BaseDomain"]
         self.mappings = mappings or {}
         self.parameters = parameters or {}
-        self.max_zone_count = max_zone_count
         self.cfn_domain = self.domain.replace('.', '-')
 
         self._conn = None
@@ -62,21 +74,6 @@ class Builder(object):
             self._conn = ConnectionManager(self.region)
         return self._conn
 
-    def get_bucket_location(self):
-        """ Determines what region the S3 bucket should be created in.
-
-        This is annoying - rather than creating the bucket in the region that
-        you are connected to, create_bucket needs a special extra argument.
-
-        Even worse, it uses the region for everywhere BUT us-east-1, which
-        is instead blank.
-        """
-        if self.region == 'us-east-1':
-            location = ''
-        else:
-            location = self.region
-        return location
-
     @property
     def cfn_bucket(self):
         if not getattr(self, '_cfn_bucket', None):
@@ -88,30 +85,22 @@ class Builder(object):
                     logger.debug("Creating bucket %s.", self.cfn_domain)
                     self._cfn_bucket = s3.create_bucket(
                         self.cfn_domain,
-                        location=self.get_bucket_location())
+                        location=get_bucket_location(self.region))
                 else:
                     logger.exception("Error creating bucket %s.",
                                      self.cfn_domain)
                     raise
         return self._cfn_bucket
 
-    def verify_zone_availability(self):
-        return find_subnetable_zones(self.conn.vpc)
-
     def reset(self):
         self.plan = Plan()
         self.outputs = {}
 
     def get_stack_full_name(self, stack_name):
-        return "%s-%s" % (self.cfn_domain, stack_name)
+        return get_stack_full_name(self.cfn_domain, stack_name)
 
-    def stack_template_key_name(self, stack_template):
-        return "%s-%s.json" % (stack_template.name, stack_template.version)
-
-    def stack_template_url(self, stack_template):
-        key_name = self.stack_template_key_name(stack_template)
-        return "https://s3.amazonaws.com/%s/%s" % (self.cfn_domain,
-                                                   key_name)
+    def stack_template_url(self, blueprint):
+        return stack_template_url(self.cfn_domain, blueprint)
 
     def s3_stack_push(self, blueprint, force=False):
         """ Pushes the rendered blueprint's template to S3.
@@ -121,7 +110,7 @@ class Builder(object):
 
         Returns the URL to the template in S3.
         """
-        key_name = self.stack_template_key_name(blueprint)
+        key_name = stack_template_key_name(blueprint)
         template_url = self.stack_template_url(blueprint)
         if self.cfn_bucket.get_key(key_name) and not force:
             logger.debug("Cloudformation template %s already exists.",
@@ -298,7 +287,10 @@ class Builder(object):
         logger.debug("Getting outputs from stack %s.", stack_name)
 
         full_name = self.get_stack_full_name(stack_name)
-        stack = self.conn.cloudformation.describe_stacks(full_name)[0]
+        stack = self.get_stack(full_name)
+        if not stack:
+            logger.debug("Stack %s does not exist, skipping.", full_name)
+            return
         stack_outputs = {}
         self.outputs[stack_name] = stack_outputs
         for output in stack.outputs:
@@ -347,8 +339,6 @@ class Builder(object):
         This is the main entry point for the Builder.
         """
         self.reset()
-        self.parameters['Zones'] = \
-            self.verify_zone_availability()[:self.max_zone_count]
         self.setup_prereqs()
         self.plan = self.build_plan(stack_definitions)
         logger.info("Launching stacks: %s", ', '.join(self.plan.keys()))

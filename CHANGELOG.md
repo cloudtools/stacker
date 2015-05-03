@@ -1,5 +1,7 @@
 ## pending
 
+- remove auto-subnet splitting in vpc stack
+
 ## 0.2.2 (2015-03-31)
 
 - Allow AWS to generate the DBInstanceIdentifier

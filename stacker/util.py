@@ -88,10 +88,31 @@ def load_object_from_string(fqcn):
     return getattr(sys.modules[module_path], object_name)
 
 
+def uppercase_first_letter(s):
+    """ Return string 's' with first character upper case. """
+    return s[0].upper() + s[1:]
+
+
 def cf_safe_name(name):
     """ Given a string, returns a name that is safe for use as a CloudFormation
     Resource. (ie: Only alphanumeric characters)
     """
     alphanumeric = r'[a-zA-Z0-9]+'
     parts = re.findall(alphanumeric, name)
-    return ''.join([part.capitalize() for part in parts])
+    return ''.join([uppercase_first_letter(part) for part in parts])
+
+
+def get_bucket_location(region):
+    """ Determines what region the S3 bucket should be created in.
+
+    This is annoying - rather than creating the bucket in the region that
+    you are connected to, create_bucket needs a special extra argument.
+
+    Even worse, it uses the region for everywhere BUT us-east-1, which
+    is instead blank.
+    """
+    if region == 'us-east-1':
+        location = ''
+    else:
+        location = region
+    return location

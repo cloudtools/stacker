@@ -33,18 +33,24 @@ if you'd like to play with something smaller. To launch the stacks, after
 installing stacker and loading your AWS API keys in your environment
 (AWS\_ACCESS\_KEY\_ID & AWS\_SECRET\_ACCESS\_KEY), call the following::
 
-    stacker -v -r us-east-1 -d example.com -p CidrBlock=10.128.0.0/16 conf/example.yaml
+    stacker -v -p BaseDomain=example.com -r us-east-1 -p AZCount=2 -p CidrBlock=10.128.0.0/16 example.com conf/example.yaml
 
 Here's the syntax help from the command::
 
   # stacker -h
-  usage: stacker [-h] [-r REGION] [-m MAX_ZONES] [-v] [-d DOMAIN]
-                 [-p PARAMETER=VALUE] [--stacks STACKNAME]
-                 config
+  usage: stacker [-h] [-r REGION] [-m MAX_ZONES] [-v] [-p PARAMETER=VALUE]
+                 [--stacks STACKNAME]
+                 namespace config
 
-  Launches AWS Cloudformation stacks from config.
+  Launches or updates cloudformation stacks based on the given config. The
+  script is smart enough to figure out if anything (the template, or parameters)
+  has changed for a given stack. If not, it will skip that stack. Can also pull
+  parameters from other stack's outputs.
 
   positional arguments:
+    namespace             The namespace for the stack collection. This will be
+                          used as the prefix to the cloudformation stacks as
+                          well as the s3 bucket where templates are stored.
     config                The config file where stack configuration is located.
                           Must be in yaml format.
 
@@ -59,13 +65,10 @@ Here's the syntax help from the command::
                           availability zones.
     -v, --verbose         Increase output verbosity. May be specified up to
                           twice.
-    -d DOMAIN, --domain DOMAIN
-                          The domain to run in. Gets converted into the
-                          BaseDomain Parameter for use in stack templates.
     -p PARAMETER=VALUE, --parameter PARAMETER=VALUE
-                          Adds parameters from the command line that can be
-                          used inside any of the stacks being built. Can be
-                          specified more than once.
+                          Adds parameters from the command line that can be used
+                          inside any of the stacks being built. Can be specified
+                          more than once.
     --stacks STACKNAME    Only work on the stacks given. Can be specified more
                           than once. If not specified then stacker will work on
                           all stacks in the config file.

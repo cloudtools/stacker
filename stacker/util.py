@@ -126,6 +126,13 @@ def handle_hooks(stage, hooks, region, namespace, mappings, parameters):
     builds the stacks.
     """
     if hooks:
+        hook_paths = []
+        for i, h in enumerate(hooks):
+            try:
+                hook_paths.append(h['path'])
+            except KeyError:
+                raise ValueError("%s hook #%d missing path." % (stage, i))
+
         hook_paths = [h['path'] for h in hooks]
         logger.info("Executing %s hooks: %s", stage, ", ".join(hook_paths))
         for hook in hooks:
@@ -146,9 +153,12 @@ def handle_hooks(stage, hooks, region, namespace, mappings, parameters):
                 if required:
                     raise
                 continue
-            if not result and required:
-                logger.error("Required hook %s failed. Return value: %s",
-                             hook['path'], result)
-                sys.exit(1)
+            if not result:
+                if required:
+                    logger.error("Required hook %s failed. Return value: %s",
+                                 hook['path'], result)
+                    sys.exit(1)
+                logger.warning("Non-required hook %s failed. Return value: %s",
+                               hook['path'], result)
     else:
         logger.debug("No %s hooks defined.", stage)

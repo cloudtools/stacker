@@ -133,7 +133,6 @@ def handle_hooks(stage, hooks, region, namespace, mappings, parameters):
             except KeyError:
                 raise ValueError("%s hook #%d missing path." % (stage, i))
 
-        hook_paths = [h['path'] for h in hooks]
         logger.info("Executing %s hooks: %s", stage, ", ".join(hook_paths))
         for hook in hooks:
             required = hook.get('required', True)

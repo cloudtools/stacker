@@ -113,4 +113,4 @@ class TestHooks(unittest.TestCase):
         hooks = [{'path': 'stacker.tests.test_util.exception_hook',
                   'required': False}]
         # Should pass
-        handle_hooks('fail', hooks, 'us-east-1', 'stage', {}, {})
+        handle_hooks('ignore_exception', hooks, 'us-east-1', 'stage', {}, {})

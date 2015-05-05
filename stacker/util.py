@@ -116,3 +116,48 @@ def get_bucket_location(region):
     else:
         location = region
     return location
+
+
+# TODO: perhaps make this a part of the builder?
+def handle_hooks(stage, hooks, region, namespace, mappings, parameters):
+    """ Used to handle pre/post_build hooks.
+
+    These are pieces of code that we want to run before/after the builder
+    builds the stacks.
+    """
+    if hooks:
+        hook_paths = []
+        for i, h in enumerate(hooks):
+            try:
+                hook_paths.append(h['path'])
+            except KeyError:
+                raise ValueError("%s hook #%d missing path." % (stage, i))
+
+        logger.info("Executing %s hooks: %s", stage, ", ".join(hook_paths))
+        for hook in hooks:
+            required = hook.get('required', True)
+            kwargs = hook.get('args', {})
+            try:
+                method = load_object_from_string(hook['path'])
+            except (AttributeError, ImportError):
+                logger.exception("Unable to load method at %s:", hook['path'])
+                if required:
+                    raise
+                continue
+            try:
+                result = method(region, namespace, mappings, parameters,
+                                **kwargs)
+            except Exception:
+                logger.exception("Method %s threw an exception:", hook['path'])
+                if required:
+                    raise
+                continue
+            if not result:
+                if required:
+                    logger.error("Required hook %s failed. Return value: %s",
+                                 hook['path'], result)
+                    sys.exit(1)
+                logger.warning("Non-required hook %s failed. Return value: %s",
+                               hook['path'], result)
+    else:
+        logger.debug("No %s hooks defined.", stage)

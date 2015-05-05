@@ -21,6 +21,7 @@ class VPC(Blueprint):
     PARAMETERS = {
         "AZCount": {
             "type": "Number",
+            "default": "2",
             "description": "The number of AZs to build the VPC in. NOTE: "
                            "this is used by stacker, not by cloudformation "
                            "directly."},

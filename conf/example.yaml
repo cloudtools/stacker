@@ -1,3 +1,14 @@
+# Hooks require a path.
+# If the build should stop when a hook fails, set required to true.
+# pre_build happens before the build
+# post_build happens after the build
+pre_build:
+  - path: stacker.hooks.route53.create_domain
+    required: true
+    # Additional args can be passed as a dict of key/value pairs in kwargs
+    # kwargs:
+# post_build:
+
 mappings:
   AmiMap:
     us-east-1:

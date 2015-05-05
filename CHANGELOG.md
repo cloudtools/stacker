@@ -1,6 +1,11 @@
 ## pending
 
-- remove auto-subnet splitting in vpc stack
+## 0.3.0 (2015-05-05)
+
+- remove auto-subnet splitting in vpc stack (GH-25)
+- create bucket in correct region (GH-17, GH-23)
+- asg sets optionally sets up ELB w/ (optional) SSL
+- Remove DNS core requirement, add plugin/hook system (GH-26)
 
 ## 0.2.2 (2015-03-31)
 

@@ -7,8 +7,7 @@ from aws_helper.connection import ConnectionManager
 
 from boto.exception import S3ResponseError, BotoServerError
 
-from .util import (create_route53_zone, load_object_from_string,
-                   get_bucket_location)
+from .util import load_object_from_string, get_bucket_location
 
 from .plan import (Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED,
                    COMPLETE_STATUSES)
@@ -25,17 +24,17 @@ class MissingParameterException(Exception):
         return self.message
 
 
-def get_stack_full_name(cfn_domain, stack_name):
-    return "%s-%s" % (cfn_domain, stack_name)
+def get_stack_full_name(cfn_base, stack_name):
+    return "%s-%s" % (cfn_base, stack_name)
 
 
 def stack_template_key_name(blueprint):
     return "%s-%s.json" % (blueprint.name, blueprint.version)
 
 
-def stack_template_url(cfn_domain, blueprint):
+def stack_template_url(bucket_name, blueprint):
     key_name = stack_template_key_name(blueprint)
-    return "https://s3.amazonaws.com/%s/%s" % (cfn_domain, key_name)
+    return "https://s3.amazonaws.com/%s/%s" % (bucket_name, key_name)
 
 
 class Builder(object):
@@ -56,12 +55,13 @@ class Builder(object):
     allowing you to pull information from one stack and use it in another.
     """
 
-    def __init__(self, region, mappings=None, parameters=None):
+    def __init__(self, region, namespace, mappings=None, parameters=None):
         self.region = region
-        self.domain = parameters["BaseDomain"]
         self.mappings = mappings or {}
         self.parameters = parameters or {}
-        self.cfn_domain = self.domain.replace('.', '-')
+        self.namespace = namespace
+        self.cfn_base = namespace.replace('.', '-').lower()
+        self.bucket_name = "stacker-%s" % self.cfn_base
 
         self._conn = None
         self._cfn_bucket = None
@@ -79,16 +79,20 @@ class Builder(object):
         if not getattr(self, '_cfn_bucket', None):
             s3 = self.conn.s3
             try:
-                self._cfn_bucket = s3.get_bucket(self.cfn_domain)
+                self._cfn_bucket = s3.get_bucket(self.bucket_name)
             except S3ResponseError, e:
                 if e.error_code == 'NoSuchBucket':
-                    logger.debug("Creating bucket %s.", self.cfn_domain)
+                    logger.debug("Creating bucket %s.", self.bucket_name)
                     self._cfn_bucket = s3.create_bucket(
-                        self.cfn_domain,
+                        self.bucket_name,
                         location=get_bucket_location(self.region))
+                elif e.error_code == 'AccessDenied':
+                    logger.exception("Access denied for bucket %s.",
+                                     self.bucket_name)
+                    raise
                 else:
                     logger.exception("Error creating bucket %s.",
-                                     self.cfn_domain)
+                                     self.bucket_name)
                     raise
         return self._cfn_bucket
 
@@ -97,10 +101,10 @@ class Builder(object):
         self.outputs = {}
 
     def get_stack_full_name(self, stack_name):
-        return get_stack_full_name(self.cfn_domain, stack_name)
+        return get_stack_full_name(self.cfn_base, stack_name)
 
     def stack_template_url(self, blueprint):
-        return stack_template_url(self.cfn_domain, blueprint)
+        return stack_template_url(self.bucket_name, blueprint)
 
     def s3_stack_push(self, blueprint, force=False):
         """ Pushes the rendered blueprint's template to S3.
@@ -118,10 +122,9 @@ class Builder(object):
             return template_url
         key = self.cfn_bucket.new_key(key_name)
         key.set_contents_from_string(blueprint.rendered)
+        logger.debug("Blueprint %s pushed to %s.", blueprint.name,
+                     template_url)
         return template_url
-
-    def setup_prereqs(self):
-        create_route53_zone(self.conn.route53, self.domain)
 
     def get_stack_status(self, stack_name):
         """ Get the status of a CloudFormation stack. """
@@ -262,6 +265,7 @@ class Builder(object):
             logger.debug("Stack %s in progress with %s status.",
                          full_name, stack.stack_status)
             return
+        logger.info("Launching stack %s now.", stack_name)
         template_url = self.s3_stack_push(blueprint)
         tags = self.build_stack_tags(stack_context, template_url)
         parameters = self.resolve_parameters(stack_context.parameters,
@@ -330,6 +334,7 @@ class Builder(object):
         for stack_def in stack_definitions:
             # Combine the Builder parameters with the stack parameters
             stack_def['parameters'].update(self.parameters)
+            stack_def['namespace'] = self.namespace
             plan.add(stack_def)
         return plan
 
@@ -339,7 +344,6 @@ class Builder(object):
         This is the main entry point for the Builder.
         """
         self.reset()
-        self.setup_prereqs()
         self.plan = self.build_plan(stack_definitions)
         logger.info("Launching stacks: %s", ', '.join(self.plan.keys()))
 
@@ -360,8 +364,6 @@ class Builder(object):
                     logger.debug("Stack %s waiting on required stacks: "
                                  "%s", stack_name, ', '.join(pending_required))
                     continue
-                logger.debug("All required stacks are finished, building %s "
-                             "now.", stack_name)
                 blueprint = self.build_blueprint(stack_context)
                 self.launch_stack(stack_name, blueprint)
             time.sleep(5)

@@ -8,6 +8,7 @@ def generate_definition(base_name, _id):
         "name": "%s.%d" % (base_name, _id),
         "class_path": "stacker.blueprints.%s.%s" % (base_name,
                                                     base_name.upper()),
+        "namespace": "example-com",
         "parameters": {
             "ExternalParameter": "fakeStack2::FakeParameter",
             "InstanceType": "m3.medium",

@@ -22,6 +22,7 @@ class AutoscalingGroup(Blueprint):
                       'description': 'Top level security group.'},
         'BaseDomain': {
             'type': 'String',
+            'default': '',
             'description': 'Base domain for the stack.'},
         'PrivateSubnets': {'type': 'List<AWS::EC2::Subnet::Id>',
                            'description': 'Subnets to deploy private '
@@ -62,11 +63,17 @@ class AutoscalingGroup(Blueprint):
             "CreateELB",
             Not(Equals(Ref("ELBHostName"), "")))
         self.template.add_condition(
+            "SetupDNS",
+            Not(Equals(Ref("BaseDomain"), "")))
+        self.template.add_condition(
             "UseSSL",
             Not(Equals(Ref("ELBCertName"), "")))
         self.template.add_condition(
             "CreateSSLELB",
             And(Condition("CreateELB"), Condition("UseSSL")))
+        self.template.add_condition(
+            "SetupELBDNS",
+            And(Condition("CreateELB"), Condition("SetupDNS")))
 
     def create_security_groups(self):
         t = self.template
@@ -156,7 +163,7 @@ class AutoscalingGroup(Blueprint):
                 TTL='120',
                 ResourceRecords=[
                     GetAtt(elb_name, 'DNSName')],
-                Condition="CreateELB"))
+                Condition="SetupELBDNS"))
 
     def create_autoscaling_group(self):
         name = "%sASG" % self.name

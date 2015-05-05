@@ -15,9 +15,11 @@ STATUS_COMPLETE = 2
 
 
 class BlueprintContext(object):
-    def __init__(self, name, class_path, requires=None, parameters=None):
+    def __init__(self, name, class_path, namespace, requires=None,
+                 parameters=None):
         self.name = name
         self.class_path = class_path
+        self.namespace = namespace
         self.parameters = parameters or {}
         requires = requires or []
         self._requires = set(requires)

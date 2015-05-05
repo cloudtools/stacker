@@ -14,7 +14,7 @@ class Blueprint(object):
         will be created from the class name automatically.
 
     :type context: BlueprintContext object
-    :param config: Used for configuring the Blueprint.
+    :param context: Used for configuring the Blueprint.
 
     :type mappings: dict
     :param mappings: Cloudformation Mappings to be used in the template.

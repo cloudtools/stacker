@@ -320,7 +320,6 @@ class Builder(object):
             if not local_status == STATUS_SUBMITTED:
                 logger.debug("Stack %s not submitted yet.", stack_name)
                 continue
-            logger.debug("Getting '%s' stack state from AWS.", stack_name)
             cf_status = self.get_stack_status(full_name)
             logger.debug("Stack %s cloudformation status: %s", full_name,
                          cf_status)

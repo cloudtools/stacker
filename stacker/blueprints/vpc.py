@@ -43,7 +43,12 @@ class VPC(Blueprint):
             "type": "AWS::EC2::KeyPair::KeyName"},
         "BaseDomain": {
             "type": "String",
+            "default": "",
             "description": "Base domain for the stack."},
+        "InternalDomain": {
+            "type": "String",
+            "default": "",
+            "description": "Internal domain name, if you have one."},
         "CidrBlock": {
             "type": "String",
             "description": "Base CIDR block for subnets.",
@@ -77,9 +82,10 @@ class VPC(Blueprint):
 
     def create_dhcp_options(self):
         t = self.template
+        domain_name = Join(" ", [Ref("BaseDomain"), Ref("InternalDomain")])
         dhcp_options = t.add_resource(ec2.DHCPOptions(
             'DHCPOptions',
-            DomainName=Ref("BaseDomain"),
+            DomainName=domain_name,
             DomainNameServers=['AmazonProvidedDNS', ]))
         t.add_resource(ec2.VPCDHCPOptionsAssociation(
             'DHCPAssociation',

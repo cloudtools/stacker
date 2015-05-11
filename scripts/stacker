@@ -16,6 +16,7 @@ import yaml
 
 from stacker.builder import Builder
 from stacker.util import handle_hooks
+from stacker.config import parse_config
 
 logger = logging.getLogger()
 
@@ -62,11 +63,24 @@ def key_value_arg(string):
     return {k: v}
 
 
+def yaml_file_type(yaml_file):
+    """ Reads a yaml file and returns the resulting data. """
+    with open(yaml_file) as fd:
+        return yaml.load(fd)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-r', '--region', default='us-east-1',
                         help="The AWS region to launch in. Default: "
                              "%(default)s")
+    parser.add_argument('-e', '--environment', type=yaml_file_type,
+                        default={},
+                        help="Path to a yaml environment file. The values in "
+                             "the environment file can be used in the stack "
+                             "config as if it were a string.Template type: "
+                             "https://docs.python.org/2/library/string.html"
+                             "#template-strings")
     parser.add_argument('-m', '--max-zones', type=int,
                         help="Gives you the ability to limit the # of zones "
                              "that resources will be launched in. If not "
@@ -92,7 +106,7 @@ def parse_args():
                              'will be used as the prefix to the '
                              'cloudformation stacks as well as the s3 bucket '
                              'where templates are stored.')
-    parser.add_argument('config',
+    parser.add_argument('config', type=argparse.FileType(),
                         help="The config file where stack configuration is "
                              "located. Must be in yaml format.")
     return parser.parse_args()
@@ -114,9 +128,9 @@ if __name__ == '__main__':
     args = parse_args()
     setup_logging(args.verbose)
     parameters = copy.deepcopy(args.parameters)
+    config_string = args.config.read()
 
-    with open(args.config) as fd:
-        config = yaml.load(fd)
+    config = parse_config(config_string, args.environment)
 
     mappings = config['mappings']
 

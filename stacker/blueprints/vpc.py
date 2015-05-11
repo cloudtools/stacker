@@ -3,8 +3,11 @@
 This includes the VPC, it's subnets, availability zones, etc.
 """
 
-from troposphere import Ref, Output, Join, FindInMap, Select, GetAZs
+from troposphere import (
+    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals
+)
 from troposphere import ec2
+from troposphere.route53 import HostedZone, HostedZoneVPCs
 
 from .base import Blueprint
 
@@ -60,6 +63,11 @@ class VPC(Blueprint):
             "default": "NAT"},
     }
 
+    def create_conditions(self):
+        self.template.add_condition(
+            "CreateInternalDomain",
+            Not(Equals(Ref("InternalDomain"), "")))
+
     def create_vpc(self):
         t = self.template
         t.add_resource(ec2.VPC(
@@ -69,6 +77,17 @@ class VPC(Blueprint):
 
         # Just about everything needs this, so storing it on the object
         t.add_output(Output("VpcId", Value=VPC_ID))
+
+    def create_internal_zone(self):
+        t = self.template
+        t.add_resource(
+            HostedZone(
+                "EmpireInternalZone",
+                Name="empire",
+                VPCs=HostedZoneVPCs(
+                    VPCId=Ref("VpcId"),
+                    VPCRegion=Ref("AWS::Region")),
+                Condition="CreateInternalDomain"))
 
     def create_default_security_group(self):
         t = self.template
@@ -201,7 +220,9 @@ class VPC(Blueprint):
         return nat_instance
 
     def create_template(self):
+        self.create_conditions()
         self.create_vpc()
+        self.create_internal_zone()
         self.create_default_security_group()
         self.create_dhcp_options()
         self.create_network()

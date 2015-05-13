@@ -1,5 +1,8 @@
-from troposphere import Ref, ec2, Output, GetAtt, Join
+from troposphere import (
+    Ref, ec2, Output, GetAtt, Not, Equals, Condition, And, Join
+)
 from troposphere.rds import DBInstance, DBSubnetGroup
+from troposphere.route53 import RecordSetType
 
 from .base import Blueprint
 
@@ -34,7 +37,35 @@ class PostgresRDS(Blueprint):
         'DBName': {
             'type': 'String',
             'description': 'Initial db to create in database.'},
+        "InternalZoneId": {
+            "type": "String",
+            "default": "",
+            "description": "Internal zone Id, if you have one."},
+        "InternalZoneName": {
+            "type": "String",
+            "default": "",
+            "description": "Internal zone name, if you have one."},
+        "InternalHostname": {
+            "type": "String",
+            "default": "",
+            "description": "Internal domain name, if you have one."},
     }
+
+    def create_conditions(self):
+        self.template.add_condition(
+            "HasInternalZone",
+            Not(Equals(Ref("InternalZoneId"), "")))
+        self.template.add_condition(
+            "HasInternalZoneName",
+            Not(Equals(Ref("InternalZoneName"), "")))
+        self.template.add_condition(
+            "HasInternalHostname",
+            Not(Equals(Ref("InternalHostname"), "")))
+        self.template.add_condition(
+            "CreateInternalHostname",
+            And(Condition("HasInternalZone"),
+                Condition("HasInternalZoneName"),
+                Condition("HasInternalHostname")))
 
     def create_subnet_group(self):
         t = self.template
@@ -74,16 +105,27 @@ class PostgresRDS(Blueprint):
                 MultiAZ=True,
                 PreferredBackupWindow=Ref('PreferredBackupWindow'),
                 VPCSecurityGroups=[Ref(RDS_SG_NAME % self.name), ]))
+
         endpoint = GetAtt(db_name, 'Endpoint.Address')
-        user = Ref("MasterUser")
-        passwd = Ref("MasterUserPassword")
-        dbname = Ref("DBName")
+
+        # Setup CNAME to db
+        t.add_resource(
+            RecordSetType(
+                '%sDnsRecord' % db_name,
+                # Appends a '.' to the end of the domain
+                HostedZoneId=Ref("InternalZoneId"),
+                Comment='RDS DB CNAME Record',
+                Name=Join(".", [Ref("InternalHostname"),
+                          Ref("InternalZoneName")]),
+                Type='CNAME',
+                TTL='120',
+                ResourceRecords=[endpoint],
+                Condition="CreateInternalHostname"))
         t.add_output(Output('DBAddress', Value=endpoint))
-        db_url = Join("", ["postgres://", user, ":", passwd, "@", endpoint,
-                           "/", dbname])
-        t.add_output(Output('DBURL', Value=db_url))
+        t.add_output(Output('DBCname', Value=Ref("%sDnsRecord" % db_name)))
 
     def create_template(self):
+        self.create_conditions()
         self.create_subnet_group()
         self.create_security_group()
         self.create_rds()

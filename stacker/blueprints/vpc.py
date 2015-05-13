@@ -83,11 +83,15 @@ class VPC(Blueprint):
         t.add_resource(
             HostedZone(
                 "EmpireInternalZone",
-                Name="empire",
-                VPCs=HostedZoneVPCs(
-                    VPCId=Ref("VpcId"),
-                    VPCRegion=Ref("AWS::Region")),
+                Name=Ref("InternalDomain"),
+                VPCs=[HostedZoneVPCs(
+                    VPCId=VPC_ID,
+                    VPCRegion=Ref("AWS::Region"))],
                 Condition="CreateInternalDomain"))
+        t.add_output(Output("InternalZoneId",
+                     Value=Ref("EmpireInternalZone")))
+        t.add_output(Output("InternalZoneName",
+                     Value=Ref("InternalDomain")))
 
     def create_default_security_group(self):
         t = self.template

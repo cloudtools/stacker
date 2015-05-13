@@ -38,6 +38,10 @@ stacks:
       # Enough subnets for 4 AZs
       PublicSubnets: 10.128.0.0/24,10.128.1.0/24,10.128.2.0/24,10.128.3.0/24
       PrivateSubnets: 10.128.8.0/22,10.128.12.0/22,10.128.16.0/22,10.128.20.0/22
+      # Uncomment if you want an internal hosted zone for the VPC
+      # If provided, it will be added to the dns search path of the DHCP
+      # Options
+      #InternalDomain: internal
   - name: bastion
     class_path: stacker.blueprints.bastion.Bastion
     parameters:
@@ -63,6 +67,12 @@ stacks:
       MasterUser: dbuser
       MasterUserPassword: ExamplePassword!
       DBName: db1
+      # If the following are uncommented and you set an InternalDomain above
+      # in the VPC a CNAME alias of InternalHostname will be setup pointing at
+      # the database.
+      #InternalZoneId: vpc::InternalZoneId
+      #InternalZoneName: vpc::InternalZoneName
+      #InternalHostname: mydb
   - name: myWeb
     class_path: stacker.blueprints.asg.AutoscalingGroup
     parameters:

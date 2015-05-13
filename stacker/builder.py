@@ -222,7 +222,8 @@ class Builder(object):
             self.get_stack_full_name(s) for s in stack_context.requires]
         logger.debug("Stack %s required stacks: %s",
                      stack_context.name, requires)
-        tags = {'template_url': template_url}
+        tags = {'template_url': template_url,
+                'stacker_namespace': self.namespace}
         if requires:
             tags['required_stacks'] = ':'.join(requires)
 

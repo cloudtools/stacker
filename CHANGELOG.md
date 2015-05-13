@@ -1,5 +1,11 @@
 ## pending
 
+## 0.4.0 (2015-05-13)
+
+- Optional internal DNS Zone on vpc blueprint [GH-29]
+- Add environment concept [GH-27]
+- Optional internal zone cname for rds databases [GH-30]
+
 ## 0.3.0 (2015-05-05)
 
 - remove auto-subnet splitting in vpc stack (GH-25)

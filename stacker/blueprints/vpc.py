@@ -4,7 +4,7 @@ This includes the VPC, it's subnets, availability zones, etc.
 """
 
 from troposphere import (
-    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals
+    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags
 )
 from troposphere import ec2
 from troposphere.route53 import HostedZone, HostedZoneVPCs
@@ -147,7 +147,8 @@ class VPC(Blueprint):
                     AvailabilityZone=az,
                     VpcId=vpc_id,
                     DependsOn=GW_ATTACH,
-                    CidrBlock=Select(i, Ref("%sSubnets" % name_prefix))))
+                    CidrBlock=Select(i, Ref("%sSubnets" % name_prefix)),
+                    Tags=Tags(type=net_type)))
                 route_table_name = "%sRouteTable%s" % (name_prefix,
                                                        name_suffix)
                 t.add_resource(ec2.RouteTable(

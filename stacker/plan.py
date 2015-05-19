@@ -1,9 +1,11 @@
+import copy
+from collections import (
+    OrderedDict,
+    Iterable,
+)
 import logging
 
 logger = logging.getLogger(__name__)
-
-import copy
-from collections import OrderedDict, Iterable
 
 INPROGRESS_STATUSES = ('CREATE_IN_PROGRESS',
                        'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS',

@@ -1,17 +1,25 @@
+import copy
 import logging
 import time
-import copy
-
-logger = logging.getLogger(__name__)
 
 from aws_helper.connection import ConnectionManager
+from boto.exception import (
+    BotoServerError,
+    S3ResponseError,
+)
 
-from boto.exception import S3ResponseError, BotoServerError
+from .plan import (
+    Plan,
+    INPROGRESS_STATUSES,
+    STATUS_SUBMITTED,
+    COMPLETE_STATUSES,
+)
+from .util import (
+    get_bucket_location,
+    load_object_from_string,
+)
 
-from .util import load_object_from_string, get_bucket_location
-
-from .plan import (Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED,
-                   COMPLETE_STATUSES)
+logger = logging.getLogger(__name__)
 
 
 class MissingParameterException(Exception):

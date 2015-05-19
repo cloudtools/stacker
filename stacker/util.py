@@ -1,13 +1,12 @@
-import logging
-
-logger = logging.getLogger(__name__)
-
-import time
-import re
 import importlib
+import logging
+import re
 import sys
+import time
 
 from boto.route53.record import ResourceRecordSets
+
+logger = logging.getLogger(__name__)
 
 
 def retry_with_backoff(function, args=None, kwargs=None, attempts=5,

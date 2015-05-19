@@ -1,7 +1,6 @@
+import yaml
 from string import Template
 from StringIO import StringIO
-
-import yaml
 
 
 class MissingEnvironment(Exception):

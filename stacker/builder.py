@@ -1,5 +1,6 @@
 import logging
 import time
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +15,10 @@ from .plan import (Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED,
 
 
 class MissingParameterException(Exception):
-    def __init__(self, blueprint, parameters):
-        self.blueprint = blueprint
-        self.parameter = parameters
-        self.message = "Blueprint %s missing required parameters: %s" % (
-            blueprint, ', '.join(parameters))
+    def __init__(self, parameters):
+        self.parameters = parameters
+        self.message = ("Missing required parameters: %s" %
+                        ', '.join(parameters))
 
     def __str__(self):
         return self.message
@@ -35,6 +35,73 @@ def stack_template_key_name(blueprint):
 def stack_template_url(bucket_name, blueprint):
     key_name = stack_template_key_name(blueprint)
     return "https://s3.amazonaws.com/%s/%s" % (bucket_name, key_name)
+
+
+def gather_parameters(stack_def, builder_parameters):
+    """ Merges builder provided & stack defined parameters.
+
+    Ensures that more specificly defined parameters (ie: parameters defined
+    specifically for the given stack: stack_name::parameter) override less
+    specific parameters provided by the builder.
+
+    Order of precedence:
+        - builder defined stack specific (stack_name::parameter)
+        - builder defined non-specific (parameter)
+        - stack_def defined
+    """
+    parameters = copy.deepcopy(stack_def.get('parameters', {}))
+    stack_specific_params = {}
+    for key, value in builder_parameters.iteritems():
+        stack = None
+        if "::" in key:
+            stack, key = key.split("::", 1)
+        if not stack:
+            # Non-stack specific, go ahead and add it
+            parameters[key] = value
+            continue
+        # Gather stack specific params for later
+        if stack == stack_def['name']:
+            stack_specific_params[key] = value
+    # Now update stack parameters with the stack specific parameters
+    # ensuring they override generic parameters
+    parameters.update(stack_specific_params)
+    return parameters
+
+
+def handle_missing_parameters(params, required_params, existing_stack=None):
+    """ Handles any missing parameters.
+
+    If an existing_stack is provided, look up missing parameters there.
+
+    Args:
+        params (dict): key/value dictionary of stack definition parameters
+        required_params (list): A list of required parameter names.
+        existing_stack (Stack): A boto.cloudformation.stack.Stack object.
+                                If provided, will be searched for any
+                                missing parameters.
+
+    Returns:
+        list of tuples: The final list of key/value pairs returned as a
+                        list of tuples.
+
+    Raises:
+        MissingParameterException: Raised if a required parameter is
+                                   still missing.
+    """
+    missing_params = list(set(required_params) - set(params.keys()))
+    if existing_stack:
+        stack_params = {p.key: p.value for p in existing_stack.parameters}
+        for p in missing_params:
+            if p in stack_params:
+                value = stack_params[p]
+                logger.debug("Using parameter %s from existing stack: %s",
+                             p, value)
+                params[p] = value
+    final_missing = list(set(required_params) - set(params.keys()))
+    if final_missing:
+        raise MissingParameterException(final_missing)
+
+    return params.items()
 
 
 class Builder(object):
@@ -164,13 +231,23 @@ class Builder(object):
         self.plan[stack_name].blueprint = blueprint
         return blueprint
 
-    def resolve_parameters(self, parameters, blueprint, existing_stack=None):
+    def resolve_parameters(self, parameters, blueprint):
         """ Resolves parameters for a given blueprint.
 
         Given a list of parameters, first discard any parameters that the
         blueprint does not use. Then, if a remaining parameter is in the format
         <stack_name>::<output_name>, pull that output from the foreign
         stack.
+
+        Args:
+            parameters (dict): A dictionary of parameters provided by the
+                               stack definition
+            blueprint (Blueprint): A stacker.blueprint.base.Blueprint object
+                                   that is having the parameters applied to
+                                   it.
+
+        Returns:
+            dict: The resolved parameters.
         """
         params = {}
         blueprint_params = blueprint.parameters
@@ -186,22 +263,7 @@ class Builder(object):
                 self.get_outputs(stack_name)
                 value = self.outputs[stack_name][output]
             params[k] = value
-        # Deal w/ missing parameters
-        required_params = [k for k, v in blueprint.required_parameters]
-        missing_params = list(set(required_params) - set(params.keys()))
-        if existing_stack:
-            stack_params = {p.key: p.value for p in existing_stack.parameters}
-            for p in missing_params:
-                if p in stack_params:
-                    value = stack_params[p]
-                    logger.debug("Using parameter %s from existing stack: %s",
-                                 p, value)
-                    params[p] = value
-        final_missing = list(set(required_params) - set(params.keys()))
-        if final_missing:
-            raise MissingParameterException(blueprint.name, final_missing)
-
-        return params.items()
+        return params
 
     def get_stack(self, stack_full_name):
         """ Give a stacks full name, query for the boto Stack object.
@@ -270,7 +332,10 @@ class Builder(object):
         template_url = self.s3_stack_push(blueprint)
         tags = self.build_stack_tags(stack_context, template_url)
         parameters = self.resolve_parameters(stack_context.parameters,
-                                             blueprint, stack)
+                                             blueprint)
+        required_params = [k for k, v in blueprint.required_parameters]
+        parameters = handle_missing_parameters(parameters, required_params,
+                                               stack)
         submitted = False
         if not stack:
             submitted = self.create_stack(full_name, template_url, parameters,
@@ -333,8 +398,9 @@ class Builder(object):
         plan = Plan()
         for stack_def in stack_definitions:
             # Combine the Builder parameters with the stack parameters
-            stack_def['parameters'].update(self.parameters)
             stack_def['namespace'] = self.namespace
+            stack_def['parameters'] = gather_parameters(stack_def,
+                                                        self.parameters)
             plan.add(stack_def)
         return plan
 

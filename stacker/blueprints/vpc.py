@@ -119,11 +119,13 @@ class VPC(Blueprint):
         dhcp_options = t.add_resource(ec2.DHCPOptions(
             'DHCPOptions',
             DomainName=domain_name,
-            DomainNameServers=['AmazonProvidedDNS', ]))
+            DomainNameServers=['AmazonProvidedDNS', ],
+            Condition="CreateInternalDomain"))
         t.add_resource(ec2.VPCDHCPOptionsAssociation(
             'DHCPAssociation',
             VpcId=VPC_ID,
-            DhcpOptionsId=Ref(dhcp_options)))
+            DhcpOptionsId=Ref(dhcp_options),
+            Condition="CreateInternalDomain"))
 
     def create_gateway(self):
         t = self.template

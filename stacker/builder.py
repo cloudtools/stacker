@@ -306,6 +306,7 @@ class Builder(object):
                 'stacker_namespace': self.namespace}
         if requires:
             tags['required_stacks'] = ':'.join(requires)
+        return tags
 
     def create_stack(self, full_name, template_url, parameters, tags):
         """ Creates a stack in CloudFormation """

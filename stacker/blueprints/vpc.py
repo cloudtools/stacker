@@ -88,10 +88,20 @@ class VPC(Blueprint):
                     VPCId=VPC_ID,
                     VPCRegion=Ref("AWS::Region"))],
                 Condition="CreateInternalDomain"))
-        t.add_output(Output("InternalZoneId",
-                     Value=Ref("EmpireInternalZone")))
-        t.add_output(Output("InternalZoneName",
-                     Value=Ref("InternalDomain")))
+        t.add_output(
+            Output(
+                "InternalZoneId",
+                Value=Ref("EmpireInternalZone"),
+                Condition="CreateInternalDomain",
+            )
+        )
+        t.add_output(
+            Output(
+                "InternalZoneName",
+                Value=Ref("InternalDomain"),
+                Condition="CreateInternalDomain",
+            )
+        )
 
     def create_default_security_group(self):
         t = self.template

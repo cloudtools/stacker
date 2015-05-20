@@ -82,7 +82,7 @@ class VPC(Blueprint):
         t = self.template
         t.add_resource(
             HostedZone(
-                "EmpireInternalZone",
+                "InternalZone",
                 Name=Ref("InternalDomain"),
                 VPCs=[HostedZoneVPCs(
                     VPCId=VPC_ID,
@@ -91,7 +91,7 @@ class VPC(Blueprint):
         t.add_output(
             Output(
                 "InternalZoneId",
-                Value=Ref("EmpireInternalZone"),
+                Value=Ref("InternalZone"),
                 Condition="CreateInternalDomain",
             )
         )

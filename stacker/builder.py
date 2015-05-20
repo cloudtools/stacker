@@ -23,13 +23,20 @@ logger = logging.getLogger(__name__)
 
 
 class MissingParameterException(Exception):
-    def __init__(self, parameters):
-        self.parameters = parameters
-        self.message = ("Missing required parameters: %s" %
-                        ', '.join(parameters))
 
-    def __str__(self):
-        return self.message
+    def __init__(self, parameters, *args, **kwargs):
+        self.parameters = parameters
+        message = 'Missing required parameters: %s' % (
+            ', '.join(parameters),
+        )
+        super(MissingParameterException, self).__init__(message, *args, **kwargs)
+
+
+class ParameterDoesNotExist(Exception):
+
+    def __init__(self, parameter, *args, **kwargs):
+        message = 'Parameter: "%s" does not exist in output' % (parameter,)
+        super(ParameterDoesNotExist, self).__init__(message, *args, **kwargs)
 
 
 def get_stack_full_name(cfn_base, stack_name):
@@ -268,8 +275,11 @@ class Builder(object):
             if isinstance(value, basestring) and '::' in value:
                 # Get from the Output of another stack in the stack_map
                 stack_name, output = value.split('::')
-                self.get_outputs(stack_name)
-                value = self.outputs[stack_name][output]
+                stack_outputs = self.get_outputs(stack_name)
+                try:
+                    value = stack_outputs[output]
+                except KeyError:
+                    raise ParameterDoesNotExist(value)
             params[k] = value
         return params
 
@@ -374,7 +384,7 @@ class Builder(object):
         for output in stack.outputs:
             logger.debug("    %s: %s", output.key, output.value)
             stack_outputs[output.key] = output.value
-        return self.outputs
+        return self.outputs[stack_name]
 
     def sync_plan_status(self):
         """ Updates the status of each stack in the local plan.

@@ -1,10 +1,7 @@
 import hashlib
 import logging
 
-from troposphere import (
-    Parameter,
-    Template,
-)
+from troposphere import Parameter, Template
 
 logger = logging.getLogger(__name__)
 

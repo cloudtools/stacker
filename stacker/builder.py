@@ -3,21 +3,10 @@ import logging
 import time
 
 from aws_helper.connection import ConnectionManager
-from boto.exception import (
-    BotoServerError,
-    S3ResponseError,
-)
+from boto.exception import BotoServerError, S3ResponseError
 
-from .plan import (
-    Plan,
-    INPROGRESS_STATUSES,
-    STATUS_SUBMITTED,
-    COMPLETE_STATUSES,
-)
-from .util import (
-    get_bucket_location,
-    load_object_from_string,
-)
+from .plan import Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED, COMPLETE_STATUSES
+from .util import get_bucket_location, load_object_from_string
 
 logger = logging.getLogger(__name__)
 

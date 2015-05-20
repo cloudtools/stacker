@@ -65,7 +65,10 @@ class VPC(Blueprint):
 
     def create_conditions(self):
         self.template.add_condition(
-            "CreateInternalDomain",
+            "NoHostedZones",
+            Equals(Ref("InternalDomain"), ""))
+        self.template.add_condition(
+            "HasHostedZones",
             Not(Equals(Ref("InternalDomain"), "")))
 
     def create_vpc(self):
@@ -87,21 +90,17 @@ class VPC(Blueprint):
                 VPCs=[HostedZoneVPCs(
                     VPCId=VPC_ID,
                     VPCRegion=Ref("AWS::Region"))],
-                Condition="CreateInternalDomain"))
+                Condition="HasHostedZones"))
         t.add_output(
             Output(
                 "InternalZoneId",
                 Value=Ref("InternalZone"),
-                Condition="CreateInternalDomain",
-            )
-        )
+                Condition="HasHostedZones"))
         t.add_output(
             Output(
                 "InternalZoneName",
                 Value=Ref("InternalDomain"),
-                Condition="CreateInternalDomain",
-            )
-        )
+                Condition="HasHostedZones"))
 
     def create_default_security_group(self):
         t = self.template
@@ -113,19 +112,35 @@ class VPC(Blueprint):
             Output('DefaultSG',
                    Value=Ref(DEFAULT_SG)))
 
-    def create_dhcp_options(self):
+    def _dhcp_options_hosted_zones(self):
         t = self.template
         domain_name = Join(" ", [Ref("BaseDomain"), Ref("InternalDomain")])
         dhcp_options = t.add_resource(ec2.DHCPOptions(
-            'DHCPOptions',
+            'DHCPOptionsWithDNS',
             DomainName=domain_name,
             DomainNameServers=['AmazonProvidedDNS', ],
-            Condition="CreateInternalDomain"))
+            Condition="HasHostedZones"))
         t.add_resource(ec2.VPCDHCPOptionsAssociation(
-            'DHCPAssociation',
+            'DHCPAssociationWithDNS',
             VpcId=VPC_ID,
             DhcpOptionsId=Ref(dhcp_options),
-            Condition="CreateInternalDomain"))
+            Condition="HasHostedZones"))
+
+    def _dhcp_options_no_hosted_zones(self):
+        t = self.template
+        dhcp_options = t.add_resource(ec2.DHCPOptions(
+            'DHCPOptionsNoDNS',
+            DomainNameServers=['AmazonProvidedDNS', ],
+            Condition="NoHostedZones"))
+        t.add_resource(ec2.VPCDHCPOptionsAssociation(
+            'DHCPAssociationNoDNS',
+            VpcId=VPC_ID,
+            DhcpOptionsId=Ref(dhcp_options),
+            Condition="NoHostedZones"))
+
+    def create_dhcp_options(self):
+        self._dhcp_options_hosted_zones()
+        self._dhcp_options_no_hosted_zones()
 
     def create_gateway(self):
         t = self.template

@@ -371,7 +371,8 @@ class Builder(object):
         Updates the local output cache with the values it finds.
         """
         if stack_name in self.outputs and not force:
-            return
+            return self.outputs[stack_name]
+
         logger.debug("Getting outputs from stack %s.", stack_name)
 
         full_name = self.get_stack_full_name(stack_name)

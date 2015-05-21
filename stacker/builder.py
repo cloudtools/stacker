@@ -146,15 +146,20 @@ class Builder(object):
         return self._conn
 
     @property
+    def s3_conn(self):
+        if not getattr(self, '_s3_conn', None):
+            self._s3_conn = ConnectionManager().s3
+        return self._s3_conn
+
+    @property
     def cfn_bucket(self):
         if not getattr(self, '_cfn_bucket', None):
-            s3 = self.conn.s3
             try:
-                self._cfn_bucket = s3.get_bucket(self.bucket_name)
+                self._cfn_bucket = self.s3_conn.get_bucket(self.bucket_name)
             except S3ResponseError, e:
                 if e.error_code == 'NoSuchBucket':
                     logger.debug("Creating bucket %s.", self.bucket_name)
-                    self._cfn_bucket = s3.create_bucket(
+                    self._cfn_bucket = self.s3_conn.create_bucket(
                         self.bucket_name,
                         location=get_bucket_location(self.region))
                 elif e.error_code == 'AccessDenied':

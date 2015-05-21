@@ -4,8 +4,9 @@ import string
 import os
 import Queue
 
+from stacker.context import Context
 from stacker.util import (
-    get_bucket_location, cf_safe_name, load_object_from_string,
+    cf_safe_name, load_object_from_string,
     camel_to_snake, handle_hooks)
 
 regions = ['us-east-1', 'cn-north-1', 'ap-northeast-1', 'eu-west-1',
@@ -14,12 +15,6 @@ regions = ['us-east-1', 'cn-north-1', 'ap-northeast-1', 'eu-west-1',
 
 
 class TestUtil(unittest.TestCase):
-    def test_get_bucket_location(self):
-        for r in regions:
-            expected = r
-            if r == "us-east-1":
-                expected = ""
-            self.assertEqual(get_bucket_location(r), expected)
 
     def test_cf_safe_name(self):
         tests = (
@@ -67,35 +62,39 @@ def exception_hook(*args):
 
 
 class TestHooks(unittest.TestCase):
+
+    def setUp(self):
+        self.context = Context('namespace')
+
     def test_empty_hook_stage(self):
         hooks = []
-        handle_hooks('fake', hooks, 'us-east-1', 'stage', {}, {})
+        handle_hooks('fake', hooks, 'us-east-1', self.context)
         self.assertTrue(hook_queue.empty())
 
     def test_missing_required_hook(self):
         hooks = [{'path': 'not.a.real.path', 'required': True}]
         with self.assertRaises(ImportError):
-            handle_hooks('missing', hooks, 'us-east-1', 'stage', {}, {})
+            handle_hooks('missing', hooks, 'us-east-1', self.context)
 
     def test_missing_required_hook_method(self):
         hooks = [{'path': 'stacker.hooks.blah', 'required': True}]
         with self.assertRaises(AttributeError):
-            handle_hooks('missing', hooks, 'us-east-1', 'stage', {}, {})
+            handle_hooks('missing', hooks, 'us-east-1', self.context)
 
     def test_missing_non_required_hook_method(self):
         hooks = [{'path': 'stacker.hooks.blah', 'required': False}]
-        handle_hooks('missing', hooks, 'us-east-1', 'stage', {}, {})
+        handle_hooks('missing', hooks, 'us-east-1', self.context)
         self.assertTrue(hook_queue.empty())
 
     def test_default_required_hook(self):
         hooks = [{'path': 'stacker.hooks.blah'}]
         with self.assertRaises(AttributeError):
-            handle_hooks('missing', hooks, 'us-east-1', 'stage', {}, {})
+            handle_hooks('missing', hooks, 'us-east-1', self.context)
 
     def test_valid_hook(self):
         hooks = [{'path': 'stacker.tests.test_util.mock_hook',
                   'required': True}]
-        handle_hooks('missing', hooks, 'us-east-1', 'stage', {}, {})
+        handle_hooks('missing', hooks, 'us-east-1', self.context)
         good = hook_queue.get_nowait()
         self.assertEqual(good[0], 'us-east-1')
         with self.assertRaises(Queue.Empty):
@@ -105,12 +104,12 @@ class TestHooks(unittest.TestCase):
         hooks = [{'path': 'stacker.tests.test_util.fail_hook',
                   'required': True}]
         with self.assertRaises(SystemExit):
-            handle_hooks('fail', hooks, 'us-east-1', 'stage', {}, {})
+            handle_hooks('fail', hooks, 'us-east-1', self.context)
         hooks = [{'path': 'stacker.tests.test_util.exception_hook',
                   'required': True}]
         with self.assertRaises(Exception):
-            handle_hooks('fail', hooks, 'us-east-1', 'stage', {}, {})
+            handle_hooks('fail', hooks, 'us-east-1', self.context)
         hooks = [{'path': 'stacker.tests.test_util.exception_hook',
                   'required': False}]
         # Should pass
-        handle_hooks('ignore_exception', hooks, 'us-east-1', 'stage', {}, {})
+        handle_hooks('ignore_exception', hooks, 'us-east-1', self.context)

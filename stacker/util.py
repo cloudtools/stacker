@@ -101,24 +101,8 @@ def cf_safe_name(name):
     return ''.join([uppercase_first_letter(part) for part in parts])
 
 
-def get_bucket_location(region):
-    """ Determines what region the S3 bucket should be created in.
-
-    This is annoying - rather than creating the bucket in the region that
-    you are connected to, create_bucket needs a special extra argument.
-
-    Even worse, it uses the region for everywhere BUT us-east-1, which
-    is instead blank.
-    """
-    if region == 'us-east-1':
-        location = ''
-    else:
-        location = region
-    return location
-
-
 # TODO: perhaps make this a part of the builder?
-def handle_hooks(stage, hooks, region, namespace, mappings, parameters):
+def handle_hooks(stage, hooks, region, context):
     """ Used to handle pre/post_build hooks.
 
     These are pieces of code that we want to run before/after the builder
@@ -147,8 +131,13 @@ def handle_hooks(stage, hooks, region, namespace, mappings, parameters):
                 raise
             continue
         try:
-            result = method(region, namespace, mappings, parameters,
-                            **kwargs)
+            result = method(
+                region,
+                context.namespace,
+                context.mappings,
+                context.parameters,
+                **kwargs
+            )
         except Exception:
             logger.exception("Method %s threw an exception:", hook['path'])
             if required:

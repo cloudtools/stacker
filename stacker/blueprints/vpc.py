@@ -171,7 +171,7 @@ class VPC(Blueprint):
         subnets = {'public': [], 'private': []}
         net_types = subnets.keys()
         zones = []
-        for i in range(int(self.context.parameters["AZCount"])):
+        for i in range(int(self.parameters["AZCount"])):
             az = Select(i, GetAZs(""))
             zones.append(az)
             name_suffix = i

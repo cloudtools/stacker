@@ -1,74 +1,61 @@
 import unittest
 
-from stacker.plan import BlueprintContext, Plan
+import mock
+
+from stacker.plan import Step, Plan
+from stacker.stack import Stack
+
+from .factories import generate_definition
+
+count = 0
 
 
-def generate_definition(base_name, _id):
-    return {
-        "name": "%s.%d" % (base_name, _id),
-        "class_path": "stacker.blueprints.%s.%s" % (base_name,
-                                                    base_name.upper()),
-        "namespace": "example-com",
-        "parameters": {
-            "ExternalParameter": "fakeStack2::FakeParameter",
-            "InstanceType": "m3.medium",
-            "AZCount": 2,
-            },
-        "requires": ["fakeStack"]
-    }
+class TestStep(unittest.TestCase):
 
-
-class TestBlueprintContext(unittest.TestCase):
     def setUp(self):
-        self.context = BlueprintContext(**generate_definition('vpc', 1))
+        stack = Stack(generate_definition('vpc', 1))
+        self.step = Step(
+            stack=stack,
+            index=0,
+            run_func=lambda x, y: (x, y),
+            completion_func=lambda y: True,
+        )
 
     def test_status(self):
-        self.assertFalse(self.context.submitted)
-        self.assertFalse(self.context.completed)
-        self.context.submit()
-        self.assertTrue(self.context.submitted)
-        self.assertFalse(self.context.completed)
-        self.context.complete()
-        self.assertTrue(self.context.submitted)
-        self.assertTrue(self.context.completed)
-
-    def test_requires(self):
-        self.assertIn('fakeStack', self.context.requires)
-        self.assertIn('fakeStack2', self.context.requires)
+        self.assertFalse(self.step.submitted)
+        self.assertFalse(self.step.completed)
+        self.step.submit()
+        self.assertTrue(self.step.submitted)
+        self.assertFalse(self.step.completed)
+        self.step.complete()
+        self.assertTrue(self.step.submitted)
+        self.assertTrue(self.step.completed)
 
 
 class TestPlan(unittest.TestCase):
+
     def setUp(self):
-        self.plan = Plan()
+        self.count = 0
+        self.plan = Plan(provider=mock.MagicMock(), sleep_time=0)
         for i in range(4):
-            self.plan.add(generate_definition('vpc', i))
+            stack = Stack(generate_definition('vpc', i))
+            self.plan.add(
+                stack=stack,
+                run_func=self._run_func,
+                completion_func=self._completion_func,
+            )
 
-    def test_add(self):
-        first_id = 'vpc.1'
-        self.assertIn(first_id, self.plan)
-        self.assertIsInstance(self.plan[first_id], BlueprintContext)
+    def _run_func(self, results, stack):
+        self.count += 1
+        if not self.count % 2:
+            return True
+        return False
 
-    def test_status(self):
-        self.assertEqual(len(self.plan.list_submitted()), 0)
-        self.assertEqual(len(self.plan.list_completed()), 0)
-        self.assertEqual(len(self.plan.list_skipped()), 0)
-        self.assertEqual(len(self.plan.list_pending()), 4)
-        self.plan.submit('vpc.1')
-        self.assertEqual(len(self.plan.list_submitted()), 1)
-        self.assertEqual(len(self.plan.list_completed()), 0)
-        self.assertEqual(len(self.plan.list_skipped()), 0)
-        self.assertEqual(len(self.plan.list_pending()), 4)
-        self.plan.complete('vpc.1')
-        self.assertEqual(len(self.plan.list_submitted()), 0)
-        self.assertEqual(len(self.plan.list_completed()), 1)
-        self.assertEqual(len(self.plan.list_skipped()), 0)
-        self.assertEqual(len(self.plan.list_pending()), 3)
-        self.assertFalse(self.plan.completed)
-        self.plan.skip('vpc.2')
-        self.assertEqual(len(self.plan.list_submitted()), 0)
-        self.assertEqual(len(self.plan.list_completed()), 1)
-        self.assertEqual(len(self.plan.list_skipped()), 1)
-        self.assertEqual(len(self.plan.list_pending()), 2)
-        for i in range(4):
-            self.plan.complete("vpc.%d" % i)
-        self.assertTrue(self.plan.completed)
+    def _completion_func(self, stack):
+        return self.count
+
+    def test_execute_plan(self):
+        results = self.plan.execute()
+        self.assertEqual(self.count, 8)
+        self.assertEqual(results[self.plan.keys()[0]], 2)
+        self.assertEqual(results[self.plan.keys()[-1]], 8)

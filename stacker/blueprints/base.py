@@ -13,36 +13,34 @@ class Blueprint(object):
     :param name: A name for the blueprint. If not provided, one
         will be created from the class name automatically.
 
-    :type context: BlueprintContext object
-    :param context: Used for configuring the Blueprint.
+    :type parameters: Dictionary
+    :param stack: Used for configuring the Blueprint.
 
     :type mappings: dict
     :param mappings: Cloudformation Mappings to be used in the template.
 
     """
-    def __init__(self, name, context, mappings=None):
+    def __init__(self, name, parameters, mappings=None):
         self.name = name
         self.mappings = mappings
-        # TODO: This is only, currently, used for parameters. should probably
-        #       just pass parameters alone.
-        self.context = context
+        self.parameters = parameters
         self.outputs = {}
         self.reset_template()
 
     @property
-    def parameters(self):
+    def template_parameters(self):
         return self.template.parameters
 
     @property
     def required_parameters(self):
-        """ Returns all parameters that do not have a default value. """
+        """ Returns all template parameters that do not have a default value. """
         required = []
-        for k, v in self.parameters.items():
+        for k, v in self.template_parameters.items():
             if not hasattr(v, 'Default'):
                 required.append((k, v))
         return required
 
-    def setup_parameters(self):
+    def setup_template_parameters(self):
         t = self.template
         parameters = getattr(self, 'PARAMETERS')
         if not parameters:
@@ -72,7 +70,7 @@ class Blueprint(object):
 
     def render_template(self):
         self.create_template()
-        self.setup_parameters()
+        self.setup_template_parameters()
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)

@@ -1,18 +1,10 @@
-import copy
-from collections import (
-    OrderedDict,
-    Iterable,
-)
+from collections import OrderedDict
 import logging
+import time
 
 from collections import namedtuple
 
 logger = logging.getLogger(__name__)
-
-INPROGRESS_STATUSES = ('CREATE_IN_PROGRESS',
-                       'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS',
-                       'UPDATE_IN_PROGRESS')
-COMPLETE_STATUSES = ('CREATE_COMPLETE', 'UPDATE_COMPLETE')
 
 Status = namedtuple('Status', ['name', 'code'])
 PENDING = Status('pending', 0)
@@ -21,21 +13,20 @@ COMPLETE = Status('complete', 2)
 SKIPPED = Status('skipped', 3)
 
 
-class BlueprintContext(object):
-    def __init__(self, name, class_path, namespace, requires=None,
-                 parameters=None):
-        self.name = name
-        self.class_path = class_path
-        self.namespace = namespace
-        self.parameters = parameters or {}
-        requires = requires or []
-        self._requires = set(requires)
+class Step(object):
 
-        self.blueprint = None
+    def __init__(self, stack, index, run_func, completion_func=None):
+        self.stack = stack
         self.status = PENDING
+        self.index = index
+        self._run_func = run_func
+        self._completion_func = completion_func
 
     def __repr__(self):
-        return self.name
+        return '<stacker.plan.Step:%s:%s>' % (
+            self.index + 1,
+            self.stack.name,
+        )
 
     @property
     def completed(self):
@@ -49,20 +40,12 @@ class BlueprintContext(object):
     def submitted(self):
         return self.status.code >= SUBMITTED.code
 
-    @property
-    def requires(self):
-        requires = copy.deepcopy(self._requires)
-        # Auto add dependencies when parameters reference the Ouptuts of
-        # another stack.
-        parameters = self.parameters
-        for value in parameters.values():
-            if isinstance(value, basestring) and '::' in value:
-                stack_name, _ = value.split('::')
-            else:
-                continue
-            if stack_name not in requires:
-                requires.add(stack_name)
-        return requires
+    def submit(self):
+        self.set_status(SUBMITTED)
+
+    def run(self, results):
+        self.submit()
+        return self._run_func(results, self.stack)
 
     def set_status(self, status):
         logger.debug("Setting %s state to %s.", self.name, status.name)
@@ -70,9 +53,8 @@ class BlueprintContext(object):
 
     def complete(self):
         self.set_status(COMPLETE)
-
-    def submit(self):
-        self.set_status(SUBMITTED)
+        if self._completion_func and callable(self._completion_func):
+            return self._completion_func(self.stack)
 
     def skip(self):
         self.set_status(SKIPPED)
@@ -81,28 +63,20 @@ class BlueprintContext(object):
 class Plan(OrderedDict):
     """ Used to organize the order in which stacks will be created/updated.
     """
-    def add(self, definition):
-        self[definition['name']] = BlueprintContext(**definition)
 
-    def _parse_items(self, items):
-        if isinstance(items, Iterable) and not isinstance(items, basestring):
-            return items
-        return [items, ]
+    def __init__(self, provider, sleep_time=5, max_attempts=10, *args, **kwargs):
+        self.provider = provider
+        self.sleep_time = sleep_time
+        self.max_attempts = max_attempts
+        super(Plan, self).__init__(*args, **kwargs)
 
-    def complete(self, items):
-        items = self._parse_items(items)
-        for i in items:
-            self[i].complete()
-
-    def submit(self, items):
-        items = self._parse_items(items)
-        for i in items:
-            self[i].submit()
-
-    def skip(self, items):
-        items = self._parse_items(items)
-        for i in items:
-            self[i].skip()
+    def add(self, stack, run_func, completion_func=None):
+        self[stack.name] = Step(
+            stack=stack,
+            index=len(self.keys()),
+            run_func=run_func,
+            completion_func=completion_func,
+        )
 
     def list_status(self, status):
         result = OrderedDict()
@@ -133,3 +107,22 @@ class Plan(OrderedDict):
         if self.list_pending():
             return False
         return True
+
+    def execute(self):
+        results = {}
+        attempts = 0
+        while not self.completed:
+            step_name, step = self.list_pending()[0]
+            attempts += 1
+            if not attempts % 10:
+                logger.info("Waiting on stack: %s", step_name)
+
+            state = step.run(results)
+            if state.code == COMPLETE.code:
+                attempts = 0
+                results[step_name] = step.complete()
+            elif state.code == SKIPPED.code:
+                step.skip()
+            else:
+                time.sleep(self.sleep_time)
+        return results

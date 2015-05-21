@@ -13,9 +13,12 @@ import copy
 import logging
 import yaml
 
-from stacker.builder import Builder
-from stacker.util import handle_hooks
-from stacker.config import parse_config
+from stacker.actions import (
+    build,
+    destroy,
+)
+from stacker.context import Context
+from stacker.providers import aws
 
 logger = logging.getLogger()
 
@@ -24,16 +27,6 @@ DEBUG_FORMAT = ('[%(asctime)s] %(levelname)s %(name)s:%(lineno)d'
 INFO_FORMAT = ('[%(asctime)s] %(message)s')
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S'
-
-
-def get_stack_definitions(config, stack_list):
-    """ Extract stack definitions from the config.
-
-    If no stack_list given, return stack config as is.
-    """
-    if not stack_list:
-        return config['stacks']
-    return [s for s in config['stacks'] if s['name'] in stack_list]
 
 
 class KeyValueAction(argparse.Action):
@@ -126,21 +119,14 @@ def setup_logging(verbosity):
 if __name__ == '__main__':
     args = parse_args()
     setup_logging(args.verbose)
-    parameters = copy.deepcopy(args.parameters)
-    config_string = args.config.read()
 
-    config = parse_config(config_string, args.environment)
-
-    mappings = config['mappings']
-
-    builder = Builder(args.region, args.namespace, mappings=mappings,
-                      parameters=parameters)
-
-    stack_definitions = get_stack_definitions(config, args.stacks)
-    stack_names = [s['name'] for s in stack_definitions]
-    handle_hooks('pre_build', config.get('pre_build', None), args.region,
-                 args.namespace, mappings, parameters)
-    logger.info("Working on stacks: %s", ', '.join(stack_names))
-    builder.build(stack_definitions)
-    handle_hooks('post_build', config.get('post_build', None), args.region,
-                 args.namespace, mappings, parameters)
+    provider = aws.Provider(region=args.region)
+    context = Context(
+        namespace=args.namespace,
+        environment=args.environment,
+        parameters=copy.deepcopy(args.parameters),
+        stacks=args.stacks,
+    )
+    context.load_config(args.config.read())
+    action = destroy.Action(context, provider=provider)
+    action.run()

@@ -35,7 +35,8 @@ class BaseCommand(object):
                 subcommand.add_arguments(subparser)
                 subparser.set_defaults(run=subcommand.run)
 
-    def logger(self, *args, **kwargs):
+    @property
+    def logger(self):
         if not hasattr(self, '_logger'):
             self._logger = logging.getLogger(self.name)
         return self._logger

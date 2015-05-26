@@ -61,8 +61,8 @@ class BaseCommand(object):
         self.add_subcommands(parser)
         return parser.parse_args()
 
-    def run(self, args, **kwargs):
-        self.setup_logging(args.verbose)
+    def run(self, options, **kwargs):
+        self.setup_logging(options.verbose)
 
-    def configure(self, args, **kwargs):
+    def configure(self, options, **kwargs):
         pass

@@ -108,3 +108,29 @@ class TestBuildAction(unittest.TestCase):
         build_action = build.Action(context)
         plan = build_action._generate_plan()
         self.assertEqual(plan.keys(), ['other', 'vpc', 'bastion', 'db'])
+
+    def test_dont_execute_plan_when_outline_specified(self):
+        config = {'stacks': [
+            {'name': 'vpc'},
+            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
+            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
+            {'name': 'other', 'parameters': {}}
+        ]}
+        context = Context('namespace', config=config)
+        build_action = build.Action(context)
+        with mock.patch.object(build_action, '_generate_plan') as mock_generate_plan:
+            build_action.run(outline=True)
+            self.assertEqual(mock_generate_plan().execute.call_count, 0)
+
+    def test_execute_plan_when_outline_not_specified(self):
+        config = {'stacks': [
+            {'name': 'vpc'},
+            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
+            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
+            {'name': 'other', 'parameters': {}}
+        ]}
+        context = Context('namespace', config=config)
+        build_action = build.Action(context)
+        with mock.patch.object(build_action, '_generate_plan') as mock_generate_plan:
+            build_action.run(outline=False)
+            self.assertEqual(mock_generate_plan().execute.call_count, 1)

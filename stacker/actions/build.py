@@ -167,7 +167,7 @@ class Action(base.BaseAction):
         return params.items()
 
     def _generate_plan(self):
-        plan = Plan(provider=self.provider)
+        plan = Plan(details='Create/Update stacks', provider=self.provider)
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -184,20 +184,25 @@ class Action(base.BaseAction):
             dependencies[stack.name] = stack.requires
         return dependencies
 
-    def run(self, *args, **kwargs):
+    def run(self, outline=False, *args, **kwargs):
         """ Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
         """
-        # TODO have a better place for these
-        pre_build = self.context.config.get('pre_build')
-        if pre_build:
-            util.handle_hooks('pre_build', pre_build, self.provider.region, self.context)
+        if not outline:
+            # TODO have a better place for these
+            pre_build = self.context.config.get('pre_build')
+            if pre_build:
+                util.handle_hooks('pre_build', pre_build, self.provider.region, self.context)
 
         plan = self._generate_plan()
-        logger.info("Launching stacks: %s", ', '.join(plan.keys()))
-        plan.execute()
+        if not outline:
+            logger.info("Launching stacks: %s", ', '.join(plan.keys()))
+            plan.execute()
+        else:
+            plan.outline()
 
-        post_build = self.context.config.get('post_build')
-        if post_build:
-            util.handle_hooks('post_build', post_build, self.context)
+        if not outline:
+            post_build = self.context.config.get('post_build')
+            if post_build:
+                util.handle_hooks('post_build', post_build, self.context)

@@ -89,13 +89,13 @@ class Stacker(BaseCommand):
                             help="The config file where stack configuration is "
                                  "located. Must be in yaml format.")
 
-    def configure(self, args, **kwargs):
-        super(Stacker, self).configure(args, **kwargs)
-        args.provider = aws.Provider(region=args.region)
-        args.context = Context(
-            namespace=args.namespace,
-            environment=args.environment,
-            parameters=copy.deepcopy(args.parameters),
-            stacks=args.stacks,
+    def configure(self, options, **kwargs):
+        super(Stacker, self).configure(options, **kwargs)
+        options.provider = aws.Provider(region=options.region)
+        options.context = Context(
+            namespace=options.namespace,
+            environment=options.environment,
+            parameters=copy.deepcopy(options.parameters),
+            stacks=options.stacks,
         )
-        args.context.load_config(args.config.read())
+        options.context.load_config(options.config.read())

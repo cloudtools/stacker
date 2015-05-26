@@ -52,3 +52,13 @@ class TestDestroyAction(unittest.TestCase):
             mock_get_stack.side_effect = get_stack
             plan = self.action._generate_plan()
         self.assertEqual(['other', 'db', 'instance', 'bastion', 'vpc'], plan.keys())
+
+    def test_only_execute_plan_when_forced(self):
+        with mock.patch.object(self.action, '_generate_plan') as mock_generate_plan:
+            self.action.run(force=False)
+            self.assertEqual(mock_generate_plan().execute.call_count, 0)
+
+    def test_execute_plan_when_forced(self):
+        with mock.patch.object(self.action, '_generate_plan') as mock_generate_plan:
+            self.action.run(force=True)
+            self.assertEqual(mock_generate_plan().execute.call_count, 1)

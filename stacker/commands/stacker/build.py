@@ -8,6 +8,7 @@ Can also pull parameters from other stack's outputs.
 """
 
 from ..base import BaseCommand
+from ...actions import build
 
 
 class Build(BaseCommand):
@@ -22,3 +23,11 @@ class Build(BaseCommand):
                                  "that resources will be launched in. If not "
                                  "given, then resources will be launched in all "
                                  "available availability zones.")
+        parser.add_argument('-o', '--outline', action='store_true',
+                            help='Print an outline of what steps will be taken '
+                            'to build the stacks')
+
+    def run(self, options, **kwargs):
+        super(Build, self).run(options, **kwargs)
+        action = build.Action(options.context, provider=options.provider)
+        action.run(outline=options.outline)

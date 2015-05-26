@@ -61,10 +61,10 @@ class Step(object):
 
 
 class Plan(OrderedDict):
-    """ Used to organize the order in which stacks will be created/updated.
-    """
+    """Used to organize the execution of cloudformation steps"""
 
-    def __init__(self, provider, sleep_time=5, max_attempts=10, *args, **kwargs):
+    def __init__(self, details, provider, sleep_time=5, max_attempts=10, *args, **kwargs):
+        self.details = details
         self.provider = provider
         self.sleep_time = sleep_time
         self.max_attempts = max_attempts
@@ -126,3 +126,18 @@ class Plan(OrderedDict):
             else:
                 time.sleep(self.sleep_time)
         return results
+
+    def outline(self):
+        logger.info("Plan '%s':", self.details)
+        steps = 1
+        while not self.completed:
+            step_name, step = self.list_pending()[0]
+            logger.info(
+                "\t- step %s: target: '%s', action: '%s'",
+                steps,
+                step_name,
+                step._run_func.__name__,
+            )
+            # Set the status to COMPLETE directly so we don't call the completion func
+            step.status = STATUS_COMPLETE
+            steps += 1

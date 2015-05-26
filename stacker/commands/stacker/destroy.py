@@ -16,7 +16,7 @@ class Destroy(BaseCommand):
                             help="Whehter or not you want to go through "
                                  " with destroying the stacks")
 
-    def run(self, args, **kwargs):
-        super(Destroy, self).run(args, **kwargs)
-        action = destroy.Action(args.context, provider=args.provider)
-        action.run(force=args.force)
+    def run(self, options, **kwargs):
+        super(Destroy, self).run(options, **kwargs)
+        action = destroy.Action(options.context, provider=options.provider)
+        action.run(force=options.force)

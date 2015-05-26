@@ -36,7 +36,7 @@ class TestPlan(unittest.TestCase):
 
     def setUp(self):
         self.count = 0
-        self.plan = Plan(provider=mock.MagicMock(), sleep_time=0)
+        self.plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
         for i in range(4):
             stack = Stack(generate_definition('vpc', i))
             self.plan.add(

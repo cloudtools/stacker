@@ -26,7 +26,7 @@ class Action(base.BaseAction):
         return dependencies
 
     def _generate_plan(self):
-        plan = Plan(provider=self.provider)
+        plan = Plan(details='Destroy stacks', provider=self.provider)
         stacks = self.context.get_stacks()
 
         stacks_dict = dict((stack.name, stack) for stack in stacks)
@@ -56,6 +56,9 @@ class Action(base.BaseAction):
         else:
             self.provider.destroy_stack(provider_stack)
 
-    def run(self, *args, **kwargs):
+    def run(self, force, *args, **kwargs):
         plan = self._generate_plan()
-        plan.execute()
+        if force:
+            plan.execute()
+        else:
+            plan.outline()

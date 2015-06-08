@@ -147,7 +147,7 @@ class Builder(object):
 
     @property
     def s3_conn(self):
-        if not getattr(self, '_s3_conn', None):
+        if not hasattr(self, '_s3_conn'):
             self._s3_conn = ConnectionManager().s3
         return self._s3_conn
 

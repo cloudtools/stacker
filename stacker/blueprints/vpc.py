@@ -4,7 +4,7 @@ This includes the VPC, it's subnets, availability zones, etc.
 """
 
 from troposphere import (
-    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags
+    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags, And, Or
 )
 from troposphere import ec2
 from troposphere.route53 import HostedZone, HostedZoneVPCs
@@ -66,10 +66,16 @@ class VPC(Blueprint):
     def create_conditions(self):
         self.template.add_condition(
             "NoHostedZones",
-            Equals(Ref("InternalDomain"), ""))
+            And(
+                Equals(Ref("InternalDomain"), ""),
+                Equals(Ref("BaseDomain"), ""),
+            ))
         self.template.add_condition(
             "HasHostedZones",
-            Not(Equals(Ref("InternalDomain"), "")))
+            Or(
+                Not(Equals(Ref("InternalDomain"), "")),
+                Not(Equals(Ref("BaseDomain"), "")),
+            ))
 
     def create_vpc(self):
         t = self.template

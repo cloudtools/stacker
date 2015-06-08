@@ -29,4 +29,4 @@ class Destroy(BaseCommand):
             force = confirm.lower() == 'yes'
             if not force:
                 self.logger.info('Confirmation failed, printing ouline...')
-        action.run(force=force)
+        action.execute(force=force)

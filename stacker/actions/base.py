@@ -71,8 +71,19 @@ class BaseAction(object):
                      template_url)
         return template_url
 
+    def execute(self, *args, **kwargs):
+        self.pre_run(*args, **kwargs)
+        self.run(*args, **kwargs)
+        self.post_run(*args, **kwargs)
+
+    def pre_run(self, *args, **kwargs):
+        pass
+
     def run(self, *args, **kwargs):
         raise NotImplementedError('Subclass must implement "run" method')
+
+    def post_run(self, *args, **kwargs):
+        pass
 
     def _get_all_stack_names(self, dependency_dict):
         return set(

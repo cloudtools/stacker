@@ -30,4 +30,4 @@ class Build(BaseCommand):
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
-        action.run(outline=options.outline)
+        action.execute(outline=options.outline)

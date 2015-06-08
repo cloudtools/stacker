@@ -1,8 +1,14 @@
-import unittest
 from collections import namedtuple
+import unittest
+
+import mock
 
 from stacker.builder import (
-    gather_parameters, handle_missing_parameters, MissingParameterException
+    Builder,
+    gather_parameters,
+    handle_missing_parameters,
+    MissingParameterException,
+    ParameterDoesNotExist,
 )
 
 
@@ -84,3 +90,21 @@ class TestHandleMissingParameters(unittest.TestCase):
         required = ['Address']
         result = handle_missing_parameters(def_params, required, stack)
         self.assertEqual(result, def_params.items())
+
+
+class TestBuilder(unittest.TestCase):
+
+    def setUp(self):
+        self.builder = Builder('us-east-1', 'namespace')
+
+    def test_resolve_parameters_referencing_non_existant_output(self):
+        parameters = {
+            'param_1': 'mock::output_1',
+            'param_2': 'mock::does_not_exist',
+        }
+        with mock.patch.object(self.builder, 'get_outputs') as mock_outputs:
+            mock_outputs.return_value = {'output_1': 'output'}
+            mock_blueprint = mock.MagicMock()
+            type(mock_blueprint).parameters = parameters
+            with self.assertRaises(ParameterDoesNotExist):
+                self.builder.resolve_parameters(parameters, mock_blueprint)

@@ -4,7 +4,7 @@ This includes the VPC, it's subnets, availability zones, etc.
 """
 
 from troposphere import (
-    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags
+    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags, And, Or
 )
 from troposphere import ec2
 from troposphere.route53 import HostedZone, HostedZoneVPCs
@@ -65,8 +65,17 @@ class VPC(Blueprint):
 
     def create_conditions(self):
         self.template.add_condition(
-            "CreateInternalDomain",
-            Not(Equals(Ref("InternalDomain"), "")))
+            "NoHostedZones",
+            And(
+                Equals(Ref("InternalDomain"), ""),
+                Equals(Ref("BaseDomain"), ""),
+            ))
+        self.template.add_condition(
+            "HasHostedZones",
+            Or(
+                Not(Equals(Ref("InternalDomain"), "")),
+                Not(Equals(Ref("BaseDomain"), "")),
+            ))
 
     def create_vpc(self):
         t = self.template
@@ -82,16 +91,22 @@ class VPC(Blueprint):
         t = self.template
         t.add_resource(
             HostedZone(
-                "EmpireInternalZone",
+                "InternalZone",
                 Name=Ref("InternalDomain"),
                 VPCs=[HostedZoneVPCs(
                     VPCId=VPC_ID,
                     VPCRegion=Ref("AWS::Region"))],
-                Condition="CreateInternalDomain"))
-        t.add_output(Output("InternalZoneId",
-                     Value=Ref("EmpireInternalZone")))
-        t.add_output(Output("InternalZoneName",
-                     Value=Ref("InternalDomain")))
+                Condition="HasHostedZones"))
+        t.add_output(
+            Output(
+                "InternalZoneId",
+                Value=Ref("InternalZone"),
+                Condition="HasHostedZones"))
+        t.add_output(
+            Output(
+                "InternalZoneName",
+                Value=Ref("InternalDomain"),
+                Condition="HasHostedZones"))
 
     def create_default_security_group(self):
         t = self.template
@@ -103,17 +118,35 @@ class VPC(Blueprint):
             Output('DefaultSG',
                    Value=Ref(DEFAULT_SG)))
 
-    def create_dhcp_options(self):
+    def _dhcp_options_hosted_zones(self):
         t = self.template
         domain_name = Join(" ", [Ref("BaseDomain"), Ref("InternalDomain")])
         dhcp_options = t.add_resource(ec2.DHCPOptions(
-            'DHCPOptions',
+            'DHCPOptionsWithDNS',
             DomainName=domain_name,
-            DomainNameServers=['AmazonProvidedDNS', ]))
+            DomainNameServers=['AmazonProvidedDNS', ],
+            Condition="HasHostedZones"))
         t.add_resource(ec2.VPCDHCPOptionsAssociation(
-            'DHCPAssociation',
+            'DHCPAssociationWithDNS',
             VpcId=VPC_ID,
-            DhcpOptionsId=Ref(dhcp_options)))
+            DhcpOptionsId=Ref(dhcp_options),
+            Condition="HasHostedZones"))
+
+    def _dhcp_options_no_hosted_zones(self):
+        t = self.template
+        dhcp_options = t.add_resource(ec2.DHCPOptions(
+            'DHCPOptionsNoDNS',
+            DomainNameServers=['AmazonProvidedDNS', ],
+            Condition="NoHostedZones"))
+        t.add_resource(ec2.VPCDHCPOptionsAssociation(
+            'DHCPAssociationNoDNS',
+            VpcId=VPC_ID,
+            DhcpOptionsId=Ref(dhcp_options),
+            Condition="NoHostedZones"))
+
+    def create_dhcp_options(self):
+        self._dhcp_options_hosted_zones()
+        self._dhcp_options_no_hosted_zones()
 
     def create_gateway(self):
         t = self.template

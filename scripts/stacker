@@ -8,10 +8,9 @@ Can also pull parameters from other stack's outputs.
 """
 
 import argparse
-import logging
 from collections import Mapping
 import copy
-
+import logging
 import yaml
 
 from stacker.builder import Builder

@@ -1,9 +1,9 @@
-import logging
 import hashlib
+import logging
+
+from troposphere import Parameter, Template
 
 logger = logging.getLogger(__name__)
-
-from troposphere import Template, Parameter
 
 
 class Blueprint(object):

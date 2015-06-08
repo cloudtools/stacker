@@ -1,27 +1,31 @@
+import copy
 import logging
 import time
-import copy
+
+from aws_helper.connection import ConnectionManager
+from boto.exception import BotoServerError, S3ResponseError
+
+from .plan import Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED, COMPLETE_STATUSES
+from .util import get_bucket_location, load_object_from_string
 
 logger = logging.getLogger(__name__)
 
-from aws_helper.connection import ConnectionManager
-
-from boto.exception import S3ResponseError, BotoServerError
-
-from .util import load_object_from_string, get_bucket_location
-
-from .plan import (Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED,
-                   COMPLETE_STATUSES)
-
 
 class MissingParameterException(Exception):
-    def __init__(self, parameters):
-        self.parameters = parameters
-        self.message = ("Missing required parameters: %s" %
-                        ', '.join(parameters))
 
-    def __str__(self):
-        return self.message
+    def __init__(self, parameters, *args, **kwargs):
+        self.parameters = parameters
+        message = 'Missing required parameters: %s' % (
+            ', '.join(parameters),
+        )
+        super(MissingParameterException, self).__init__(message, *args, **kwargs)
+
+
+class ParameterDoesNotExist(Exception):
+
+    def __init__(self, parameter, *args, **kwargs):
+        message = 'Parameter: "%s" does not exist in output' % (parameter,)
+        super(ParameterDoesNotExist, self).__init__(message, *args, **kwargs)
 
 
 def get_stack_full_name(cfn_base, stack_name):
@@ -142,15 +146,20 @@ class Builder(object):
         return self._conn
 
     @property
+    def s3_conn(self):
+        if not hasattr(self, '_s3_conn'):
+            self._s3_conn = ConnectionManager().s3
+        return self._s3_conn
+
+    @property
     def cfn_bucket(self):
         if not getattr(self, '_cfn_bucket', None):
-            s3 = self.conn.s3
             try:
-                self._cfn_bucket = s3.get_bucket(self.bucket_name)
+                self._cfn_bucket = self.s3_conn.get_bucket(self.bucket_name)
             except S3ResponseError, e:
                 if e.error_code == 'NoSuchBucket':
                     logger.debug("Creating bucket %s.", self.bucket_name)
-                    self._cfn_bucket = s3.create_bucket(
+                    self._cfn_bucket = self.s3_conn.create_bucket(
                         self.bucket_name,
                         location=get_bucket_location(self.region))
                 elif e.error_code == 'AccessDenied':
@@ -260,8 +269,11 @@ class Builder(object):
             if isinstance(value, basestring) and '::' in value:
                 # Get from the Output of another stack in the stack_map
                 stack_name, output = value.split('::')
-                self.get_outputs(stack_name)
-                value = self.outputs[stack_name][output]
+                stack_outputs = self.get_outputs(stack_name)
+                try:
+                    value = stack_outputs[output]
+                except KeyError:
+                    raise ParameterDoesNotExist(value)
             params[k] = value
         return params
 
@@ -288,6 +300,7 @@ class Builder(object):
                 'stacker_namespace': self.namespace}
         if requires:
             tags['required_stacks'] = ':'.join(requires)
+        return tags
 
     def create_stack(self, full_name, template_url, parameters, tags):
         """ Creates a stack in CloudFormation """
@@ -353,7 +366,8 @@ class Builder(object):
         Updates the local output cache with the values it finds.
         """
         if stack_name in self.outputs and not force:
-            return
+            return self.outputs[stack_name]
+
         logger.debug("Getting outputs from stack %s.", stack_name)
 
         full_name = self.get_stack_full_name(stack_name)
@@ -366,7 +380,7 @@ class Builder(object):
         for output in stack.outputs:
             logger.debug("    %s: %s", output.key, output.value)
             stack_outputs[output.key] = output.value
-        return self.outputs
+        return self.outputs[stack_name]
 
     def sync_plan_status(self):
         """ Updates the status of each stack in the local plan.

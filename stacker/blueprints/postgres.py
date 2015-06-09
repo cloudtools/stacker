@@ -49,6 +49,10 @@ class PostgresRDS(Blueprint):
             "type": "String",
             "default": "",
             "description": "Internal domain name, if you have one."},
+        "StorageEncrypted": {
+            "type": "String",
+            "default": "false",
+            "description": "Boolean for whether or not the database is encrypted"},
     }
 
     def create_conditions(self):
@@ -104,7 +108,10 @@ class PostgresRDS(Blueprint):
                 MasterUserPassword=Ref('MasterUserPassword'),
                 MultiAZ=True,
                 PreferredBackupWindow=Ref('PreferredBackupWindow'),
-                VPCSecurityGroups=[Ref(RDS_SG_NAME % self.name), ]))
+                VPCSecurityGroups=[Ref(RDS_SG_NAME % self.name), ],
+                StorageEncrypted=Ref('StorageEncrypted'),
+            ),
+        )
 
         endpoint = GetAtt(db_name, 'Endpoint.Address')
 

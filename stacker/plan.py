@@ -5,6 +5,8 @@ from collections import (
 )
 import logging
 
+from collections import namedtuple
+
 logger = logging.getLogger(__name__)
 
 INPROGRESS_STATUSES = ('CREATE_IN_PROGRESS',
@@ -12,8 +14,11 @@ INPROGRESS_STATUSES = ('CREATE_IN_PROGRESS',
                        'UPDATE_IN_PROGRESS')
 COMPLETE_STATUSES = ('CREATE_COMPLETE', 'UPDATE_COMPLETE')
 
-STATUS_SUBMITTED = 1
-STATUS_COMPLETE = 2
+Status = namedtuple('Status', ['name', 'code'])
+PENDING = Status('pending', 0)
+SUBMITTED = Status('submitted', 1)
+COMPLETE = Status('complete', 2)
+SKIPPED = Status('skipped', 3)
 
 
 class BlueprintContext(object):
@@ -27,18 +32,22 @@ class BlueprintContext(object):
         self._requires = set(requires)
 
         self.blueprint = None
-        self.status = None
+        self.status = PENDING
 
     def __repr__(self):
         return self.name
 
     @property
     def completed(self):
-        return self.status == STATUS_COMPLETE
+        return self.status == COMPLETE
+
+    @property
+    def skipped(self):
+        return self.status == SKIPPED
 
     @property
     def submitted(self):
-        return self.status >= STATUS_SUBMITTED
+        return self.status.code >= SUBMITTED.code
 
     @property
     def requires(self):
@@ -55,13 +64,18 @@ class BlueprintContext(object):
                 requires.add(stack_name)
         return requires
 
+    def set_status(self, status):
+        logger.debug("Setting %s state to %s.", self.name, status.name)
+        self.status = status
+
     def complete(self):
-        logger.debug("Setting %s state to complete.", self.name)
-        self.status = STATUS_COMPLETE
+        self.set_status(COMPLETE)
 
     def submit(self):
-        logger.debug("Setting %s state to submitted.", self.name)
-        self.status = STATUS_SUBMITTED
+        self.set_status(SUBMITTED)
+
+    def skip(self):
+        self.set_status(SKIPPED)
 
 
 class Plan(OrderedDict):
@@ -85,24 +99,32 @@ class Plan(OrderedDict):
         for i in items:
             self[i].submit()
 
-    def list_completed(self):
+    def skip(self, items):
+        items = self._parse_items(items)
+        for i in items:
+            self[i].skip()
+
+    def list_status(self, status):
         result = OrderedDict()
         for k, record in self.items():
-            if record.status == STATUS_COMPLETE:
+            if record.status == status:
                 result[k] = record
         return result
 
-    def list_pending(self):
-        result = OrderedDict()
-        for k, record in self.items():
-            if record.status != STATUS_COMPLETE:
-                result[k] = record
-        return result
+    def list_completed(self):
+        return self.list_status(COMPLETE)
 
     def list_submitted(self):
+        return self.list_status(SUBMITTED)
+
+    def list_skipped(self):
+        return self.list_status(SKIPPED)
+
+    def list_pending(self):
+        """ Pending is any task that isn't COMPLETE or SKIPPED. """
         result = OrderedDict()
         for k, record in self.items():
-            if record.status == STATUS_SUBMITTED:
+            if record.status != COMPLETE and record.status != SKIPPED:
                 result[k] = record
         return result
 

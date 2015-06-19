@@ -5,7 +5,9 @@ import time
 from aws_helper.connection import ConnectionManager
 from boto.exception import BotoServerError, S3ResponseError
 
-from .plan import Plan, INPROGRESS_STATUSES, STATUS_SUBMITTED, COMPLETE_STATUSES
+from .plan import (
+    Plan, INPROGRESS_STATUSES, SUBMITTED, SKIPPED, PENDING, COMPLETE_STATUSES
+)
 from .util import get_bucket_location, load_object_from_string
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,8 @@ class MissingParameterException(Exception):
         message = 'Missing required parameters: %s' % (
             ', '.join(parameters),
         )
-        super(MissingParameterException, self).__init__(message, *args, **kwargs)
+        super(MissingParameterException, self).__init__(message, *args,
+                                                        **kwargs)
 
 
 class ParameterDoesNotExist(Exception):
@@ -311,7 +314,7 @@ class Builder(object):
                                               template_url=template_url,
                                               parameters=parameters, tags=tags,
                                               capabilities=['CAPABILITY_IAM'])
-        return True
+        return SUBMITTED
 
     def update_stack(self, full_name, template_url, parameters, tags):
         """ Updates an existing stack in CloudFormation. """
@@ -320,12 +323,12 @@ class Builder(object):
             self.conn.cloudformation.update_stack(
                 full_name, template_url=template_url, parameters=parameters,
                 tags=tags, capabilities=['CAPABILITY_IAM'])
-            return True
+            return SUBMITTED
         except BotoServerError as e:
             if 'No updates are to be performed.' in e.message:
                 logger.info("Stack %s did not change, not updating.",
                             full_name)
-                return True
+                return SKIPPED
             raise
 
     def launch_stack(self, stack_name, blueprint):
@@ -349,16 +352,15 @@ class Builder(object):
         required_params = [k for k, v in blueprint.required_parameters]
         parameters = handle_missing_parameters(parameters, required_params,
                                                stack)
-        submitted = False
+        status = PENDING
         if not stack:
-            submitted = self.create_stack(full_name, template_url, parameters,
-                                          tags)
+            status = self.create_stack(full_name, template_url, parameters,
+                                       tags)
         else:
-            submitted = self.update_stack(full_name, template_url, parameters,
-                                          tags)
+            status = self.update_stack(full_name, template_url, parameters,
+                                       tags)
 
-        if submitted:
-            stack_context.submit()
+        stack_context.set_status(status)
 
     def get_outputs(self, stack_name, force=False):
         """ Gets all the outputs from a given stack in CloudFormation.
@@ -397,7 +399,7 @@ class Builder(object):
             local_status = stack_context.status
             # We only update local status on stacks that have been marked
             # locally as submitted
-            if not local_status == STATUS_SUBMITTED:
+            if not local_status == SUBMITTED:
                 logger.debug("Stack %s not submitted yet.", stack_name)
                 continue
             cf_status = self.get_stack_status(full_name)

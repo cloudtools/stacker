@@ -352,15 +352,15 @@ class Builder(object):
         required_params = [k for k, v in blueprint.required_parameters]
         parameters = handle_missing_parameters(parameters, required_params,
                                                stack)
-        state = PENDING
+        status = PENDING
         if not stack:
-            state = self.create_stack(full_name, template_url, parameters,
-                                      tags)
+            status = self.create_stack(full_name, template_url, parameters,
+                                       tags)
         else:
-            state = self.update_stack(full_name, template_url, parameters,
-                                      tags)
+            status = self.update_stack(full_name, template_url, parameters,
+                                       tags)
 
-        stack_context.set_status(state)
+        stack_context.set_status(status)
 
     def get_outputs(self, stack_name, force=False):
         """ Gets all the outputs from a given stack in CloudFormation.

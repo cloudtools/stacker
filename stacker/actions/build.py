@@ -2,7 +2,7 @@ import logging
 
 from . import base
 from .. import exceptions, util
-from ..provider.exceptions import StackDidNotChange
+from ..providers.exceptions import StackDidNotChange
 from ..plan import COMPLETE, SKIPPED, PENDING, Plan
 
 logger = logging.getLogger(__name__)

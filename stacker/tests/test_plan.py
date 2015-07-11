@@ -2,7 +2,7 @@ import unittest
 
 import mock
 
-from stacker.plan import Step, Plan
+from stacker.plan import COMPLETE, PENDING, SKIPPED, Step, Plan
 from stacker.stack import Stack
 
 from .factories import generate_definition
@@ -37,7 +37,7 @@ class TestPlan(unittest.TestCase):
     def setUp(self):
         self.count = 0
         self.plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
-        for i in range(4):
+        for i in range(5):
             stack = Stack(generate_definition('vpc', i))
             self.plan.add(
                 stack=stack,
@@ -48,14 +48,17 @@ class TestPlan(unittest.TestCase):
     def _run_func(self, results, stack):
         self.count += 1
         if not self.count % 2:
-            return True
-        return False
+            return COMPLETE
+        elif self.count == 9:
+            return SKIPPED
+        return PENDING
 
     def _completion_func(self, stack):
         return self.count
 
     def test_execute_plan(self):
         results = self.plan.execute()
-        self.assertEqual(self.count, 8)
+        self.assertEqual(self.count, 9)
         self.assertEqual(results[self.plan.keys()[0]], 2)
-        self.assertEqual(results[self.plan.keys()[-1]], 8)
+        self.assertEqual(results[self.plan.keys()[-2]], 8)
+        self.assertEqual(len(self.plan.list_skipped()), 1)

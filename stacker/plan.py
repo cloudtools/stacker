@@ -48,7 +48,7 @@ class Step(object):
         return self._run_func(results, self.stack)
 
     def set_status(self, status):
-        logger.debug("Setting %s state to %s.", self.name, status.name)
+        logger.debug("Setting %s state to %s.", self.stack.name, status.name)
         self.status = status
 
     def complete(self):
@@ -79,11 +79,7 @@ class Plan(OrderedDict):
         )
 
     def list_status(self, status):
-        result = OrderedDict()
-        for k, record in self.items():
-            if record.status == status:
-                result[k] = record
-        return result
+        return [step for step in self.iteritems() if step[1].status == status]
 
     def list_completed(self):
         return self.list_status(COMPLETE)
@@ -96,11 +92,10 @@ class Plan(OrderedDict):
 
     def list_pending(self):
         """ Pending is any task that isn't COMPLETE or SKIPPED. """
-        result = OrderedDict()
-        for k, record in self.items():
-            if record.status != COMPLETE and record.status != SKIPPED:
-                result[k] = record
-        return result
+        return [step for step in self.iteritems() if (
+            step[1].status != COMPLETE and
+            step[1].status != SKIPPED
+        )]
 
     @property
     def completed(self):
@@ -117,11 +112,11 @@ class Plan(OrderedDict):
             if not attempts % 10:
                 logger.info("Waiting on stack: %s", step_name)
 
-            state = step.run(results)
-            if state.code == COMPLETE.code:
+            status = step.run(results)
+            if status.code == COMPLETE.code:
                 attempts = 0
                 results[step_name] = step.complete()
-            elif state.code == SKIPPED.code:
+            elif status.code == SKIPPED.code:
                 step.skip()
             else:
                 time.sleep(self.sleep_time)
@@ -139,5 +134,5 @@ class Plan(OrderedDict):
                 step._run_func.__name__,
             )
             # Set the status to COMPLETE directly so we don't call the completion func
-            step.status = STATUS_COMPLETE
+            step.status = COMPLETE
             steps += 1

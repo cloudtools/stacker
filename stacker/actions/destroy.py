@@ -1,12 +1,12 @@
 import logging
 
-from . import base
+from .base import BaseAction
 from ..plan import COMPLETE, PENDING, SKIPPED, Plan
 
 logger = logging.getLogger(__name__)
 
 
-class Action(base.BaseAction):
+class Action(BaseAction):
 
     def _get_dependencies(self, stacks_dict):
         dependencies = {}

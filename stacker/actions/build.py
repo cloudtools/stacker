@@ -1,6 +1,6 @@
 import logging
 
-from . import base
+from .base import BaseAction
 from .. import exceptions, util
 from ..providers.exceptions import StackDidNotChange
 from ..plan import COMPLETE, SKIPPED, PENDING, Plan
@@ -8,7 +8,7 @@ from ..plan import COMPLETE, SKIPPED, PENDING, Plan
 logger = logging.getLogger(__name__)
 
 
-class Action(base.BaseAction):
+class Action(BaseAction):
     """ Responsible for building & coordinating CloudFormation stacks.
 
     Handles the conversion from:

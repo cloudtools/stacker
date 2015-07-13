@@ -1,11 +1,11 @@
 # TODO make this relevant
 """Destroy stacker
 """
-from ..base import BaseCommand
+from .base import StackerCommand
 from ...actions import destroy
 
 
-class Destroy(BaseCommand):
+class Destroy(StackerCommand):
 
     name = "destroy"
     description = __doc__

@@ -58,7 +58,6 @@ class BaseCommand(object):
 
     def parse_args(self):
         parser = argparse.ArgumentParser(description=self.description)
-        self.add_arguments(parser)
         self.add_subcommands(parser)
         return parser.parse_args()
 

@@ -7,11 +7,11 @@ parameters) has changed for a given stack. If not, it will skip that stack.
 Can also pull parameters from other stack's outputs.
 """
 
-from ..base import BaseCommand
+from .base import StackerCommand
 from ...actions import build
 
 
-class Build(BaseCommand):
+class Build(StackerCommand):
 
     name = 'build'
     description = __doc__

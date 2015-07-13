@@ -4,7 +4,8 @@ This includes the VPC, it's subnets, availability zones, etc.
 """
 
 from troposphere import (
-    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags, And, Or
+    Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags, Or,
+    Condition
 )
 from troposphere import ec2
 from troposphere.route53 import HostedZone, HostedZoneVPCs
@@ -65,17 +66,20 @@ class VPC(Blueprint):
 
     def create_conditions(self):
         self.template.add_condition(
-            "NoHostedZones",
-            And(
-                Equals(Ref("InternalDomain"), ""),
-                Equals(Ref("BaseDomain"), ""),
-            ))
+            "HasInternalDomain",
+            Not(Equals(Ref("InternalDomain"), "")))
+        self.template.add_condition(
+            "HasExternalDomain",
+            Not(Equals(Ref("BaseDomain"), "")))
         self.template.add_condition(
             "HasHostedZones",
             Or(
-                Not(Equals(Ref("InternalDomain"), "")),
-                Not(Equals(Ref("BaseDomain"), "")),
+                Condition("HasInternalDomain"),
+                Condition("HasExternalDomain")
             ))
+        self.template.add_condition(
+            "NoHostedZones",
+            Not(Condition("HasHostedZones")))
 
     def create_vpc(self):
         t = self.template
@@ -96,17 +100,17 @@ class VPC(Blueprint):
                 VPCs=[HostedZoneVPCs(
                     VPCId=VPC_ID,
                     VPCRegion=Ref("AWS::Region"))],
-                Condition="HasHostedZones"))
+                Condition="HasInternalDomain"))
         t.add_output(
             Output(
                 "InternalZoneId",
                 Value=Ref("InternalZone"),
-                Condition="HasHostedZones"))
+                Condition="HasInternalDomain"))
         t.add_output(
             Output(
                 "InternalZoneName",
                 Value=Ref("InternalDomain"),
-                Condition="HasHostedZones"))
+                Condition="HasInternalDomain"))
 
     def create_default_security_group(self):
         t = self.template

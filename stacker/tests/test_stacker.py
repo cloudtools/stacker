@@ -45,3 +45,19 @@ class TestStacker(unittest.TestCase):
         self.assertNotIn('BaseDomain', blueprint.parameters)
         self.assertNotIn('AZCount', blueprint.parameters)
         self.assertNotIn('CidrBlock', blueprint.parameters)
+
+    def test_stacker_blueprint_property_access_does_not_reset_blueprint(self):
+        stacker = Stacker()
+        parser = argparse.ArgumentParser(description=stacker.description)
+        stacker.add_subcommands(parser)
+        args = parser.parse_args(
+            ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
+             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16', 'stacker-test',
+             'stacker/tests/fixtures/vpc-bastion-db-web.yaml']
+        )
+        stacker.configure(args)
+        stacks_dict = args.context.get_stacks_dict()
+        bastion_stack = stacks_dict['bastion']
+        bastion_stack.blueprint.create_template()
+        bastion_stack.blueprint.setup_parameters()
+        self.assertIn('DefaultSG', bastion_stack.blueprint.parameters)

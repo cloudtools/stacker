@@ -67,14 +67,16 @@ class Stack(object):
 
     @property
     def blueprint(self):
-        class_path = self.definition['class_path']
-        blueprint_class = util.load_object_from_string(class_path)
-        if not hasattr(blueprint_class, 'rendered'):
-            raise AttributeError("Stack class %s does not have a "
-                                 "'rendered' "
-                                 "attribute." % (class_path,))
-        return blueprint_class(
-            name=self.name,
-            context=self.context,
-            mappings=self.mappings,
-        )
+        if not hasattr(self, '_blueprint'):
+            class_path = self.definition['class_path']
+            blueprint_class = util.load_object_from_string(class_path)
+            if not hasattr(blueprint_class, 'rendered'):
+                raise AttributeError("Stack class %s does not have a "
+                                     "'rendered' "
+                                     "attribute." % (class_path,))
+            self._blueprint = blueprint_class(
+                name=self.name,
+                context=self.context,
+                mappings=self.mappings,
+            )
+        return self._blueprint

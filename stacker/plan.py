@@ -142,7 +142,7 @@ class Plan(OrderedDict):
             step.status = COMPLETE
             steps += 1
 
-        logger.log(level, "\n\nPlan '%s':\n%s", self.details, '\n'.join(messages))
+        logger.log(level, "\n\nPlan '%s':\n%s\n", self.details, '\n'.join(messages))
 
     def _check_point(self, current_step_name=None):
         if current_step_name:
@@ -152,4 +152,4 @@ class Plan(OrderedDict):
         for step_name, step in self.iteritems():
             message = '  - Step "%s": %s' % (step_name, step.status.name)
             messages.append(message)
-        logger.info('\nPlan Status:\n%s', '\n'.join(messages))
+        logger.info('\n\nPlan Status:\n%s\n', '\n'.join(messages))

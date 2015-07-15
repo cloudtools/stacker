@@ -56,6 +56,7 @@ class Provider(BaseProvider):
     def destroy_stack(self, stack, **kwargs):
         logger.info("Destroying stack: %s" % (stack.stack_name,))
         self.cloudformation.delete_stack(stack.stack_id)
+        return True
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
         logger.info("Stack %s not found, creating.", fqn)

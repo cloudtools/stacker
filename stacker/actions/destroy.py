@@ -72,4 +72,4 @@ class Action(BaseAction):
             debug_plan.outline(logging.DEBUG)
             plan.execute()
         else:
-            plan.outline()
+            plan.outline(execute_helper=True)

@@ -203,7 +203,7 @@ class Action(BaseAction):
             logger.info("Launching stacks: %s", ', '.join(plan.keys()))
             plan.execute()
         else:
-            plan.outline()
+            plan.outline(execute_helper=True)
 
     def post_run(self, outline=False, *args, **kwargs):
         post_build = self.context.config.get('post_build')

@@ -126,7 +126,7 @@ class Plan(OrderedDict):
         self._check_point()
         return results
 
-    def outline(self, level=logging.INFO):
+    def outline(self, level=logging.INFO, execute_helper=False):
         steps = 1
         messages = []
         while not self.completed:
@@ -141,6 +141,9 @@ class Plan(OrderedDict):
             # Set the status to COMPLETE directly so we don't call the completion func
             step.status = COMPLETE
             steps += 1
+
+        if execute_helper:
+            messages.append('\nTo execute this plan, run with "-f, --force" flag.')
 
         logger.log(level, "\n\nPlan '%s':\n%s\n", self.details, '\n'.join(messages))
 

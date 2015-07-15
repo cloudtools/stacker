@@ -120,6 +120,7 @@ class Plan(OrderedDict):
             elif status.code == SKIPPED.code:
                 step.skip()
             else:
+                step.set_status(status)
                 time.sleep(self.sleep_time)
 
         self._check_point()

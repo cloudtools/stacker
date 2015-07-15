@@ -5,6 +5,7 @@ import mock
 
 from stacker.actions import destroy
 from stacker.context import Context
+from stacker.plan import SUBMITTED, PENDING, COMPLETE, SKIPPED
 from stacker.providers import aws
 
 
@@ -62,3 +63,16 @@ class TestDestroyAction(unittest.TestCase):
         with mock.patch.object(self.action, '_generate_plan') as mock_generate_plan:
             self.action.run(force=True)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
+
+    def test_destroy_stack_complete_if_state_pending(self):
+        # Simulate the provider not being able to find the stack (a result of
+        # it being successfully deleted)
+        self.action.provider = mock.MagicMock()
+        self.action.provider.get_stack.return_value = None
+        status = self.action._destroy_stack({}, MockStack('vpc'), status=SUBMITTED)
+        # if we haven't processed the step (ie. has never been PENDING, should be skipped)
+        self.assertEqual(status, SKIPPED)
+        status = self.action._destroy_stack({}, MockStack('vpc'), status=PENDING)
+        # if we have processed the step and then can't find the stack, it means
+        # we successfully deleted it
+        self.assertEqual(status, COMPLETE)

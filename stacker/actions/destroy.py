@@ -42,7 +42,13 @@ class Action(BaseAction):
         provider_stack = self.provider.get_stack(stack.fqn)
         if not provider_stack:
             logger.debug("Stack %s does not exist.", stack.fqn)
-            return SKIPPED
+            # Once the stack has been destroyed, it doesn't exist. If the
+            # status of the step was PENDING, we know we just deleted it,
+            # otherwise it should be skipped
+            if kwargs.get('status', None) is PENDING:
+                return COMPLETE
+            else:
+                return SKIPPED
 
         logger.debug(
             "Stack %s provider status: %s",

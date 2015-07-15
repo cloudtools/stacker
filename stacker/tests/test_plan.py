@@ -51,7 +51,8 @@ class TestPlan(unittest.TestCase):
                 completion_func=self._completion_func,
             )
 
-    def _run_func(self, results, stack):
+    def _run_func(self, results, stack, **kwargs):
+        self.assertIn('status', kwargs, 'Step "status" should be passed to all run_funcs')
         self.count += 1
         if not self.count % 2:
             return COMPLETE

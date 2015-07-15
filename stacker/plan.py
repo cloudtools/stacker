@@ -123,12 +123,13 @@ class Plan(OrderedDict):
                 time.sleep(self.sleep_time)
         return results
 
-    def outline(self):
-        logger.info("Plan '%s':", self.details)
+    def outline(self, level=logging.INFO):
+        logger.log(level, "Plan '%s':", self.details)
         steps = 1
         while not self.completed:
             step_name, step = self.list_pending()[0]
-            logger.info(
+            logger.log(
+                level,
                 "\t- step %s: target: '%s', action: '%s'",
                 steps,
                 step_name,

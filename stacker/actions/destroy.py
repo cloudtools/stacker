@@ -60,6 +60,10 @@ class Action(BaseAction):
     def run(self, force, *args, **kwargs):
         plan = self._generate_plan()
         if force:
+            # need to generate a new plan to log since the outline sets the
+            # steps to COMPLETE in order to log them
+            debug_plan = self._generate_plan()
+            debug_plan.outline(logging.DEBUG)
             plan.execute()
         else:
             plan.outline()

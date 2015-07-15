@@ -20,7 +20,7 @@ class Destroy(StackerCommand):
         super(Destroy, self).run(options, **kwargs)
         action = destroy.Action(options.context, provider=options.provider)
         stack_names = map(lambda x: '  - %s' % (x.fqn,), options.context.get_stacks())
-        message = 'Are you sure you want to destroy the following stacks:\n%s\n\n(yes/no): ' % (
+        message = '\nAre you sure you want to destroy the following stacks:\n%s\n\n(yes/no): ' % (
             '\n'.join(stack_names),
         )
         force = False

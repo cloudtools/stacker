@@ -55,6 +55,7 @@ class Action(BaseAction):
             return PENDING
         else:
             self.provider.destroy_stack(provider_stack)
+        return PENDING
 
     def run(self, force, *args, **kwargs):
         plan = self._generate_plan()

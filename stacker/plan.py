@@ -44,8 +44,9 @@ class Step(object):
         self.set_status(SUBMITTED)
 
     def run(self, results):
-        self.submit()
-        return self._run_func(results, self.stack)
+        if not self.submitted:
+            self.submit()
+        return self._run_func(results, self.stack, status=self.status)
 
     def set_status(self, status):
         logger.debug("Setting %s state to %s.", self.stack.name, status.name)

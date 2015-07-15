@@ -36,7 +36,7 @@ def _gather_parameters(stack_def, builder_parameters):
 
 class Stack(object):
 
-    def __init__(self, definition, base_fqn='', parameters=None, mappings=None):
+    def __init__(self, definition, context, base_fqn='', parameters=None, mappings=None):
         self.base_fqn = base_fqn
         self.name = definition['name']
         if self.base_fqn:
@@ -46,6 +46,7 @@ class Stack(object):
         self.definition = definition
         self.parameters = _gather_parameters(definition, parameters or {})
         self.mappings = mappings
+        self.context = context
 
     def __repr__(self):
         return self.name
@@ -74,6 +75,6 @@ class Stack(object):
                                  "attribute." % (class_path,))
         return blueprint_class(
             name=self.name,
-            parameters=self.parameters,
+            context=self.context,
             mappings=self.mappings,
         )

@@ -32,8 +32,9 @@ class Context(object):
             self._stacks = []
             for stack_def in definitions:
                 stack = Stack(
-                    base_fqn=self.get_fqn(),
                     definition=stack_def,
+                    context=self,
+                    base_fqn=self.get_fqn(),
                     parameters=self.parameters,
                     mappings=self.mappings,
                 )

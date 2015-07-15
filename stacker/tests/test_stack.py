@@ -1,5 +1,7 @@
 import unittest
 
+from mock import MagicMock
+
 from stacker.stack import _gather_parameters, Stack
 from .factories import generate_definition
 
@@ -8,7 +10,10 @@ class TestStack(unittest.TestCase):
 
     def setUp(self):
         self.sd = {"name": "test"}
-        self.stack = Stack(generate_definition('vpc', 1))
+        self.stack = Stack(
+            definition=generate_definition('vpc', 1),
+            context=MagicMock(),
+        )
 
     def test_stack_requires(self):
         self.assertIn('fakeStack', self.stack.requires)

@@ -20,27 +20,27 @@ class Blueprint(object):
     :param mappings: Cloudformation Mappings to be used in the template.
 
     """
-    def __init__(self, name, parameters, mappings=None):
+    def __init__(self, name, context, mappings=None):
         self.name = name
         self.mappings = mappings
-        self.parameters = parameters
+        self.context = context
         self.outputs = {}
         self.reset_template()
 
     @property
-    def template_parameters(self):
+    def parameters(self):
         return self.template.parameters
 
     @property
     def required_parameters(self):
         """ Returns all template parameters that do not have a default value. """
         required = []
-        for k, v in self.template_parameters.items():
+        for k, v in self.parameters.items():
             if not hasattr(v, 'Default'):
                 required.append((k, v))
         return required
 
-    def setup_template_parameters(self):
+    def setup_parameters(self):
         t = self.template
         parameters = getattr(self, 'PARAMETERS')
         if not parameters:
@@ -70,7 +70,7 @@ class Blueprint(object):
 
     def render_template(self):
         self.create_template()
-        self.setup_template_parameters()
+        self.setup_parameters()
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)

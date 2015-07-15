@@ -13,7 +13,10 @@ count = 0
 class TestStep(unittest.TestCase):
 
     def setUp(self):
-        stack = Stack(generate_definition('vpc', 1))
+        stack = Stack(
+            definition=generate_definition('vpc', 1),
+            context=mock.MagicMock(),
+        )
         self.step = Step(
             stack=stack,
             index=0,
@@ -38,7 +41,10 @@ class TestPlan(unittest.TestCase):
         self.count = 0
         self.plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
         for i in range(5):
-            stack = Stack(generate_definition('vpc', i))
+            stack = Stack(
+                definition=generate_definition('vpc', i),
+                context=mock.MagicMock(),
+            )
             self.plan.add(
                 stack=stack,
                 run_func=self._run_func,

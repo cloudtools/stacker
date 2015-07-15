@@ -111,7 +111,7 @@ class Plan(OrderedDict):
             step_name, step = self.list_pending()[0]
             attempts += 1
             if not attempts % 10:
-                logger.info("Waiting on stack: %s", step_name)
+                self._check_point(step_name)
 
             status = step.run(results)
             if status.code == COMPLETE.code:
@@ -138,3 +138,11 @@ class Plan(OrderedDict):
             # Set the status to COMPLETE directly so we don't call the completion func
             step.status = COMPLETE
             steps += 1
+
+    def _check_point(self, current_step_name):
+        logger.info('Waiting on stack: %s', current_step_name)
+        messages = []
+        for step_name, step in self.iteritems():
+            message = '  - Step "%s": %s' % (step_name, step.status.name)
+            messages.append(message)
+        logger.info('\nPlan Status:\n%s', '\n'.join(messages))

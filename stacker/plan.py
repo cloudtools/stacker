@@ -121,6 +121,8 @@ class Plan(OrderedDict):
                 step.skip()
             else:
                 time.sleep(self.sleep_time)
+
+        self._check_point()
         return results
 
     def outline(self, level=logging.INFO):
@@ -139,8 +141,10 @@ class Plan(OrderedDict):
             step.status = COMPLETE
             steps += 1
 
-    def _check_point(self, current_step_name):
-        logger.info('Waiting on stack: %s', current_step_name)
+    def _check_point(self, current_step_name=None):
+        if current_step_name:
+            logger.info('Waiting on stack: %s', current_step_name)
+
         messages = []
         for step_name, step in self.iteritems():
             message = '  - Step "%s": %s' % (step_name, step.status.name)

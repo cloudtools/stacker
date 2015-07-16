@@ -6,7 +6,7 @@ import mock
 from stacker.actions import build
 from stacker.context import Context
 from stacker import exceptions
-from stacker.plan import COMPLETE, SKIPPED, SUBMITTED
+from stacker.plan import COMPLETE, PENDING, SKIPPED, SUBMITTED
 from stacker.providers.exceptions import StackDidNotChange
 
 
@@ -139,6 +139,7 @@ class TestBuildAction(unittest.TestCase):
             mock_provider.is_stack_in_progress.return_value = True
             mock_provider.is_stack_completed.return_value = False
             status = step.run({})
+            step.set_status(status)
             # status should still be SUBMITTED since we're waiting for it to complete
             self.assertEqual(status, SUBMITTED)
             # simulate completed stack
@@ -152,3 +153,11 @@ class TestBuildAction(unittest.TestCase):
             mock_provider.update_stack.side_effect = StackDidNotChange
             status = step.run({})
             self.assertEqual(status, SKIPPED)
+
+            # simulate an update is required
+            mock_provider.reset_mock()
+            mock_provider.update_stack.side_effect = None
+            step.set_status(PENDING)
+            status = step.run({})
+            self.assertEqual(status, SUBMITTED)
+            self.assertEqual(mock_provider.update_stack.call_count, 1)

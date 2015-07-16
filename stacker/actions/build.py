@@ -88,7 +88,7 @@ class Action(BaseAction):
         it is already updating or creating.
         """
         provider_stack = self.provider.get_stack(stack.fqn)
-        if provider_stack:
+        if provider_stack and kwargs.get('status') is SUBMITTED:
             logger.debug(
                 "Stack %s provider status: %s",
                 stack.fqn,

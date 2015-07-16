@@ -114,10 +114,13 @@ class Plan(OrderedDict):
                 self._check_point(step_name)
 
             status = step.run(results)
-            if status.code == COMPLETE.code:
+            if not isinstance(status, Status):
+                raise ValueError('Step run_func must return a valid Status')
+
+            if status is COMPLETE:
                 attempts = 0
                 results[step_name] = step.complete()
-            elif status.code == SKIPPED.code:
+            elif status is SKIPPED:
                 step.skip()
             else:
                 step.set_status(status)

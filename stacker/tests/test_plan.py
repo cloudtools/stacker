@@ -69,3 +69,15 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(results[self.plan.keys()[0]], 2)
         self.assertEqual(results[self.plan.keys()[-2]], 8)
         self.assertEqual(len(self.plan.list_skipped()), 1)
+
+    def test_step_must_return_status(self):
+        plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
+        stack = Stack(definition=generate_definition('vpc', 1), context=mock.MagicMock())
+        plan.add(
+            stack=stack,
+            run_func=lambda x, y,
+            **kwargs: (x, y),
+            completion_func=lambda x: True,
+        )
+        with self.assertRaises(ValueError):
+            plan.execute()

@@ -1,7 +1,12 @@
 import logging
 
 from .base import BaseAction
-from ..plan import COMPLETE, PENDING, SKIPPED, Plan
+from ..plan import (
+    COMPLETE,
+    SKIPPED,
+    SUBMITTED,
+    Plan,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +48,9 @@ class Action(BaseAction):
         if not provider_stack:
             logger.debug("Stack %s does not exist.", stack.fqn)
             # Once the stack has been destroyed, it doesn't exist. If the
-            # status of the step was PENDING, we know we just deleted it,
+            # status of the step was SUBMITTED, we know we just deleted it,
             # otherwise it should be skipped
-            if kwargs.get('status', None) is PENDING:
+            if kwargs.get('status', None) is SUBMITTED:
                 return COMPLETE
             else:
                 return SKIPPED
@@ -58,10 +63,10 @@ class Action(BaseAction):
         if self.provider.is_stack_destroyed(provider_stack):
             return COMPLETE
         elif self.provider.is_stack_in_progress(provider_stack):
-            return PENDING
+            return SUBMITTED
         else:
             self.provider.destroy_stack(provider_stack)
-        return PENDING
+        return SUBMITTED
 
     def run(self, force, *args, **kwargs):
         plan = self._generate_plan()

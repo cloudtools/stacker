@@ -15,6 +15,10 @@ mappings:
       NAT: ami-ad227cc4
       ubuntu1404: &ubuntu1404 ami-74e27e1c # Setting an anchor
       bastion: *ubuntu1404 # Using the anchor above
+    us-west-2:
+      NAT: ami-290f4119
+      ubuntu1404west2: &ubuntu1404west2 ami-5189a661
+      bastion: *ubuntu1404west2
 
 vpc_parameters: &vpc_parameters
   VpcId: vpc::VpcId # parametrs with ::'s in them refer to <stack>::<Output>

@@ -122,7 +122,11 @@ class PostgresRDS(Blueprint):
                 ResourceRecords=[endpoint],
                 Condition="CreateInternalHostname"))
         t.add_output(Output('DBAddress', Value=endpoint))
-        t.add_output(Output('DBCname', Value=Ref("%sDnsRecord" % db_name)))
+        t.add_output(
+            Output(
+                'DBCname',
+                Condition="CreateInternalHostname",
+                Value=Ref("%sDnsRecord" % db_name)))
 
     def create_template(self):
         self.create_conditions()

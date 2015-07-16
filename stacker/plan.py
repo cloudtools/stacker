@@ -15,12 +15,14 @@ SKIPPED = Status('skipped', 3)
 
 class Step(object):
 
-    def __init__(self, stack, index, run_func, completion_func=None):
+    def __init__(self, stack, index, run_func, completion_func=None,
+                 skip_func=None):
         self.stack = stack
         self.status = PENDING
         self.index = index
         self._run_func = run_func
         self._completion_func = completion_func
+        self._skip_func = skip_func
 
     def __repr__(self):
         return '<stacker.plan.Step:%s:%s>' % (
@@ -57,6 +59,8 @@ class Step(object):
 
     def skip(self):
         self.set_status(SKIPPED)
+        if self._skip_func and callable(self._skip_func):
+            return self._skip_func(self.stack)
 
 
 class Plan(OrderedDict):
@@ -69,12 +73,13 @@ class Plan(OrderedDict):
         self.max_attempts = max_attempts
         super(Plan, self).__init__(*args, **kwargs)
 
-    def add(self, stack, run_func, completion_func=None):
+    def add(self, stack, run_func, completion_func=None, skip_func=None):
         self[stack.name] = Step(
             stack=stack,
             index=len(self.keys()),
             run_func=run_func,
             completion_func=completion_func,
+            skip_func=skip_func,
         )
 
     def list_status(self, status):
@@ -119,7 +124,7 @@ class Plan(OrderedDict):
                 attempts = 0
                 results[step_name] = step.complete()
             elif status is SKIPPED:
-                step.skip()
+                results[step_name] = step.skip()
             else:
                 step.set_status(status)
                 time.sleep(self.sleep_time)

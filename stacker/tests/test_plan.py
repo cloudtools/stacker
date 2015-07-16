@@ -40,6 +40,7 @@ class TestPlan(unittest.TestCase):
     def setUp(self):
         self.count = 0
         self.plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
+        self._skip_func = mock.MagicMock()
         for i in range(5):
             stack = Stack(
                 definition=generate_definition('vpc', i),
@@ -49,6 +50,7 @@ class TestPlan(unittest.TestCase):
                 stack=stack,
                 run_func=self._run_func,
                 completion_func=self._completion_func,
+                skip_func=self._skip_func,
             )
 
     def _run_func(self, results, stack, **kwargs):
@@ -69,6 +71,7 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(results[self.plan.keys()[0]], 2)
         self.assertEqual(results[self.plan.keys()[-2]], 8)
         self.assertEqual(len(self.plan.list_skipped()), 1)
+        self.assertEqual(len(self.plan.list_skipped()), self._skip_func.call_count)
 
     def test_step_must_return_status(self):
         plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)

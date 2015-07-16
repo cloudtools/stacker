@@ -175,6 +175,7 @@ class Action(BaseAction):
                 stacks[stack_name],
                 run_func=self._launch_stack,
                 completion_func=self._get_outputs,
+                skip_func=self._get_outputs,
             )
         return plan
 

@@ -61,3 +61,17 @@ class TestStacker(unittest.TestCase):
         bastion_stack.blueprint.create_template()
         bastion_stack.blueprint.setup_parameters()
         self.assertIn('DefaultSG', bastion_stack.blueprint.parameters)
+
+    def test_stacker_build_context_stack_names_specified(self):
+        stacker = Stacker()
+        parser = argparse.ArgumentParser(description=stacker.description)
+        stacker.add_subcommands(parser)
+        args = parser.parse_args(
+            ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
+             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16', 'stacker-test',
+             'stacker/tests/fixtures/vpc-bastion-db-web.yaml', '--stacks',
+             'vpc', '--stacks', 'bastion']
+        )
+        stacker.configure(args)
+        stacks = args.context.get_stacks()
+        self.assertEqual(len(stacks), 2)

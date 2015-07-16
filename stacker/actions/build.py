@@ -3,7 +3,7 @@ import logging
 from .base import BaseAction
 from .. import exceptions, util
 from ..providers.exceptions import StackDidNotChange
-from ..plan import COMPLETE, SKIPPED, PENDING, Plan
+from ..plan import COMPLETE, SKIPPED, SUBMITTED, Plan
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ class Action(BaseAction):
                 return COMPLETE
             elif self.provider.is_stack_in_progress(provider_stack):
                 logger.debug("Stack %s in progress.", stack.fqn)
-                return PENDING
+                return SUBMITTED
 
         logger.info("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
@@ -115,7 +115,7 @@ class Action(BaseAction):
         except StackDidNotChange:
             return SKIPPED
 
-        return PENDING
+        return SUBMITTED
 
     def _get_outputs(self, stack):
         """ Gets all the outputs from a given stack in CloudFormation.

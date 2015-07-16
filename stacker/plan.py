@@ -44,8 +44,6 @@ class Step(object):
         self.set_status(SUBMITTED)
 
     def run(self, results):
-        if not self.submitted:
-            self.submit()
         return self._run_func(results, self.stack, status=self.status)
 
     def set_status(self, status):

@@ -6,6 +6,8 @@ import mock
 from stacker.actions import build
 from stacker.context import Context
 from stacker import exceptions
+from stacker.plan import COMPLETE, SKIPPED, SUBMITTED
+from stacker.providers.exceptions import StackDidNotChange
 
 
 Parameter = namedtuple('Parameter', ['key', 'value'])
@@ -23,6 +25,15 @@ class TestBuildAction(unittest.TestCase):
     def setUp(self):
         self.context = Context('namespace')
         self.build_action = build.Action(self.context)
+
+    def _get_context(self, **kwargs):
+        config = {'stacks': [
+            {'name': 'vpc'},
+            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
+            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
+            {'name': 'other', 'parameters': {}}
+        ]}
+        return Context('namespace', config=config, **kwargs)
 
     def test_resolve_parameters_referencing_non_existant_output(self):
         parameters = {
@@ -71,13 +82,7 @@ class TestBuildAction(unittest.TestCase):
         self.assertEqual(result, def_params.items())
 
     def test_get_dependencies(self):
-        config = {'stacks': [
-            {'name': 'vpc'},
-            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
-            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
-            {'name': 'other', 'parameters': {}}
-        ]}
-        context = Context('namespace', config=config)
+        context = self._get_context()
         build_action = build.Action(context)
         dependencies = build_action._get_dependencies()
         self.assertEqual(dependencies['bastion'], set(['vpc']))
@@ -85,52 +90,65 @@ class TestBuildAction(unittest.TestCase):
         self.assertFalse(dependencies['other'])
 
     def test_get_stack_execution_order(self):
-        config = {'stacks': [
-            {'name': 'vpc'},
-            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
-            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
-            {'name': 'other', 'parameters': {}}
-        ]}
-        context = Context('namespace', config=config)
+        context = self._get_context()
         build_action = build.Action(context)
         dependencies = build_action._get_dependencies()
         execution_order = build_action.get_stack_execution_order(dependencies)
         self.assertEqual(execution_order, ['other', 'vpc', 'bastion', 'db'])
 
     def test_generate_plan(self):
-        config = {'stacks': [
-            {'name': 'vpc'},
-            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
-            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
-            {'name': 'other', 'parameters': {}}
-        ]}
-        context = Context('namespace', config=config)
+        context = self._get_context()
         build_action = build.Action(context)
         plan = build_action._generate_plan()
         self.assertEqual(plan.keys(), ['other', 'vpc', 'bastion', 'db'])
 
     def test_dont_execute_plan_when_outline_specified(self):
-        config = {'stacks': [
-            {'name': 'vpc'},
-            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
-            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
-            {'name': 'other', 'parameters': {}}
-        ]}
-        context = Context('namespace', config=config)
+        context = self._get_context()
         build_action = build.Action(context)
         with mock.patch.object(build_action, '_generate_plan') as mock_generate_plan:
             build_action.run(outline=True)
             self.assertEqual(mock_generate_plan().execute.call_count, 0)
 
     def test_execute_plan_when_outline_not_specified(self):
-        config = {'stacks': [
-            {'name': 'vpc'},
-            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
-            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
-            {'name': 'other', 'parameters': {}}
-        ]}
-        context = Context('namespace', config=config)
+        context = self._get_context()
         build_action = build.Action(context)
         with mock.patch.object(build_action, '_generate_plan') as mock_generate_plan:
             build_action.run(outline=False)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
+
+    def test_launch_stack_step_statuses(self):
+        mock_provider = mock.MagicMock()
+        mock_stack = mock.MagicMock()
+
+        context = self._get_context()
+        build_action = build.Action(context, provider=mock_provider)
+        plan = build_action._generate_plan()
+        _, step = plan.list_pending()[0]
+        step.stack = mock.MagicMock()
+
+        # mock provider shouldn't return a stack at first since it hasn't been launched
+        mock_provider.get_stack.return_value = None
+        with mock.patch.object(build_action, 's3_stack_push'):
+            # initial run should return SUBMITTED since we've passed off to CF
+            status = step.run({})
+            self.assertEqual(status, SUBMITTED)
+
+            # provider should now return the CF stack since it exists
+            mock_provider.get_stack.return_value = mock_stack
+            # simulate that we're still in progress
+            mock_provider.is_stack_in_progress.return_value = True
+            mock_provider.is_stack_completed.return_value = False
+            status = step.run({})
+            # status should still be SUBMITTED since we're waiting for it to complete
+            self.assertEqual(status, SUBMITTED)
+            # simulate completed stack
+            mock_provider.is_stack_completed.return_value = True
+            mock_provider.is_stack_in_progress.return_value = False
+            status = step.run({})
+            self.assertEqual(status, COMPLETE)
+            # simulate stack should be skipped
+            mock_provider.is_stack_completed.return_value = False
+            mock_provider.is_stack_in_progress.return_value = False
+            mock_provider.update_stack.side_effect = StackDidNotChange
+            status = step.run({})
+            self.assertEqual(status, SKIPPED)

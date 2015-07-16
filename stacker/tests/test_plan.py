@@ -2,7 +2,7 @@ import unittest
 
 import mock
 
-from stacker.plan import COMPLETE, PENDING, SKIPPED, Step, Plan
+from stacker.plan import COMPLETE, PENDING, SKIPPED, SUBMITTED, Step, Plan
 from stacker.stack import Stack
 
 from .factories import generate_definition
@@ -58,7 +58,7 @@ class TestPlan(unittest.TestCase):
             return COMPLETE
         elif self.count == 9:
             return SKIPPED
-        return PENDING
+        return SUBMITTED
 
     def _completion_func(self, stack):
         return self.count

@@ -134,31 +134,27 @@ class Plan(OrderedDict):
 
     def outline(self, level=logging.INFO, execute_helper=False):
         steps = 1
-        messages = []
+        logger.log(level, 'Plan "%s":', self.details)
         while not self.completed:
             step_name, step = self.list_pending()[0]
-            messages.append(
-                "  - step %s: target: '%s', action: '%s'" % (
-                    steps,
-                    step_name,
-                    step._run_func.__name__,
-                )
+            logger.log(
+                level,
+                '  - step: %s: target: "%s", action: "%s"',
+                steps,
+                step_name,
+                step._run_func.__name__,
             )
             # Set the status to COMPLETE directly so we don't call the completion func
             step.status = COMPLETE
             steps += 1
 
         if execute_helper:
-            messages.append('\nTo execute this plan, run with "-f, --force" flag.')
-
-        logger.log(level, "\n\nPlan '%s':\n%s\n", self.details, '\n'.join(messages))
+            logger.log(level, 'To execute this plan, run with "-f, --force" flag.')
 
     def _check_point(self, current_step_name=None):
         if current_step_name:
             logger.info('Waiting on stack: %s', current_step_name)
 
-        messages = []
+        logger.info('Plan Status:')
         for step_name, step in self.iteritems():
-            message = '  - Step "%s": %s' % (step_name, step.status.name)
-            messages.append(message)
-        logger.info('\n\nPlan Status:\n%s\n', '\n'.join(messages))
+            logger.info('  - step "%s": %s', step_name, step.status.name)

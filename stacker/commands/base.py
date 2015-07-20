@@ -2,7 +2,7 @@ import argparse
 import logging
 
 DEBUG_FORMAT = ('[%(asctime)s] %(levelname)s %(name)s:%(lineno)d'
-                '(%(funcName)s) - %(message)s')
+                '(%(funcName)s): %(message)s')
 INFO_FORMAT = ('[%(asctime)s] %(message)s')
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S'

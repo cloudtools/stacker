@@ -46,7 +46,9 @@ class Stack(object):
         self.definition = definition
         self.parameters = _gather_parameters(definition, parameters or {})
         self.mappings = mappings
-        self.context = context
+        # XXX this is temporary until we remove passing context down to the blueprint
+        self.context = copy.deepcopy(context)
+        self.context.parameters.update(self.parameters)
 
     def __repr__(self):
         return self.name

@@ -40,6 +40,7 @@ class Action(BaseAction):
             plan.add(
                 stacks_dict[stack_name],
                 run_func=self._destroy_stack,
+                requires=dependencies.get(stack_name),
             )
         return plan
 

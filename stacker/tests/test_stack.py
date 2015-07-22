@@ -16,8 +16,17 @@ class TestStack(unittest.TestCase):
         )
 
     def test_stack_requires(self):
-        self.assertIn('fakeStack', self.stack.requires)
-        self.assertIn('fakeStack2', self.stack.requires)
+        definition = generate_definition(
+            'vpc',
+            1,
+            parameters={
+                "ExternalParameter": "fakeStack2::FakeParameter",
+            },
+            requires=['fakeStack'],
+        )
+        stack = Stack(definition=definition, context=MagicMock())
+        self.assertIn('fakeStack', stack.requires)
+        self.assertIn('fakeStack2', stack.requires)
 
     def test_empty_parameters(self):
         build_action_parameters = {}

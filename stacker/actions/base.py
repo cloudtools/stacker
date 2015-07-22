@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import boto
@@ -92,23 +93,26 @@ class BaseAction(object):
         )
 
     def get_stack_execution_order(self, dependency_dict):
+        # copy the dependency_dict since we pop items out of it to get the
+        # execution order, we don't want to mutate the one passed in
+        dependencies = copy.deepcopy(dependency_dict)
         pending_steps = []
         executed_steps = []
-        stack_names = self._get_all_stack_names(dependency_dict)
+        stack_names = self._get_all_stack_names(dependencies)
         for stack_name in stack_names:
-            requirements = dependency_dict.get(stack_name, None)
+            requirements = dependencies.get(stack_name, None)
             if not requirements:
-                dependency_dict.pop(stack_name, None)
+                dependencies.pop(stack_name, None)
                 pending_steps.append(stack_name)
 
-        while dependency_dict:
+        while dependencies:
             for step in pending_steps:
-                for stack_name, requirements in dependency_dict.items():
+                for stack_name, requirements in dependencies.items():
                     if step in requirements:
                         requirements.remove(step)
 
                     if not requirements:
-                        dependency_dict.pop(stack_name)
+                        dependencies.pop(stack_name)
                         pending_steps.append(stack_name)
                 pending_steps.remove(step)
                 executed_steps.append(step)

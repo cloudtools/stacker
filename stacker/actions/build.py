@@ -176,6 +176,7 @@ class Action(BaseAction):
                 run_func=self._launch_stack,
                 completion_func=self._get_outputs,
                 skip_func=self._get_outputs,
+                requires=dependencies.get(stack_name),
             )
         return plan
 

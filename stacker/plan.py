@@ -4,6 +4,8 @@ import time
 
 from collections import namedtuple
 
+from .exceptions import ImproperlyConfigured
+
 logger = logging.getLogger(__name__)
 
 Status = namedtuple('Status', ['name', 'code'])
@@ -16,10 +18,11 @@ SKIPPED = Status('skipped', 3)
 class Step(object):
 
     def __init__(self, stack, index, run_func, completion_func=None,
-                 skip_func=None):
+                 skip_func=None, requires=None):
         self.stack = stack
         self.status = PENDING
         self.index = index
+        self.requires = requires or []
         self._run_func = run_func
         self._completion_func = completion_func
         self._skip_func = skip_func
@@ -66,20 +69,36 @@ class Step(object):
 class Plan(OrderedDict):
     """Used to organize the execution of cloudformation steps"""
 
-    def __init__(self, details, provider, sleep_time=5, max_attempts=10, *args, **kwargs):
+    def __init__(
+            self,
+            details,
+            provider,
+            sleep_time=5,
+            max_attempts=10,
+            wait_func=None,
+            *args,
+            **kwargs
+        ):
         self.details = details
         self.provider = provider
         self.sleep_time = sleep_time
         self.max_attempts = max_attempts
+        if wait_func is not None:
+            if not callable(wait_func):
+                raise ImproperlyConfigured(self.__class__, '"wait_func" must be a callable')
+            self._wait_func = wait_func
+        else:
+            self._wait_func = time.sleep
         super(Plan, self).__init__(*args, **kwargs)
 
-    def add(self, stack, run_func, completion_func=None, skip_func=None):
+    def add(self, stack, run_func, completion_func=None, skip_func=None, requires=None):
         self[stack.name] = Step(
             stack=stack,
             index=len(self.keys()),
             run_func=run_func,
             completion_func=completion_func,
             skip_func=skip_func,
+            requires=requires,
         )
 
     def list_status(self, status):
@@ -107,27 +126,41 @@ class Plan(OrderedDict):
             return False
         return True
 
-    def execute(self):
-        results = {}
+    def execute(self, results=None):
+        if results is None:
+            results = {}
+
         attempts = 0
         while not self.completed:
-            step_name, step = self.list_pending()[0]
             attempts += 1
             if not attempts % 10:
-                self._check_point(step_name)
+                self._check_point()
 
-            status = step.run(results)
-            if not isinstance(status, Status):
-                raise ValueError('Step run_func must return a valid Status')
+            for step_name, step in self.list_pending():
+                waiting_on = []
+                for required_stack in step.requires:
+                    if required_stack not in results:
+                        waiting_on.append(required_stack)
 
-            if status is COMPLETE:
-                attempts = 0
-                results[step_name] = step.complete()
-            elif status is SKIPPED:
-                results[step_name] = step.skip()
-            else:
-                step.set_status(status)
-                time.sleep(self.sleep_time)
+                if waiting_on:
+                    logger.info(
+                        'Stack: "%s" waiting on required stacks: %s',
+                        step.stack.name,
+                        ', '.join(waiting_on),
+                    )
+                    continue
+
+                status = step.run(results)
+                if not isinstance(status, Status):
+                    raise ValueError('Step run_func must return a valid Status')
+
+                if status is COMPLETE:
+                    results[step_name] = step.complete()
+                elif status is SKIPPED:
+                    results[step_name] = step.skip()
+                else:
+                    step.set_status(status)
+            self._wait_func(self.sleep_time)
 
         self._check_point()
         return results
@@ -151,10 +184,7 @@ class Plan(OrderedDict):
         if execute_helper:
             logger.log(level, 'To execute this plan, run with "-f, --force" flag.')
 
-    def _check_point(self, current_step_name=None):
-        if current_step_name:
-            logger.info('Waiting on stack: %s', current_step_name)
-
+    def _check_point(self):
         logger.info('Plan Status:')
         for step_name, step in self.iteritems():
             logger.info('  - step "%s": %s', step_name, step.status.name)

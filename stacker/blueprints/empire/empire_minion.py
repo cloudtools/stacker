@@ -18,25 +18,31 @@ CLUSTER_SG_NAME = "EmpireMinionSecurityGroup"
 
 class EmpireMinion(EmpireBase):
     PARAMETERS = {
-        "VpcId": {"type": "AWS::EC2::VPC::Id", "description": "Vpc Id"},
-        "DefaultSG": {"type": "AWS::EC2::SecurityGroup::Id",
-                      "description": "Top level security group."},
-        "PrivateSubnets": {"type": "List<AWS::EC2::Subnet::Id>",
-                           "description": "Subnets to deploy private "
-                                          "instances in."},
-        "AvailabilityZones": {"type": "CommaDelimitedList",
-                              "description": "Availability Zones to deploy "
-                                             "instances in."},
-        "InstanceType": {"type": "String",
-                         "description": "Empire AWS Instance Type",
-                         "default": "c4.2xlarge"},
-        "MinSize": {"type": "Number",
-                    "description": "Minimum # of empire minion instances.",
-                    "default": "3"},
-        "MaxSize": {"type": "Number",
-                    "description": "Maximum # of empire minion instances.",
-                    "default": "20"},
-        "SshKeyName": {"type": "AWS::EC2::KeyPair::KeyName"},
+        "VpcId": {
+            "type": "AWS::EC2::VPC::Id", "description": "Vpc Id"},
+        "DefaultSG": {
+            "type": "AWS::EC2::SecurityGroup::Id",
+            "description": "Top level security group."},
+        "PrivateSubnets": {
+            "type": "List<AWS::EC2::Subnet::Id>",
+            "description": "Subnets to deploy private instances in."},
+        "AvailabilityZones": {
+            "type": "CommaDelimitedList",
+            "description": "Availability Zones to deploy instances in."},
+        "InstanceType": {
+            "type": "String",
+            "description": "Empire AWS Instance Type",
+            "default": "c4.2xlarge"},
+        "MinSize": {
+            "type": "Number",
+            "description": "Minimum # of empire minion instances.",
+            "default": "3"},
+        "MaxSize": {
+            "type": "Number",
+            "description": "Maximum # of empire minion instances.",
+            "default": "20"},
+        "SshKeyName": {
+            "type": "AWS::EC2::KeyPair::KeyName"},
         "ImageName": {
             "type": "String",
             "description": "The image name to use from the AMIMap (usually "

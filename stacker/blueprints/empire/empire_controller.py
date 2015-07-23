@@ -22,49 +22,56 @@ ELB_SG_NAME = "EmpireControllerELBSecurityGroup"
 
 class EmpireController(EmpireBase):
     PARAMETERS = {
-        'VpcId': {'type': 'AWS::EC2::VPC::Id', 'description': 'Vpc Id'},
-        'DefaultSG': {'type': 'AWS::EC2::SecurityGroup::Id',
-                      'description': 'Top level security group.'},
-        'ExternalDomain': {
-            'type': 'String',
-            'description': 'Base domain for the stack.',
-            'default': ''},
+        "VpcId": {
+            "type": "AWS::EC2::VPC::Id",
+            "description": "Vpc Id"},
+        "DefaultSG": {
+            "type": "AWS::EC2::SecurityGroup::Id",
+            "description": "Top level security group."},
+        "ExternalDomain": {
+            "type": "String",
+            "description": "Base domain for the stack.",
+            "default": ""},
         "InternalZoneId": {
             "type": "AWS::Route53::HostedZone::Id",
             "description": "Zone ID of the internal Empire zone",
             },
-        'PrivateSubnets': {'type': 'List<AWS::EC2::Subnet::Id>',
-                           'description': 'Subnets to deploy private '
-                                          'instances in.'},
-        'PublicSubnets': {'type': 'List<AWS::EC2::Subnet::Id>',
-                          'description': 'Subnets to deploy public (elb) '
-                                         'instances in.'},
-        'AvailabilityZones': {'type': 'CommaDelimitedList',
-                              'description': 'Availability Zones to deploy '
-                                             'instances in.'},
-        'InstanceType': {'type': 'String',
-                         'description': 'Empire AWS Instance Type',
-                         'default': 'm3.medium'},
-        "MinHosts": {"type": "Number",
-                     "description": "Minimum # of empire minion instances.",
-                     "default": "2"},
-        "MaxHosts": {"type": "Number",
-                     "description": "Maximum # of empire minion instances.",
-                     "default": "3"},
-        'SshKeyName': {'type': 'AWS::EC2::KeyPair::KeyName'},
-        'TrustedNetwork': {
-            'type': 'String',
-            'description': 'CIDR block allowed to connect to empire ELB.'},
+        "PrivateSubnets": {
+            "type": "List<AWS::EC2::Subnet::Id>",
+            "description": "Subnets to deploy private instances in."},
+        "PublicSubnets": {
+            "type": "List<AWS::EC2::Subnet::Id>",
+            "description": "Subnets to deploy public (elb) instances in."},
+        "AvailabilityZones": {
+            "type": "CommaDelimitedList",
+            "description": "Availability Zones to deploy instances in."},
+        "InstanceType": {
+            "type": "String",
+            "description": "Empire AWS Instance Type",
+            "default": "m3.medium"},
+        "MinHosts": {
+            "type": "Number",
+            "description": "Minimum # of empire minion instances.",
+            "default": "2"},
+        "MaxHosts": {
+            "type": "Number",
+            "description": "Maximum # of empire minion instances.",
+            "default": "3"},
+        "SshKeyName": {
+            "type": "AWS::EC2::KeyPair::KeyName"},
+        "TrustedNetwork": {
+            "type": "String",
+            "description": "CIDR block allowed to connect to empire ELB."},
         "ImageName": {
             "type": "String",
             "description": "The image name to use from the AMIMap (usually "
                            "found in the config file.)",
             "default": "NAT"},
-        'ControllerELBCertName': {
-            'type': 'String',
-            'description': 'The SSL certificate name to use on the ELB. Note: '
-                           'If this is set, non-HTTPS access is disabled.',
-            'default': ''},
+        "ControllerELBCertName": {
+            "type": "String",
+            "description": "The SSL certificate name to use on the ELB. Note: "
+                           "If this is set, non-HTTPS access is disabled.",
+            "default": ""},
         "PublicEmpireAppELBSG": {
             "type": "AWS::EC2::SecurityGroup::Id",
             "description": "The SG used by the Public App ELBs."},

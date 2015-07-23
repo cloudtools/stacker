@@ -1,0 +1,156 @@
+# This is an example stacker config for bringing up a "Production Ready"
+# version of Empire (https://github.com/remind101/empire)
+# It brings up 5 stacks:
+# - vpc:
+#   Basic vpc definitions, nat hosts, etc
+# - bastion:
+#   bastion hosts with ssh limited to a single CIDR range (your office, for
+#   example) that can ssh to any host insde the VPC
+# - empireDB:
+#   A postgres RDS database that will host your empire database.
+# - empireMinion:
+#   An autoscaling group that will deploy have the ECS Agent deployed to each
+#   instance and configured to use the ECS Cluster that Empire will deploy
+#   tasks into.
+# - empireController:
+#   An autoscaling group that will launch the Empire API. An ELB will be built
+#   in front of these hosts, using an SSL certificate if provided (recommended)
+#   and only allowing access from the same trusted CIDR range defined in
+#   the bastion. It will also create a DNS CNAME in a given External Domain
+#   for the empire API ELB (https://empire.<given domain>)
+#
+# Each stack builds whatever security groups, IAM profiles, roles, and
+# policies that they might need.
+
+# Hooks require a path.
+# If the build should stop when a hook fails, set required to true.
+# pre_build happens before the build
+# post_build happens after the build
+pre_build:
+  - path: stacker.hooks.route53.create_domain
+    required: true
+    # Additional args can be passed as a dict of key/value pairs in kwargs
+    args:
+      domain: ${external_domain}
+# post_build:
+
+mappings:
+  AmiMap:
+    us-east-1:
+      NAT: ami-c02b04a8
+      ubuntu1404: ami-c135f3aa
+      empire: ami-75bb641e
+    us-west-1:
+      NAT: ami-67a54423
+      ubuntu1404: ami-bf3dccfb
+      empire: ami-6d827f29
+    us-west-2:
+      NAT: ami-2dae821d
+      ubuntu1404: ami-f15b5dc1
+      empire: ami-45c8c475
+
+# Many stacks need these settings, or a subset of them, from the VPC -
+# this makes it easy to pass them around. Stacker will drop unused Parameters
+# that are passed to a blueprint.
+vpc_parameters: &vpc_parameters
+  VpcId: vpc::VpcId # parametrs with ::'s in them refer to <stack>::<Output>
+  DefaultSG: vpc::DefaultSG
+  PublicSubnets: vpc::PublicSubnets
+  PrivateSubnets: vpc::PrivateSubnets
+  AvailabilityZones: vpc::AvailabilityZones
+
+# These are required for the minion & controller, used to access private
+# registries.
+docker_params: &docker_params
+  DockerRegistry: ${docker_registry}
+  DockerRegistryUser: ${docker_registry_user}
+  DockerRegistryPassword: ${docker_registry_password}
+  DockerRegistryEmail: ${docker_registry_email}
+ 
+stacks:
+  - name: vpc
+    class_path: stacker.blueprints.vpc.VPC
+    parameters:
+      # Only build in 4 AZs, can be overridden with -p on the command line
+      # Note: If you want more than 4 AZs you should add more subnets below
+      #       Also you need at least 2 AZs in order to use the DB because
+      #       of the fact that the DB blueprint uses MultiAZ
+      # Note: You will create a NAT instance PER Availability zone.
+      AZCount: 4
+      # Enough subnets for 4 AZs
+      PublicSubnets: 10.128.0.0/24,10.128.1.0/24,10.128.2.0/24,10.128.3.0/24
+      PrivateSubnets: 10.128.8.0/22,10.128.12.0/22,10.128.16.0/22,10.128.20.0/22
+      # InstanceType used for NAT instances
+      InstanceType: ${nat_instance_type}
+      SshKeyName: ${ssh_key_name}
+      BaseDomain: ${external_domain}
+      InternalDomain: empire
+      # CidrBlock needs to be hold all of the Public & Private subnets above
+      CidrBlock: 10.128.0.0/16
+      ImageName: NAT
+  - name: bastion
+    class_path: stacker.blueprints.bastion.Bastion
+    parameters:
+      # Extends the parameters dict with the contents of the vpc_parameters
+      # anchor. Basically we're including all VPC Outputs in the parameters
+      # of the bastion stack. Note: Stacker figures out, automatically, which
+      # parameters the stack actually needs and only submits those to each
+      # stack. For example, most stacks are in the PrivateSubnets, but not
+      # the PublicSubnets, but stacker deals with it for you.
+      << : *vpc_parameters
+      InstanceType: ${bastion_instance_type}
+      OfficeNetwork: ${trusted_network_cidr}
+      MinSize: 2
+      MaxSize: 2
+      SshKeyName: ${ssh_key_name}
+      ImageName: ubuntu1404
+  - name: empireDB
+    class_path: stacker.blueprints.postgres.PostgresRDS
+    parameters:
+      << : *vpc_parameters
+      InstanceType: ${empiredb_instance_type}
+      AllocatedStorage: ${empiredb_disk_size}
+      MasterUser: ${empiredb_user}
+      MasterUserPassword: ${empiredb_password}
+      DBName: empire
+      # Creates the InternalHostname on the InternalZone, ie:
+      # empire-db.empire
+      InternalZoneId: vpc::InternalZoneId
+      InternalZoneName: vpc::InternalZoneName
+      InternalHostname: empire-db
+  - name: empireMinion
+    class_path: stacker.blueprints.empire.empire_minion.EmpireMinion
+    parameters:
+      << : *vpc_parameters
+      << : *docker_params
+      InstanceType: ${empire_minion_instance_type}
+      MinSize: ${empire_minion_min_instance_count}
+      MaxSize: ${empire_minion_max_instance_count}
+      SshKeyName: ${ssh_key_name}
+      ImageName: empire
+  - name: empireController
+    class_path: stacker.blueprints.empire.empire_controller.EmpireController
+    parameters:
+      << : *vpc_parameters
+      << : *docker_params
+      ExternalDomain: ${external_domain}
+      InternalZoneId: vpc::InternalZoneId
+      InstanceType: ${empire_controller_instance_type}
+      MinSize: ${empire_controller_min_instance_count}
+      MaxSize: ${empire_controller_max_instance_count}
+      SshKeyName: ${ssh_key_name}
+      ImageName: empire
+      TrustedNetwork: ${trusted_network_cidr}
+      ControllerELBCertName: ${empire_controller_cert_name}
+      PublicEmpireAppELBSG: empireMinion::PublicEmpireAppELBSG
+      PrivateEmpireAppELBSG: empireMinion::PrivateEmpireAppELBSG
+      EmpireMinionCluster: empireMinion::MinionECSCluster
+      EmpireDBSecurityGroup: empireDB::SecurityGroup
+      EmpireDatabaseHost: empireDB::DBCname
+      EmpireDatabaseSG: empireDB::SecurityGroup
+      EmpireDatabaseUser: ${empiredb_user}
+      EmpireDatabasePassword: ${empiredb_password}
+      EmpireGithubClientId: ${empire_controller_github_client_id}
+      EmpireGithubClientSecret: ${empire_controller_github_client_secret}
+      EmpireGithubOrganization: ${empire_controller_github_organization}
+      EmpireTokenSecret: ${empire_controller_token_secret}

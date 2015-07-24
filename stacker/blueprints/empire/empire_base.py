@@ -26,9 +26,6 @@ class EmpireBase(Blueprint):
     def create_autoscaling_group(self):
         logger.debug("No autoscaling_group to setup for %s", self.name)
 
-    def create_instances(self):
-        logger.debug("No instances to setup for %s", self.name)
-
     def generate_user_data(self):
         contents = Join("", self.generate_seed_contents())
         stanza = Base64(Join(
@@ -52,4 +49,3 @@ class EmpireBase(Blueprint):
         self.create_load_balancer()
         self.create_iam_profile()
         self.create_autoscaling_group()
-        self.create_instances()

@@ -8,7 +8,10 @@ detail how things will be built. Once the env is to your liking, you can launch
 the environment by running the following command:
 
 ```
-$ stacker -e conf/empire/example.env -r <region> <namespace> conf/empire/empire.yaml
+stacker -e conf/empire/example.env -r <region> <namespace> conf/empire/empire.yaml
+
+# Example:
+stacker -e conf/empire/example.env -r us-east-1 my-unique-namespace conf/empire/empire.yaml
 ```
 
 Right now it takes around 20-30 minutes to finish bringing up the entire

@@ -20,6 +20,24 @@ environment due largely to how long it takes RDS to build the Empire database.
 Rather than use the ECS Container AMI that Amazon provides, the Empire team
 has built their own [Empire AMI][empire_ami] based on Ubuntu 14.04.
 
+# Security
+
+These blueprints & stack definitions assume a base level of security, but could
+likely be tightened up quite a bit more to suit your needs. Some basics:
+
+- SSL on the Empire API ELB
+- All hosts except NAT & bastion hosts in private subnets with no public
+  addresses
+- Bastion hosts (ssh) and Empire API ELB (https) access are firewalled to a
+  single trusted CIDR range
+- Empire Minions & Controllers have no direct network access to each other
+- The Empire database is in the private VPC and can only be accessed by the
+  Empire Controller hosts.
+- Github authentication is setup on the Empire API (provided you give all of
+  the necessary variables for github in the environment)
+
+That said - if you see something that we missed, please let me know!
+
 [Empire]: https://github.com/remind101/empire/
 [example.env]: https://github.com/remind101/stacker/blob/master/conf/empire/example.env
 [empire.yaml]: https://github.com/remind101/stacker/blob/master/conf/empire/empire.yaml

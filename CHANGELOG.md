@@ -1,5 +1,14 @@
 ## pending
 
+## 0.4.1 (2015-07-23)
+
+- Stack Specific Parameters [GH-32]
+- Random fixes & cleanup [GH-34]
+- Handle skipped rollbacks [GH-36]
+- Internal zone detection [GH-39]
+- Internal hostname conditional [GH-40]
+- Empire production stacks [GH-43]
+
 ## 0.4.0 (2015-05-13)
 
 - Optional internal DNS Zone on vpc blueprint [GH-29]

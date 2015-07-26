@@ -48,7 +48,7 @@ class Stack(object):
         self.mappings = mappings
         # XXX this is temporary until we remove passing context down to the blueprint
         self.context = copy.deepcopy(context)
-        if self.context.parameters:
+        if isinstance(self.context.parameters, dict):
             self.context.parameters.update(self.parameters)
 
     def __repr__(self):

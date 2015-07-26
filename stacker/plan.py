@@ -143,7 +143,7 @@ class Plan(OrderedDict):
                         waiting_on.append(required_stack)
 
                 if waiting_on:
-                    logger.info(
+                    logger.debug(
                         'Stack: "%s" waiting on required stacks: %s',
                         step.stack.name,
                         ', '.join(waiting_on),

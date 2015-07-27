@@ -52,8 +52,9 @@ class Step(object):
         return self._run_func(results, self.stack, status=self.status)
 
     def set_status(self, status):
-        logger.debug("Setting %s state to %s.", self.stack.name, status.name)
-        self.status = status
+        if status is not self.status:
+            logger.debug("Setting %s state to %s.", self.stack.name, status.name)
+            self.status = status
 
     def complete(self):
         self.set_status(COMPLETE)

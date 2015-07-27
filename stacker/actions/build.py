@@ -55,11 +55,12 @@ class Action(BaseAction):
             if isinstance(value, basestring) and '::' in value:
                 # Get from the Output of another stack in the stack_map
                 stack_name, output = value.split('::')
+                stack_fqn = self.context.get_fqn(stack_name)
                 # XXX check out this logic to see if this is what we really want to do
                 try:
-                    stack_outputs = outputs[stack_name]
+                    stack_outputs = outputs[stack_fqn]
                 except KeyError:
-                    raise exceptions.StackDoesNotExist(stack_name)
+                    raise exceptions.StackDoesNotExist(stack_fqn)
                 try:
                     value = stack_outputs[output]
                 except KeyError:
@@ -183,7 +184,7 @@ class Action(BaseAction):
     def _get_dependencies(self):
         dependencies = {}
         for stack in self.context.get_stacks():
-            dependencies[stack.name] = stack.requires
+            dependencies[stack.fqn] = stack.requires
         return dependencies
 
     def pre_run(self, outline=False, *args, **kwargs):

@@ -36,13 +36,9 @@ def _gather_parameters(stack_def, builder_parameters):
 
 class Stack(object):
 
-    def __init__(self, definition, context, base_fqn='', parameters=None, mappings=None):
-        self.base_fqn = base_fqn
+    def __init__(self, definition, context, parameters=None, mappings=None):
         self.name = definition['name']
-        if self.base_fqn:
-            self.fqn = '-'.join([base_fqn, self.name])
-        else:
-            self.fqn = self.name
+        self.fqn = context.get_fqn(self.name)
         self.definition = definition
         self.parameters = _gather_parameters(definition, parameters or {})
         self.mappings = mappings
@@ -52,7 +48,7 @@ class Stack(object):
             self.context.parameters.update(self.parameters)
 
     def __repr__(self):
-        return self.name
+        return self.fqn
 
     @property
     def requires(self):
@@ -64,8 +60,9 @@ class Stack(object):
                 stack_name, _ = value.split('::')
             else:
                 continue
-            if stack_name not in requires:
-                requires.add(stack_name)
+            stack_fqn = self.context.get_fqn(stack_name)
+            if stack_fqn not in requires:
+                requires.add(stack_fqn)
         return requires
 
     @property

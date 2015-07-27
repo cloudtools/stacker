@@ -35,7 +35,7 @@ class TestStacker(unittest.TestCase):
         )
         stacker.configure(args)
         stacks_dict = args.context.get_stacks_dict()
-        blueprint = stacks_dict['bastion'].blueprint
+        blueprint = stacks_dict[args.context.get_fqn('bastion')].blueprint
         self.assertTrue(hasattr(blueprint, 'context'))
         blueprint.create_template()
         blueprint.setup_parameters()
@@ -57,7 +57,7 @@ class TestStacker(unittest.TestCase):
         )
         stacker.configure(args)
         stacks_dict = args.context.get_stacks_dict()
-        bastion_stack = stacks_dict['bastion']
+        bastion_stack = stacks_dict[args.context.get_fqn('bastion')]
         bastion_stack.blueprint.create_template()
         bastion_stack.blueprint.setup_parameters()
         self.assertIn('DefaultSG', bastion_stack.blueprint.parameters)

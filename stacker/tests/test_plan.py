@@ -1,6 +1,7 @@
 import unittest
 import mock
 
+from stacker.context import Context
 from stacker.exceptions import ImproperlyConfigured
 from stacker.plan import COMPLETE, SKIPPED, SUBMITTED, Step, Plan
 from stacker.stack import Stack
@@ -13,9 +14,10 @@ count = 0
 class TestStep(unittest.TestCase):
 
     def setUp(self):
+        self.context = Context('namespace')
         stack = Stack(
             definition=generate_definition('vpc', 1),
-            context=mock.MagicMock(),
+            context=self.context,
         )
         self.step = Step(
             stack=stack,
@@ -39,6 +41,7 @@ class TestPlan(unittest.TestCase):
 
     def setUp(self):
         self.count = 0
+        self.context = Context('namespace')
 
     def _run_func(self, results, stack, **kwargs):
         self.assertIn('status', kwargs, 'Step "status" should be passed to all run_funcs')
@@ -59,10 +62,10 @@ class TestPlan(unittest.TestCase):
         for i in range(5):
             overrides = {}
             if previous_stack:
-                overrides['requires'] = [previous_stack.name]
+                overrides['requires'] = [previous_stack.fqn]
             stack = Stack(
                 definition=generate_definition('vpc', i, **overrides),
-                context=mock.MagicMock(),
+                context=self.context,
             )
             previous_stack = stack
             plan.add(
@@ -98,7 +101,7 @@ class TestPlan(unittest.TestCase):
         def _test_stack_name(stack):
             # use a test_stack_name since the plan execution treats the stack
             # name in the results as a completed stack (either skipped or complete)
-            return '_test_%s' % (stack.name,)
+            return '_test_%s' % (stack.fqn,)
 
         def _run_func(results, stack, *args, **kwargs):
             test_stack_name = _test_stack_name(stack)
@@ -111,14 +114,14 @@ class TestPlan(unittest.TestCase):
                 results[test_stack_name] += 1
                 return SUBMITTED
 
-        vpc_stack = Stack(definition=generate_definition('vpc', 1), context=mock.MagicMock())
+        vpc_stack = Stack(definition=generate_definition('vpc', 1), context=self.context)
         web_stack = Stack(
-            definition=generate_definition('web', 2, requires=[vpc_stack.name]),
-            context=mock.MagicMock(),
+            definition=generate_definition('web', 2, requires=[vpc_stack.fqn]),
+            context=self.context,
         )
         db_stack = Stack(
-            definition=generate_definition('db', 3, requires=[vpc_stack.name]),
-            context=mock.MagicMock(),
+            definition=generate_definition('db', 3, requires=[vpc_stack.fqn]),
+            context=self.context,
         )
 
         def _wait_func(sleep_time):
@@ -128,7 +131,7 @@ class TestPlan(unittest.TestCase):
             if web_stack_test_name in results:
                 # verify the vpc stack has completed
                 self.assertEqual(results[vpc_stack_test_name], 2)
-                self.assertIn(vpc_stack.name, results)
+                self.assertIn(vpc_stack.fqn, results)
                 if db_stack_test_name not in results:
                     # verify that this is the first pass at building the
                     # web_stack, the next loop should trigger running the
@@ -153,3 +156,10 @@ class TestPlan(unittest.TestCase):
     def test_plan_wait_func_must_be_function(self):
         with self.assertRaises(ImproperlyConfigured):
             Plan(details='Test', provider=mock.MagicMock(), wait_func='invalid')
+
+    def test_plan_steps_listed_with_fqn(self):
+        plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
+        stack = Stack(definition=generate_definition('vpc', 1), context=Context('namespace'))
+        plan.add(stack=stack, run_func=lambda x, y: (x, y))
+        steps = plan.list_pending()
+        self.assertEqual(steps[0][0], stack.fqn)

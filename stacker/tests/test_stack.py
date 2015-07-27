@@ -1,7 +1,6 @@
 import unittest
 
-from mock import MagicMock
-
+from stacker.context import Context
 from stacker.stack import _gather_parameters, Stack
 from .factories import generate_definition
 
@@ -10,9 +9,10 @@ class TestStack(unittest.TestCase):
 
     def setUp(self):
         self.sd = {"name": "test"}
+        self.context = Context('namespace')
         self.stack = Stack(
             definition=generate_definition('vpc', 1),
-            context=MagicMock(),
+            context=self.context,
         )
 
     def test_stack_requires(self):
@@ -22,11 +22,17 @@ class TestStack(unittest.TestCase):
             parameters={
                 "ExternalParameter": "fakeStack2::FakeParameter",
             },
-            requires=['fakeStack'],
+            requires=map(self.context.get_fqn, ['fakeStack']),
         )
-        stack = Stack(definition=definition, context=MagicMock())
-        self.assertIn('fakeStack', stack.requires)
-        self.assertIn('fakeStack2', stack.requires)
+        stack = Stack(definition=definition, context=self.context)
+        self.assertIn(
+            self.context.get_fqn('fakeStack'),
+            stack.requires,
+        )
+        self.assertIn(
+            self.context.get_fqn('fakeStack2'),
+            stack.requires,
+        )
 
     def test_empty_parameters(self):
         build_action_parameters = {}

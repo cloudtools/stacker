@@ -30,7 +30,7 @@ class Step(object):
     def __repr__(self):
         return '<stacker.plan.Step:%s:%s>' % (
             self.index + 1,
-            self.stack.name,
+            self.stack.fqn,
         )
 
     @property
@@ -92,7 +92,7 @@ class Plan(OrderedDict):
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, completion_func=None, skip_func=None, requires=None):
-        self[stack.name] = Step(
+        self[stack.fqn] = Step(
             stack=stack,
             index=len(self.keys()),
             run_func=run_func,

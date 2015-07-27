@@ -40,11 +40,33 @@ class TestBuildAction(unittest.TestCase):
             'param_1': 'mock::output_1',
             'param_2': 'other::does_not_exist',
         }
-        outputs = {'mock': {'output_1': 'output'}, 'other': {}}
+        outputs = {
+            self.context.get_fqn('mock'): {'output_1': 'output'},
+            self.context.get_fqn('other'): {},
+        }
         mock_blueprint = mock.MagicMock()
         type(mock_blueprint).parameters = parameters
         with self.assertRaises(exceptions.ParameterDoesNotExist):
             self.build_action._resolve_parameters(outputs, parameters, mock_blueprint)
+
+    def test_resolve_parameters(self):
+        parameters = {
+            'param_1': 'mock::output_1',
+            'param_2': 'other::output_2',
+        }
+        outputs = {
+            self.context.get_fqn('mock'): {'output_1': 'output_1'},
+            self.context.get_fqn('other'): {'output_2': 'output_2'},
+        }
+        mock_blueprint = mock.MagicMock()
+        type(mock_blueprint).parameters = parameters
+        resolved_parameters = self.build_action._resolve_parameters(
+            outputs,
+            parameters,
+            mock_blueprint,
+        )
+        self.assertEqual(resolved_parameters['param_1'], 'output_1')
+        self.assertEqual(resolved_parameters['param_2'], 'output_2')
 
     def test_resolve_parameters_referencing_non_existant_stack(self):
         parameters = {
@@ -85,22 +107,31 @@ class TestBuildAction(unittest.TestCase):
         context = self._get_context()
         build_action = build.Action(context)
         dependencies = build_action._get_dependencies()
-        self.assertEqual(dependencies['bastion'], set(['vpc']))
-        self.assertEqual(dependencies['db'], set(['vpc', 'bastion']))
-        self.assertFalse(dependencies['other'])
+        self.assertEqual(
+            dependencies[context.get_fqn('bastion')],
+            set(map(context.get_fqn, ['vpc'])),
+        )
+        self.assertEqual(
+            dependencies[context.get_fqn('db')],
+            set(map(context.get_fqn, ['vpc', 'bastion'])),
+        )
+        self.assertFalse(dependencies[context.get_fqn('other')])
 
     def test_get_stack_execution_order(self):
         context = self._get_context()
         build_action = build.Action(context)
         dependencies = build_action._get_dependencies()
         execution_order = build_action.get_stack_execution_order(dependencies)
-        self.assertEqual(execution_order, ['other', 'vpc', 'bastion', 'db'])
+        self.assertEqual(
+            execution_order,
+            map(context.get_fqn, ['other', 'vpc', 'bastion', 'db']),
+        )
 
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context)
         plan = build_action._generate_plan()
-        self.assertEqual(plan.keys(), ['other', 'vpc', 'bastion', 'db'])
+        self.assertEqual(plan.keys(), map(context.get_fqn, ['other', 'vpc', 'bastion', 'db']))
 
     def test_dont_execute_plan_when_outline_specified(self):
         context = self._get_context()

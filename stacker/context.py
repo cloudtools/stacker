@@ -34,7 +34,6 @@ class Context(object):
                 stack = Stack(
                     definition=stack_def,
                     context=self,
-                    base_fqn=self.get_fqn(),
                     parameters=self.parameters,
                     mappings=self.mappings,
                 )
@@ -42,7 +41,7 @@ class Context(object):
         return self._stacks
 
     def get_stacks_dict(self):
-        return dict((stack.name, stack) for stack in self.get_stacks())
+        return dict((stack.fqn, stack) for stack in self.get_stacks())
 
     def get_fqn(self, name=None):
         return '-'.join(filter(None, [self._base_fqn, name]))

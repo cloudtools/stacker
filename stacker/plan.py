@@ -161,7 +161,9 @@ class Plan(OrderedDict):
                     results[step_name] = step.skip()
                 else:
                     step.set_status(status)
-            self._wait_func(self.sleep_time)
+
+            if not self.completed:
+                self._wait_func(self.sleep_time)
 
         self._check_point()
         return results

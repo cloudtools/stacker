@@ -75,6 +75,7 @@ class TestPlan(unittest.TestCase):
                 skip_func=_skip_func,
                 requires=stack.requires,
             )
+
         results = plan.execute()
         self.assertEqual(self.count, 9)
         self.assertEqual(results[plan.keys()[0]], 2)
@@ -163,3 +164,22 @@ class TestPlan(unittest.TestCase):
         plan.add(stack=stack, run_func=lambda x, y: (x, y))
         steps = plan.list_pending()
         self.assertEqual(steps[0][0], stack.fqn)
+
+    def test_execute_plan_wait_func_not_called_if_complete(self):
+        wait_func = mock.MagicMock()
+        plan = Plan(details='Test', provider=mock.MagicMock(), wait_func=wait_func)
+
+        def run_func(*args, **kwargs):
+            return COMPLETE
+
+        for i in range(2):
+            stack = Stack(definition=generate_definition('vpc', i), context=self.context)
+            plan.add(
+                stack=stack,
+                run_func=run_func,
+                completion_func=self._completion_func,
+                requires=stack.requires,
+            )
+
+        plan.execute()
+        self.assertEqual(wait_func.call_count, 0)

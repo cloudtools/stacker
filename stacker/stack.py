@@ -4,7 +4,7 @@ from . import util
 
 
 def _gather_parameters(stack_def, builder_parameters):
-    """ Merges builder provided & stack defined parameters.
+    """Merges builder provided & stack defined parameters.
 
     Ensures that more specificly defined parameters (ie: parameters defined
     specifically for the given stack: stack_name::parameter) override less
@@ -14,6 +14,7 @@ def _gather_parameters(stack_def, builder_parameters):
         - builder defined stack specific (stack_name::parameter)
         - builder defined non-specific (parameter)
         - stack_def defined
+
     """
     parameters = copy.deepcopy(stack_def.get('parameters', {}))
     stack_specific_params = {}

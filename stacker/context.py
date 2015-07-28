@@ -3,6 +3,12 @@ from .stack import Stack
 
 
 class Context(object):
+    """The context under which the current stacks are being executed.
+
+    The stacker Context is responsible for translating the values passed in via
+    the command line and specified in the config to `Stack` objects.
+
+    """
 
     _optional_keys = ('environment', 'stack_names', 'parameters', 'mappings', 'config')
 
@@ -22,10 +28,16 @@ class Context(object):
         return [s for s in self.config['stacks'] if s['name'] in self.stack_names]
 
     def get_stacks(self):
-        # TODO fix docstring
-        """Extract stack definitions from the config.
+        """Get the stacks for the current action.
 
-        If no stack_list given, return stack config as is.
+        Handles configuring the `stacker.stack.Stack` objects that will be used
+        in the current action. Responsible for merging the stack definition in
+        the config, the parameters specified on the command line, and any
+        mappings specified in the config.
+
+        Returns:
+            list: a list of `stacker.stack.Stack` objects
+
         """
         if not hasattr(self, '_stacks'):
             definitions = self._get_stack_definitions()
@@ -44,4 +56,5 @@ class Context(object):
         return dict((stack.fqn, stack) for stack in self.get_stacks())
 
     def get_fqn(self, name=None):
+        """Return the fully qualified name of an object within this context."""
         return '-'.join(filter(None, [self._base_fqn, name]))

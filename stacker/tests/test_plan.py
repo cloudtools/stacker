@@ -21,7 +21,6 @@ class TestStep(unittest.TestCase):
         )
         self.step = Step(
             stack=stack,
-            index=0,
             run_func=lambda x, y: (x, y),
             completion_func=lambda y: True,
         )
@@ -56,7 +55,7 @@ class TestPlan(unittest.TestCase):
         return self.count
 
     def test_execute_plan(self):
-        plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
+        plan = Plan(description='Test', sleep_time=0)
         _skip_func = mock.MagicMock()
         previous_stack = None
         for i in range(5):
@@ -84,7 +83,7 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(len(plan.list_skipped()), _skip_func.call_count)
 
     def test_step_must_return_status(self):
-        plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
+        plan = Plan(description='Test', sleep_time=0)
         stack = Stack(definition=generate_definition('vpc', 1), context=mock.MagicMock())
         plan.add(
             stack=stack,
@@ -144,7 +143,7 @@ class TestPlan(unittest.TestCase):
                     self.assertEqual(results[web_stack_test_name], 1)
                     self.assertEqual(results[db_stack_test_name], 1)
 
-        plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0, wait_func=_wait_func)
+        plan = Plan(description='Test', sleep_time=0, wait_func=_wait_func)
         for stack in [vpc_stack, web_stack, db_stack]:
             plan.add(
                 stack=stack,
@@ -156,10 +155,10 @@ class TestPlan(unittest.TestCase):
 
     def test_plan_wait_func_must_be_function(self):
         with self.assertRaises(ImproperlyConfigured):
-            Plan(details='Test', provider=mock.MagicMock(), wait_func='invalid')
+            Plan(description='Test', wait_func='invalid')
 
     def test_plan_steps_listed_with_fqn(self):
-        plan = Plan(details='Test', provider=mock.MagicMock(), sleep_time=0)
+        plan = Plan(description='Test', sleep_time=0)
         stack = Stack(definition=generate_definition('vpc', 1), context=Context('namespace'))
         plan.add(stack=stack, run_func=lambda x, y: (x, y))
         steps = plan.list_pending()
@@ -167,7 +166,7 @@ class TestPlan(unittest.TestCase):
 
     def test_execute_plan_wait_func_not_called_if_complete(self):
         wait_func = mock.MagicMock()
-        plan = Plan(details='Test', provider=mock.MagicMock(), wait_func=wait_func)
+        plan = Plan(description='Test', wait_func=wait_func)
 
         def run_func(*args, **kwargs):
             return COMPLETE

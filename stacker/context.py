@@ -1,3 +1,4 @@
+from .exceptions import MissingEnvironment
 from .config import parse_config
 from .stack import Stack
 
@@ -24,18 +25,21 @@ class Context(object):
 
     """
 
-    def __init__(self, namespace, environment=None, stack_names=None,
+    def __init__(self, environment, stack_names=None,
                  parameters=None, mappings=None, config=None,
                  force_stacks=None):
-        self.namespace = namespace
-        self.environment = environment or {}
+        try:
+            self.namespace = environment['namespace']
+        except KeyError:
+            raise MissingEnvironment(['namespace'])
+
+        self.environment = environment
         self.stack_names = stack_names or []
         self.parameters = parameters or {}
         self.mappings = mappings or {}
         self.config = config or {}
         self.force_stacks = force_stacks or []
-
-        self._base_fqn = namespace.replace('.', '-').lower()
+        self._base_fqn = self.namespace.replace('.', '-').lower()
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)

@@ -41,7 +41,7 @@ class TestProvider(BaseProvider):
 class TestBuildAction(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context('namespace')
+        self.context = Context({'namespace': 'namespace'})
         self.build_action = build.Action(self.context, provider=TestProvider())
 
     def _get_context(self, **kwargs):
@@ -52,7 +52,7 @@ class TestBuildAction(unittest.TestCase):
              'else': 'bastion::something'}},
             {'name': 'other', 'parameters': {}}
         ]}
-        return Context('namespace', config=config, **kwargs)
+        return Context({'namespace': 'namespace'}, config=config, **kwargs)
 
     def test_resolve_parameters_referencing_non_existant_output(self):
         parameters = {

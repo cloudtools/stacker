@@ -14,7 +14,7 @@ count = 0
 class TestStep(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context('namespace')
+        self.context = Context({'namespace': 'namespace'})
         stack = Stack(
             definition=generate_definition('vpc', 1),
             context=self.context,
@@ -39,7 +39,8 @@ class TestPlan(unittest.TestCase):
 
     def setUp(self):
         self.count = 0
-        self.context = Context('namespace')
+        self.environment = {'namespace': 'namespace'}
+        self.context = Context(self.environment)
 
     def _run_func(self, stack, **kwargs):
         self.count += 1
@@ -142,8 +143,7 @@ class TestPlan(unittest.TestCase):
 
     def test_plan_steps_listed_with_fqn(self):
         plan = Plan(description='Test', sleep_time=0)
-        stack = Stack(definition=generate_definition('vpc', 1),
-                      context=Context('namespace'))
+        stack = Stack(definition=generate_definition('vpc', 1), context=self.context)
         plan.add(stack=stack, run_func=lambda x, y: (x, y))
         steps = plan.list_pending()
         self.assertEqual(steps[0][0], stack.fqn)

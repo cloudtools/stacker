@@ -77,12 +77,6 @@ class StackerCommand(BaseCommand):
         parser.add_argument("-v", "--verbose", action="count", default=0,
                             help="Increase output verbosity. May be specified "
                                  "up to twice.")
-        parser.add_argument("--stacks", action="append",
-                            metavar="STACKNAME", type=str,
-                            help="Only work on the stacks given. Can be "
-                                 "specified more than once. If not specified "
-                                 "then stacker will work on all stacks in the "
-                                 "config file.")
         parser.add_argument("namespace",
                             help="The namespace for the stack collection. "
                                  "This will be used as the prefix to the "

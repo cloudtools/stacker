@@ -57,7 +57,7 @@ class Stack(object):
 
     @property
     def requires(self):
-        requires = set(self.definition.get('requires', []))
+        requires = set(map(self.context.get_fqn, self.definition.get('requires', [])))
         # Auto add dependencies when parameters reference the Ouptuts of
         # another stack.
         for value in self.parameters.values():

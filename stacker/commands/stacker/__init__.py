@@ -1,6 +1,7 @@
 import copy
 
 from .build import Build
+from .destroy import Destroy
 from ..base import BaseCommand
 from ...context import Context
 from ...providers import aws
@@ -9,7 +10,7 @@ from ...providers import aws
 class Stacker(BaseCommand):
 
     name = 'stacker'
-    subcommands = (Build,)
+    subcommands = (Build, Destroy)
 
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)

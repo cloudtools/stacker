@@ -16,7 +16,6 @@ class Stacker(BaseCommand):
         super(Stacker, self).configure(options, **kwargs)
         options.provider = aws.Provider(region=options.region)
         options.context = Context(
-            namespace=options.namespace,
             environment=options.environment,
             parameters=copy.deepcopy(options.parameters),
             stack_names=options.stacks,

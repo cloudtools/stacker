@@ -177,9 +177,9 @@ class EmpireController(EmpireBase):
     def setup_listeners(self):
         no_ssl = [elb.Listener(
             LoadBalancerPort=80,
-            Protocol='HTTP',
+            Protocol='TCP',
             InstancePort=8080,
-            InstanceProtocol='HTTP'
+            InstanceProtocol='TCP'
         )]
 
         cert_id = Join("", [

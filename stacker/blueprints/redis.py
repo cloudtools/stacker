@@ -33,7 +33,7 @@ class RedisCluster(Blueprint):
             'default': 'sun:02:00-sun:03:00',
         },
         'AutomaticFailoverEnabled': {
-            'type': 'Boolean',
+            'type': 'String',
             'description': (
                 'Specifies whether a read-only replica will be automatically '
                 'promoted to read/write primary if the existing primary fails. '

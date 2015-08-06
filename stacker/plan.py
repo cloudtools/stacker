@@ -16,22 +16,35 @@ SKIPPED = Status('skipped', 3)
 
 
 class Step(object):
+    """State machine for executing generic actions related to stacks.
 
-    def __init__(self, stack, index, run_func, completion_func=None,
+    Args:
+        stack (`stacker.stack.Stack`): the `Stack` object associated with this
+            step
+        run_func (func): the function to be run for the given stack
+        completion_func (Optional[func]): Optional function that should be run
+            when the step is complete. This should be used to return some
+            result of the step.
+        skip_func (Optional[func]): Optional function that should be run when
+            the step is skipped. This can be used to return results from the
+            step, without risking calling a completion function agian.
+        requires (Optional[list]): List of stacks this step depends on being
+            completed before running. This step will not be executed unless the
+            required stacks have either completed or skipped.
+
+    """
+
+    def __init__(self, stack, run_func, completion_func=None,
                  skip_func=None, requires=None):
         self.stack = stack
         self.status = PENDING
-        self.index = index
         self.requires = requires or []
         self._run_func = run_func
         self._completion_func = completion_func
         self._skip_func = skip_func
 
     def __repr__(self):
-        return '<stacker.plan.Step:%s:%s>' % (
-            self.index + 1,
-            self.stack.fqn,
-        )
+        return '<stacker.plan.Step:%s>' % (self.stack.fqn,)
 
     @property
     def completed(self):
@@ -68,22 +81,28 @@ class Step(object):
 
 
 class Plan(OrderedDict):
-    """Used to organize the execution of cloudformation steps"""
+    """A collection of `Step`s to execute.
 
-    def __init__(
-            self,
-            details,
-            provider,
-            sleep_time=5,
-            max_attempts=10,
-            wait_func=None,
-            *args,
-            **kwargs
-        ):
-        self.details = details
-        self.provider = provider
+    The `Plan` helps organize the steps needed to execute a particular action
+    for a set of `Stack`s. It will run the steps in the order they are added to
+    the `Plan` via the `add` function. If a `Step` specifies requirements, the
+    `Plan` will wait until the required stacks have completed before executing
+    that `Step`.
+
+    Args:
+        description (str): description of the plan
+        sleep_time (Optional[int]): the amount of time that will be passed to
+            the `wait_func`
+        wait_func (Optional[func]): the function to be called after each pass
+            of running stacks. This defaults to `time.sleep` and will sleep for
+            the given `sleep_time` before starting the next pass.
+
+    """
+
+    def __init__(self, description, sleep_time=5, wait_func=None, *args,
+                 **kwargs):
+        self.description = description
         self.sleep_time = sleep_time
-        self.max_attempts = max_attempts
         if wait_func is not None:
             if not callable(wait_func):
                 raise ImproperlyConfigured(self.__class__, '"wait_func" must be a callable')
@@ -93,9 +112,9 @@ class Plan(OrderedDict):
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, completion_func=None, skip_func=None, requires=None):
+        """Add a new step to the plan."""
         self[stack.fqn] = Step(
             stack=stack,
-            index=len(self.keys()),
             run_func=run_func,
             completion_func=completion_func,
             skip_func=skip_func,
@@ -115,7 +134,7 @@ class Plan(OrderedDict):
         return self.list_status(SKIPPED)
 
     def list_pending(self):
-        """ Pending is any task that isn't COMPLETE or SKIPPED. """
+        """Pending is any task that isn't COMPLETE or SKIPPED. """
         return [step for step in self.iteritems() if (
             step[1].status != COMPLETE and
             step[1].status != SKIPPED
@@ -128,6 +147,18 @@ class Plan(OrderedDict):
         return True
 
     def execute(self, results=None):
+        """Execute the plan.
+
+        This will run through all of the steps registered with the plan and
+        submit them in parallel based on their dependencies. The results will
+        be returned once all steps have either been skipped or completed.
+
+        Args:
+            results (Optional[dict]): The dictionary that should be used to
+                store the results
+
+        """
+
         if results is None:
             results = {}
 
@@ -169,8 +200,20 @@ class Plan(OrderedDict):
         return results
 
     def outline(self, level=logging.INFO, execute_helper=False):
+        """Print an outline of the actions the plan is going to take.
+
+        The outline will represent the rough ordering of the steps that will be taken.
+
+        Args:
+            level (Optional[int]): a valid log level that should be used to log
+                the outline
+            execute_helper (Optional[bool]): boolean for whether or not a line
+                instructing the user to pass the "force" flag should be
+                provided.
+
+        """
         steps = 1
-        logger.log(level, 'Plan "%s":', self.details)
+        logger.log(level, 'Plan "%s":', self.description)
         while not self.completed:
             step_name, step = self.list_pending()[0]
             logger.log(

@@ -9,15 +9,13 @@ logger = logging.getLogger(__name__)
 class Blueprint(object):
     """Base implementation for dealing with a troposphere template.
 
-    :type name: string
-    :param name: A name for the blueprint. If not provided, one
-        will be created from the class name automatically.
-
-    :type parameters: Dictionary
-    :param stack: Used for configuring the Blueprint.
-
-    :type mappings: dict
-    :param mappings: Cloudformation Mappings to be used in the template.
+    Args:
+        name (str): A name for the blueprint. If not provided, one will be
+            created from the class name automatically.
+        context (`stacker.context.Context`): the context the blueprint is being
+            executed under.
+        mappings (Optional[dict]): Cloudformation Mappings to be used in the
+            template.
 
     """
     def __init__(self, name, context, mappings=None):
@@ -33,7 +31,7 @@ class Blueprint(object):
 
     @property
     def required_parameters(self):
-        """ Returns all template parameters that do not have a default value. """
+        """Returns all template parameters that do not have a default value."""
         required = []
         for k, v in self.parameters.items():
             if not hasattr(v, 'Default'):

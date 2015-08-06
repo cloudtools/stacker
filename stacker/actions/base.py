@@ -53,12 +53,13 @@ class BaseAction(object):
         return stack_template_url(self.bucket_name, blueprint)
 
     def s3_stack_push(self, blueprint, force=False):
-        """ Pushes the rendered blueprint's template to S3.
+        """Pushes the rendered blueprint's template to S3.
 
         Verifies that the template doesn't already exist in S3 before
         pushing.
 
         Returns the URL to the template in S3.
+
         """
         key_name = stack_template_key_name(blueprint)
         template_url = self.stack_template_url(blueprint)
@@ -86,16 +87,41 @@ class BaseAction(object):
     def post_run(self, *args, **kwargs):
         pass
 
-    def _get_all_stack_names(self, dependency_dict):
+    def _get_all_stack_names(self, dependencies):
+        """Get all stack names specified in dependencies.
+
+        Args:
+            - dependencies (dict): a dictionary where each key should be the
+                fully qualified name of a stack whose value is an array of
+                fully qualified stack names that the stack depends on.
+
+        Returns:
+            set: set of all stack names
+
+        """
         return set(
-            dependency_dict.keys() +
-            [item for dependencies in dependency_dict.values() for item in dependencies]
+            dependencies.keys() +
+            [item for items in dependencies.values() for item in items]
         )
 
-    def get_stack_execution_order(self, dependency_dict):
-        # copy the dependency_dict since we pop items out of it to get the
+    def get_stack_execution_order(self, dependencies):
+        """Return the order in which the stacks should be executed.
+
+        Args:
+            - dependencies (dict): a dictionary where each key should be the
+                fully qualified name of a stack whose value is an array of
+                fully qualified stack names that the stack depends on. This is
+                used to generate the order in which the stacks should be
+                executed.
+
+        Returns:
+            array: An array of stack names in the order which they should be
+                executed.
+
+        """
+        # copy the dependencies since we pop items out of it to get the
         # execution order, we don't want to mutate the one passed in
-        dependencies = copy.deepcopy(dependency_dict)
+        dependencies = copy.deepcopy(dependencies)
         pending_steps = []
         executed_steps = []
         stack_names = self._get_all_stack_names(dependencies)

@@ -10,10 +10,11 @@ from awacs import ecs
 
 def create_ecs_service_role(region, namespace, mappings, parameters,
                             **kwargs):
-    """ Used to create the ecsServieRole, which has to be named exactly that
+    """Used to create the ecsServieRole, which has to be named exactly that
     currently, so cannot be created via CloudFormation. See:
 
     http://docs.aws.amazon.com/AmazonECS/latest/developerguide/IAM_policies.html#service_IAM_role
+
     """
     conn = ConnectionManager(region).iam
     policy = Policy(

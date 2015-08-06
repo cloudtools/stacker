@@ -61,31 +61,33 @@ class StackerCommand(BaseCommand):
                             action=KeyValueAction, default={},
                             help="Adds parameters from the command line "
                                  "that can be used inside any of the stacks "
-                                 "being built. Can be specified more than once.")
-        parser.add_argument('-r', '--region', default='us-east-1',
+                                 "being built. Can be specified more than "
+                                 "once.")
+        parser.add_argument("-r", "--region", default="us-east-1",
                             help="The AWS region to launch in. Default: "
                                  "%(default)s")
-        parser.add_argument('-e', '--environment', type=yaml_file_type,
+        parser.add_argument("-e", "--environment", type=yaml_file_type,
                             default={},
-                            help="Path to a yaml environment file. The values in "
-                                 "the environment file can be used in the stack "
-                                 "config as if it were a string.Template type: "
-                                 "https://docs.python.org/2/library/string.html"
-                                 "#template-strings")
-        parser.add_argument('-v', '--verbose', action='count', default=0,
-                            help='Increase output verbosity. May be specified up '
-                                 'to twice.')
+                            help="Path to a yaml environment file. The values "
+                                 "in the environment file can be used in the "
+                                 "stack config as if it were a "
+                                 "string.Template type: "
+                                 "https://docs.python.org/2/library/"
+                                 "string.html#template-strings")
+        parser.add_argument("-v", "--verbose", action="count", default=0,
+                            help="Increase output verbosity. May be specified "
+                                 "up to twice.")
         parser.add_argument("--stacks", action="append",
                             metavar="STACKNAME", type=str,
                             help="Only work on the stacks given. Can be "
                                  "specified more than once. If not specified "
                                  "then stacker will work on all stacks in the "
                                  "config file.")
-        parser.add_argument('namespace',
-                            help='The namespace for the stack collection. This '
-                                 'will be used as the prefix to the '
-                                 'cloudformation stacks as well as the s3 bucket '
-                                 'where templates are stored.')
-        parser.add_argument('config', type=argparse.FileType(),
-                            help="The config file where stack configuration is "
-                                 "located. Must be in yaml format.")
+        parser.add_argument("namespace",
+                            help="The namespace for the stack collection. "
+                                 "This will be used as the prefix to the "
+                                 "cloudformation stacks as well as the s3 "
+                                 "bucket where templates are stored.")
+        parser.add_argument("config", type=argparse.FileType(),
+                            help="The config file where stack configuration "
+                                 "is located. Must be in yaml format.")

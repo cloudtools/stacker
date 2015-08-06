@@ -14,7 +14,8 @@ class MissingParameterException(Exception):
         message = 'Missing required parameters: %s' % (
             ', '.join(parameters),
         )
-        super(MissingParameterException, self).__init__(message, *args, **kwargs)
+        super(MissingParameterException, self).__init__(message, *args,
+                                                        **kwargs)
 
 
 class ParameterDoesNotExist(Exception):

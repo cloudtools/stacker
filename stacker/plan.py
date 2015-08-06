@@ -66,7 +66,8 @@ class Step(object):
 
     def set_status(self, status):
         if status is not self.status:
-            logger.debug("Setting %s state to %s.", self.stack.name, status.name)
+            logger.debug("Setting %s state to %s.", self.stack.name,
+                         status.name)
             self.status = status
 
     def complete(self):
@@ -105,13 +106,15 @@ class Plan(OrderedDict):
         self.sleep_time = sleep_time
         if wait_func is not None:
             if not callable(wait_func):
-                raise ImproperlyConfigured(self.__class__, '"wait_func" must be a callable')
+                raise ImproperlyConfigured(self.__class__,
+                                           '"wait_func" must be a callable')
             self._wait_func = wait_func
         else:
             self._wait_func = time.sleep
         super(Plan, self).__init__(*args, **kwargs)
 
-    def add(self, stack, run_func, completion_func=None, skip_func=None, requires=None):
+    def add(self, stack, run_func, completion_func=None, skip_func=None,
+            requires=None):
         """Add a new step to the plan."""
         self[stack.fqn] = Step(
             stack=stack,
@@ -184,7 +187,8 @@ class Plan(OrderedDict):
 
                 status = step.run(results)
                 if not isinstance(status, Status):
-                    raise ValueError('Step run_func must return a valid Status')
+                    raise ValueError('Step run_func must return a valid '
+                                     'Status')
 
                 if status is COMPLETE:
                     results[step_name] = step.complete()
@@ -202,7 +206,8 @@ class Plan(OrderedDict):
     def outline(self, level=logging.INFO, execute_helper=False):
         """Print an outline of the actions the plan is going to take.
 
-        The outline will represent the rough ordering of the steps that will be taken.
+        The outline will represent the rough ordering of the steps that will be
+        taken.
 
         Args:
             level (Optional[int]): a valid log level that should be used to log
@@ -223,12 +228,14 @@ class Plan(OrderedDict):
                 step_name,
                 step._run_func.__name__,
             )
-            # Set the status to COMPLETE directly so we don't call the completion func
+            # Set the status to COMPLETE directly so we don't call the
+            # completion func
             step.status = COMPLETE
             steps += 1
 
         if execute_helper:
-            logger.log(level, 'To execute this plan, run with "-f, --force" flag.')
+            logger.log(level, 'To execute this plan, run with "-f, --force" '
+                              'flag.')
 
     def _check_point(self):
         logger.info('Plan Status:')

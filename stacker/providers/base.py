@@ -7,10 +7,12 @@ class BaseProvider(object):
 
     def __init__(self, *args, **kwargs):
         if not self.name:
-            raise exceptions.ImproperlyConfigured('Provider must have a "name"')
+            raise exceptions.ImproperlyConfigured('Provider must have a '
+                                                  '"name"')
 
     def _not_implemented_erorr(self, method):
-        raise NotImplementedError('Provider "%s" does not support "%s"' % (self.name, method))
+        raise NotImplementedError('Provider "%s" does not support "%s"' % (
+                                  self.name, method))
 
     def get_stack(self, stack_name, *args, **kwargs):
         self._not_implemented_erorr('get_stack')

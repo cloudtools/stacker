@@ -36,7 +36,8 @@ class TestStack(unittest.TestCase):
 
     def test_empty_parameters(self):
         build_action_parameters = {}
-        self.assertEqual({}, _gather_parameters(self.sd, build_action_parameters))
+        self.assertEqual({}, _gather_parameters(self.sd,
+                                                build_action_parameters))
 
     def test_generic_build_action_override(self):
         sdef = self.sd

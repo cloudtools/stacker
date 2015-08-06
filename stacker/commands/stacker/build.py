@@ -1,10 +1,9 @@
-# TODO make sure this is still relevant
-"""Launches or updates cloudformation stacks based on the given config.
+"""Launches or updates CloudFormation stacks based on the given config.
 
-The script is smart enough to figure out if anything (the template, or
-parameters) has changed for a given stack. If not, it will skip that stack.
+Stacker is smart enough to figure out if anything (the template or parameters)
+have changed for a given stack. If nothing has changed, stacker will correctly
+skip executing anything against the stack.
 
-Can also pull parameters from other stack's outputs.
 """
 
 from .base import StackerCommand

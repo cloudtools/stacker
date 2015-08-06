@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class Provider(BaseProvider):
+    """AWS CloudFormation Provider"""
 
     DELETED_STATUS = 'DELETE_COMPLETE'
     IN_PROGRESS_STATUSES = (

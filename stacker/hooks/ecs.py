@@ -22,10 +22,11 @@ def connect_to_region(region_name, **kw_params):
 
 
 def create_clusters(region, namespace, mappings, parameters, **kwargs):
-    """ Creates ECS clusters.
+    """Creates ECS clusters.
 
     Expects a 'clusters' argument, which should contain a list of cluster
     names to create.
+
     """
     conn = connect_to_region(region)
     try:

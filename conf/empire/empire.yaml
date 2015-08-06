@@ -39,15 +39,15 @@ mappings:
     us-east-1:
       NAT: ami-c02b04a8
       ubuntu1404: ami-c135f3aa
-      empire: ami-3186585a
+      empire: ami-a18d2fca
     us-west-1:
       NAT: ami-67a54423
       ubuntu1404: ami-bf3dccfb
-      empire: ami-2fd5286b
+      empire: ami-ade11ee9
     us-west-2:
       NAT: ami-2dae821d
       ubuntu1404: ami-f15b5dc1
-      empire: ami-1d808c2d
+      empire: ami-f5ccc4c5
 
 # Many stacks need these settings, or a subset of them, from the VPC -
 # this makes it easy to pass them around. Stacker will drop unused Parameters

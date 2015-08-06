@@ -1,6 +1,3 @@
-# TODO add a better description about all the actions
-"""Description about what stacker does
-"""
 import copy
 
 from .build import Build
@@ -12,7 +9,6 @@ from ...providers import aws
 class Stacker(BaseCommand):
 
     name = 'stacker'
-    description = __doc__
     subcommands = (Build,)
 
     def configure(self, options, **kwargs):

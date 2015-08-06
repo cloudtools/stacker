@@ -9,25 +9,22 @@ logger = logging.getLogger(__name__)
 
 
 class Action(BaseAction):
-    """ Responsible for building & coordinating CloudFormation stacks.
+    """Responsible for building & coordinating CloudFormation stacks.
 
-    Handles the conversion from:
-        config -> Blueprints -> Cloudformation Templates
+    Generates the build plan based on stack dependencies (these dependencies
+    are determined automatically based on references to output values from
+    other stacks).
 
-    Then pushes the templates into S3 if they have changed. Then kicks off
-    the stacks in order, depending on their dependencies/requirements (to
-    other stacks, and usually it is done automatically though manual
-    dependencies can be specified in the config).
+    The plan can then either be printed out as an outline or executed. If
+    executed, each stack will get launched in order which entails:
+        - Pushing the generated CloudFormation template to S3 if it has chnaged
+        - Submitting either a build or update of the given stack to the `Provider`.
+        - Stores the stack outputs for reference by other stacks.
 
-    If a stack already exists, but it's template or parameters have changed
-    it updates the stack, handling dependencies.
-
-    Also manages the translation of Output's to Parameters between stacks,
-    allowing you to pull information from one stack and use it in another.
     """
 
     def _resolve_parameters(self, outputs, parameters, blueprint):
-        """ Resolves parameters for a given blueprint.
+        """Resolves parameters for a given blueprint.
 
         Given a list of parameters, first discard any parameters that the
         blueprint does not use. Then, if a remaining parameter is in the format
@@ -35,14 +32,15 @@ class Action(BaseAction):
         stack.
 
         Args:
+            outputs (dict): any outputs that can be referenced by other stacks
             parameters (dict): A dictionary of parameters provided by the
-                               stack definition
-            blueprint (Blueprint): A stacker.blueprint.base.Blueprint object
-                                   that is having the parameters applied to
-                                   it.
+                stack definition
+            blueprint (`stacker.blueprint.base.Blueprint`): A Blueprint object
+                that is having the parameters applied to it.
 
         Returns:
             dict: The resolved parameters.
+
         """
         params = {}
         blueprint_params = blueprint.parameters
@@ -69,8 +67,7 @@ class Action(BaseAction):
         return params
 
     def _build_stack_tags(self, stack, template_url):
-        """ Builds a common set of tags to attach to a stack.
-        """
+        """Builds a common set of tags to attach to a stack"""
         requires = [req for req in stack.requires]
         logger.debug("Stack %s required stacks: %s",
                      stack.name, requires)
@@ -83,10 +80,11 @@ class Action(BaseAction):
         return tags
 
     def _launch_stack(self, results, stack, **kwargs):
-        """ Handles the creating or updating of a stack in CloudFormation.
+        """Handles the creating or updating of a stack in CloudFormation.
 
         Also makes sure that we don't try to create or update a stack while
         it is already updating or creating.
+
         """
         provider_stack = self.provider.get_stack(stack.fqn)
         if provider_stack and kwargs.get('status') is SUBMITTED:
@@ -119,9 +117,10 @@ class Action(BaseAction):
         return SUBMITTED
 
     def _get_outputs(self, stack):
-        """ Gets all the outputs from a given stack in CloudFormation.
+        """Gets all the outputs from a given stack in CloudFormation.
 
         Updates the local output cache with the values it finds.
+
         """
         provider_stack = self.provider.get_stack(stack.fqn)
         if not provider_stack:
@@ -133,24 +132,25 @@ class Action(BaseAction):
         return stack_outputs
 
     def _handle_missing_parameters(self, params, required_params, existing_stack=None):
-        """ Handles any missing parameters.
+        """Handles any missing parameters.
 
         If an existing_stack is provided, look up missing parameters there.
 
         Args:
             params (dict): key/value dictionary of stack definition parameters
             required_params (list): A list of required parameter names.
-            existing_stack (Stack): A boto.cloudformation.stack.Stack object.
-                                    If provided, will be searched for any
-                                    missing parameters.
+            existing_stack (`boto.cloudformation.stack.Stack`): A `Stack`
+                object. If provided, will be searched for any missing
+                parameters.
 
         Returns:
             list of tuples: The final list of key/value pairs returned as a
-                            list of tuples.
+                list of tuples.
 
         Raises:
             MissingParameterException: Raised if a required parameter is
-                                       still missing.
+                still missing.
+
         """
         missing_params = list(set(required_params) - set(params.keys()))
         if existing_stack:
@@ -168,7 +168,7 @@ class Action(BaseAction):
         return params.items()
 
     def _generate_plan(self):
-        plan = Plan(details='Create/Update stacks', provider=self.provider)
+        plan = Plan(description='Create/Update stacks')
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -188,6 +188,7 @@ class Action(BaseAction):
         return dependencies
 
     def pre_run(self, outline=False, *args, **kwargs):
+        """Any steps that need to be taken prior to running the action."""
         pre_build = self.context.config.get('pre_build')
         if not outline and pre_build:
             util.handle_hooks('pre_build', pre_build, self.provider.region, self.context)
@@ -196,6 +197,7 @@ class Action(BaseAction):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
+
         """
         plan = self._generate_plan()
         if not outline:
@@ -209,6 +211,7 @@ class Action(BaseAction):
             plan.outline(execute_helper=True)
 
     def post_run(self, outline=False, *args, **kwargs):
+        """Any steps that need to be taken after running the action."""
         post_build = self.context.config.get('post_build')
         if not outline and post_build:
             util.handle_hooks('post_build', post_build, self.context)

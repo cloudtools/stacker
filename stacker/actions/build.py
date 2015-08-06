@@ -17,8 +17,9 @@ class Action(BaseAction):
 
     The plan can then either be printed out as an outline or executed. If
     executed, each stack will get launched in order which entails:
-        - Pushing the generated CloudFormation template to S3 if it has chnaged
-        - Submitting either a build or update of the given stack to the `Provider`.
+        - Pushing the generated CloudFormation template to S3 if it has changed
+        - Submitting either a build or update of the given stack to the
+          `Provider`.
         - Stores the stack outputs for reference by other stacks.
 
     """
@@ -54,7 +55,8 @@ class Action(BaseAction):
                 # Get from the Output of another stack in the stack_map
                 stack_name, output = value.split('::')
                 stack_fqn = self.context.get_fqn(stack_name)
-                # XXX check out this logic to see if this is what we really want to do
+                # XXX check out this logic to see if this is what we really
+                # want to do
                 try:
                     stack_outputs = outputs[stack_fqn]
                 except KeyError:
@@ -102,15 +104,20 @@ class Action(BaseAction):
         logger.info("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack, template_url)
-        parameters = self._resolve_parameters(results, stack.parameters, stack.blueprint)
+        parameters = self._resolve_parameters(results, stack.parameters,
+                                              stack.blueprint)
         required_params = [k for k, v in stack.blueprint.required_parameters]
-        parameters = self._handle_missing_parameters(parameters, required_params, provider_stack)
+        parameters = self._handle_missing_parameters(parameters,
+                                                     required_params,
+                                                     provider_stack)
 
         try:
             if not provider_stack:
-                self.provider.create_stack(stack.fqn, template_url, parameters, tags)
+                self.provider.create_stack(stack.fqn, template_url, parameters,
+                                           tags)
             else:
-                self.provider.update_stack(stack.fqn, template_url, parameters, tags)
+                self.provider.update_stack(stack.fqn, template_url, parameters,
+                                           tags)
         except StackDidNotChange:
             return SKIPPED
 
@@ -131,7 +138,8 @@ class Action(BaseAction):
             stack_outputs[output.key] = output.value
         return stack_outputs
 
-    def _handle_missing_parameters(self, params, required_params, existing_stack=None):
+    def _handle_missing_parameters(self, params, required_params,
+                                   existing_stack=None):
         """Handles any missing parameters.
 
         If an existing_stack is provided, look up missing parameters there.
@@ -191,7 +199,8 @@ class Action(BaseAction):
         """Any steps that need to be taken prior to running the action."""
         pre_build = self.context.config.get('pre_build')
         if not outline and pre_build:
-            util.handle_hooks('pre_build', pre_build, self.provider.region, self.context)
+            util.handle_hooks('pre_build', pre_build, self.provider.region,
+                              self.context)
 
     def run(self, outline=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.

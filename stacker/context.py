@@ -10,7 +10,8 @@ class Context(object):
 
     """
 
-    _optional_keys = ('environment', 'stack_names', 'parameters', 'mappings', 'config')
+    _optional_keys = ('environment', 'stack_names', 'parameters', 'mappings',
+                      'config')
 
     def __init__(self, namespace, **kwargs):
         self.namespace = namespace
@@ -25,7 +26,8 @@ class Context(object):
     def _get_stack_definitions(self):
         if not self.stack_names:
             return self.config['stacks']
-        return [s for s in self.config['stacks'] if s['name'] in self.stack_names]
+        return [s for s in self.config['stacks'] if s['name'] in
+                self.stack_names]
 
     def get_stacks(self):
         """Get the stacks for the current action.

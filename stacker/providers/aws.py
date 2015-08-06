@@ -30,7 +30,8 @@ class Provider(BaseProvider):
     @property
     def cloudformation(self):
         if not hasattr(self, '_cloudformation'):
-            self._cloudformation = cloudformation.connect_to_region(self.region)
+            self._cloudformation = cloudformation.connect_to_region(
+                self.region)
         return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):

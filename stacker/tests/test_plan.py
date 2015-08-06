@@ -43,7 +43,8 @@ class TestPlan(unittest.TestCase):
         self.context = Context('namespace')
 
     def _run_func(self, results, stack, **kwargs):
-        self.assertIn('status', kwargs, 'Step "status" should be passed to all run_funcs')
+        self.assertIn('status', kwargs, 'Step "status" should be passed to '
+                                        'all run_funcs')
         self.count += 1
         if not self.count % 2:
             return COMPLETE
@@ -84,7 +85,8 @@ class TestPlan(unittest.TestCase):
 
     def test_step_must_return_status(self):
         plan = Plan(description='Test', sleep_time=0)
-        stack = Stack(definition=generate_definition('vpc', 1), context=mock.MagicMock())
+        stack = Stack(definition=generate_definition('vpc', 1),
+                      context=mock.MagicMock())
         plan.add(
             stack=stack,
             run_func=lambda x, y,
@@ -100,7 +102,8 @@ class TestPlan(unittest.TestCase):
 
         def _test_stack_name(stack):
             # use a test_stack_name since the plan execution treats the stack
-            # name in the results as a completed stack (either skipped or complete)
+            # name in the results as a completed stack (either skipped or
+            # complete)
             return '_test_%s' % (stack.fqn,)
 
         def _run_func(results, stack, *args, **kwargs):
@@ -114,7 +117,8 @@ class TestPlan(unittest.TestCase):
                 results[test_stack_name] += 1
                 return SUBMITTED
 
-        vpc_stack = Stack(definition=generate_definition('vpc', 1), context=self.context)
+        vpc_stack = Stack(definition=generate_definition('vpc', 1),
+                          context=self.context)
         web_stack = Stack(
             definition=generate_definition('web', 2, requires=[vpc_stack.fqn]),
             context=self.context,
@@ -159,7 +163,8 @@ class TestPlan(unittest.TestCase):
 
     def test_plan_steps_listed_with_fqn(self):
         plan = Plan(description='Test', sleep_time=0)
-        stack = Stack(definition=generate_definition('vpc', 1), context=Context('namespace'))
+        stack = Stack(definition=generate_definition('vpc', 1),
+                      context=Context('namespace'))
         plan.add(stack=stack, run_func=lambda x, y: (x, y))
         steps = plan.list_pending()
         self.assertEqual(steps[0][0], stack.fqn)
@@ -172,7 +177,8 @@ class TestPlan(unittest.TestCase):
             return COMPLETE
 
         for i in range(2):
-            stack = Stack(definition=generate_definition('vpc', i), context=self.context)
+            stack = Stack(definition=generate_definition('vpc', i),
+                          context=self.context)
             plan.add(
                 stack=stack,
                 run_func=run_func,

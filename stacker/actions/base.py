@@ -38,7 +38,8 @@ class BaseAction(object):
             except boto.exception.S3ResponseError, e:
                 if e.error_code == 'NoSuchBucket':
                     logger.debug("Creating bucket %s.", self.bucket_name)
-                    self._cfn_bucket = self.s3_conn.create_bucket(self.bucket_name)
+                    self._cfn_bucket = self.s3_conn.create_bucket(
+                        self.bucket_name)
                 elif e.error_code == 'AccessDenied':
                     logger.exception("Access denied for bucket %s.",
                                      self.bucket_name)

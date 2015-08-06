@@ -43,7 +43,8 @@ class Stack(object):
         self.definition = definition
         self.parameters = _gather_parameters(definition, parameters or {})
         self.mappings = mappings
-        # XXX this is temporary until we remove passing context down to the blueprint
+        # XXX this is temporary until we remove passing context down to the
+        # blueprint
         self.context = copy.deepcopy(context)
         if isinstance(self.context.parameters, dict):
             self.context.parameters.update(self.parameters)

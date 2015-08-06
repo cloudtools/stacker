@@ -30,7 +30,8 @@ class TestBuildAction(unittest.TestCase):
         config = {'stacks': [
             {'name': 'vpc'},
             {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
-            {'name': 'db', 'parameters': {'test': 'vpc::something', 'else': 'bastion::something'}},
+            {'name': 'db', 'parameters': {'test': 'vpc::something',
+             'else': 'bastion::something'}},
             {'name': 'other', 'parameters': {}}
         ]}
         return Context('namespace', config=config, **kwargs)
@@ -47,7 +48,8 @@ class TestBuildAction(unittest.TestCase):
         mock_blueprint = mock.MagicMock()
         type(mock_blueprint).parameters = parameters
         with self.assertRaises(exceptions.ParameterDoesNotExist):
-            self.build_action._resolve_parameters(outputs, parameters, mock_blueprint)
+            self.build_action._resolve_parameters(outputs, parameters,
+                                                  mock_blueprint)
 
     def test_resolve_parameters(self):
         parameters = {
@@ -76,7 +78,8 @@ class TestBuildAction(unittest.TestCase):
         mock_blueprint = mock.MagicMock()
         type(mock_blueprint).parameters = parameters
         with self.assertRaises(exceptions.StackDoesNotExist):
-            self.build_action._resolve_parameters(outputs, parameters, mock_blueprint)
+            self.build_action._resolve_parameters(outputs, parameters,
+                                                  mock_blueprint)
 
     def test_gather_missing_from_stack(self):
         stack_params = {'Address': '10.0.0.1'}
@@ -84,7 +87,8 @@ class TestBuildAction(unittest.TestCase):
         def_params = {}
         required = ['Address']
         self.assertEqual(
-            self.build_action._handle_missing_parameters(def_params, required, stack),
+            self.build_action._handle_missing_parameters(def_params, required,
+                                                         stack),
             stack_params.items())
 
     def test_missing_params_no_stack(self):
@@ -100,7 +104,8 @@ class TestBuildAction(unittest.TestCase):
         stack = MockStack(stack_params)
         def_params = {'Address': '192.168.0.1'}
         required = ['Address']
-        result = self.build_action._handle_missing_parameters(def_params, required, stack)
+        result = self.build_action._handle_missing_parameters(def_params,
+                                                              required, stack)
         self.assertEqual(result, def_params.items())
 
     def test_get_dependencies(self):
@@ -131,19 +136,22 @@ class TestBuildAction(unittest.TestCase):
         context = self._get_context()
         build_action = build.Action(context)
         plan = build_action._generate_plan()
-        self.assertEqual(plan.keys(), map(context.get_fqn, ['other', 'vpc', 'bastion', 'db']))
+        self.assertEqual(plan.keys(), map(context.get_fqn,
+                                          ['other', 'vpc', 'bastion', 'db']))
 
     def test_dont_execute_plan_when_outline_specified(self):
         context = self._get_context()
         build_action = build.Action(context)
-        with mock.patch.object(build_action, '_generate_plan') as mock_generate_plan:
+        with mock.patch.object(build_action, '_generate_plan') as \
+                mock_generate_plan:
             build_action.run(outline=True)
             self.assertEqual(mock_generate_plan().execute.call_count, 0)
 
     def test_execute_plan_when_outline_not_specified(self):
         context = self._get_context()
         build_action = build.Action(context)
-        with mock.patch.object(build_action, '_generate_plan') as mock_generate_plan:
+        with mock.patch.object(build_action, '_generate_plan') as \
+                mock_generate_plan:
             build_action.run(outline=False)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
 
@@ -157,7 +165,8 @@ class TestBuildAction(unittest.TestCase):
         _, step = plan.list_pending()[0]
         step.stack = mock.MagicMock()
 
-        # mock provider shouldn't return a stack at first since it hasn't been launched
+        # mock provider shouldn't return a stack at first since it hasn't been
+        # launched
         mock_provider.get_stack.return_value = None
         with mock.patch.object(build_action, 's3_stack_push'):
             # initial run should return SUBMITTED since we've passed off to CF
@@ -171,7 +180,8 @@ class TestBuildAction(unittest.TestCase):
             mock_provider.is_stack_completed.return_value = False
             status = step.run({})
             step.set_status(status)
-            # status should still be SUBMITTED since we're waiting for it to complete
+            # status should still be SUBMITTED since we're waiting for it to
+            # complete
             self.assertEqual(status, SUBMITTED)
             # simulate completed stack
             mock_provider.is_stack_completed.return_value = True

@@ -13,8 +13,8 @@ class Blueprint(object):
     :param name: A name for the blueprint. If not provided, one
         will be created from the class name automatically.
 
-    :type context: BlueprintContext object
-    :param context: Used for configuring the Blueprint.
+    :type parameters: Dictionary
+    :param stack: Used for configuring the Blueprint.
 
     :type mappings: dict
     :param mappings: Cloudformation Mappings to be used in the template.
@@ -23,8 +23,6 @@ class Blueprint(object):
     def __init__(self, name, context, mappings=None):
         self.name = name
         self.mappings = mappings
-        # TODO: This is only, currently, used for parameters. should probably
-        #       just pass parameters alone.
         self.context = context
         self.outputs = {}
         self.reset_template()
@@ -35,7 +33,7 @@ class Blueprint(object):
 
     @property
     def required_parameters(self):
-        """ Returns all parameters that do not have a default value. """
+        """ Returns all template parameters that do not have a default value. """
         required = []
         for k, v in self.parameters.items():
             if not hasattr(v, 'Default'):

@@ -6,9 +6,20 @@ import yaml
 from . import exceptions
 
 
-def parse_config(config_string, environment=None):
-    """ Parse a config, using it as a template with the environment. """
-    t = Template(config_string)
+def parse_config(raw_config, environment=None):
+    """Parse a config, using it as a template with the environment.
+
+    Args:
+        raw_config (str): the raw stacker configuration string.
+        environment (Optional[dict]): any environment values that should be
+            passed to the config
+
+    Returns:
+        dict: the stacker configuration populated with any values passed from
+            the environment
+
+    """
+    t = Template(raw_config)
     buff = StringIO()
     if not environment:
         environment = {}

@@ -183,7 +183,7 @@ class Action(BaseAction):
 
         return params.items()
 
-    def _generate_plan(self, force_stacks=[]):
+    def _generate_plan(self, force_stacks):
         plan = Plan(description='Create/Update stacks')
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
@@ -212,12 +212,13 @@ class Action(BaseAction):
             util.handle_hooks('pre_build', pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, force_stacks=[], *args, **kwargs):
+    def run(self, outline=False, force_stacks=None, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
+        force_stacks = force_stacks or []
         plan = self._generate_plan(force_stacks=force_stacks)
         if not outline:
             # need to generate a new plan to log since the outline sets the

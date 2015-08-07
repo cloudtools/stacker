@@ -135,7 +135,7 @@ class TestBuildAction(unittest.TestCase):
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context)
-        plan = build_action._generate_plan()
+        plan = build_action._generate_plan(force_stacks=[])
         self.assertEqual(plan.keys(), map(context.get_fqn,
                                           ['other', 'vpc', 'bastion', 'db']))
 
@@ -161,9 +161,10 @@ class TestBuildAction(unittest.TestCase):
 
         context = self._get_context()
         build_action = build.Action(context, provider=mock_provider)
-        plan = build_action._generate_plan()
+        plan = build_action._generate_plan(force_stacks=[])
         _, step = plan.list_pending()[0]
         step.stack = mock.MagicMock()
+        step.stack.locked = False
 
         # mock provider shouldn't return a stack at first since it hasn't been
         # launched

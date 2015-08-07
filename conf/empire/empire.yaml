@@ -115,7 +115,7 @@ stacks:
       AllocatedStorage: ${empiredb_disk_size}
       MasterUser: ${empiredb_user}
       MasterUserPassword: ${empiredb_password}
-      DBName: empiredb
+      DBName: empire
       # Creates the InternalHostname on the InternalZone, ie:
       # empire-db.empire
       InternalZoneId: vpc::InternalZoneId

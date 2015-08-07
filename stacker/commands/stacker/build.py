@@ -26,8 +26,13 @@ class Build(StackerCommand):
         parser.add_argument("-o", "--outline", action="store_true",
                             help="Print an outline of what steps will be "
                                  "taken to build the stacks")
+        parser.add_argument("--force", action="append", default=[],
+                            metavar="STACKNAME", type=str,
+                            help="If a stackname is provided to --force, it "
+                                 "will be updated, even if it is locked in "
+                                 "the config.")
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
-        action.execute(outline=options.outline)
+        action.execute(outline=options.outline, force_stacks=options.force)

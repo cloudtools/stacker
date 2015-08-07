@@ -35,10 +35,11 @@ class Step(object):
     """
 
     def __init__(self, stack, run_func, completion_func=None,
-                 skip_func=None, requires=None):
+                 skip_func=None, requires=None, **kwargs):
         self.stack = stack
         self.status = PENDING
         self.requires = requires or []
+        self.kwargs = kwargs
         self._run_func = run_func
         self._completion_func = completion_func
         self._skip_func = skip_func
@@ -62,7 +63,8 @@ class Step(object):
         self.set_status(SUBMITTED)
 
     def run(self, results):
-        return self._run_func(results, self.stack, status=self.status)
+        return self._run_func(results, self.stack, status=self.status,
+                              **self.kwargs)
 
     def set_status(self, status):
         if status is not self.status:
@@ -114,7 +116,7 @@ class Plan(OrderedDict):
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, completion_func=None, skip_func=None,
-            requires=None):
+            requires=None, **kwargs):
         """Add a new step to the plan."""
         self[stack.fqn] = Step(
             stack=stack,
@@ -122,6 +124,7 @@ class Plan(OrderedDict):
             completion_func=completion_func,
             skip_func=skip_func,
             requires=requires,
+            **kwargs
         )
 
     def list_status(self, status):

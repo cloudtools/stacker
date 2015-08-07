@@ -116,6 +116,14 @@ class Action(BaseAction):
                 self.provider.create_stack(stack.fqn, template_url, parameters,
                                            tags)
             else:
+                if stack.locked:
+                    if not kwargs.get('force', False):
+                        logger.info("Stack %s locked and not in force list. "
+                                    "Refusing to update.", stack.name)
+                        return SKIPPED
+                    else:
+                        logger.debug("Stack %s locked, but is in force list.",
+                                     stack.name)
                 self.provider.update_stack(stack.fqn, template_url, parameters,
                                            tags)
         except StackDidNotChange:
@@ -175,17 +183,19 @@ class Action(BaseAction):
 
         return params.items()
 
-    def _generate_plan(self):
+    def _generate_plan(self, force_stacks=[]):
         plan = Plan(description='Create/Update stacks')
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
+            force = stacks[stack_name].name in force_stacks
             plan.add(
                 stacks[stack_name],
                 run_func=self._launch_stack,
                 completion_func=self._get_outputs,
                 skip_func=self._get_outputs,
                 requires=dependencies.get(stack_name),
+                force=force,
             )
         return plan
 
@@ -202,13 +212,13 @@ class Action(BaseAction):
             util.handle_hooks('pre_build', pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, *args, **kwargs):
+    def run(self, outline=False, force_stacks=[], *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
-        plan = self._generate_plan()
+        plan = self._generate_plan(force_stacks=force_stacks)
         if not outline:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them

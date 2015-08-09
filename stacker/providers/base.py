@@ -1,30 +1,26 @@
-from .. import exceptions
+def not_implemented(method):
+    raise NotImplementedError("Provider does not support '%s' "
+                              "method." % method)
 
 
 class BaseProvider(object):
-
-    name = None
-
-    def __init__(self, *args, **kwargs):
-        if not self.name:
-            raise exceptions.ImproperlyConfigured('Provider must have a '
-                                                  '"name"')
-
-    def _not_implemented_erorr(self, method):
-        raise NotImplementedError('Provider "%s" does not support "%s"' % (
-                                  self.name, method))
-
     def get_stack(self, stack_name, *args, **kwargs):
-        self._not_implemented_erorr('get_stack')
+        not_implemented("get_stack")
 
     def create_stack(self, *args, **kwargs):
-        self._not_implemented_erorr('create_stack')
+        not_implemented("create_stack")
 
     def update_stack(self, *args, **kwargs):
-        self._not_implemented_erorr('update_stack')
+        not_implemented("update_stack")
 
     def destroy_stack(self, *args, **kwargs):
-        self._not_implemented_erorr('destroy_stack')
+        not_implemented("destroy_stack")
 
     def get_stack_status(self, stack_name, *args, **kwargs):
-        self._not_implemented_erorr('get_stack_status')
+        not_implemented("get_stack_status")
+
+    def get_outputs(self, stack_name, *args, **kwargs):
+        not_implemented("get_outputs")
+
+    def get_output(self, stack_name, output):
+        return self.get_outputs(stack_name)[output]

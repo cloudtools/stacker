@@ -24,7 +24,7 @@ class Action(BaseAction):
 
     """
 
-    def _resolve_parameters(self, outputs, parameters, blueprint):
+    def _resolve_parameters(self, parameters, blueprint):
         """Resolves parameters for a given blueprint.
 
         Given a list of parameters, first discard any parameters that the
@@ -33,7 +33,6 @@ class Action(BaseAction):
         stack.
 
         Args:
-            outputs (dict): any outputs that can be referenced by other stacks
             parameters (dict): A dictionary of parameters provided by the
                 stack definition
             blueprint (`stacker.blueprint.base.Blueprint`): A Blueprint object
@@ -55,16 +54,10 @@ class Action(BaseAction):
                 # Get from the Output of another stack in the stack_map
                 stack_name, output = value.split('::')
                 stack_fqn = self.context.get_fqn(stack_name)
-                # XXX check out this logic to see if this is what we really
-                # want to do
                 try:
-                    stack_outputs = outputs[stack_fqn]
+                    value = self.provider.get_output(stack_fqn, output)
                 except KeyError:
-                    raise exceptions.StackDoesNotExist(stack_fqn)
-                try:
-                    value = stack_outputs[output]
-                except KeyError:
-                    raise exceptions.ParameterDoesNotExist(value)
+                    raise exceptions.OutputDoesNotExist(stack_fqn, value)
             params[k] = value
         return params
 
@@ -81,14 +74,18 @@ class Action(BaseAction):
             tags['required_stacks'] = ':'.join(requires)
         return tags
 
-    def _launch_stack(self, results, stack, **kwargs):
+    def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.
 
         Also makes sure that we don't try to create or update a stack while
         it is already updating or creating.
 
         """
-        provider_stack = self.provider.get_stack(stack.fqn)
+        try:
+            provider_stack = self.provider.get_stack(stack.fqn)
+        except exceptions.StackDoesNotExist:
+            provider_stack = None
+
         if provider_stack and kwargs.get('status') is SUBMITTED:
             logger.debug(
                 "Stack %s provider status: %s",
@@ -104,7 +101,7 @@ class Action(BaseAction):
         logger.info("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack, template_url)
-        parameters = self._resolve_parameters(results, stack.parameters,
+        parameters = self._resolve_parameters(stack.parameters,
                                               stack.blueprint)
         required_params = [k for k, v in stack.blueprint.required_parameters]
         parameters = self._handle_missing_parameters(parameters,
@@ -122,21 +119,6 @@ class Action(BaseAction):
             return SKIPPED
 
         return SUBMITTED
-
-    def _get_outputs(self, stack):
-        """Gets all the outputs from a given stack in CloudFormation.
-
-        Updates the local output cache with the values it finds.
-
-        """
-        provider_stack = self.provider.get_stack(stack.fqn)
-        if not provider_stack:
-            raise ValueError("Stack %s does not exist." % (stack.fqn,))
-        stack_outputs = {}
-        for output in provider_stack.outputs:
-            logger.debug("    %s: %s", output.key, output.value)
-            stack_outputs[output.key] = output.value
-        return stack_outputs
 
     def _handle_missing_parameters(self, params, required_params,
                                    existing_stack=None):
@@ -183,8 +165,6 @@ class Action(BaseAction):
             plan.add(
                 stacks[stack_name],
                 run_func=self._launch_stack,
-                completion_func=self._get_outputs,
-                skip_func=self._get_outputs,
                 requires=dependencies.get(stack_name),
             )
         return plan

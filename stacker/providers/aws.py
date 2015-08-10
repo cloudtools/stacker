@@ -70,7 +70,6 @@ class Provider(BaseProvider):
     COMPLETE_STATUSES = (
         'CREATE_COMPLETE',
         'UPDATE_COMPLETE',
-        'UPDATE_ROLLBACK_COMPLETE',
     )
 
     def __init__(self, region, **kwargs):

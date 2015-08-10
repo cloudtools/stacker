@@ -5,6 +5,7 @@ from boto import cloudformation
 
 from . import exceptions
 from .base import BaseProvider
+from ..util import retry_with_backoff
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,34 @@ def get_output_dict(stack):
                      output.value)
         outputs[output.key] = output.value
     return outputs
+
+
+def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
+    """Wrap retry_with_backoff to handle AWS Cloudformation Throttling.
+
+    Args:
+        fn (function): The function to call.
+        attempts (int): Maximum # of attempts to retry the function.
+        args (list): List of positional arguments to pass to the function.
+        kwargs (dict): Dict of keyword arguments to pass to the function.
+
+    Returns:
+        passthrough: This returns the result of the function call itself.
+
+    Raises:
+        passthrough: This raises any exceptions the function call raises,
+            except for boto.exception.BotoServerError, provided it doesn't
+            retry more than attempts.
+    """
+    def _throttling_checker(exc):
+        if exc.status == 400 and "Throttling" in exc.message:
+            logger.debug("AWS throttling calls.")
+            return True
+        return False
+
+    return retry_with_backoff(fn, args=args, kwargs=kwargs, attempts=attempts,
+                              exc_list=[boto.exception.BotoServerError],
+                              retry_checker=_throttling_checker)
 
 
 class Provider(BaseProvider):
@@ -59,7 +88,8 @@ class Provider(BaseProvider):
         if stack_name not in self._stacks:
             try:
                 self._stacks[stack_name] = \
-                    self.cloudformation.describe_stacks(stack_name)[0]
+                    retry_on_throttling(self.cloudformation.describe_stacks,
+                                        args=[stack_name])[0]
             except boto.exception.BotoServerError as e:
                 if 'does not exist' not in e.message:
                     raise
@@ -80,30 +110,33 @@ class Provider(BaseProvider):
 
     def destroy_stack(self, stack, **kwargs):
         logger.info("Destroying stack: %s" % (stack.stack_name,))
-        self.cloudformation.delete_stack(stack.stack_id)
+        retry_on_throttling(self.cloudformation.delete_stack,
+                            args=[stack.stack_id])
         return True
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
         logger.info("Stack %s not found, creating.", fqn)
         logger.debug("Using parameters: %s", parameters)
         logger.debug("Using tags: %s", tags)
-        self.cloudformation.create_stack(
-            fqn,
-            template_url=template_url,
-            parameters=parameters, tags=tags,
-            capabilities=['CAPABILITY_IAM'],
+        retry_on_throttling(
+            self.cloudformation.create_stack,
+            args=[fqn],
+            kwargs=dict(template_url=template_url,
+                        parameters=parameters, tags=tags,
+                        capabilities=['CAPABILITY_IAM']),
         )
         return True
 
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
         try:
             logger.info("Attempting to update stack %s.", fqn)
-            self.cloudformation.update_stack(
-                fqn,
-                template_url=template_url,
-                parameters=parameters,
-                tags=tags,
-                capabilities=['CAPABILITY_IAM'],
+            retry_on_throttling(
+                self.cloudformation.update_stack,
+                args=[fqn],
+                kwargs=dict(template_url=template_url,
+                            parameters=parameters,
+                            tags=tags,
+                            capabilities=['CAPABILITY_IAM']),
             )
         except boto.exception.BotoServerError as e:
             if 'No updates are to be performed.' in e.message:

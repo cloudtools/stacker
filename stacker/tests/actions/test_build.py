@@ -7,7 +7,7 @@ from stacker.actions import build
 from stacker.context import Context
 from stacker import exceptions
 from stacker.plan import COMPLETE, PENDING, SKIPPED, SUBMITTED
-from stacker.providers.exceptions import StackDidNotChange
+from stacker.exceptions import StackDidNotChange
 from stacker.providers.base import BaseProvider
 
 

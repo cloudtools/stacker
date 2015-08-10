@@ -3,7 +3,7 @@ import logging
 import boto
 from boto import cloudformation
 
-from . import exceptions
+from .. import exceptions
 from .base import BaseProvider
 from ..util import retry_with_backoff
 
@@ -23,7 +23,7 @@ def get_output_dict(stack):
     """
     outputs = {}
     for output in stack.outputs:
-        logger.debug("    %s %s: %s", stack.name, output.key,
+        logger.debug("    %s %s: %s", stack.stack_name, output.key,
                      output.value)
         outputs[output.key] = output.value
     return outputs
@@ -47,13 +47,13 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
             retry more than attempts.
     """
     def _throttling_checker(exc):
-        if exc.status == 400 and "Throttling" in exc.message:
+        if exc.status == 400 and exc.error_code == "Throttling":
             logger.debug("AWS throttling calls.")
             return True
         return False
 
     return retry_with_backoff(fn, args=args, kwargs=kwargs, attempts=attempts,
-                              exc_list=[boto.exception.BotoServerError],
+                              exc_list=(boto.exception.BotoServerError, ),
                               retry_checker=_throttling_checker)
 
 
@@ -70,11 +70,11 @@ class Provider(BaseProvider):
     COMPLETE_STATUSES = (
         'CREATE_COMPLETE',
         'UPDATE_COMPLETE',
+        'UPDATE_ROLLBACK_COMPLETE',
     )
 
     def __init__(self, region, **kwargs):
         self.region = region
-        self._stacks = {}
         self._outputs = {}
 
     @property
@@ -85,16 +85,13 @@ class Provider(BaseProvider):
         return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):
-        if stack_name not in self._stacks:
-            try:
-                self._stacks[stack_name] = \
-                    retry_on_throttling(self.cloudformation.describe_stacks,
-                                        args=[stack_name])[0]
-            except boto.exception.BotoServerError as e:
-                if 'does not exist' not in e.message:
-                    raise
-                raise exceptions.StackDoesNotExist(stack_name)
-        return self._stacks[stack_name]
+        try:
+            return retry_on_throttling(self.cloudformation.describe_stacks,
+                                       args=[stack_name])[0]
+        except boto.exception.BotoServerError as e:
+            if 'does not exist' not in e.message:
+                raise
+            raise exceptions.StackDoesNotExist(stack_name)
 
     def get_stack_status(self, stack, **kwargs):
         return stack.stack_status

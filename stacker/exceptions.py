@@ -1,5 +1,3 @@
-
-
 class StackDoesNotExist(Exception):
 
     def __init__(self, stack_name, *args, **kwargs):
@@ -42,3 +40,9 @@ class ImproperlyConfigured(Exception):
             error,
         )
         super(ImproperlyConfigured, self).__init__(message, *args, **kwargs)
+
+
+class StackDidNotChange(Exception):
+    """Exception raised when there are no changes to be made by the
+    provider.
+    """

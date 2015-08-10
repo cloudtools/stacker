@@ -10,7 +10,23 @@ from ..util import retry_with_backoff
 logger = logging.getLogger(__name__)
 
 
-def retry_cf_throttling(fn, attempts=3, args=None, kwargs=None):
+def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
+    """Wrap retry_with_backoff to handle AWS Cloudformation Throttling.
+
+    Args:
+        fn (function): The function to call.
+        attempts (int): Maximum # of attempts to retry the function.
+        args (list): List of positional arguments to pass to the function.
+        kwargs (dict): Dict of keyword arguments to pass to the function.
+
+    Returns:
+        passthrough: This returns the result of the function call itself.
+
+    Raises:
+        passthrough: This raises any exceptions the function call raises,
+            except for boto.exception.BotoServerError, provided it doesn't
+            retry more than attempts.
+    """
     def _throttling_checker(exc):
         if exc.status == 400 and "Throttling" in exc.message:
             logger.debug("AWS throttling calls.")
@@ -50,7 +66,7 @@ class Provider(BaseProvider):
     def get_stack(self, stack_name, **kwargs):
         stack = None
         try:
-            stack = retry_cf_throttling(self.cloudformation.describe_stacks,
+            stack = retry_on_throttling(self.cloudformation.describe_stacks,
                                         args=[stack_name])[0]
         except boto.exception.BotoServerError as e:
             if 'does not exist' not in e.message:
@@ -71,7 +87,7 @@ class Provider(BaseProvider):
 
     def destroy_stack(self, stack, **kwargs):
         logger.info("Destroying stack: %s" % (stack.stack_name,))
-        retry_cf_throttling(self.cloudformation.delete_stack,
+        retry_on_throttling(self.cloudformation.delete_stack,
                             args=[stack.stack_id])
         return True
 
@@ -79,7 +95,7 @@ class Provider(BaseProvider):
         logger.info("Stack %s not found, creating.", fqn)
         logger.debug("Using parameters: %s", parameters)
         logger.debug("Using tags: %s", tags)
-        retry_cf_throttling(
+        retry_on_throttling(
             self.cloudformation.create_stack,
             args=[fqn],
             kwargs=dict(template_url=template_url,
@@ -91,7 +107,7 @@ class Provider(BaseProvider):
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
         try:
             logger.info("Attempting to update stack %s.", fqn)
-            retry_cf_throttling(
+            retry_on_throttling(
                 self.cloudformation.update_stack,
                 args=[fqn],
                 kwargs=dict(template_url=template_url,

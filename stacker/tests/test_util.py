@@ -7,7 +7,7 @@ import Queue
 from stacker.context import Context
 from stacker.util import (
     cf_safe_name, load_object_from_string,
-    camel_to_snake, handle_hooks)
+    camel_to_snake, handle_hooks, retry_with_backoff)
 
 regions = ['us-east-1', 'cn-north-1', 'ap-northeast-1', 'eu-west-1',
            'ap-southeast-1', 'ap-southeast-2', 'us-west-2', 'us-gov-west-1',
@@ -113,3 +113,121 @@ class TestHooks(unittest.TestCase):
                   'required': False}]
         # Should pass
         handle_hooks('ignore_exception', hooks, 'us-east-1', self.context)
+
+
+class TestException1(Exception):
+    pass
+
+
+class TestException2(Exception):
+    pass
+
+
+class TestExceptionRetries(unittest.TestCase):
+    def setUp(self):
+        self.counter = 0
+
+    def _works_immediately(self, a, b, x=None, y=None):
+        self.counter += 1
+        return [a, b, x, y]
+
+    def _works_second_attempt(self, a, b, x=None, y=None):
+        self.counter += 1
+        if self.counter == 2:
+            return [a, b, x, y]
+        raise Exception("Broke.")
+
+    def _second_raises_exception2(self, a, b, x=None, y=None):
+        self.counter += 1
+        if self.counter == 2:
+            return [a, b, x, y]
+        raise TestException2("Broke.")
+
+    def _throws_exception2(self, a, b, x=None, y=None):
+        self.counter += 1
+        raise TestException2("Broke.")
+
+    def test_function_works_no_retry(self):
+
+        r = retry_with_backoff(self._works_immediately,
+                               attempts=2, min_delay=0, max_delay=.1,
+                               args=['a', 'b'],
+                               kwargs={'x': 'X', 'y': 'Y'})
+        self.assertEqual(r, ['a', 'b', 'X', 'Y'])
+        self.assertEqual(self.counter, 1)
+
+    def test_retry_exception(self):
+
+        r = retry_with_backoff(self._works_second_attempt,
+                               attempts=5, min_delay=0, max_delay=.1,
+                               args=['a', 'b'],
+                               kwargs={'x': 'X', 'y': 'Y'})
+        self.assertEqual(r, ['a', 'b', 'X', 'Y'])
+        self.assertEqual(self.counter, 2)
+
+    def test_multiple_exceptions(self):
+
+        r = retry_with_backoff(self._second_raises_exception2,
+                               exc_list=(TestException1, TestException2),
+                               attempts=5, min_delay=0, max_delay=.1,
+                               args=['a', 'b'],
+                               kwargs={'x': 'X', 'y': 'Y'})
+        self.assertEqual(r, ['a', 'b', 'X', 'Y'])
+        self.assertEqual(self.counter, 2)
+
+    def test_unhandled_exception(self):
+
+        with self.assertRaises(TestException2):
+            retry_with_backoff(self._throws_exception2,
+                               exc_list=(TestException1),
+                               attempts=5, min_delay=0, max_delay=.1,
+                               args=['a', 'b'],
+                               kwargs={'x': 'X', 'y': 'Y'})
+        self.assertEqual(self.counter, 1)
+
+    def test_never_recovers(self):
+
+        with self.assertRaises(TestException2):
+            retry_with_backoff(self._throws_exception2,
+                               exc_list=(TestException1, TestException2),
+                               attempts=5, min_delay=0, max_delay=.1,
+                               args=['a', 'b'],
+                               kwargs={'x': 'X', 'y': 'Y'})
+        self.assertEqual(self.counter, 5)
+
+    def test_retry_checker(self):
+        def _throws_handled_exception(a, b, x=None, y=None):
+            self.counter += 1
+            if self.counter == 2:
+                return [a, b, x, y]
+            raise TestException2("Broke.")
+
+        def _throws_unhandled_exception(a, b, x=None, y=None):
+            self.counter += 1
+            if self.counter == 2:
+                return [a, b, x, y]
+            raise TestException2("Invalid")
+
+        def _check_for_broke_message(e):
+            if "Broke." in e.message:
+                return True
+            return False
+
+        r = retry_with_backoff(_throws_handled_exception,
+                               exc_list=(TestException2),
+                               retry_checker=_check_for_broke_message,
+                               attempts=5, min_delay=0, max_delay=.1,
+                               args=['a', 'b'],
+                               kwargs={'x': 'X', 'y': 'Y'})
+        self.assertEqual(self.counter, 2)
+        self.assertEqual(r, ['a', 'b', 'X', 'Y'])
+
+        self.counter = 0
+        with self.assertRaises(TestException2):
+            retry_with_backoff(_throws_unhandled_exception,
+                               exc_list=(TestException2),
+                               retry_checker=_check_for_broke_message,
+                               attempts=5, min_delay=0, max_delay=.1,
+                               args=['a', 'b'],
+                               kwargs={'x': 'X', 'y': 'Y'})
+        self.assertEqual(self.counter, 1)

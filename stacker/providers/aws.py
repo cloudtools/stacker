@@ -10,6 +10,25 @@ from ..util import retry_with_backoff
 logger = logging.getLogger(__name__)
 
 
+def get_output_dict(stack):
+    """Returns a dict of key/values for the outputs for a given CF stack.
+
+    Args:
+        stack (boto.cloudformation.stack.Stack): The stack object to get
+            outputs from.
+
+    Returns:
+        dict: A dictionary with key/values for each output on the stack.
+
+    """
+    outputs = {}
+    for output in stack.outputs:
+        logger.debug("    %s %s: %s", stack.name, output.key,
+                     output.value)
+        outputs[output.key] = output.value
+    return outputs
+
+
 def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
     """Wrap retry_with_backoff to handle AWS Cloudformation Throttling.
 
@@ -55,6 +74,8 @@ class Provider(BaseProvider):
 
     def __init__(self, region, **kwargs):
         self.region = region
+        self._stacks = {}
+        self._outputs = {}
 
     @property
     def cloudformation(self):
@@ -64,14 +85,16 @@ class Provider(BaseProvider):
         return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):
-        stack = None
-        try:
-            stack = retry_on_throttling(self.cloudformation.describe_stacks,
+        if stack_name not in self._stacks:
+            try:
+                self._stacks[stack_name] = \
+                    retry_on_throttling(self.cloudformation.describe_stacks,
                                         args=[stack_name])[0]
-        except boto.exception.BotoServerError as e:
-            if 'does not exist' not in e.message:
-                raise
-        return stack
+            except boto.exception.BotoServerError as e:
+                if 'does not exist' not in e.message:
+                    raise
+                raise exceptions.StackDoesNotExist(stack_name)
+        return self._stacks[stack_name]
 
     def get_stack_status(self, stack, **kwargs):
         return stack.stack_status
@@ -133,3 +156,9 @@ class Provider(BaseProvider):
 
     def get_stack_name(self, stack, **kwargs):
         return stack.stack_name
+
+    def get_outputs(self, stack_name, *args, **kwargs):
+        if stack_name not in self._outputs:
+            stack = self.get_stack(stack_name)
+            self._outputs[stack_name] = get_output_dict(stack)
+        return self._outputs[stack_name]

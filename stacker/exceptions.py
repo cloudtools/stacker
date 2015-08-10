@@ -27,11 +27,12 @@ class MissingLocalParameterException(Exception):
                                                              **kwargs)
 
 
-class ParameterDoesNotExist(Exception):
+class OutputDoesNotExist(Exception):
 
-    def __init__(self, parameter, *args, **kwargs):
-        message = 'Parameter: "%s" does not exist in output' % (parameter,)
-        super(ParameterDoesNotExist, self).__init__(message, *args, **kwargs)
+    def __init__(self, stack_name, output, *args, **kwargs):
+        message = 'Output %s does not exist on stack %s' % (output,
+                                                            stack_name)
+        super(OutputDoesNotExist, self).__init__(message, *args, **kwargs)
 
 
 class MissingEnvironment(Exception):

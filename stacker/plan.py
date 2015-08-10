@@ -22,26 +22,17 @@ class Step(object):
         stack (`stacker.stack.Stack`): the `Stack` object associated with this
             step
         run_func (func): the function to be run for the given stack
-        completion_func (Optional[func]): Optional function that should be run
-            when the step is complete. This should be used to return some
-            result of the step.
-        skip_func (Optional[func]): Optional function that should be run when
-            the step is skipped. This can be used to return results from the
-            step, without risking calling a completion function agian.
         requires (Optional[list]): List of stacks this step depends on being
             completed before running. This step will not be executed unless the
             required stacks have either completed or skipped.
 
     """
 
-    def __init__(self, stack, run_func, completion_func=None,
-                 skip_func=None, requires=None):
+    def __init__(self, stack, run_func, requires=None):
         self.stack = stack
         self.status = PENDING
         self.requires = requires or []
         self._run_func = run_func
-        self._completion_func = completion_func
-        self._skip_func = skip_func
 
     def __repr__(self):
         return '<stacker.plan.Step:%s>' % (self.stack.fqn,)
@@ -58,11 +49,8 @@ class Step(object):
     def submitted(self):
         return self.status.code >= SUBMITTED.code
 
-    def submit(self):
-        self.set_status(SUBMITTED)
-
-    def run(self, results):
-        return self._run_func(results, self.stack, status=self.status)
+    def run(self):
+        return self._run_func(self.stack, status=self.status)
 
     def set_status(self, status):
         if status is not self.status:
@@ -72,13 +60,12 @@ class Step(object):
 
     def complete(self):
         self.set_status(COMPLETE)
-        if self._completion_func and callable(self._completion_func):
-            return self._completion_func(self.stack)
 
     def skip(self):
         self.set_status(SKIPPED)
-        if self._skip_func and callable(self._skip_func):
-            return self._skip_func(self.stack)
+
+    def submit(self):
+        self.set_status(SUBMITTED)
 
 
 class Plan(OrderedDict):
@@ -113,14 +100,11 @@ class Plan(OrderedDict):
             self._wait_func = time.sleep
         super(Plan, self).__init__(*args, **kwargs)
 
-    def add(self, stack, run_func, completion_func=None, skip_func=None,
-            requires=None):
+    def add(self, stack, run_func, requires=None):
         """Add a new step to the plan."""
         self[stack.fqn] = Step(
             stack=stack,
             run_func=run_func,
-            completion_func=completion_func,
-            skip_func=skip_func,
             requires=requires,
         )
 
@@ -149,21 +133,37 @@ class Plan(OrderedDict):
             return False
         return True
 
-    def execute(self, results=None):
+    def _single_run(self):
+        """Executes a single run through the plan, touching each step."""
+        for step_name, step in self.list_pending():
+            waiting_on = []
+            for required_stack in step.requires:
+                if not self[required_stack].completed and \
+                        not self[required_stack].skipped:
+                    waiting_on.append(required_stack)
+
+            if waiting_on:
+                logger.debug(
+                    'Stack: "%s" waiting on required stacks: %s',
+                    step.stack.name,
+                    ', '.join(waiting_on),
+                )
+                continue
+
+            status = step.run()
+            if not isinstance(status, Status):
+                raise ValueError('Step run_func must return a valid '
+                                 'Status')
+
+            step.set_status(status)
+        return self.completed
+
+    def execute(self):
         """Execute the plan.
 
         This will run through all of the steps registered with the plan and
-        submit them in parallel based on their dependencies. The results will
-        be returned once all steps have either been skipped or completed.
-
-        Args:
-            results (Optional[dict]): The dictionary that should be used to
-                store the results
-
+        submit them in parallel based on their dependencies.
         """
-
-        if results is None:
-            results = {}
 
         attempts = 0
         while not self.completed:
@@ -171,37 +171,10 @@ class Plan(OrderedDict):
             if not attempts % 10:
                 self._check_point()
 
-            for step_name, step in self.list_pending():
-                waiting_on = []
-                for required_stack in step.requires:
-                    if required_stack not in results:
-                        waiting_on.append(required_stack)
-
-                if waiting_on:
-                    logger.debug(
-                        'Stack: "%s" waiting on required stacks: %s',
-                        step.stack.name,
-                        ', '.join(waiting_on),
-                    )
-                    continue
-
-                status = step.run(results)
-                if not isinstance(status, Status):
-                    raise ValueError('Step run_func must return a valid '
-                                     'Status')
-
-                if status is COMPLETE:
-                    results[step_name] = step.complete()
-                elif status is SKIPPED:
-                    results[step_name] = step.skip()
-                else:
-                    step.set_status(status)
-
-            if not self.completed:
+            if not self._single_run():
                 self._wait_func(self.sleep_time)
 
         self._check_point()
-        return results
 
     def outline(self, level=logging.INFO, execute_helper=False):
         """Print an outline of the actions the plan is going to take.

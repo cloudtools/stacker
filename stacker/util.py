@@ -20,6 +20,7 @@ def retry_with_backoff(function, args=None, kwargs=None, attempts=5,
         exc_list = (Exception, )
     while True:
         attempt += 1
+        logger.debug("Calling %s, attempt %d.", function, attempt)
         sleep_time = min(max_delay, min_delay * attempt)
         try:
             return function(*args, **kwargs)

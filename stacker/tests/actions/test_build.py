@@ -7,7 +7,8 @@ from stacker.actions import build
 from stacker.context import Context
 from stacker import exceptions
 from stacker.plan import COMPLETE, PENDING, SKIPPED, SUBMITTED
-from stacker.providers.exceptions import StackDidNotChange
+from stacker.exceptions import StackDidNotChange
+from stacker.providers.base import BaseProvider
 
 
 Parameter = namedtuple('Parameter', ['key', 'value'])
@@ -20,11 +21,28 @@ class MockStack(object):
             self.parameters.append(Parameter(key=k, value=v))
 
 
+class TestProvider(BaseProvider):
+    def __init__(self, outputs=None, *args, **kwargs):
+        self._outputs = outputs or {}
+
+    def set_outputs(self, outputs):
+        self._outputs = outputs
+
+    def get_stack(self, stack_name, **kwargs):
+        if stack_name not in self._outputs:
+            raise exceptions.StackDoesNotExist(stack_name)
+        return {'name': stack_name, 'outputs': self._outputs[stack_name]}
+
+    def get_outputs(self, stack_name, *args, **kwargs):
+        stack = self.get_stack(stack_name)
+        return stack['outputs']
+
+
 class TestBuildAction(unittest.TestCase):
 
     def setUp(self):
         self.context = Context('namespace')
-        self.build_action = build.Action(self.context)
+        self.build_action = build.Action(self.context, provider=TestProvider())
 
     def _get_context(self, **kwargs):
         config = {'stacks': [
@@ -41,14 +59,14 @@ class TestBuildAction(unittest.TestCase):
             'param_1': 'mock::output_1',
             'param_2': 'other::does_not_exist',
         }
-        outputs = {
+        self.build_action.provider.set_outputs({
             self.context.get_fqn('mock'): {'output_1': 'output'},
             self.context.get_fqn('other'): {},
-        }
+        })
         mock_blueprint = mock.MagicMock()
         type(mock_blueprint).parameters = parameters
-        with self.assertRaises(exceptions.ParameterDoesNotExist):
-            self.build_action._resolve_parameters(outputs, parameters,
+        with self.assertRaises(exceptions.OutputDoesNotExist):
+            self.build_action._resolve_parameters(parameters,
                                                   mock_blueprint)
 
     def test_resolve_parameters(self):
@@ -56,29 +74,29 @@ class TestBuildAction(unittest.TestCase):
             'param_1': 'mock::output_1',
             'param_2': 'other::output_2',
         }
-        outputs = {
-            self.context.get_fqn('mock'): {'output_1': 'output_1'},
-            self.context.get_fqn('other'): {'output_2': 'output_2'},
-        }
+        self.build_action.provider.set_outputs({
+            self.context.get_fqn('mock'): {'output_1': 'output1'},
+            self.context.get_fqn('other'): {'output_2': 'output2'},
+        })
+
         mock_blueprint = mock.MagicMock()
         type(mock_blueprint).parameters = parameters
         resolved_parameters = self.build_action._resolve_parameters(
-            outputs,
             parameters,
             mock_blueprint,
         )
-        self.assertEqual(resolved_parameters['param_1'], 'output_1')
-        self.assertEqual(resolved_parameters['param_2'], 'output_2')
+        self.assertEqual(resolved_parameters['param_1'], 'output1')
+        self.assertEqual(resolved_parameters['param_2'], 'output2')
 
     def test_resolve_parameters_referencing_non_existant_stack(self):
         parameters = {
             'param_1': 'mock::output_1',
         }
-        outputs = {}
+        self.build_action.provider.set_outputs({})
         mock_blueprint = mock.MagicMock()
         type(mock_blueprint).parameters = parameters
         with self.assertRaises(exceptions.StackDoesNotExist):
-            self.build_action._resolve_parameters(outputs, parameters,
+            self.build_action._resolve_parameters(parameters,
                                                   mock_blueprint)
 
     def test_gather_missing_from_stack(self):
@@ -171,7 +189,7 @@ class TestBuildAction(unittest.TestCase):
         mock_provider.get_stack.return_value = None
         with mock.patch.object(build_action, 's3_stack_push'):
             # initial run should return SUBMITTED since we've passed off to CF
-            status = step.run({})
+            status = step.run()
             self.assertEqual(status, SUBMITTED)
 
             # provider should now return the CF stack since it exists
@@ -179,7 +197,7 @@ class TestBuildAction(unittest.TestCase):
             # simulate that we're still in progress
             mock_provider.is_stack_in_progress.return_value = True
             mock_provider.is_stack_completed.return_value = False
-            status = step.run({})
+            status = step.run()
             step.set_status(status)
             # status should still be SUBMITTED since we're waiting for it to
             # complete
@@ -187,19 +205,19 @@ class TestBuildAction(unittest.TestCase):
             # simulate completed stack
             mock_provider.is_stack_completed.return_value = True
             mock_provider.is_stack_in_progress.return_value = False
-            status = step.run({})
+            status = step.run()
             self.assertEqual(status, COMPLETE)
             # simulate stack should be skipped
             mock_provider.is_stack_completed.return_value = False
             mock_provider.is_stack_in_progress.return_value = False
             mock_provider.update_stack.side_effect = StackDidNotChange
-            status = step.run({})
+            status = step.run()
             self.assertEqual(status, SKIPPED)
 
             # simulate an update is required
             mock_provider.reset_mock()
             mock_provider.update_stack.side_effect = None
             step.set_status(PENDING)
-            status = step.run({})
+            status = step.run()
             self.assertEqual(status, SUBMITTED)
             self.assertEqual(mock_provider.update_stack.call_count, 1)

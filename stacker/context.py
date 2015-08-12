@@ -12,7 +12,7 @@ class Context(object):
 
     def __init__(self, namespace, environment=None, stack_names=None,
                  parameters=None, mappings=None, config=None,
-                 force_stacks=None, **kwargs):
+                 force_stacks=None):
         self.namespace = namespace
         self.environment = environment or {}
         self.stack_names = stack_names or []

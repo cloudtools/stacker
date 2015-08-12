@@ -195,9 +195,8 @@ class EmpireMinion(EmpireBase):
     def generate_shell_script_contents(self):
         script = [
                 "#!/bin/bash\n"
-                "apt-get install -y jq\n"
-                "apt-get remove -y awscli\n"
-                "pip install awscli --upgrade\n"
+                "yum install -y jq aws-cli\n"
+                "start ecs"
                 "cluster=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .Cluster' )\n"
                 "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n"
                 "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n"
@@ -206,10 +205,10 @@ class EmpireMinion(EmpireBase):
                 "cluster=$cluster\n"
                 "az=$az\n"
                 "region=$region\n"
-                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n"
-                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region \" > /etc/rc.local\n"
-                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n"
-                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region"
+                "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n"
+                "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region \" > /etc/rc.local\n"
+                "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n"
+                "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region"
         ]
 
         return script

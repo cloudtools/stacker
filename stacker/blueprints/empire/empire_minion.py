@@ -201,7 +201,8 @@ class EmpireMinion(EmpireBase):
                 "\n",
                 "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n",
                 "start ecs\n", 
-                "while [ -z \"$instance_arn\" ]\n",
+                "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
+                "while [ "$instance_arn" = "" ]\n",
                 "do\n",
                 "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
                 "sleep 5\n",
@@ -212,7 +213,7 @@ class EmpireMinion(EmpireBase):
                 "cluster=$cluster\n",
                 "az=$az\n",
                 "region=$region\n",
-                "instance_arn=$instance_arn"
+                "instance_arn=$instance_arn\n"
                 "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",
                 "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region \" > /etc/rc.local\n",
                 "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",

@@ -19,5 +19,6 @@ class Stacker(BaseCommand):
             environment=options.environment,
             parameters=copy.deepcopy(options.parameters),
             stack_names=options.stacks,
+            force_stacks=options.force,
         )
         options.context.load_config(options.config.read())

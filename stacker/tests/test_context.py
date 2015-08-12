@@ -8,23 +8,6 @@ class TestContext(unittest.TestCase):
     def setUp(self):
         self.config = {'stacks': [{'name': 'stack1'}, {'name': 'stack2'}]}
 
-    def test_context_optional_keys_defaults(self):
-        context = Context('namespace')
-        for key in context._optional_keys:
-            self.assertTrue(hasattr(context, key))
-
-    def test_context_optional_keys_set(self):
-        context = Context(
-            'namespace',
-            environment={},
-            stack_names=['stack'],
-            mappings={},
-            config={},
-        )
-        for key in ['environment', 'mappings', 'config']:
-            self.assertEqual(getattr(context, key), {})
-        self.assertEqual(context.stack_names, ['stack'])
-
     def test_context_get_stacks_specific_stacks(self):
         context = Context('namespace', config=self.config,
                           stack_names=['stack2'])

@@ -10,13 +10,17 @@ class Context(object):
 
     """
 
-    _optional_keys = ('environment', 'stack_names', 'parameters', 'mappings',
-                      'config')
-
-    def __init__(self, namespace, **kwargs):
+    def __init__(self, namespace, environment=None, stack_names=None,
+                 parameters=None, mappings=None, config=None,
+                 force_stacks=None, **kwargs):
         self.namespace = namespace
-        for key in self._optional_keys:
-            setattr(self, key, kwargs.get(key))
+        self.environment = environment or {}
+        self.stack_names = stack_names or []
+        self.parameters = parameters or {}
+        self.mappings = mappings or {}
+        self.config = config or {}
+        self.force_stacks = force_stacks or []
+
         self._base_fqn = namespace.replace('.', '-').lower()
 
     def load_config(self, conf_string):
@@ -50,6 +54,8 @@ class Context(object):
                     context=self,
                     parameters=self.parameters,
                     mappings=self.mappings,
+                    force=stack_def['name'] in self.force_stacks,
+                    locked=stack_def.get('locked', False),
                 )
                 self._stacks.append(stack)
         return self._stacks

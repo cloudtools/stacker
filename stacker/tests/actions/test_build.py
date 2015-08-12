@@ -153,7 +153,7 @@ class TestBuildAction(unittest.TestCase):
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context)
-        plan = build_action._generate_plan(force_stacks=[])
+        plan = build_action._generate_plan()
         self.assertEqual(plan.keys(), map(context.get_fqn,
                                           ['other', 'vpc', 'bastion', 'db']))
 
@@ -179,7 +179,7 @@ class TestBuildAction(unittest.TestCase):
 
         context = self._get_context()
         build_action = build.Action(context, provider=mock_provider)
-        plan = build_action._generate_plan(force_stacks=[])
+        plan = build_action._generate_plan()
         _, step = plan.list_pending()[0]
         step.stack = mock.MagicMock()
         step.stack.locked = False
@@ -221,3 +221,19 @@ class TestBuildAction(unittest.TestCase):
             status = step.run()
             self.assertEqual(status, SUBMITTED)
             self.assertEqual(mock_provider.update_stack.call_count, 1)
+
+    def test_should_update(self):
+        test_scenario = namedtuple('test_scenario',
+                                   ['locked', 'force', 'result'])
+        test_scenarios = (
+            test_scenario(locked=False, force=False, result=True),
+            test_scenario(locked=False, force=True, result=True),
+            test_scenario(locked=True, force=False, result=False),
+            test_scenario(locked=True, force=True, result=True)
+        )
+        mock_stack = mock.MagicMock(["locked", "force", "name"])
+        mock_stack.name = "test-stack"
+        for t in test_scenarios:
+            mock_stack.locked = t.locked
+            mock_stack.force = t.force
+            self.assertEqual(build.should_update(mock_stack), t.result)

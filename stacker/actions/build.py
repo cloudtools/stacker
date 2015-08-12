@@ -8,6 +8,26 @@ from ..plan import COMPLETE, SKIPPED, SUBMITTED, Plan
 logger = logging.getLogger(__name__)
 
 
+def should_update(stack):
+    """Tests whether a stack should be submitted for updates to CF.
+
+    Args:
+        stack (stacker.stack.Stack): The stack object to check.
+
+    Returns:
+        bool: If the stack should be updated, return True.
+    """
+    if stack.locked:
+        if not stack.force:
+            logger.info("Stack %s locked and not in --force list. "
+                        "Refusing to update.", stack.name)
+            return False
+        else:
+            logger.debug("Stack %s locked, but is in --force "
+                         "list.", stack.name)
+    return True
+
+
 class Action(BaseAction):
     """Responsible for building & coordinating CloudFormation stacks.
 
@@ -113,14 +133,8 @@ class Action(BaseAction):
                 self.provider.create_stack(stack.fqn, template_url, parameters,
                                            tags)
             else:
-                if stack.locked:
-                    if not kwargs.get('force', False):
-                        logger.info("Stack %s locked and not in force list. "
-                                    "Refusing to update.", stack.name)
-                        return SKIPPED
-                    else:
-                        logger.debug("Stack %s locked, but is in force list.",
-                                     stack.name)
+                if not should_update(stack):
+                    return SKIPPED
                 self.provider.update_stack(stack.fqn, template_url, parameters,
                                            tags)
         except StackDidNotChange:
@@ -165,17 +179,15 @@ class Action(BaseAction):
 
         return params.items()
 
-    def _generate_plan(self, force_stacks):
+    def _generate_plan(self):
         plan = Plan(description='Create/Update stacks')
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
-            force = stacks[stack_name].name in force_stacks
             plan.add(
                 stacks[stack_name],
                 run_func=self._launch_stack,
                 requires=dependencies.get(stack_name),
-                force=force,
             )
         return plan
 
@@ -192,14 +204,13 @@ class Action(BaseAction):
             util.handle_hooks('pre_build', pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, force_stacks=None, *args, **kwargs):
+    def run(self, outline=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
-        force_stacks = force_stacks or []
-        plan = self._generate_plan(force_stacks=force_stacks)
+        plan = self._generate_plan()
         if not outline:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them
@@ -208,7 +219,7 @@ class Action(BaseAction):
             logger.info("Launching stacks: %s", ', '.join(plan.keys()))
             plan.execute()
         else:
-            plan.outline(execute_helper=True)
+            plan.outline()
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

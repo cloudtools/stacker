@@ -37,13 +37,15 @@ def _gather_parameters(stack_def, builder_parameters):
 
 class Stack(object):
 
-    def __init__(self, definition, context, parameters=None, mappings=None):
+    def __init__(self, definition, context, parameters=None, mappings=None,
+                 locked=False, force=False):
         self.name = definition['name']
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
         self.parameters = _gather_parameters(definition, parameters or {})
         self.mappings = mappings
-        self.locked = definition.get('locked', False)
+        self.locked = locked
+        self.force = force
         # XXX this is temporary until we remove passing context down to the
         # blueprint
         self.context = copy.deepcopy(context)

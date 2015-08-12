@@ -3,7 +3,47 @@ import logging
 
 from troposphere import Parameter, Template
 
+from ..exceptions import MissingLocalParameterException
+
 logger = logging.getLogger(__name__)
+
+
+def get_local_parameters(parameter_def, parameters):
+    """Gets local parameters from parameter list.
+
+    Given a local parameter definition, and a list of parameters, extract the
+    local parameters, or use a default if provided. If the parameter isn't
+    present, and there is no default, then throw an exception.
+
+    Args:
+        parameter_def (dict): A dictionary of expected/allowed parameters
+            and their defaults. If a parameter is in the list, but does not
+            have a default, it is considered required.
+        parameters (dict): A dictionary of parameters to pull local parameters
+            from.
+
+    Returns:
+        dict: A dictionary of local parameters.
+
+    Raises:
+        MissingLocalParameterException: If a parameter is defined in
+            parameter_def, does not have a default, and does not exist in
+            parameters.
+
+    """
+    local = {}
+
+    for param, attrs in parameter_def.items():
+        try:
+            value = parameters[param]
+        except KeyError:
+            try:
+                value = attrs['default']
+            except KeyError:
+                raise MissingLocalParameterException(param)
+        local[param] = value
+
+    return local
 
 
 class Blueprint(object):
@@ -23,6 +63,7 @@ class Blueprint(object):
         self.mappings = mappings
         self.context = context
         self.outputs = {}
+        self.local_parameters = self.get_local_parameters()
         self.reset_template()
 
     @property
@@ -38,12 +79,21 @@ class Blueprint(object):
                 required.append((k, v))
         return required
 
+    def get_local_parameters(self):
+        local_parameters = getattr(self, 'LOCAL_PARAMETERS', {})
+        return get_local_parameters(local_parameters, self.context.parameters)
+
     def setup_parameters(self):
         t = self.template
-        parameters = getattr(self, 'PARAMETERS')
+        # First look for CF_PARAMETERS, then fall back to regular PARAMETERS
+        # for backwards compatibility.
+        parameters = getattr(self, 'CF_PARAMETERS',
+                             getattr(self, 'PARAMETERS', {}))
+
         if not parameters:
             logger.debug("No parameters defined.")
             return
+
         for param, attrs in parameters.items():
             p = Parameter(param,
                           Type=attrs.get('type'),

@@ -9,11 +9,20 @@ class MissingParameterException(Exception):
 
     def __init__(self, parameters, *args, **kwargs):
         self.parameters = parameters
-        message = 'Missing required parameters: %s' % (
+        message = 'Missing required cloudformation parameters: %s' % (
             ', '.join(parameters),
         )
         super(MissingParameterException, self).__init__(message, *args,
                                                         **kwargs)
+
+
+class MissingLocalParameterException(Exception):
+
+    def __init__(self, parameter, *args, **kwargs):
+        self.parameter = parameter
+        message = 'Missing required local parameter: %s' % parameter
+        super(MissingLocalParameterException, self).__init__(message, *args,
+                                                             **kwargs)
 
 
 class OutputDoesNotExist(Exception):

@@ -260,7 +260,7 @@ class EmpireMinion(EmpireBase):
                 "    path: /etc/empire/script\n",
                 "    permissions: 0640\n",
                 "runcmd:\n"
-                "  - [ sh, -c, "sh /etc/empire/script" ]"
+                "  - [ sh, -c, \"sh /etc/empire/script\" ]"
             ]
         ))
         return stanza

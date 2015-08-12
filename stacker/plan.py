@@ -176,7 +176,7 @@ class Plan(OrderedDict):
 
         self._check_point()
 
-    def outline(self, level=logging.INFO, execute_helper=False):
+    def outline(self, level=logging.INFO):
         """Print an outline of the actions the plan is going to take.
 
         The outline will represent the rough ordering of the steps that will be
@@ -185,10 +185,6 @@ class Plan(OrderedDict):
         Args:
             level (Optional[int]): a valid log level that should be used to log
                 the outline
-            execute_helper (Optional[bool]): boolean for whether or not a line
-                instructing the user to pass the "force" flag should be
-                provided.
-
         """
         steps = 1
         logger.log(level, 'Plan "%s":', self.description)
@@ -205,10 +201,6 @@ class Plan(OrderedDict):
             # completion func
             step.status = COMPLETE
             steps += 1
-
-        if execute_helper:
-            logger.log(level, 'To execute this plan, run with "-f, --force" '
-                              'flag.')
 
     def _check_point(self):
         logger.info('Plan Status:')

@@ -64,6 +64,9 @@ stacks:
       ImageName: bastion
   - name: myDB
     class_path: stacker.blueprints.postgres.PostgresRDS
+    # this stack is locked, which means it will not update unless you pass the
+    # stack name "myDB" on the command line with --force
+    locked: true
     parameters:
       << : *vpc_parameters
       InstanceType: db.m3.medium

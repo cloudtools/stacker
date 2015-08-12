@@ -182,6 +182,7 @@ class TestBuildAction(unittest.TestCase):
         plan = build_action._generate_plan()
         _, step = plan.list_pending()[0]
         step.stack = mock.MagicMock()
+        step.stack.locked = False
 
         # mock provider shouldn't return a stack at first since it hasn't been
         # launched
@@ -220,3 +221,19 @@ class TestBuildAction(unittest.TestCase):
             status = step.run()
             self.assertEqual(status, SUBMITTED)
             self.assertEqual(mock_provider.update_stack.call_count, 1)
+
+    def test_should_update(self):
+        test_scenario = namedtuple('test_scenario',
+                                   ['locked', 'force', 'result'])
+        test_scenarios = (
+            test_scenario(locked=False, force=False, result=True),
+            test_scenario(locked=False, force=True, result=True),
+            test_scenario(locked=True, force=False, result=False),
+            test_scenario(locked=True, force=True, result=True)
+        )
+        mock_stack = mock.MagicMock(["locked", "force", "name"])
+        mock_stack.name = "test-stack"
+        for t in test_scenarios:
+            mock_stack.locked = t.locked
+            mock_stack.force = t.force
+            self.assertEqual(build.should_update(mock_stack), t.result)

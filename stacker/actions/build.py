@@ -8,6 +8,26 @@ from ..plan import COMPLETE, SKIPPED, SUBMITTED, Plan
 logger = logging.getLogger(__name__)
 
 
+def should_update(stack):
+    """Tests whether a stack should be submitted for updates to CF.
+
+    Args:
+        stack (stacker.stack.Stack): The stack object to check.
+
+    Returns:
+        bool: If the stack should be updated, return True.
+    """
+    if stack.locked:
+        if not stack.force:
+            logger.info("Stack %s locked and not in --force list. "
+                        "Refusing to update.", stack.name)
+            return False
+        else:
+            logger.debug("Stack %s locked, but is in --force "
+                         "list.", stack.name)
+    return True
+
+
 class Action(BaseAction):
     """Responsible for building & coordinating CloudFormation stacks.
 
@@ -113,6 +133,8 @@ class Action(BaseAction):
                 self.provider.create_stack(stack.fqn, template_url, parameters,
                                            tags)
             else:
+                if not should_update(stack):
+                    return SKIPPED
                 self.provider.update_stack(stack.fqn, template_url, parameters,
                                            tags)
         except StackDidNotChange:
@@ -197,7 +219,7 @@ class Action(BaseAction):
             logger.info("Launching stacks: %s", ', '.join(plan.keys()))
             plan.execute()
         else:
-            plan.outline(execute_helper=True)
+            plan.outline()
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

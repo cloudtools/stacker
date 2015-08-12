@@ -192,6 +192,30 @@ class EmpireMinion(EmpireBase):
             ]
         return seed
 
+    def generate_shell_script_contents(self):
+        script = [
+                "apt-get install -y jq\n"
+                "apt-get remove -y awscli\n"
+                "pip install awscli --upgrade\n"
+                "cluster=$(curl -s http://localhost:51678/v1/metadata \ \n"
+                  "| jq -r '. | .Cluster' )\n"
+                "instance_arn=$(curl -s http://localhost:51678/v1/metadata \ \n"
+                "| jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n"
+                "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n"
+                "region=${az:0:${#az} - 1}\n"
+                "echo \" \n"
+                "cluster=$cluster\n"
+                "az=$az\n"
+                "region=$region\n"
+                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 \ \n"
+                "--container-instances $instance_arn --region $region\n"
+                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 \ \n"
+                "--container-instances $instance_arn --region $region\n"
+                "\" > /etc/rc.local"
+        ]
+
+        return script
+
     def create_autoscaling_group(self):
         t = self.template
         t.add_resource(
@@ -219,6 +243,7 @@ class EmpireMinion(EmpireBase):
 
     def generate_user_data(self):
         contents = Join("", self.generate_seed_contents())
+        script_contents = Join("", self.generate_shell_script_contents())
         stanza = Base64(Join(
             "",
             [
@@ -229,25 +254,13 @@ class EmpireMinion(EmpireBase):
                 "    owner: root:root\n",
                 "    path: /etc/empire/seed\n",
                 "    permissions: 0640\n",
-                "#!/bin/bash\n",
-                "apt-get install -y jq\n"
-                "apt-get remove -y awscli\n"
-                "pip install awscli --upgrade\n"
-                "cluster=$(curl -s http://localhost:51678/v1/metadata \ \n"
-                  "| jq -r '. | .Cluster' )\n"
-                "instance_arn=$(curl -s http://localhost:51678/v1/metadata \ \n"
-                "| jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n"
-                "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n"
-                "region=${az:0:${#az} - 1}\n"
-                "echo \" \n"
-                "cluster=$cluster\n"
-                "az=$az\n"
-                "region=$region\n"
-                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 \ \n"
-                "--container-instances $instance_arn --region $region\n"
-                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 \ \n"
-                "--container-instances $instance_arn --region $region\n"
-                "\" > /etc/rc.local"
+                "  - encoding: b64\n",
+                "    content: ", Base64(script_contents), "\n",
+                "    owner: root:root\n",
+                "    path: /etc/empire/script\n",
+                "    permissions: 0640\n",
+                "runcmd:\n"
+                "  - [ sh, -c, "sh /etc/empire/script" ]"
             ]
         ))
         return stanza

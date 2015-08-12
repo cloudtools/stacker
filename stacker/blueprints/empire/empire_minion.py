@@ -198,7 +198,8 @@ class EmpireMinion(EmpireBase):
                 "yum install -y jq aws-cli\n"
                 "start ecs\n"
                 "cluster="
-                Ref("EmpireMinionCluster")"\n"
+                Ref("EmpireMinionCluster")
+                "\n"
                 "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n"
                 "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n"
                 "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n"

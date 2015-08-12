@@ -47,6 +47,9 @@ class Bastion(Blueprint):
             "description": "The image name to use from the AMIMap (usually "
                            "found in the config file.)",
             "default": "bastion"},
+        "DBSecurityGroup": {
+            "type": "AWS::EC2::SecurityGroup::Id",
+            "description": "Security group of the database."},
     }
 
     def create_security_groups(self):
@@ -71,6 +74,14 @@ class Bastion(Blueprint):
                 ToPort=22,
                 SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
                 GroupId=Ref('DefaultSG')))
+
+
+        t.add_resource(
+            ec2.SecurityGroupIngress(
+                "EmpireMinionDBAccess",
+                IpProtocol='tcp', FromPort=5432, ToPort=5432,
+                SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
+                GroupId=Ref('DBSecurityGroup')))
 
     def create_autoscaling_group(self):
         t = self.template

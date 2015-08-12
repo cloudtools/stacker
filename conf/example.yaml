@@ -42,6 +42,7 @@ stacks:
       # Enough subnets for 4 AZs
       PublicSubnets: 10.128.0.0/24,10.128.1.0/24,10.128.2.0/24,10.128.3.0/24
       PrivateSubnets: 10.128.8.0/22,10.128.12.0/22,10.128.16.0/22,10.128.20.0/22
+      CidrBlock: 10.128.0.0/16
       # Uncomment if you want an internal hosted zone for the VPC
       # If provided, it will be added to the dns search path of the DHCP
       # Options

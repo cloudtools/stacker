@@ -73,6 +73,9 @@ class EmpireMinion(EmpireBase):
         "DockerRegistryEmail": {
             "type": "String",
             "description": "Email for authentication with docker registry."},
+        "DBSecurityGroup": {
+            "type": "AWS::EC2::SecurityGroup::Id",
+            "description": "Security group of the database."},
     }
 
     def create_security_groups(self):
@@ -90,6 +93,13 @@ class EmpireMinion(EmpireBase):
                 IpProtocol='-1', FromPort='-1', ToPort='-1',
                 SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
                 GroupId=Ref(CLUSTER_SG_NAME)))
+
+        t.add_resource(
+            ec2.SecurityGroupIngress(
+                "EmpireMinionDBAccess",
+                IpProtocol='tcp', FromPort=5432, ToPort=5432,
+                SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
+                GroupId=Ref('DBSecurityGroup')))
 
         # Application ELB Security Groups
         # Internal
@@ -206,3 +216,39 @@ class EmpireMinion(EmpireBase):
                 MaxSize=Ref("MaxSize"),
                 VPCZoneIdentifier=Ref("PrivateSubnets"),
                 Tags=[ASTag('Name', 'empire_minion', True)]))
+
+    def generate_user_data(self):
+        contents = Join("", self.generate_seed_contents())
+        stanza = Base64(Join(
+            "",
+            [
+                "#cloud-config\n",
+                "write_files:\n",
+                "  - encoding: b64\n",
+                "    content: ", Base64(contents), "\n",
+                "    owner: root:root\n",
+                "    path: /etc/empire/seed\n",
+                "    permissions: 0640\n"
+            ],
+            [
+                "#!/bin/bash\n",
+                "apt-get install -y jq\n"
+                "pip install awscli --upgrade\n"
+                "cluster=$(curl -s http://localhost:51678/v1/metadata \ \n"
+                  "| jq -r '. | .Cluster' )\n"
+                "instance_arn=$(curl -s http://localhost:51678/v1/metadata \ \n"
+                "| jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n"
+                "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n"
+                "region=${az:0:${#az} - 1}\n"
+                "echo \" \n"
+                "cluster=$cluster\n"
+                "az=$az\n"
+                "region=$region\n"
+                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 \ \n"
+                "--container-instances $instance_arn --region $region\n"
+                "/usr/local/bin/aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 \ \n"
+                "--container-instances $instance_arn --region $region\n"
+                "\" > /etc/rc.local"
+            ]
+        ))
+        return stanza

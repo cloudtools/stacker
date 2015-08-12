@@ -194,7 +194,7 @@ class EmpireMinion(EmpireBase):
 
     def generate_shell_script_contents(self):
         script = [
-                "#!/bin/bash"
+                "#!/bin/bash\n"
                 "apt-get install -y jq\n"
                 "apt-get remove -y awscli\n"
                 "pip install awscli --upgrade\n"

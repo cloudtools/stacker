@@ -35,4 +35,4 @@ class Build(StackerCommand):
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
-        action.execute(outline=options.outline, force_stacks=options.force)
+        action.execute(outline=options.outline)

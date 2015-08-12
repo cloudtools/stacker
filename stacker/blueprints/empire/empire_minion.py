@@ -228,9 +228,7 @@ class EmpireMinion(EmpireBase):
                 "    content: ", Base64(contents), "\n",
                 "    owner: root:root\n",
                 "    path: /etc/empire/seed\n",
-                "    permissions: 0640\n"
-            ],
-            [
+                "    permissions: 0640\n",
                 "#!/bin/bash\n",
                 "apt-get install -y jq\n"
                 "apt-get remove -y awscli\n"

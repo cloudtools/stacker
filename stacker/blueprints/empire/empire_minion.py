@@ -208,6 +208,7 @@ class EmpireMinion(EmpireBase):
                 "cluster=$cluster\n",
                 "az=$az\n",
                 "region=$region\n",
+                "instance_arn=$instance_arn"
                 "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",
                 "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region \" > /etc/rc.local\n",
                 "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",

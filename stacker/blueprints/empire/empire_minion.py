@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from troposphere import Ref, Output, GetAtt, Tags, FindInMap
+from troposphere import Ref, Output, GetAtt, Tags, FindInMap, Join, Base64
 from troposphere import ec2, autoscaling, ecs
 from troposphere.autoscaling import Tag as ASTag
 from troposphere.iam import Role, InstanceProfile, Policy

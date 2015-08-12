@@ -193,26 +193,24 @@ class EmpireMinion(EmpireBase):
         return seed
 
     def generate_shell_script_contents(self):
-        cluster = Ref("EmpireMinionCluster")
-
         script = [
-                "#!/bin/bash\n"
-                "yum install -y jq aws-cli\n"
-                "start ecs\n"
-                "cluster="
-                cluster
-                "\n"
-                "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n"
-                "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n"
-                "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n"
-                "region=${az:0:${#az} - 1}\n"
-                "echo \" \n"
-                "cluster=$cluster\n"
-                "az=$az\n"
-                "region=$region\n"
-                "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n"
-                "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region \" > /etc/rc.local\n"
-                "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n"
+                "#!/bin/bash\n",
+                "yum install -y jq aws-cli\n",
+                "start ecs\n",
+                "cluster=",
+                Ref("EmpireMinionCluster"),
+                "\n",
+                "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n",
+                "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
+                "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n",
+                "region=${az:0:${#az} - 1}\n",
+                "echo \" \n",
+                "cluster=$cluster\n",
+                "az=$az\n",
+                "region=$region\n",
+                "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",
+                "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region \" > /etc/rc.local\n",
+                "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",
                 "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region"
         ]
 

@@ -193,12 +193,14 @@ class EmpireMinion(EmpireBase):
         return seed
 
     def generate_shell_script_contents(self):
+        cluster = Ref("EmpireMinionCluster")
+
         script = [
                 "#!/bin/bash\n"
                 "yum install -y jq aws-cli\n"
                 "start ecs\n"
                 "cluster="
-                Ref("EmpireMinionCluster")
+                cluster
                 "\n"
                 "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n"
                 "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n"

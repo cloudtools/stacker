@@ -202,7 +202,7 @@ class EmpireMinion(EmpireBase):
                 "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n",
                 "start ecs\n", 
                 "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
-                "while [ "$instance_arn" = "" ]\n",
+                "while [ \"$instance_arn\" = \"\" ]\n",
                 "do\n",
                 "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
                 "sleep 5\n",

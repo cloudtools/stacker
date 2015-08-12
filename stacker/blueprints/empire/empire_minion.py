@@ -233,6 +233,7 @@ class EmpireMinion(EmpireBase):
             [
                 "#!/bin/bash\n",
                 "apt-get install -y jq\n"
+                "apt-get remove -y awscli\n"
                 "pip install awscli --upgrade\n"
                 "cluster=$(curl -s http://localhost:51678/v1/metadata \ \n"
                   "| jq -r '. | .Cluster' )\n"

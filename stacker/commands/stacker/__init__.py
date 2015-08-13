@@ -1,12 +1,12 @@
 import copy
 
+from .base import BaseCommandMixin
 from .build import Build
-from ..base import BaseCommand
 from ...context import Context
 from ...providers import aws
 
 
-class Stacker(BaseCommand):
+class Stacker(BaseCommandMixin):
 
     name = 'stacker'
     subcommands = (Build,)

@@ -17,6 +17,9 @@ At this point this is very much alpha software - it is still in heavy
 development, and interfaces/configuration/etc may/will likely/most definitely
 change :)
 
+That said, at Remind we use stacker to manage all of our Cloudformation stacks-
+both in development, staging and production without any major issues.
+
 Stacker Command
 ===============
 

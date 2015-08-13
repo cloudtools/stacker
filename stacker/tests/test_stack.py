@@ -22,7 +22,7 @@ class TestStack(unittest.TestCase):
             parameters={
                 "ExternalParameter": "fakeStack2::FakeParameter",
             },
-            requires=map(self.context.get_fqn, ['fakeStack']),
+            requires=[self.context.get_fqn('fakeStack')],
         )
         stack = Stack(definition=definition, context=self.context)
         self.assertIn(

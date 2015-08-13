@@ -40,7 +40,7 @@ class TestDestroyAction(unittest.TestCase):
     def test_generate_plan(self):
         plan = self.action._generate_plan()
         self.assertEqual(
-            map(self.context.get_fqn, ['other', 'db', 'instance', 'bastion', 'vpc']),
+            [self.context.get_fqn(s) for s in ['other', 'db', 'instance', 'bastion', 'vpc']],
             plan.keys(),
         )
 

@@ -132,11 +132,11 @@ class TestBuildAction(unittest.TestCase):
         dependencies = build_action._get_dependencies()
         self.assertEqual(
             dependencies[context.get_fqn('bastion')],
-            set(map(context.get_fqn, ['vpc'])),
+            set([context.get_fqn('vpc')]),
         )
         self.assertEqual(
             dependencies[context.get_fqn('db')],
-            set(map(context.get_fqn, ['vpc', 'bastion'])),
+            set([context.get_fqn(s) for s in['vpc', 'bastion']]),
         )
         self.assertFalse(dependencies[context.get_fqn('other')])
 
@@ -147,15 +147,17 @@ class TestBuildAction(unittest.TestCase):
         execution_order = build_action.get_stack_execution_order(dependencies)
         self.assertEqual(
             execution_order,
-            map(context.get_fqn, ['other', 'vpc', 'bastion', 'db']),
+            [context.get_fqn(s) for s in ['other', 'vpc', 'bastion', 'db']],
         )
 
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context)
         plan = build_action._generate_plan()
-        self.assertEqual(plan.keys(), map(context.get_fqn,
-                                          ['other', 'vpc', 'bastion', 'db']))
+        self.assertEqual(
+            plan.keys(),
+            [context.get_fqn(s) for s in ['other', 'vpc', 'bastion', 'db']],
+        )
 
     def test_dont_execute_plan_when_outline_specified(self):
         context = self._get_context()

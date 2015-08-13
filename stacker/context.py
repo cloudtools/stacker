@@ -64,5 +64,13 @@ class Context(object):
         return dict((stack.fqn, stack) for stack in self.get_stacks())
 
     def get_fqn(self, name=None):
-        """Return the fully qualified name of an object within this context."""
+        """Return the fully qualified name of an object within this context.
+
+        If the name passed already appears to be a fully qualified name, it
+        will be returned with no further processing.
+
+        """
+        if name and name.startswith(self._base_fqn + '-'):
+            return name
+
         return '-'.join(filter(None, [self._base_fqn, name]))

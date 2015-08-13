@@ -31,8 +31,17 @@ class Build(StackerCommand):
                             help="If a stackname is provided to --force, it "
                                  "will be updated, even if it is locked in "
                                  "the config.")
+        parser.add_argument("--stacks", action="append",
+                            metavar="STACKNAME", type=str,
+                            help="Only work on the stacks given. Can be "
+                                 "specified more than once. If not specified "
+                                 "then stacker will work on all stacks in the "
+                                 "config file.")
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
         action.execute(outline=options.outline)
+
+    def get_context_kwargs(self, options, **kwargs):
+        return {'stack_names': options.stacks, 'force_stacks': options.force}

@@ -1,5 +1,16 @@
 ## pending
 
+## 0.5.0 (2015-08-13)
+
+- stacker subcommands [GH-35]
+- Added Empire production stacks [GH-43]
+  - Major change in internal code layout & added testing
+- added destroy subcommand [GH-59]
+- Local Blueprint Parameters [GH-61]
+- Lockable stacks [GH-62]
+- Deal with Cloudformation API throttling [GH-64]
+- Clarify Remind's usage of stacker in README [GH-70]
+
 ## 0.4.1 (2015-07-23)
 
 - Stack Specific Parameters [GH-32]

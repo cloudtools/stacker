@@ -202,7 +202,8 @@ class EmpireMinion(EmpireBase):
                 "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n",
                 ". /etc/empire/seed\n"
                 "echo ECS_ENGINE_AUTH_TYPE=docker >> /etc/ecs/ecs.config\n"
-                "echo \"ECS_ENGINE_AUTH_DATA=\"{\"$DOCKER_REGISTRY\":{\"username\":\"$DOCKER_USER\",\"password\":\"$DOCKER_PASS\",\"email\":\"$DOCKER_EMAIL\"}}\"\" >> /etc/ecs/ecs.config\n"
+                "auth_data=$(printf 'ECS_ENGINE_AUTH_DATA={\"%s\":{\"username\":\"%s\",\"password\":\"%s\",\"email\":\"%s\"}}' $DOCKER_REGISTRY $DOCKER_USER $DOCKER_PASS $DOCKER_EMAIL)\n"
+                "echo $auth_data >> /etc/ecs/ecs.config\n"
                 "start ecs\n", 
                 "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
                 "while [ \"$instance_arn\" = \"\" ]\n",

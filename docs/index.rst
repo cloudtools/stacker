@@ -27,6 +27,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   terminology
+   config
+   commands
+   environments
+   blueprints
+
    API Docs <api/modules>
 
 

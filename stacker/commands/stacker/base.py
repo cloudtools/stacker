@@ -43,7 +43,7 @@ def yaml_file_type(yaml_file):
         return yaml.load(fd)
 
 
-class StackerCommand(object):
+class BaseCommand(object):
     """Base class for all stacker subcommands.
 
     The way argparse handles common arguments that should be passed to the

@@ -2,7 +2,7 @@ import copy
 
 from .build import Build
 from .destroy import Destroy
-from ..base import BaseCommand
+from .base import BaseCommand
 from ...context import Context
 from ...providers import aws
 

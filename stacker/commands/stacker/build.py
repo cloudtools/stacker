@@ -6,11 +6,11 @@ skip executing anything against the stack.
 
 """
 
-from .base import StackerCommand
+from .base import BaseCommand
 from ...actions import build
 
 
-class Build(StackerCommand):
+class Build(BaseCommand):
 
     name = 'build'
     description = __doc__

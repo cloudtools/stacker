@@ -5,11 +5,11 @@ any manual requirements they specify or output values they rely on from other
 stacks.
 
 """
-from .base import StackerCommand
+from .base import BaseCommand
 from ...actions import destroy
 
 
-class Destroy(StackerCommand):
+class Destroy(BaseCommand):
 
     name = "destroy"
     description = __doc__

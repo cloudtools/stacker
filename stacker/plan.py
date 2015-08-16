@@ -81,21 +81,21 @@ class Step(object):
 
 
 class Plan(OrderedDict):
-    """A collection of `Step`s to execute.
+    """A collection of :class:`Step` objects to execute.
 
-    The `Plan` helps organize the steps needed to execute a particular action
-    for a set of `Stack`s. It will run the steps in the order they are added to
-    the `Plan` via the `add` function. If a `Step` specifies requirements, the
-    `Plan` will wait until the required stacks have completed before executing
-    that `Step`.
+    The :class:`Plan` helps organize the steps needed to execute a particular
+    action for a set of :class:`stacker.stack.Stack` objects. It will run the
+    steps in the order they are added to the `Plan` via the :func:`Plan.add`
+    function. If a `Step` specifies requirements, the `Plan` will wait until
+    the required stacks have completed before executing that `Step`.
 
     Args:
         description (str): description of the plan
         sleep_time (Optional[int]): the amount of time that will be passed to
             the `wait_func`. Default: 5 seconds.
         wait_func (Optional[func]): the function to be called after each pass
-            of running stacks. This defaults to `time.sleep` and will sleep for
-            the given `sleep_time` before starting the next pass.
+            of running stacks. This defaults to :func:`time.sleep` and will
+            sleep for the given `sleep_time` before starting the next pass.
             Default: :func:`time.sleep`
 
     """

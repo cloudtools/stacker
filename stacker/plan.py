@@ -39,32 +39,44 @@ class Step(object):
 
     @property
     def completed(self):
+        """Returns True if the step is in a COMPLETE state."""
         return self.status == COMPLETE
 
     @property
     def skipped(self):
+        """Returns True if the step is in a SKIPPED state."""
         return self.status == SKIPPED
 
     @property
     def submitted(self):
+        """Returns True if the step is SUBMITTED, COMPLETE, or SKIPPED."""
         return self.status.code >= SUBMITTED.code
 
     def run(self):
         return self._run_func(self.stack, status=self.status)
 
     def set_status(self, status):
+        """Sets the current step's status.
+
+        Args:
+            status (:class:`Status <Status>` object): The status to set the
+                step to.
+        """
         if status is not self.status:
             logger.debug("Setting %s state to %s.", self.stack.name,
                          status.name)
             self.status = status
 
     def complete(self):
+        """A shortcut for set_status(COMPLETE)"""
         self.set_status(COMPLETE)
 
     def skip(self):
+        """A shortcut for set_status(SKIPPED)"""
         self.set_status(SKIPPED)
 
     def submit(self):
+        """A shortcut for set_status(SUBMITTED)"""
         self.set_status(SUBMITTED)
 
 
@@ -80,10 +92,11 @@ class Plan(OrderedDict):
     Args:
         description (str): description of the plan
         sleep_time (Optional[int]): the amount of time that will be passed to
-            the `wait_func`
+            the `wait_func`. Default: 5 seconds.
         wait_func (Optional[func]): the function to be called after each pass
             of running stacks. This defaults to `time.sleep` and will sleep for
             the given `sleep_time` before starting the next pass.
+            Default: :func:`time.sleep`
 
     """
 
@@ -101,7 +114,14 @@ class Plan(OrderedDict):
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, requires=None):
-        """Add a new step to the plan."""
+        """Add a new step to the plan.
+
+        Args:
+            stack (:class:`stacker.stack.Stack`): The stack to add to the plan.
+            run_func (function): The function to call when the step is ran.
+            requires (Optional(list)): A list of other stacks that are required
+                to be complete before this step is started.
+        """
         self[stack.fqn] = Step(
             stack=stack,
             run_func=run_func,
@@ -109,15 +129,26 @@ class Plan(OrderedDict):
         )
 
     def list_status(self, status):
+        """Returns a list of steps in the given status.
+
+        Args:
+            status (:class:`Status`): The status to match steps against.
+
+        Returns:
+            list: A list of :class:`Step` objects that are in the given status.
+        """
         return [step for step in self.iteritems() if step[1].status == status]
 
     def list_completed(self):
+        """A shortcut for list_status(COMPLETE)"""
         return self.list_status(COMPLETE)
 
     def list_submitted(self):
+        """A shortcut for list_status(SUBMITTED)"""
         return self.list_status(SUBMITTED)
 
     def list_skipped(self):
+        """A shortcut for list_status(SKIPPED)"""
         return self.list_status(SKIPPED)
 
     def list_pending(self):
@@ -129,6 +160,7 @@ class Plan(OrderedDict):
 
     @property
     def completed(self):
+        """True if there are no more pending steps."""
         if self.list_pending():
             return False
         return True
@@ -208,6 +240,7 @@ class Plan(OrderedDict):
             logger.log(level, message)
 
     def _check_point(self):
+        """Outputs the current status of all steps in the plan."""
         logger.info('Plan Status:')
         for step_name, step in self.iteritems():
             logger.info('  - step "%s": %s', step_name, step.status.name)

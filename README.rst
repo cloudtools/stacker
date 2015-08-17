@@ -44,7 +44,7 @@ if you'd like to play with something smaller. To launch the stacks, after
 installing stacker and loading your AWS API keys in your environment
 (AWS\_ACCESS\_KEY\_ID & AWS\_SECRET\_ACCESS\_KEY), call the following::
 
-    stacker build -v -p BaseDomain=blahblah.com -r us-east-1 example.com conf/example.yaml
+    stacker build -v -p BaseDomain=blahblah.com -r us-east-1 conf/stage.env conf/example.yaml
 
 As of now there is no option to tear down the stack in the tool (we plan to
 add it), so you'll need to tear the stacks it creates down manually. When doing
@@ -77,12 +77,17 @@ parameter. If it finds it, it will use that automatically.
 Environments
 ============
 
-As well as definining the stack config, you can further customize the stack
-config via an environment (ie the ``-e or --environment`` argument).
+As well as defining the stack config, you'll need to specify an
+environment. The environment should point to a yaml formatted file that
+contains a flat dictionary (ie: only ``key: value`` pairs).  Those keys
+can be used in the stack config as python `string.Template`_ mappings.
 
-The environment should point at a yaml formatted file that contains a flat
-dictionary (ie: only key: value pairs).  Those keys can be used in the
-stack config as python `string.Template`_ mappings.
+At a minimum the environment must define the ``namespace`` parameter::
+
+  namespace: example.com
+
+This helps preserve the namespace for the stacks between subsequent
+builds.
 
 For example, if you wanted to name a stack based on the environment you were
 building it in, first you would create an environment file with the

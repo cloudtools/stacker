@@ -60,8 +60,8 @@ class Blueprint(object):
     """
     def __init__(self, name, context, mappings=None):
         self.name = name
-        self.mappings = mappings
         self.context = context
+        self.mappings = mappings
         self.outputs = {}
         self.local_parameters = self.get_local_parameters()
         self.reset_template()

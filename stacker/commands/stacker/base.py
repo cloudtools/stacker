@@ -79,7 +79,8 @@ class BaseCommand(object):
                 )
                 subcommand.add_arguments(subparser)
                 subparser.set_defaults(run=subcommand.run)
-                subparser.set_defaults(get_context_kwargs=subcommand.get_context_kwargs)
+                subparser.set_defaults(
+                    get_context_kwargs=subcommand.get_context_kwargs)
 
     @property
     def logger(self):
@@ -114,15 +115,18 @@ class BaseCommand(object):
         pass
 
     def get_context_kwargs(self, options, **kwargs):
-        """Return a dictionary of kwargs that will be passed when setting up the Context.
+        """Return a dictionary of kwargs that will be used with the Context.
 
-        This allows commands to pass in any specific arguments they define to the context.
+        This allows commands to pass in any specific arguments they define to
+        the context.
 
         Args:
-            options (argparse.Namespace): arguments that have been passed via the command line
+            options (:class:`argparse.Namespace`): arguments that have been
+                passed via the command line
 
         Returns:
-            dict: Dictionary that will be passed to Context initializer as kwargs.
+            dict: Dictionary that will be passed to Context initializer as
+                kwargs.
 
         """
         return {}

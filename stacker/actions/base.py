@@ -7,15 +7,48 @@ logger = logging.getLogger(__name__)
 
 
 def stack_template_key_name(blueprint):
+    """Given a blueprint, produce an appropriate key name.
+
+    Args:
+        blueprint (:class:`stacker.blueprints.base.Blueprint`): The blueprint
+            object to create the key from.
+
+    Returns:
+        string: Key name resulting from blueprint.
+    """
     return "%s-%s.json" % (blueprint.name, blueprint.version)
 
 
 def stack_template_url(bucket_name, blueprint):
+    """Produces an s3 url for a given blueprint.
+
+    Args:
+        bucket_name (string): The name of the S3 bucket where the resulting
+            templates are stored.
+        blueprint (:class:`stacker.blueprints.base.Blueprint`): The blueprint
+            object to create the URL to.
+
+    Returns:
+        string: S3 URL.
+    """
     key_name = stack_template_key_name(blueprint)
     return "https://s3.amazonaws.com/%s/%s" % (bucket_name, key_name)
 
 
 class BaseAction(object):
+    """Actions perform the actual work of each Command.
+
+    Each action is tied to a :class:`stacker.commands.base.BaseCommand`, and
+    is responsible for building the :class:`stacker.plan.Plan` that will be
+    executed to perform that command.
+
+    Args:
+        context (:class:`stacker.context.Context`): The stacker context for
+            the current run.
+        provider (Optional(:class:`stacker.providers.base.BaseProvider`)):
+            The provider that will be interacted with in order to perform
+            the necessary actions.
+    """
 
     def __init__(self, context, provider=None):
         self.context = context
@@ -26,12 +59,14 @@ class BaseAction(object):
 
     @property
     def s3_conn(self):
+        """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, '_s3_conn'):
             self._s3_conn = boto.connect_s3()
         return self._s3_conn
 
     @property
     def cfn_bucket(self):
+        """The cloudformation bucket where templates will be stored."""
         if not getattr(self, '_cfn_bucket', None):
             try:
                 self._cfn_bucket = self.s3_conn.get_bucket(self.bucket_name)
@@ -60,7 +95,6 @@ class BaseAction(object):
         pushing.
 
         Returns the URL to the template in S3.
-
         """
         key_name = stack_template_key_name(blueprint)
         template_url = self.stack_template_url(blueprint)

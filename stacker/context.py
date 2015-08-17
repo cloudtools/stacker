@@ -8,6 +8,20 @@ class Context(object):
     The stacker Context is responsible for translating the values passed in via
     the command line and specified in the config to `Stack` objects.
 
+    Args:
+        namespace (string): A unique namespace for the stacks being built.
+        environment (dict): A dictionary used to pass in information about
+            the environment. Useful for templating.
+        stack_names (list): A list of stack_names to operate on. If not passed,
+            usually all stacks defined in the config will be operated on.
+        parameters (dict): Parameters passed down to each blueprint to
+            parameterize the templates.
+        mappings (dict): Used as Cloudformation mappings for the blueprint.
+        config (dict): The configuration being operated on, containing the
+            stack definitions.
+        force_stacks (list): A list of stacks to force work on. Used to work
+            on locked stacks.
+
     """
 
     def __init__(self, namespace, environment=None, stack_names=None,
@@ -42,7 +56,7 @@ class Context(object):
         mappings specified in the config.
 
         Returns:
-            list: a list of `stacker.stack.Stack` objects
+            list: a list of :class:`stacker.stack.Stack` objects
 
         """
         if not hasattr(self, '_stacks'):

@@ -12,7 +12,38 @@ logger = logging.getLogger(__name__)
 def retry_with_backoff(function, args=None, kwargs=None, attempts=5,
                        min_delay=1, max_delay=3, exc_list=None,
                        retry_checker=None):
-    """ Retries function, catching expected Exceptions. """
+    """Retries function, catching expected Exceptions.
+
+    Each retry has a delay between `min_delay` and `max_delay` seconds,
+    increasing with each attempt.
+
+    Args:
+        function (function): The function to call.
+        args (Optional(list)): A list of positional arguments to pass to the
+            given function.
+        kwargs (Optional(dict)): Keyword arguments to pass to the given
+            function.
+        attempts (Optional(int)): The # of times to retry the function.
+            Default: 5
+        min_delay (Optional(int)): The minimum time to delay retries, in
+            seconds. Default: 1
+        max_delay (Optional(int)): The maximum time to delay retries, in
+            seconds. Default: 5
+        exc_list (Optional(list)): A list of :class:`Exception` classes that
+            should be retried. Default: [:class:`Exception`,]
+        retry_checker (Optional(func)): An optional function that is used to
+            do a deeper analysis on the received :class:`Exception` to
+            determine if it qualifies for retry. Receives a single argument,
+            the :class:`Exception` object that was caught. Should return
+            True if it should be retried.
+
+    Returns:
+        variable: Returns whatever the given function returns.
+
+    Raises:
+        :class:`Exception`: Raises whatever exception the given function
+            raises, if unable to succeed within the given number of attempts.
+    """
     args = args or []
     kwargs = kwargs or {}
     attempt = 0
@@ -41,20 +72,39 @@ def retry_with_backoff(function, args=None, kwargs=None, attempts=5,
 
 
 def camel_to_snake(name):
-    """ Converts CamelCase to snake_case. """
+    """Converts CamelCase to snake_case.
+
+    Args:
+        name (string): The name to convert from CamelCase to snake_case.
+
+    Returns:
+        string: Converted string.
+    """
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
 def convert_class_name(kls):
-    """ Gets a string that represents a given class. """
+    """Gets a string that represents a given class.
+
+    Args:
+        kls (class): The class being analyzed for its name.
+
+    Returns:
+        string: The name of the given kls.
+    """
     return camel_to_snake(kls.__name__)
 
 
 def create_route53_zone(conn, zone_name):
-    """ Create's the given zone_name if it doesn't already exists.
+    """Create's the given zone_name if it doesn't already exists.
 
     Also sets the SOA negative caching TTL to something short (300 seconds).
+
+    Args:
+        conn (:class:`boto.route53.Route53Connection`): The connection used
+            to interact with Route53's API.
+        zone_name (string): The name of the DNS hosted zone to create.
     """
     if not zone_name.endswith('.'):
         zone_name += '.'
@@ -81,7 +131,9 @@ def create_route53_zone(conn, zone_name):
 
 
 def load_object_from_string(fqcn):
-    """ Given a '.' delimited string representing the full path to an object
+    """Converts '.' delimited strings to a python object.
+
+    Given a '.' delimited string representing the full path to an object
     (function, class, variable) inside a module, return that object.  Example:
 
     load_object_from_string('os.path.basename')
@@ -97,12 +149,14 @@ def load_object_from_string(fqcn):
 
 
 def uppercase_first_letter(s):
-    """ Return string 's' with first character upper case. """
+    """Return string 's' with first character upper case."""
     return s[0].upper() + s[1:]
 
 
 def cf_safe_name(name):
-    """ Given a string, returns a name that is safe for use as a CloudFormation
+    """Converts a name to a safe string for a Cloudformation resource.
+
+    Given a string, returns a name that is safe for use as a CloudFormation
     Resource. (ie: Only alphanumeric characters)
     """
     alphanumeric = r'[a-zA-Z0-9]+'
@@ -116,6 +170,14 @@ def handle_hooks(stage, hooks, region, context):
 
     These are pieces of code that we want to run before/after the builder
     builds the stacks.
+
+    Args:
+        stage (string): The current stage (pre_run, post_run, etc).
+        hooks (list): A list of dictionaries containing the hooks to execute.
+        region (string): The AWS region the current stacker run is executing
+            in.
+        context (:class:`stacker.context.Context`): The current stacker
+            context.
     """
     if not hooks:
         logger.debug("No %s hooks defined.", stage)

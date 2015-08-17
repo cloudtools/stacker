@@ -3,7 +3,7 @@ import copy
 from . import util
 
 
-def _gather_parameters(stack_def, builder_parameters):
+def _gather_parameters(stack_def, context_parameters):
     """Merges builder provided & stack defined parameters.
 
     Ensures that more specificly defined parameters (ie: parameters defined
@@ -15,10 +15,17 @@ def _gather_parameters(stack_def, builder_parameters):
         - builder defined non-specific (parameter)
         - stack_def defined
 
+    Args:
+        stack_def (dict): The stack definition being worked on.
+        context_parameters (dict): A dictionary of parameters passed in
+            through the Context, usually from the CLI.
+
+    Returns:
+        dict: Contains key/value pairs of the collected parameters.
     """
     parameters = copy.deepcopy(stack_def.get('parameters', {}))
     stack_specific_params = {}
-    for key, value in builder_parameters.iteritems():
+    for key, value in context_parameters.iteritems():
         stack = None
         if "::" in key:
             stack, key = key.split("::", 1)
@@ -36,6 +43,18 @@ def _gather_parameters(stack_def, builder_parameters):
 
 
 class Stack(object):
+    """Represents gathered information about a stack to be built/updated.
+
+    Args:
+        definition (dict): A stack definition.
+        context (:class:`stacker.context.Context`): Current context for
+            building the stack.
+        parameters (Optional(dict)): Context parameters.
+        mappings (Optional(dict)): Cloudformation mappings passed to the
+            blueprint.
+        locked (Optional(bool)): Whether or not the stack is locked.
+        force (Optional(bool)): Whether to force updates on this stack.
+    """
 
     def __init__(self, definition, context, parameters=None, mappings=None,
                  locked=False, force=False):
@@ -57,7 +76,8 @@ class Stack(object):
 
     @property
     def requires(self):
-        requires = set([self.context.get_fqn(r) for r in self.definition.get('requires', [])])
+        requires = set([self.context.get_fqn(r) for r in
+                        self.definition.get('requires', [])])
         # Auto add dependencies when parameters reference the Ouptuts of
         # another stack.
         for value in self.parameters.values():

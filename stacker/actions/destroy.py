@@ -85,4 +85,5 @@ class Action(BaseAction):
             debug_plan.outline(logging.DEBUG)
             plan.execute()
         else:
-            plan.outline(message='To execute this plan, run with "-f, --force" flag.')
+            plan.outline(message='To execute this plan, run with "--force" '
+                                 'flag.')

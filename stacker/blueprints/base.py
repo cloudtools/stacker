@@ -41,6 +41,14 @@ def get_local_parameters(parameter_def, parameters):
                 value = attrs['default']
             except KeyError:
                 raise MissingLocalParameterException(param)
+
+        _type = attrs['type']
+        if _type:
+            try:
+                value = _type(value)
+            except ValueError:
+                raise ValueError("Local parameter %s must be %s.", param,
+                                 _type)
         local[param] = value
 
     return local

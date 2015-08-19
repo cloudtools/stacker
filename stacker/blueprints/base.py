@@ -42,7 +42,7 @@ def get_local_parameters(parameter_def, parameters):
             except KeyError:
                 raise MissingLocalParameterException(param)
 
-        _type = attrs['type']
+        _type = attrs.get('type')
         if _type:
             try:
                 value = _type(value)

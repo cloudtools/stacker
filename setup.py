@@ -5,7 +5,6 @@ import glob
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    'aws_helper>=0.2.0',
     'troposphere>=1.0.0',
     'boto>=2.25.0',
     'PyYAML>=3.11',

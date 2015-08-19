@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from aws_helper.connection import ConnectionManager
+from boto.iam import connect_to_region
 
 from awacs.aws import Statement, Allow, Policy
 from awacs import ecs
@@ -16,7 +16,7 @@ def create_ecs_service_role(region, namespace, mappings, parameters,
     http://docs.aws.amazon.com/AmazonECS/latest/developerguide/IAM_policies.html#service_IAM_role
 
     """
-    conn = ConnectionManager(region).iam
+    conn = connect_to_region(region)
     policy = Policy(
         Statement=[
             Statement(

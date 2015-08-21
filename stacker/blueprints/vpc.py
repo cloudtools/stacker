@@ -22,13 +22,14 @@ NAT_SG = "NATSG"
 
 
 class VPC(Blueprint):
+    LOCAL_PARAMETERS = {
+        "AZCount":  {
+            "type": int,
+            "default": 2,
+        }
+    }
+
     PARAMETERS = {
-        "AZCount": {
-            "type": "Number",
-            "default": "2",
-            "description": "The number of AZs to build the VPC in. NOTE: "
-                           "this is used by stacker, not by cloudformation "
-                           "directly."},
         "PrivateSubnets": {
             "type": "CommaDelimitedList",
             "description": "Comma separated list of subnets to use for "
@@ -171,7 +172,7 @@ class VPC(Blueprint):
         subnets = {'public': [], 'private': []}
         net_types = subnets.keys()
         zones = []
-        for i in range(int(self.context.parameters["AZCount"])):
+        for i in range(self.local_parameters["AZCount"]):
             az = Select(i, GetAZs(""))
             zones.append(az)
             name_suffix = i

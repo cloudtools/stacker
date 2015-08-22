@@ -102,8 +102,6 @@ class Blueprint(object):
 
     def setup_parameters(self):
         t = self.template
-        # First look for CF_PARAMETERS, then fall back to regular PARAMETERS
-        # for backwards compatibility.
         parameters = self._get_parameters()
 
         if not parameters:

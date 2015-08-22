@@ -45,40 +45,36 @@ def get_local_parameters(parameter_def, parameters):
 
     return local
 
+PARAMETER_PROPERTIES = {
+    'default': 'Default',
+    'description': 'Description',
+    'no_echo': 'NoEcho',
+    'allowed_values': 'AllowedValues',
+    'allowed_pattern': 'AllowedPattern',
+    'max_length': 'MaxLength',
+    'min_length': 'MinLength',
+    'max_value': 'MaxValue',
+    'min_value': 'MinValue',
+    'constaint_description': 'ConstraintDescription'
+}
 
-def build_parameter(name, attrs):
-    """Builds a troposphere Parameter with the given attributes.
+
+def build_parameter(name, properties):
+    """Builds a troposphere Parameter with the given properties.
 
     Args:
         name (string): The name of the parameter.
-        attrs (dict): Contains the attributes that will be applied to the
+        properties (dict): Contains the properties that will be applied to the
             parameter. See:
             http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
 
     Returns:
         :class:`troposphere.Parameter`: The created parameter object.
     """
-    p = Parameter(name,
-                  Type=attrs.get('type'),
-                  Description=attrs.get('description', ''))
-    if 'default' in attrs:
-        p.Default = attrs['default']
-    if 'no_echo' in attrs:
-        p.NoEcho = attrs['no_echo']
-    if 'allowed_values' in attrs:
-        p.AllowedValues = attrs['allowed_values']
-    if 'allowed_pattern' in attrs:
-        p.AllowedPattern = attrs['allowed_pattern']
-    if 'max_length' in attrs:
-        p.MaxLength = attrs['max_length']
-    if 'min_length' in attrs:
-        p.MinLength = attrs['min_length']
-    if 'max_value' in attrs:
-        p.MaxValue = attrs['max_value']
-    if 'min_value' in attrs:
-        p.MinValue = attrs['min_value']
-    if 'constraint_description' in attrs:
-        p.ConstraintDescription = attrs['constraint_description']
+    p = Parameter(name, Type=properties.get('type'))
+    for name, attr in PARAMETER_PROPERTIES.items():
+        if name in properties:
+            setattr(p, attr, properties[name])
     return p
 
 

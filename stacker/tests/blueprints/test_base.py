@@ -33,4 +33,4 @@ class TestBuildParameter(unittest.TestCase):
     def test_base_parameter(self):
         p = build_parameter("BasicParam", {'type': 'String'})
         p.validate()
-        self.assertEquals(p.type, 'String')
+        self.assertEquals(p.Type, 'String')

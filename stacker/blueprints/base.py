@@ -123,12 +123,26 @@ class Blueprint(object):
         local_parameters = getattr(self, 'LOCAL_PARAMETERS', {})
         return get_local_parameters(local_parameters, self.context.parameters)
 
+    def _get_parameters(self):
+        """Get the parameter definitions.
+
+        First looks at CF_PARAMETERS, then falls back to PARAMETERS for
+        backwards compatibility.
+
+        Makes this easy to override going forward for more backwards
+        compatibility.
+
+        Returns:
+            dict: parameter definitions. Keys are parameter names, the values
+                are dicts containing key/values for various parameter
+                properties.
+        """
+        return getattr(self, 'CF_PARAMETERS',
+                       getattr(self, 'PARAMETERS', {}))
+
     def setup_parameters(self):
         t = self.template
-        # First look for CF_PARAMETERS, then fall back to regular PARAMETERS
-        # for backwards compatibility.
-        parameters = getattr(self, 'CF_PARAMETERS',
-                             getattr(self, 'PARAMETERS', {}))
+        parameters = self._get_parameters()
 
         if not parameters:
             logger.debug("No parameters defined.")

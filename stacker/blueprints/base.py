@@ -46,6 +46,42 @@ def get_local_parameters(parameter_def, parameters):
     return local
 
 
+def build_parameter(name, attrs):
+    """Builds a troposphere Parameter with the given attributes.
+
+    Args:
+        name (string): The name of the parameter.
+        attrs (dict): Contains the attributes that will be applied to the
+            parameter. See:
+            http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
+
+    Returns:
+        :class:`troposphere.Parameter`: The created parameter object.
+    """
+    p = Parameter(name,
+                  Type=attrs.get('type'),
+                  Description=attrs.get('description', ''))
+    if 'default' in attrs:
+        p.Default = attrs['default']
+    if 'no_echo' in attrs:
+        p.NoEcho = attrs['no_echo']
+    if 'allowed_values' in attrs:
+        p.AllowedValues = attrs['allowed_values']
+    if 'allowed_pattern' in attrs:
+        p.AllowedPattern = attrs['allowed_pattern']
+    if 'max_length' in attrs:
+        p.MaxLength = attrs['max_length']
+    if 'min_length' in attrs:
+        p.MinLength = attrs['min_length']
+    if 'max_value' in attrs:
+        p.MaxValue = attrs['max_value']
+    if 'min_value' in attrs:
+        p.MinValue = attrs['min_value']
+    if 'constraint_description' in attrs:
+        p.ConstraintDescription = attrs['constraint_description']
+    return p
+
+
 class Blueprint(object):
     """Base implementation for dealing with a troposphere template.
 
@@ -95,11 +131,7 @@ class Blueprint(object):
             return
 
         for param, attrs in parameters.items():
-            p = Parameter(param,
-                          Type=attrs.get('type'),
-                          Description=attrs.get('description', ''))
-            if 'default' in attrs:
-                p.Default = attrs['default']
+            p = build_parameter(param, attrs)
             t.add_parameter(p)
 
     def import_mappings(self):

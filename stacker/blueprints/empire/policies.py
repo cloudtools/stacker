@@ -17,7 +17,7 @@ def ecs_agent_policy():
                 Action=[ecs.CreateCluster, ecs.RegisterContainerInstance,
                         ecs.DeregisterContainerInstance,
                         ecs.DiscoverPollEndpoint, ecs.ECSAction("Submit*"),
-                        ecs.Poll]
+                        ecs.Poll, ecs.ECSAction("StartTelemetrySession")]
             )
         ]
     )

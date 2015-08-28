@@ -86,6 +86,7 @@ class EmpireController(EmpireBase):
             "description": "User for empire database."},
         "EmpireDatabasePassword": {
             "type": "String",
+            "no_echo": True,
             "description": "Password for empire database."},
         "EmpireDatabaseHost": {
             "type": "String",
@@ -99,6 +100,7 @@ class EmpireController(EmpireBase):
                            "in Empire."},
         "EmpireGithubClientSecret": {
             "type": "String",
+            "no_echo": True,
             "description": "Github Client Secret to enable Github "
                            "Authentication in Empire."},
         "EmpireGithubOrganization": {
@@ -107,6 +109,7 @@ class EmpireController(EmpireBase):
                            "Authentication in Empire."},
         "EmpireTokenSecret": {
             "type": "String",
+            "no_echo": True,
             "description": "Secret used to sign Empire access tokens."},
         "DockerRegistry": {
             "type": "String",
@@ -118,6 +121,7 @@ class EmpireController(EmpireBase):
             "description": "User for authentication with docker registry."},
         "DockerRegistryPassword": {
             "type": "String",
+            "no_echo": True,
             "description": "Password for authentication with docker "
                            "registry."},
         "DockerRegistryEmail": {

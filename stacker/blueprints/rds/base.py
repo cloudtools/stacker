@@ -95,7 +95,7 @@ class MasterInstance(Blueprint):
 
     ENGINE = None
 
-    def _get_engine_versions(self):
+    def get_engine_versions(self):
         """Used by engine specific subclasses - returns valid engine versions.
 
         Should only be overridden if the class variable ENGINE is defined on
@@ -142,7 +142,7 @@ class MasterInstance(Blueprint):
                 "description": "Set to 'false' to disable MultiAZ support.",
                 "default": "true"},
         }
-        engine_versions = self._get_engine_versions()
+        engine_versions = self.get_engine_versions()
         if engine_versions:
             master_parameters['EngineVersion']['allowed_values'] = \
                 engine_versions

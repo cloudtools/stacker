@@ -191,7 +191,7 @@ class MasterInstance(Blueprint):
             DBSubnetGroup(
                 SUBNET_GROUP,
                 DBSubnetGroupDescription="%s VPC subnet group." % self.name,
-                SubnetIds=Ref("PrivateSubnets")))
+                SubnetIds=Ref("Subnets")))
 
     def create_security_group(self):
         t = self.template

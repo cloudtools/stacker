@@ -1,10 +1,14 @@
 from troposphere import (
-    Ref, ec2, Output, GetAtt, Not, Equals, Condition, And, Join, If
+    Ref, ec2, Output, GetAtt, Not, Equals, Condition, And, Join, If, FindInMap,
+    Tags
 )
-from troposphere.rds import DBInstance, DBSubnetGroup
+from troposphere.rds import (
+    DBInstance, DBSubnetGroup, DBParameterGroup, OptionGroup,
+)
 from troposphere.route53 import RecordSetType
 
 from ..base import Blueprint
+from .mappings import MAPPINGS
 
 RDS_ENGINES = ["MySQL", "oracle-se1", "oracle-se", "oracle-ee", "sqlserver-ee",
                "sqlserver-se", "sqlserver-ex", "sqlserver-web", "postgres"]
@@ -56,12 +60,6 @@ def common_parameters():
                            "100 and must be at least 1/10th the IOPs "
                            "setting.",
             "default": "10"},
-        "StorageEncrypted": {
-            "type": "String",
-            "description": "Set to 'false' to disable encrypted storage.",
-            "default": "true",
-            "allowed_values": ["true", "false"]
-        },
         "IOPS": {
             "type": "Number",
             "description": "If set, uses provisioned IOPS for the "
@@ -81,6 +79,13 @@ def common_parameters():
             "type": "String",
             "default": "",
             "description": "Internal domain name, if you have one."},
+        "PreferredMaintenanceWindow": {
+            "type": "String",
+            "description": "A (minimum 30 minute) window in "
+                           "DDD:HH:MM-DDD:HH:MM format in UTC for backups. "
+                           "Default: Sunday 3am-4am PST",
+            "default": "Sun:11:00-Sun:12:00"},
+
     }
 
     return parameters
@@ -94,6 +99,12 @@ class MasterInstance(Blueprint):
     """
 
     ENGINE = None
+    LOCAL_PARAMETERS = {
+        "DatabaseParameters": {
+            "type": dict,
+            "default": {},
+        },
+    }
 
     def get_engine_versions(self):
         """Used by engine specific subclasses - returns valid engine versions.
@@ -141,6 +152,27 @@ class MasterInstance(Blueprint):
                 "type": "String",
                 "description": "Set to 'false' to disable MultiAZ support.",
                 "default": "true"},
+            "StorageEncrypted": {
+                "type": "String",
+                "description": "Set to 'false' to disable encrypted storage.",
+                "default": "true",
+                "allowed_values": ["true", "false"]
+            },
+            "KmsKeyid": {
+                "type": "String",
+                "description": "Requires that StorageEncrypted is true. "
+                               "Should be an ARN to the KMS key that should "
+                               "be used to encrypt the storage.",
+                "default": "",
+            },
+            "LicenseModel": {
+                "type": "String",
+                "description": "License model for the database instance.",
+                "default": "general-public-license",
+                "allowed_values": ["general-public-license",
+                                   "license-included",
+                                   "bring-your-own-license"]
+            },
         }
         engine_versions = self.get_engine_versions()
         if engine_versions:
@@ -163,25 +195,31 @@ class MasterInstance(Blueprint):
 
         return parameters
 
+    def family_mappings(self):
+        t = self.template
+        for name, mapping in MAPPINGS:
+            t.add_mapping(name, mapping)
+
     def create_conditions(self):
-        self.template.add_condition(
+        t = self.template
+        t.add_condition(
             "HasInternalZone",
             Not(Equals(Ref("InternalZoneId"), "")))
-        self.template.add_condition(
+        t.add_condition(
             "HasInternalZoneName",
             Not(Equals(Ref("InternalZoneName"), "")))
-        self.template.add_condition(
+        t.add_condition(
             "HasInternalHostname",
             Not(Equals(Ref("InternalHostname"), "")))
-        self.template.add_condition(
+        t.add_condition(
             "CreateInternalHostname",
             And(Condition("HasInternalZone"),
                 Condition("HasInternalZoneName"),
                 Condition("HasInternalHostname")))
-        self.template.add_condition(
+        t.add_condition(
             "ProvisionedIOPS",
             Not(Equals(Ref("IOPS"), "0")))
-        self.template.add_condition(
+        t.add_condition(
             "NoProvisionedIOPS",
             Equals(Ref("IOPS"), "0"))
 
@@ -210,50 +248,78 @@ class MasterInstance(Blueprint):
         endpoint = GetAtt(self.get_db_instance(), "Endpoint.Address")
         return endpoint
 
+    def get_common_attrs(self):
+        return {
+            "AllocatedStorage": Ref("AllocatedStorage"),
+            "AllowMajorVersionUpgrade": Ref("AllowMajorVersionUpgrade"),
+            "AutoMinorVersionUpgrade": Ref("AutoMinorVersionUpgrade"),
+            "BackupRetentionPeriod": Ref("BackupRetentionPeriod"),
+            "DBName": Ref("DatabaseName"),
+            "DBInstanceClass": Ref("InstanceType"),
+            "DBParameterGroupName": Ref("ParameterGroup"),
+            "DBSubnetGroupName": Ref(SUBNET_GROUP),
+            "Engine": self.ENGINE or Ref("Engine"),
+            "EngineVersion": Ref("EngineVersion"),
+            "LicenseModel": Ref("LicenseModel"),
+            "MasterUsername": Ref("MasterUser"),
+            "MasterUserPassword": Ref("MasterUserPassword"),
+            "MultiAZ": Ref("MultiAZ"),
+            "OptionGroupName": Ref("OptionGroup"),
+            "PreferredBackupWindow": Ref("PreferredBackupWindow"),
+            "PreferredMaintenanceWindow": Ref("PreferredMaintenanceWindow"),
+            "StorageEncrypted": Ref("StorageEncrypted"),
+            "VPCSecurityGroups": [Ref(SECURITY_GROUP), ],
+            "Tags": Tags(Name=self.name),
+        }
+
+    def create_parameter_group(self):
+        t = self.template
+        params = self.local_parameters["DatabaseParameters"]
+        engine = self.ENGINE or Ref("Engine")
+        t.add_resource(
+            DBParameterGroup(
+                "ParameterGroup",
+                Description=self.name,
+                Family=FindInMap("DBFamily", engine, Ref("EngineVersion")),
+                Parameters=params,
+            )
+        )
+
+    def get_option_configurations(self):
+        options = []
+        return options
+
+    def create_option_group(self):
+        t = self.template
+        engine = self.ENGINE or Ref("Engine")
+        t.add_resource(
+            OptionGroup(
+                "OptionGroup",
+                EngineName=Ref("Engine"),
+                MajorEngineVersion=FindInMap("MajorVersions",
+                                             engine, Ref("EngineVersion")),
+                OptionGroupDescription=self.name,
+                OptionConfigurations=self.get_option_configurations(),
+            )
+        )
+
     def create_rds(self):
         t = self.template
-        # Non-provisioned iops database
         t.add_resource(
             DBInstance(
                 DBINSTANCE_NO_IOPS,
                 Condition="NoProvisionedIOPS",
-                AllocatedStorage=Ref("AllocatedStorage"),
-                AllowMajorVersionUpgrade=Ref("AllowMajorVersionUpgrade"),
-                AutoMinorVersionUpgrade=Ref("AutoMinorVersionUpgrade"),
-                BackupRetentionPeriod=Ref("BackupRetentionPeriod"),
-                DBName=Ref("DatabaseName"),
-                DBInstanceClass=Ref("InstanceType"),
-                DBSubnetGroupName=Ref(SUBNET_GROUP),
-                Engine=self.ENGINE or Ref("Engine"),
-                EngineVersion=Ref("EngineVersion"),
-                MasterUsername=Ref("MasterUser"),
-                MasterUserPassword=Ref("MasterUserPassword"),
-                MultiAZ=Ref("MultiAZ"),
-                PreferredBackupWindow=Ref("PreferredBackupWindow"),
-                StorageEncrypted=Ref("StorageEncrypted"),
-                VPCSecurityGroups=[Ref(SECURITY_GROUP), ]))
+                **self.get_common_attrs()
+                ))
 
         t.add_resource(
             DBInstance(
                 DBINSTANCE_WITH_IOPS,
                 Condition="ProvisionedIOPS",
-                AllocatedStorage=Ref("AllocatedStorage"),
-                AllowMajorVersionUpgrade=Ref("AllowMajorVersionUpgrade"),
-                AutoMinorVersionUpgrade=Ref("AutoMinorVersionUpgrade"),
-                BackupRetentionPeriod=Ref("BackupRetentionPeriod"),
-                DBName=Ref("DatabaseName"),
-                DBInstanceClass=Ref("InstanceType"),
-                DBSubnetGroupName=Ref(SUBNET_GROUP),
-                Engine=self.ENGINE or Ref("Engine"),
-                EngineVersion=Ref("EngineVersion"),
-                MasterUsername=Ref("MasterUser"),
-                MasterUserPassword=Ref("MasterUserPassword"),
-                MultiAZ=Ref("MultiAZ"),
-                PreferredBackupWindow=Ref("PreferredBackupWindow"),
-                VPCSecurityGroups=[Ref(SECURITY_GROUP), ],
-                StorageEncrypted=Ref("StorageEncrypted"),
                 StorageType="io1",
-                Iops=Ref("IOPS")))
+                Iops=Ref("IOPS"),
+                **self.get_common_attrs()
+                ))
 
     def create_dns_records(self):
         t = self.template
@@ -285,6 +351,9 @@ class MasterInstance(Blueprint):
 
     def create_template(self):
         self.create_conditions()
+        self.family_mappings()
+        self.create_parameter_group()
+        self.create_option_group()
         self.create_subnet_group()
         self.create_security_group()
         self.create_rds()
@@ -302,6 +371,19 @@ class ReadReplica(MasterInstance):
                            "replica of."}
         return parameters
 
+    def get_common_attrs(self):
+        return {
+            "SourceDBInstanceIdentifier": Ref("MasterDatabaseId"),
+            "AllocatedStorage": Ref("AllocatedStorage"),
+            "AllowMajorVersionUpgrade": Ref("AllowMajorVersionUpgrade"),
+            "AutoMinorVersionUpgrade": Ref("AutoMinorVersionUpgrade"),
+            "DBInstanceClass": Ref("InstanceType"),
+            "DBSubnetGroupName": Ref(SUBNET_GROUP),
+            "OptionGroupName": Ref("OptionGroup"),
+            "PreferredMaintenanceWindow": Ref("PreferredMaintenanceWindow"),
+            "VPCSecurityGroups": [Ref(SECURITY_GROUP), ],
+        }
+
     def create_rds(self):
         t = self.template
         # Non-provisioned iops database
@@ -309,28 +391,16 @@ class ReadReplica(MasterInstance):
             DBInstance(
                 DBINSTANCE_NO_IOPS,
                 Condition="NoProvisionedIOPS",
-                SourceDBInstanceIdentifier=Ref("MasterDatabaseId"),
-                AllocatedStorage=Ref("AllocatedStorage"),
-                AllowMajorVersionUpgrade=Ref("AllowMajorVersionUpgrade"),
-                AutoMinorVersionUpgrade=Ref("AutoMinorVersionUpgrade"),
-                DBInstanceClass=Ref("InstanceType"),
-                DBSubnetGroupName=Ref(SUBNET_GROUP),
-                StorageEncrypted=Ref("StorageEncrypted"),
-                VPCSecurityGroups=[Ref(SECURITY_GROUP), ]))
+                **self.get_common_attrs()
+            ))
 
         t.add_resource(
             DBInstance(
                 DBINSTANCE_WITH_IOPS,
                 Condition="ProvisionedIOPS",
-                SourceDBInstanceIdentifier=Ref("MasterDatabaseId"),
-                AllocatedStorage=Ref("AllocatedStorage"),
-                AllowMajorVersionUpgrade=Ref("AllowMajorVersionUpgrade"),
-                AutoMinorVersionUpgrade=Ref("AutoMinorVersionUpgrade"),
-                DBInstanceClass=Ref("InstanceType"),
-                DBSubnetGroupName=Ref(SUBNET_GROUP),
-                VPCSecurityGroups=[Ref(SECURITY_GROUP), ],
-                StorageEncrypted=Ref("StorageEncrypted"),
                 StorageType="io1",
-                Iops=Ref("IOPS")))
+                Iops=Ref("IOPS"),
+                **self.get_common_attrs()
+            ))
 
         t.add_output(Output("DBAddress", Value=self.get_db_endpoint()))

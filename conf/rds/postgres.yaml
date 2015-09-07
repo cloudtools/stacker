@@ -1,0 +1,95 @@
+# Hooks require a path.
+# If the build should stop when a hook fails, set required to true.
+# pre_build happens before the build
+# post_build happens after the build
+#pre_build:
+#  - path: stacker.hooks.route53.create_domain
+#    required: true
+    # Additional args can be passed as a dict of key/value pairs in kwargs
+    # kwargs:
+# post_build:
+
+mappings:
+  AmiMap:
+    us-east-1:
+      NAT: ami-ad227cc4
+      ubuntu1404: ami-74e27e1c
+      bastion: ami-74e27e1c
+    us-west-2:
+      NAT: ami-290f4119
+      ubuntu1404: ami-5189a661
+      bastion: ami-5189a661
+
+vpc_parameters: &vpc_parameters
+  VpcId: vpc::VpcId # parametrs with ::'s in them refer to <stack>::<Output>
+  DefaultSG: vpc::DefaultSG
+  PublicSubnets: vpc::PublicSubnets
+  PrivateSubnets: vpc::PrivateSubnets
+  AvailabilityZones: vpc::AvailabilityZones
+
+stacks:
+  - name: vpc
+    class_path: stacker.blueprints.vpc.VPC
+    parameters:
+      # AZCount is the # of AvailabilityZones to attempt to build in. You
+      # should build in as many as you can afford in order to provide for
+      # better fault tolerance. Note: Since this is all done in a VPC, you
+      # need to find out how many AZs can handle VPC subnets for the
+      # region you are building in. As of this writing, here are the max
+      # allowed AZCount's for each zone:
+      #     us-east-1: 4, us-west-1: 2, us-west-2: 3, eu-west-1: 3
+      # Note: The minimum allowed AZCount is 2.
+      AZCount: ${azcount}
+      # Enough subnets for 4 AZs
+      PublicSubnets: 10.128.0.0/24,10.128.1.0/24,10.128.2.0/24,10.128.3.0/24
+      PrivateSubnets: 10.128.8.0/22,10.128.12.0/22,10.128.16.0/22,10.128.20.0/22
+      # InstanceType used for NAT instances
+      InstanceType: ${nat_instance_type}
+      SshKeyName: ${ssh_key_name}
+      InternalDomain: internal
+      # CidrBlock needs to be hold all of the Public & Private subnets above
+      CidrBlock: 10.128.0.0/16
+      ImageName: NAT
+  - name: postgresMaster
+    class_path: stacker.blueprints.rds.postgres.MasterInstance
+    parameters:
+      << : *vpc_parameters
+      Subnets: vpc::PrivateSubnets
+      InstanceType: ${db_instance_type}
+      AllowMajorVersionUpgrade: "false"
+      AutoMinorVersionUpgrade: "true"
+      AllocatedStorage: ${storage_size}
+      IOPS: ${iops}
+      InternalZoneName: vpc::InternalZoneName
+      InternalZoneId: vpc::InternalZoneId
+      InternalHostname: ${master_name}
+      DBInstanceIdentifier: ${master_name}
+      DBFamily: ${db_family}
+      EngineVersion: ${engine_version}
+      EngineMajorVersion: ${engine_major_version}
+      StorageEncrypted: ${master_storage_encrypted}
+      # MasterInstance specific
+      MasterUser: ${db_user}
+      MasterUserPassword: ${db_passwd}
+      DatabaseName: ${db_name}
+      MultiAZ: "true"
+  - name: postgresSlave
+    class_path: stacker.blueprints.rds.postgres.ReadReplica
+    parameters:
+      << : *vpc_parameters
+      Subnets: vpc::PrivateSubnets
+      InstanceType: ${db_instance_type}
+      AllowMajorVersionUpgrade: "false"
+      AutoMinorVersionUpgrade: "true"
+      AllocatedStorage: ${storage_size}
+      IOPS: ${iops}
+      InternalZoneName: vpc::InternalZoneName
+      InternalZoneId: vpc::InternalZoneId
+      InternalHostname: ${slave_name}
+      DBInstanceIdentifier: ${slave_name}
+      DBFamily: ${db_family}
+      EngineVersion: ${engine_version}
+      EngineMajorVersion: ${engine_major_version}
+      StorageEncrypted: ${slave_storage_encrypted}
+      # ReadReplica Specific
+      MasterDatabaseId: postgresMaster::DBInstance

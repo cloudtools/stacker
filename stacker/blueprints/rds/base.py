@@ -1,6 +1,5 @@
 from troposphere import (
-    Ref, ec2, Output, GetAtt, Not, Equals, Condition, And, Join, If, FindInMap,
-    Tags
+    Ref, ec2, Output, GetAtt, Not, Equals, Condition, And, Join, If, Tags
 )
 from troposphere.rds import (
     DBInstance, DBSubnetGroup, DBParameterGroup, OptionGroup,
@@ -8,7 +7,6 @@ from troposphere.rds import (
 from troposphere.route53 import RecordSetType
 
 from ..base import Blueprint
-from .mappings import MAPPINGS
 
 RDS_ENGINES = ["MySQL", "oracle-se1", "oracle-se", "oracle-ee", "sqlserver-ee",
                "sqlserver-se", "sqlserver-ex", "sqlserver-web", "postgres"]
@@ -16,8 +14,7 @@ RDS_ENGINES = ["MySQL", "oracle-se1", "oracle-se", "oracle-ee", "sqlserver-ee",
 # Resource name constants
 SUBNET_GROUP = "RDSSubnetGroup"
 SECURITY_GROUP = "RDSSecurityGroup"
-DBINSTANCE_NO_IOPS = "RDSDBInstanceNoIops"
-DBINSTANCE_WITH_IOPS = "RDSDBInstanceWithIops"
+DBINSTANCE = "RDSDBInstance"
 DNS_RECORD = "DBInstanceDnsRecord"
 
 
@@ -65,7 +62,7 @@ def common_parameters():
             "description": "If set, uses provisioned IOPS for the "
                            "database. Note: This must be no more than "
                            "10x of AllocatedStorage. Minimum: 1000",
-            "max_value": 10000,
+            "max_value": "10000",
             "default": "0"},
         "InternalZoneId": {
             "type": "String",
@@ -85,7 +82,29 @@ def common_parameters():
                            "DDD:HH:MM-DDD:HH:MM format in UTC for backups. "
                            "Default: Sunday 3am-4am PST",
             "default": "Sun:11:00-Sun:12:00"},
-
+        "DBFamily": {
+            "type": "String",
+            "description": "DBFamily for ParameterGroup.",
+            "allowed_values": [
+                "mysql5.1", "mysql5.5", "mysql5.6",
+                "oracle-ee-11.2", "oracle-ee-12.1",
+                "oracle-se-11.2", "oracle-se-12.1",
+                "oracle-se1-11.2", "oracle-se1-12.1",
+                "postgres9.3", "postgres9.4",
+                "sqlserver-ee-10.50", "sqlserver-ee-11.00",
+                "sqlserver-ex-10.50", "sqlserver-ex-11.00",
+                "sqlserver-se-10.50", "sqlserver-se-11.00",
+                "sqlserver-web-10.50", "sqlserver-web-11.00",
+            ]},
+        "EngineVersion": {
+            "type": "String",
+            "description": "Database engine version for the RDS Instance.",
+        },
+        "EngineMajorVersion": {
+            "type": "String",
+            "description": "Major Version for the engine. Basically the "
+                           "first two parts of the EngineVersion you choose. "
+        },
     }
 
     return parameters
@@ -119,16 +138,12 @@ class MasterInstance(Blueprint):
 
     def _get_parameters(self):
         master_parameters = {
-            "EngineVersion": {
-                "type": "String",
-                "description": "Database engine version for the RDS Instance.",
-            },
             "BackupRetentionPeriod": {
                 "type": "Number",
                 "description": "Number of days to retain database backups.",
-                "min_value": 0,
-                "default": 7,
-                "max_value": 35,
+                "min_value": "0",
+                "default": "7",
+                "max_value": "35",
                 "constraint_description": "Must be between 0-35.",
             },
             "MasterUser": {
@@ -137,14 +152,14 @@ class MasterInstance(Blueprint):
                 "default": "dbuser"},
             "MasterUserPassword": {
                 "type": "String",
-                "no_echo": "true",
+                "no_echo": True,
                 "description": "Master user password."},
             "PreferredBackupWindow": {
                 "type": "String",
                 "description": "A (minimum 30 minute) window in HH:MM-HH:MM "
-                               "format in UTC for backups. Default: 3am-4am "
+                               "format in UTC for backups. Default: 4am-5am "
                                "PST",
-                "default": "11:00-12:00"},
+                "default": "12:00-13:00"},
             "DatabaseName": {
                 "type": "String",
                 "description": "Initial db to create in database."},
@@ -165,22 +180,17 @@ class MasterInstance(Blueprint):
                                "be used to encrypt the storage.",
                 "default": "",
             },
-            "LicenseModel": {
-                "type": "String",
-                "description": "License model for the database instance.",
-                "default": "general-public-license",
-                "allowed_values": ["general-public-license",
-                                   "license-included",
-                                   "bring-your-own-license"]
-            },
         }
+        # Merge common parameters w/ master only parameters
+        parameters = common_parameters()
+        parameters.update(master_parameters)
+
         engine_versions = self.get_engine_versions()
         if engine_versions:
-            master_parameters['EngineVersion']['allowed_values'] = \
-                engine_versions
+            parameters['EngineVersion']['allowed_values'] = engine_versions
 
         if not self.ENGINE:
-            master_parameters['Engine'] = {
+            parameters['Engine'] = {
                 "type": "String",
                 "description": "Database engine for the RDS Instance.",
                 "allowed_values": RDS_ENGINES
@@ -190,15 +200,7 @@ class MasterInstance(Blueprint):
                 raise ValueError("ENGINE must be one of: %s" %
                                  ", ".join(RDS_ENGINES))
 
-        # Merge common parameters w/ master only parameters
-        parameters = common_parameters().update(master_parameters)
-
         return parameters
-
-    def family_mappings(self):
-        t = self.template
-        for name, mapping in MAPPINGS:
-            t.add_mapping(name, mapping)
 
     def create_conditions(self):
         t = self.template
@@ -240,12 +242,8 @@ class MasterInstance(Blueprint):
                 VpcId=Ref("VpcId")))
         t.add_output(Output("SecurityGroup", Value=Ref(sg)))
 
-    def get_db_instance(self):
-        return If("ProvisionedIOPS", DBINSTANCE_WITH_IOPS,
-                  DBINSTANCE_NO_IOPS)
-
     def get_db_endpoint(self):
-        endpoint = GetAtt(self.get_db_instance(), "Endpoint.Address")
+        endpoint = GetAtt(DBINSTANCE, "Endpoint.Address")
         return endpoint
 
     def get_common_attrs(self):
@@ -256,11 +254,13 @@ class MasterInstance(Blueprint):
             "BackupRetentionPeriod": Ref("BackupRetentionPeriod"),
             "DBName": Ref("DatabaseName"),
             "DBInstanceClass": Ref("InstanceType"),
+            "DBInstanceIdentifier": self.name,
             "DBParameterGroupName": Ref("ParameterGroup"),
             "DBSubnetGroupName": Ref(SUBNET_GROUP),
             "Engine": self.ENGINE or Ref("Engine"),
             "EngineVersion": Ref("EngineVersion"),
-            "LicenseModel": Ref("LicenseModel"),
+            # NoValue for now
+            "LicenseModel": Ref("AWS::NoValue"),
             "MasterUsername": Ref("MasterUser"),
             "MasterUserPassword": Ref("MasterUserPassword"),
             "MultiAZ": Ref("MultiAZ"),
@@ -275,12 +275,11 @@ class MasterInstance(Blueprint):
     def create_parameter_group(self):
         t = self.template
         params = self.local_parameters["DatabaseParameters"]
-        engine = self.ENGINE or Ref("Engine")
         t.add_resource(
             DBParameterGroup(
                 "ParameterGroup",
                 Description=self.name,
-                Family=FindInMap("DBFamily", engine, Ref("EngineVersion")),
+                Family=Ref("DBFamily"),
                 Parameters=params,
             )
         )
@@ -291,13 +290,11 @@ class MasterInstance(Blueprint):
 
     def create_option_group(self):
         t = self.template
-        engine = self.ENGINE or Ref("Engine")
         t.add_resource(
             OptionGroup(
                 "OptionGroup",
-                EngineName=Ref("Engine"),
-                MajorEngineVersion=FindInMap("MajorVersions",
-                                             engine, Ref("EngineVersion")),
+                EngineName=self.ENGINE or Ref("Engine"),
+                MajorEngineVersion=Ref("EngineMajorVersion"),
                 OptionGroupDescription=self.name,
                 OptionConfigurations=self.get_option_configurations(),
             )
@@ -307,17 +304,13 @@ class MasterInstance(Blueprint):
         t = self.template
         t.add_resource(
             DBInstance(
-                DBINSTANCE_NO_IOPS,
-                Condition="NoProvisionedIOPS",
-                **self.get_common_attrs()
-                ))
-
-        t.add_resource(
-            DBInstance(
-                DBINSTANCE_WITH_IOPS,
-                Condition="ProvisionedIOPS",
-                StorageType="io1",
-                Iops=Ref("IOPS"),
+                DBINSTANCE,
+                StorageType=If("NoProvisionedIOPS",
+                               Ref("AWS::NoValue"),
+                               "io1"),
+                Iops=If("NoProvisionedIOPS",
+                        Ref("AWS::NoValue"),
+                        Ref("IOPS")),
                 **self.get_common_attrs()
                 ))
 
@@ -342,7 +335,7 @@ class MasterInstance(Blueprint):
     def create_db_outputs(self):
         t = self.template
         t.add_output(Output("DBAddress", Value=self.get_db_endpoint()))
-        t.add_output(Output("DBInstance", Value=Ref(self.get_db_instance())))
+        t.add_output(Output("DBInstance", Value=Ref(DBINSTANCE)))
         t.add_output(
             Output(
                 "DBCname",
@@ -351,7 +344,6 @@ class MasterInstance(Blueprint):
 
     def create_template(self):
         self.create_conditions()
-        self.family_mappings()
         self.create_parameter_group()
         self.create_option_group()
         self.create_subnet_group()
@@ -369,6 +361,22 @@ class ReadReplica(MasterInstance):
             "type": "String",
             "description": "ID of the master database to create a read "
                            "replica of."}
+
+        engine_versions = self.get_engine_versions()
+        if engine_versions:
+            parameters['EngineVersion']['allowed_values'] = engine_versions
+
+        if not self.ENGINE:
+            parameters['Engine'] = {
+                "type": "String",
+                "description": "Database engine for the RDS Instance.",
+                "allowed_values": RDS_ENGINES
+            }
+        else:
+            if self.ENGINE not in RDS_ENGINES:
+                raise ValueError("ENGINE must be one of: %s" %
+                                 ", ".join(RDS_ENGINES))
+
         return parameters
 
     def get_common_attrs(self):
@@ -378,29 +386,10 @@ class ReadReplica(MasterInstance):
             "AllowMajorVersionUpgrade": Ref("AllowMajorVersionUpgrade"),
             "AutoMinorVersionUpgrade": Ref("AutoMinorVersionUpgrade"),
             "DBInstanceClass": Ref("InstanceType"),
-            "DBSubnetGroupName": Ref(SUBNET_GROUP),
+            "DBInstanceIdentifier": self.name,
+            "Engine": self.ENGINE or Ref("Engine"),
+            "EngineVersion": Ref("EngineVersion"),
             "OptionGroupName": Ref("OptionGroup"),
             "PreferredMaintenanceWindow": Ref("PreferredMaintenanceWindow"),
             "VPCSecurityGroups": [Ref(SECURITY_GROUP), ],
         }
-
-    def create_rds(self):
-        t = self.template
-        # Non-provisioned iops database
-        t.add_resource(
-            DBInstance(
-                DBINSTANCE_NO_IOPS,
-                Condition="NoProvisionedIOPS",
-                **self.get_common_attrs()
-            ))
-
-        t.add_resource(
-            DBInstance(
-                DBINSTANCE_WITH_IOPS,
-                Condition="ProvisionedIOPS",
-                StorageType="io1",
-                Iops=Ref("IOPS"),
-                **self.get_common_attrs()
-            ))
-
-        t.add_output(Output("DBAddress", Value=self.get_db_endpoint()))

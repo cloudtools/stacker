@@ -5,10 +5,10 @@ import glob
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    'troposphere>=1.0.0',
+    'troposphere>=1.2.1',
     'boto>=2.25.0',
     'PyYAML>=3.11',
-    'awacs>=0.5.2',
+    'awacs>=0.5.3',
 ]
 
 tests_require = [

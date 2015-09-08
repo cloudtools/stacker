@@ -1,10 +1,11 @@
 from troposphere import Ref, ec2, Output, GetAtt
-from troposphere.elasticache import (
-    ReplicationGroup,
-    SubnetGroup,
-)
+from troposphere.elasticache import ReplicationGroup, SubnetGroup
 
 from .base import Blueprint
+
+SUBNET_GROUP = 'RedisSubnetGroup'
+SECURITY_GROUP = 'RedisSecurityGroup'
+REPLICATION_GROUP = 'RedisReplicationGroup'
 
 
 class RedisCluster(Blueprint):
@@ -53,16 +54,10 @@ class RedisCluster(Blueprint):
         },
     }
 
-    def __init__(self, *args, **kwargs):
-        super(RedisCluster, self).__init__(*args, **kwargs)
-        self.subnet_group_name = '%sSubnetGroup' % (self.name,)
-        self.security_group_name = '%sElastiCacheSG' % (self.name,)
-        self.replication_group_name = '%sRedisReplicationGroup' % (self.name,)
-
     def create_subnet_group(self):
         t = self.template
         subnet_group = SubnetGroup(
-            self.subnet_group_name,
+            SUBNET_GROUP,
             Description='%s VPC subnet group.' % (self.name,),
             SubnetIds=Ref('PrivateSubnets'),
         )
@@ -71,8 +66,8 @@ class RedisCluster(Blueprint):
     def create_security_group(self):
         t = self.template
         security_group = ec2.SecurityGroup(
-            self.security_group_name,
-            GroupDescription='%s ElastiCache security group' % (self.security_group_name,),
+            SECURITY_GROUP,
+            GroupDescription='%s ElastiCache security group' % (SECURITY_GROUP,),
             VpcId=Ref('VpcId'),
         )
         resource = t.add_resource(security_group)
@@ -81,22 +76,22 @@ class RedisCluster(Blueprint):
     def create_replication_group(self):
         t = self.template
         replication_group = ReplicationGroup(
-            self.replication_group_name,
+            REPLICATION_GROUP,
             AutomaticFailoverEnabled=Ref('AutomaticFailoverEnabled'),
             CacheNodeType=Ref('CacheNodeType'),
-            CacheSubnetGroupName=Ref(self.subnet_group_name),
+            CacheSubnetGroupName=Ref(SUBNET_GROUP),
             Engine='redis',
             EngineVersion='2.8.19',
             NumCacheClusters=Ref('NumCacheClusters'),
-            ReplicationGroupDescription='%s replication group' % (self.replication_group_name,),
+            ReplicationGroupDescription='%s replication group' % (REPLICATION_GROUP,),
             PreferredMaintenanceWindow=Ref('PreferredMaintenanceWindow'),
-            SecurityGroupIds=[GetAtt(self.security_group_name, 'GroupId')],
+            SecurityGroupIds=[GetAtt(SECURITY_GROUP, 'GroupId')],
         )
         resource = t.add_resource(replication_group)
         t.add_output(Output('ReplicationGroup', Value=Ref(resource)))
 
-        primary_address = GetAtt(self.replication_group_name, 'PrimaryEndPoint.Address')
-        read_addresses = GetAtt(self.replication_group_name, 'ReadEndPoint.Addresses')
+        primary_address = GetAtt(REPLICATION_GROUP, 'PrimaryEndPoint.Address')
+        read_addresses = GetAtt(REPLICATION_GROUP, 'ReadEndPoint.Addresses')
         t.add_output(Output('PrimaryAddress', Value=primary_address))
         t.add_output(Output('ReadAddresses', Value=read_addresses))
 

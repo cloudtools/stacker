@@ -1,4 +1,16 @@
-## pending
+## 0.5.1 (2015-09-08)
+
+- Add info subcommand [GH-73]
+- Move namespace into environment [GH-72]
+- Simplified basecommand [GH-74]
+- Documentation updates [GH-75, GH-77, GH-78]
+- aws\_helper removal [GH-79]
+- Move VPC to use LOCAL\_PARAMETERS [GH-81]
+- Lower default AZ count to 2 [GH-82]
+- Allow use of all parameter properties [GH-83]
+- Parameter gathering in method [GH-84]
+- NoEcho on sensitive parameters in blueprnts [GH-85]
+- Version 2 RDS Blueprints [GH-86]
 
 ## 0.5.0 (2015-08-13)
 

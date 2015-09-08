@@ -1,6 +1,7 @@
 import logging
 
 from .base import BaseAction
+from .. import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,9 @@ class Action(BaseAction):
     def run(self, *args, **kwargs):
         logger.info('Outputs for stacks: %s', self.context.get_fqn())
         for stack in self.context.get_stacks():
-            provider_stack = self.provider.get_stack(stack.fqn)
-            if not provider_stack:
+            try:
+                provider_stack = self.provider.get_stack(stack.fqn)
+            except exceptions.StackDoesNotExist:
                 logger.info('Stack "%s" does not exist.' % (stack.fqn,))
                 continue
 

@@ -1,10 +1,10 @@
 """Gets information on the CloudFormation stacks based on the given config."""
 
-from .base import StackerCommand
+from .base import BaseCommand
 from ...actions import info
 
 
-class Info(StackerCommand):
+class Info(BaseCommand):
 
     name = 'info'
     description = __doc__

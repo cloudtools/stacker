@@ -25,7 +25,7 @@ class MockStack(object):
 class TestDestroyAction(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context('namespace')
+        self.context = Context({'namespace': 'namespace'})
         self.context.config = {
             'stacks': [
                 {'name': 'vpc'},

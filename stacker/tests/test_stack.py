@@ -9,7 +9,7 @@ class TestStack(unittest.TestCase):
 
     def setUp(self):
         self.sd = {"name": "test"}
-        self.context = Context('namespace')
+        self.context = Context({'namespace': 'namespace'})
         self.stack = Stack(
             definition=generate_definition('vpc', 1),
             context=self.context,

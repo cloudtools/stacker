@@ -64,7 +64,7 @@ def exception_hook(*args):
 class TestHooks(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context('namespace')
+        self.context = Context({'namespace': 'namespace'})
 
     def test_empty_hook_stage(self):
         hooks = []

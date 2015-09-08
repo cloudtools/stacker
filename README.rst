@@ -105,3 +105,11 @@ Stacker would then name the VPC stack ``stageVPC``.
 .. _Remind: http://www.remind.com/
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _string.Template: https://docs.python.org/2/library/string.html#template-strings
+
+Docker
+======
+
+Stack can also be executed from Docker. Use this method to run stacker if you
+want to avoid setting up a python environment::
+
+  docker run -v `pwd`:/stacks remind101/stacker build ...

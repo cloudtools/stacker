@@ -82,13 +82,6 @@ environment. The environment should point to a yaml formatted file that
 contains a flat dictionary (ie: only ``key: value`` pairs).  Those keys
 can be used in the stack config as python `string.Template`_ mappings.
 
-At a minimum the environment must define the ``namespace`` parameter::
-
-  namespace: example.com
-
-This helps preserve the namespace for the stacks between subsequent
-builds.
-
 For example, if you wanted to name a stack based on the environment you were
 building it in, first you would create an environment file with the
 environment name in it (staging in this case)::
@@ -101,6 +94,16 @@ stack), you would have the following::
   - name: ${environment}VPC
 
 Stacker would then name the VPC stack ``stageVPC``.
+
+At a minimum the environment must define the ``namespace`` parameter::
+
+  namespace: example.com
+
+The namespace should be a unique name that the stacks will be built under.
+This value will be used to prefix the CloudFormation stack names as well
+as the s3 bucket that contains the stacker templates. Specifying the
+namespace in the environment file helps preserve the namespace for the
+stacks between subsequent builds.
 
 .. _Remind: http://www.remind.com/
 .. _troposphere: https://github.com/cloudtools/troposphere

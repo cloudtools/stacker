@@ -15,9 +15,9 @@ class RedisCluster(Blueprint):
             'type': 'String',
             'description': 'The node group identifier',
         },
-        'PrivateSubnets': {
+        'Subnets': {
             'type': 'List<AWS::EC2::Subnet::Id>',
-            'description': 'Subnets to deploy private instances in.',
+            'description': 'Subnets to deploy instances in.',
         },
         'CacheNodeType': {
             'type': 'String',
@@ -60,7 +60,7 @@ class RedisCluster(Blueprint):
         subnet_group = SubnetGroup(
             SUBNET_GROUP,
             Description='%s VPC subnet group.' % (self.name,),
-            SubnetIds=Ref('PrivateSubnets'),
+            SubnetIds=Ref('Subnets'),
         )
         t.add_resource(subnet_group)
 

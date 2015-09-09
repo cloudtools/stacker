@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import logging
+import multiprocessing
 import time
 
 from collections import namedtuple
@@ -46,6 +47,11 @@ class Step(object):
     def skipped(self):
         """Returns True if the step is in a SKIPPED state."""
         return self.status == SKIPPED
+
+    @property
+    def done(self):
+        """Returns True if the step is finished (either COMPLETE or SKIPPED)"""
+        return self.completed or self.skipped
 
     @property
     def submitted(self):
@@ -100,7 +106,7 @@ class Plan(OrderedDict):
 
     """
 
-    def __init__(self, description, sleep_time=5, wait_func=None, *args,
+    def __init__(self, description, sleep_time=5, wait_func=None, watch_func=None, *args,
                  **kwargs):
         self.description = description
         self.sleep_time = sleep_time
@@ -111,6 +117,9 @@ class Plan(OrderedDict):
             self._wait_func = wait_func
         else:
             self._wait_func = time.sleep
+
+        self._watchers = {}
+        self._watch_func = watch_func
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, requires=None):
@@ -182,13 +191,29 @@ class Plan(OrderedDict):
                 )
                 continue
 
+            if not step.done and self._watch_func and step_name not in self._watchers:
+                process = multiprocessing.Process(
+                    target=self._watch_func,
+                    args=(step.stack,)
+                )
+                self._watchers[step_name] = process
+                process.start()
+
             status = step.run()
             if not isinstance(status, Status):
                 raise ValueError('Step run_func must return a valid '
                                  'Status')
-
             step.set_status(status)
+
+            if step.done and step_name in self._watchers:
+                self._terminate_watcher(self._watchers[step_name])
+
         return self.completed
+
+    def _terminate_watcher(self, watcher):
+        if watcher.is_alive():
+            watcher.terminate()
+            watcher.join()
 
     def execute(self):
         """Execute the plan.
@@ -198,13 +223,17 @@ class Plan(OrderedDict):
         """
 
         attempts = 0
-        while not self.completed:
-            attempts += 1
-            if not attempts % 10:
-                self._check_point()
+        try:
+            while not self.completed:
+                attempts += 1
+                if not attempts % 10:
+                    self._check_point()
 
-            if not self._single_run():
-                self._wait_func(self.sleep_time)
+                if not self._single_run():
+                    self._wait_func(self.sleep_time)
+        finally:
+            for watcher in self._watchers.values():
+                self._terminate_watcher(watcher)
 
         self._check_point()
 

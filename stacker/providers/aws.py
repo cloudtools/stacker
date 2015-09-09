@@ -1,13 +1,17 @@
 import logging
+import time
 
 import boto
 from boto import cloudformation
+from troposphere.utils import tail
 
 from .. import exceptions
 from .base import BaseProvider
 from ..util import retry_with_backoff
 
 logger = logging.getLogger(__name__)
+
+MAX_TAIL_RETRIES = 5
 
 
 def get_output_dict(stack):
@@ -103,6 +107,33 @@ class Provider(BaseProvider):
 
     def is_stack_destroyed(self, stack, **kwargs):
         return stack.stack_status == self.DELETED_STATUS
+
+    def tail_stack(self, stack, retries=0, **kwargs):
+        def log_func(e):
+            event_args = [e.resource_status, e.resource_type, e.resource_status_reason]
+            # filter out any values that are empty
+            event_args = [arg for arg in event_args if arg]
+            template = ' '.join(['[%s]'] + ['%s' for _ in event_args])
+            logger.info(template, *([stack.fqn] + event_args))
+
+        if not retries:
+            logger.info('Tailing stack: %s', stack.fqn)
+
+        try:
+            tail(
+                self.cloudformation,
+                stack.fqn,
+                log_func=log_func,
+                include_initial=False,
+            )
+        except boto.exception.BotoServerError as e:
+            if 'does not exist' in e.message and retries < MAX_TAIL_RETRIES:
+                # stack might be in the process of launching, wait for a second
+                # and try again
+                time.sleep(1)
+                self.tail_stack(stack, retries=retries + 1, **kwargs)
+            else:
+                raise
 
     def destroy_stack(self, stack, **kwargs):
         logger.info("Destroying stack: %s" % (stack.stack_name,))

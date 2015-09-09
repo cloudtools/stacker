@@ -228,8 +228,11 @@ class Action(BaseAction):
 
         return params.items()
 
-    def _generate_plan(self):
-        plan = Plan(description='Create/Update stacks')
+    def _generate_plan(self, tail=False):
+        plan_kwargs = {}
+        if tail:
+            plan_kwargs['watch_func'] = self.provider.tail_stack
+        plan = Plan(description='Create/Update stacks', **plan_kwargs)
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -253,13 +256,13 @@ class Action(BaseAction):
             util.handle_hooks('pre_build', pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, *args, **kwargs):
+    def run(self, outline=False, tail=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
-        plan = self._generate_plan()
+        plan = self._generate_plan(tail=tail)
         if not outline:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them

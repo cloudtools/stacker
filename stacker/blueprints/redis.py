@@ -53,6 +53,11 @@ class RedisCluster(Blueprint):
             ),
             'default': '2',
         },
+        'EngineVersion': {
+            'type': 'String',
+            'description': 'Redis version for the elasticache instance',
+            'default': '2.8.19',
+        },
     }
 
     def create_subnet_group(self):
@@ -82,7 +87,7 @@ class RedisCluster(Blueprint):
             CacheNodeType=Ref('CacheNodeType'),
             CacheSubnetGroupName=Ref(SUBNET_GROUP),
             Engine='redis',
-            EngineVersion='2.8.19',
+            EngineVersion=Ref('EngineVersion'),
             NumCacheClusters=Ref('NumCacheClusters'),
             ReplicationGroupDescription='%s replication group' % (REPLICATION_GROUP,),
             PreferredMaintenanceWindow=Ref('PreferredMaintenanceWindow'),

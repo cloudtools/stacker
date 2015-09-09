@@ -71,8 +71,8 @@ class RedisCluster(Blueprint):
             GroupDescription='%s ElastiCache security group' % (SECURITY_GROUP,),
             VpcId=Ref('VpcId'),
         )
-        resource = t.add_resource(security_group)
-        t.add_output(Output('SecurityGroup', Value=Ref(resource)))
+        t.add_resource(security_group)
+        t.add_output(Output('SecurityGroup', Value=Ref(SECURITY_GROUP)))
 
     def create_replication_group(self):
         t = self.template

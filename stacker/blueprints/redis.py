@@ -42,6 +42,7 @@ class RedisCluster(Blueprint):
                 'false, Multi-AZ is disabled for this replication group.'
             ),
             'default': 'true',
+            'allowed_values': ['true', 'false'],
         },
         'NumCacheClusters': {
             'type': 'Number',

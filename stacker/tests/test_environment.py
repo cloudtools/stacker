@@ -1,0 +1,22 @@
+import unittest
+
+from stacker.environment import parse_environment
+
+test_env = """key1: value1
+key2: value2
+key3: some:complex::value
+key4: :otherValue:
+key5: <another>@value
+"""
+
+
+class TestEnvironment(unittest.TestCase):
+
+    def test_simple_key_value_parsing(self):
+        parsed_env = parse_environment(test_env)
+        self.assertTrue(isinstance(parsed_env, dict))
+        self.assertEqual(parsed_env['key1'], 'value1')
+        self.assertEqual(parsed_env['key2'], 'value2')
+        self.assertEqual(parsed_env['key3'], 'some:complex::value')
+        self.assertEqual(parsed_env['key4'], ':otherValue:')
+        self.assertEqual(parsed_env['key5'], '<another>@value')

@@ -123,6 +123,14 @@ class BaseRDS(Blueprint):
                 "default": "false",
                 "allowed_values": ["true", "false"]
             },
+            "StorageType": {
+                "type": "String",
+                "description": "Storage type for RDS instance. Defaults to "
+                               "standard unless IOPS is set, then it "
+                               "defaults to io1",
+                "default": "default",
+                "allowed_values": ["default", "standard", "gp2", "io1"]
+            },
             "AllocatedStorage": {
                 "type": "Number",
                 "description": "Space, in GB, to allocate to RDS instance. If "
@@ -225,11 +233,11 @@ class BaseRDS(Blueprint):
                 Condition("HasInternalZoneName"),
                 Condition("HasInternalHostname")))
         t.add_condition(
-            "ProvisionedIOPS",
+            "HasProvisionedIOPS",
             Not(Equals(Ref("IOPS"), "0")))
         t.add_condition(
-            "NoProvisionedIOPS",
-            Equals(Ref("IOPS"), "0"))
+            "HasStorageType",
+            Not(Equals(Ref("StorageType"), "default")))
 
     def create_subnet_group(self):
         t = self.template
@@ -285,14 +293,13 @@ class BaseRDS(Blueprint):
         t.add_resource(
             DBInstance(
                 DBINSTANCE,
-                StorageType=If("NoProvisionedIOPS",
-                               Ref("AWS::NoValue"),
-                               "io1"),
-                Iops=If("NoProvisionedIOPS",
-                        Ref("AWS::NoValue"),
-                        Ref("IOPS")),
-                **self.get_common_attrs()
-                ))
+                StorageType=If("HasStorageType",
+                               Ref("StorageType"),
+                               Ref("AWS::NoValue")),
+                Iops=If("HasProvisionedIOPS",
+                        Ref("IOPS"),
+                        Ref("AWS::NoValue")),
+                **self.get_common_attrs()))
 
     def create_dns_records(self):
         t = self.template

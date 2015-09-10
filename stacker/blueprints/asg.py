@@ -171,9 +171,12 @@ class AutoscalingGroup(Blueprint):
     def get_autoscaling_group_parameters(self):
         return {}
 
+    def get_launch_configuration_security_groups(self):
+        sg_name = CLUSTER_SG_NAME % self.name
+        return [Ref("DefaultSG"), Ref(sg_name)]
+
     def create_autoscaling_group(self):
         name = "%sASG" % self.name
-        sg_name = CLUSTER_SG_NAME % self.name
         launch_config = "%sLaunchConfig" % name
         elb_name = ELB_NAME % self.name
         t = self.template
@@ -183,7 +186,7 @@ class AutoscalingGroup(Blueprint):
                               Ref('ImageName')),
             InstanceType=Ref("InstanceType"),
             KeyName=Ref("SshKeyName"),
-            SecurityGroups=[Ref("DefaultSG"), Ref(sg_name)],
+            SecurityGroups=self.get_launch_configuration_security_groups(),
             **self.get_launch_configuration_parameters()
         ))
         t.add_resource(autoscaling.AutoScalingGroup(

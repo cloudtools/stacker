@@ -17,12 +17,12 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
         return True
 
     logger.info('keypair: "%s" not found', keypair_name)
-    upload = raw_input(
-        'would you like to import "%s" keypair now? (yes/no) ' % (
+    create_or_upload = raw_input(
+        'import or create keypair "%s"? (import/create/cancel) ' % (
             keypair_name,
         ),
     )
-    if upload == 'yes':
+    if create_or_upload == 'import':
         path = raw_input('path to keypair file: ')
         full_path = os.path.abspath(os.path.expanduser(path))
         if not os.path.exists(full_path):
@@ -36,6 +36,16 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
                                              b64encode(contents))
         logger.info(message, keypair.name, keypair.fingerprint, 'imported')
         return True
+    elif create_or_upload == 'create':
+        path = raw_input('directory to save keyfile: ')
+        full_path - os.path.abspath(os.path.expanduser(path))
+        if not os.path.exists(full_path) and not os.path.isdir(full_path):
+            logger.error('"%s" is not a valid directory', full_path)
+            return False
+
+        keypair = connection.create_key_pair(keypair_name)
+        logger.info(message, keypair.name, keypair.fingerprint, 'created')
+        return keypair.save(full_path)
     else:
-        logger.warning('keypair must manually be imported')
+        logger.warning('no action to find keypair, failing')
         return False

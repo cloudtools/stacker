@@ -38,7 +38,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
         return True
     elif create_or_upload == 'create':
         path = raw_input('directory to save keyfile: ')
-        full_path - os.path.abspath(os.path.expanduser(path))
+        full_path = os.path.abspath(os.path.expanduser(path))
         if not os.path.exists(full_path) and not os.path.isdir(full_path):
             logger.error('"%s" is not a valid directory', full_path)
             return False

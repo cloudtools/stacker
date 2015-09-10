@@ -194,7 +194,7 @@ class AutoscalingGroup(Blueprint):
             MaxSize=Ref("MaxSize"),
             VPCZoneIdentifier=Ref("PrivateSubnets"),
             LoadBalancerNames=If("CreateELB", [Ref(elb_name), ], []),
-            Tags=[ASTag('Name', self.name, True)]
+            Tags=[ASTag('Name', self.name, True)],
             **self.autoscaling_group_parameters()
         ))
 

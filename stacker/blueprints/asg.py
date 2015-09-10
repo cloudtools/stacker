@@ -165,10 +165,10 @@ class AutoscalingGroup(Blueprint):
                     GetAtt(elb_name, 'DNSName')],
                 Condition="SetupELBDNS"))
 
-    def launch_configuration_parameters(self):
+    def get_launch_configuration_parameters(self):
         return {}
 
-    def autoscaling_group_parameters(self):
+    def get_autoscaling_group_parameters(self):
         return {}
 
     def create_autoscaling_group(self):
@@ -184,7 +184,7 @@ class AutoscalingGroup(Blueprint):
             InstanceType=Ref("InstanceType"),
             KeyName=Ref("SshKeyName"),
             SecurityGroups=[Ref("DefaultSG"), Ref(sg_name)],
-            **self.launch_configuration_parameters()
+            **self.get_launch_configuration_parameters()
         ))
         t.add_resource(autoscaling.AutoScalingGroup(
             name,
@@ -195,7 +195,7 @@ class AutoscalingGroup(Blueprint):
             VPCZoneIdentifier=Ref("PrivateSubnets"),
             LoadBalancerNames=If("CreateELB", [Ref(elb_name), ], []),
             Tags=[ASTag('Name', self.name, True)],
-            **self.autoscaling_group_parameters()
+            **self.get_autoscaling_group_parameters()
         ))
 
     def create_template(self):

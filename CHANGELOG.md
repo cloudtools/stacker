@@ -1,3 +1,9 @@
+## 0.5.2 (2015-09-10)
+
+- Add Dockerfile/image [GH-87]
+- Clean up environment docs [GH-88]
+- Make StorageType configurable in RDS v2 [GH-92]
+
 ## 0.5.1 (2015-09-08)
 
 - Add info subcommand [GH-73]

@@ -22,10 +22,14 @@ def get_vaulted_value(value):
         conf_key: world
 
     """
-    if '@' not in value:
-        raise TypeError('Vaulted vaules must include a "@<key in stored data>"')
+    try:
+        path, key = value.split('@', 1)
+    except ValueError:
+        raise TypeError(
+            'Vaulted vaules must be of the format'
+            ' "<path in vault>@<key in stored data>" (got %s)' % (value,)
+        )
 
-    path, key = value.split('@')
     response = subprocess.check_output(['vault', 'read', '-format=json', path])
     result = json.loads(response)
     return result[key]

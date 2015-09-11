@@ -3,7 +3,10 @@ from StringIO import StringIO
 
 import yaml
 
-from . import exceptions
+from .. import exceptions
+
+# add any custom yaml constructors
+from .constructors import *  # NOQA
 
 
 def parse_config(raw_config, environment=None):

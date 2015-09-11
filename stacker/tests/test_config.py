@@ -33,6 +33,6 @@ class TestConfig(unittest.TestCase):
 
     @patch('stacker.config.translators.subprocess')
     def test_vault_constructor(self, patched):
-        patched.check_output.return_value = 'secret'
+        patched.check_output.return_value = 'secret\n'
         c = parse_config('a: $a', {'a': '!vault secret/hello@value'})
         self.assertEqual(c['a'], 'secret')

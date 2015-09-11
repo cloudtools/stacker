@@ -91,7 +91,7 @@ class RedisCluster(Blueprint):
             NumCacheClusters=Ref('NumCacheClusters'),
             ReplicationGroupDescription='%s replication group' % (REPLICATION_GROUP,),
             PreferredMaintenanceWindow=Ref('PreferredMaintenanceWindow'),
-            SecurityGroupIds=[GetAtt(SECURITY_GROUP, 'GroupId')],
+            SecurityGroupIds=[Ref(SECURITY_GROUP)],
         )
         resource = t.add_resource(replication_group)
         t.add_output(Output('ReplicationGroup', Value=Ref(resource)))

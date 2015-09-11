@@ -1,4 +1,3 @@
-import json
 import subprocess
 import yaml
 
@@ -30,9 +29,7 @@ def get_vaulted_value(value):
             ' "<path in vault>@<key in stored data>" (got %s)' % (value,)
         )
 
-    response = subprocess.check_output(['vault', 'read', '-format=json', path])
-    result = json.loads(response)
-    return result[key]
+    return subprocess.check_output(['vault', 'read', '-field=%s' % (key,), path])
 
 
 def vault_constructor(loader, node):

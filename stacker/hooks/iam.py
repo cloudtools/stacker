@@ -36,17 +36,28 @@ def create_ecs_service_role(region, namespace, mappings, parameters,
     return True
 
 
-def _get_cert_arn_from_response(response):
-    return response['upload_server_certificate_response'][
-        'upload_server_certificate_result'
-    ]['server_certificate_metadata']['arn']
+def _get_cert_arn_from_response(prefix, response):
+    response_key = '%s_response' % (prefix,)
+    result_key = '%s_result' % (prefix,)
+    result = response[response_key][
+        result_key
+    ]
+    # GET response returns this extra key
+    if 'server_certificate' in result:
+        result = result['server_certificate']
+    return result['server_certificate_metadata']['arn']
 
 
 def ensure_server_cert_exists(region, namespace, mappings, parameters, **kwargs):
     conn = connect_to_region(region)
     cert_name = kwargs['cert_name']
     try:
-        conn.get_server_certificate(cert_name)
+        response = conn.get_server_certificate(cert_name)
+        cert_arn = _get_cert_arn_from_response(
+            'get_server_certificate',
+            response,
+        )
+        logger.info('certificate exists: %s (%s)', cert_name, cert_arn)
     except BotoServerError:
         upload = raw_input(
             'Certificate "%s" wasn\'t found. Upload it now? (yes/no) ' % (
@@ -91,10 +102,14 @@ def ensure_server_cert_exists(region, namespace, mappings, parameters, **kwargs)
                 parameters['cert_chain'] = contents
 
         response = conn.upload_server_cert(**parameters)
+        cert_arn = _get_cert_arn_from_response(
+            'upload_server_certificate',
+            response,
+        )
         logger.info(
             'uploaded certificate: %s (%s)',
             cert_name,
-            _get_cert_arn_from_response(response),
+            cert_arn,
         )
 
     return True

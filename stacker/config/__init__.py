@@ -5,8 +5,8 @@ import yaml
 
 from .. import exceptions
 
-# add any custom yaml constructors
-from .constructors import *  # NOQA
+# register translators (yaml constructors)
+from .translators import *  # NOQA
 
 
 def parse_config(raw_config, environment=None):

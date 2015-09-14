@@ -1,4 +1,3 @@
-from base64 import b64encode
 import logging
 import os
 
@@ -32,8 +31,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
         with open(full_path) as read_file:
             contents = read_file.read()
 
-        keypair = connection.import_key_pair(keypair_name,
-                                             b64encode(contents))
+        keypair = connection.import_key_pair(keypair_name, contents)
         logger.info(message, keypair.name, keypair.fingerprint, 'imported')
         return True
     elif create_or_upload == 'create':

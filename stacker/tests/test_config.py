@@ -1,5 +1,7 @@
+import json
 import unittest
 
+from mock import patch
 from stacker.config import parse_config
 from stacker import exceptions
 
@@ -19,6 +21,18 @@ class TestConfig(unittest.TestCase):
         c = parse_config("a: A", {})
         self.assertEqual(c["a"], "A")
 
-    def valid_env_substitution(self):
+    def test_valid_env_substitution(self):
         c = parse_config("a: $a", {"a": "A"})
         self.assertEqual(c["a"], "A")
+
+    @patch('stacker.config.translators.get_vaulted_value')
+    def test_custom_constructors(self, patched):
+        patched.return_value = 'stub'
+        c = parse_config("a: $a", {"a": "!vault some_encrypted_value"})
+        self.assertEqual(c['a'], 'stub')
+
+    @patch('stacker.config.translators.subprocess')
+    def test_vault_constructor(self, patched):
+        patched.check_output.return_value = 'secret\n'
+        c = parse_config('a: $a', {'a': '!vault secret/hello@value'})
+        self.assertEqual(c['a'], 'secret')

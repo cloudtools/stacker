@@ -106,6 +106,7 @@ class BaseCommand(object):
     def parse_args(self):
         parser = argparse.ArgumentParser(description=self.description)
         self.add_subcommands(parser)
+        self.add_arguments(parser)
         return parser.parse_args()
 
     def run(self, options, **kwargs):
@@ -132,9 +133,6 @@ class BaseCommand(object):
         return {}
 
     def add_arguments(self, parser):
-        if not self.subcommands:
-            parser.set_defaults(run=self.run)
-
         # global arguments that should be available on all stacker subcommands
         parser.add_argument("-p", "--parameter", dest="parameters",
                             metavar="PARAMETER=VALUE", type=key_value_arg,

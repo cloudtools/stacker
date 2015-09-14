@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from troposphere import Ref, Output, GetAtt, Tags, FindInMap
+from troposphere import Ref, Output, GetAtt, Tags, FindInMap, Join, Base64
 from troposphere import ec2, autoscaling, ecs
 from troposphere.autoscaling import Tag as ASTag
 from troposphere.iam import Role, InstanceProfile, Policy
@@ -74,6 +74,9 @@ class EmpireMinion(EmpireBase):
         "DockerRegistryEmail": {
             "type": "String",
             "description": "Email for authentication with docker registry."},
+        "DBSecurityGroup": {
+            "type": "AWS::EC2::SecurityGroup::Id",
+            "description": "Security group of the database."},
     }
 
     def create_security_groups(self):
@@ -91,6 +94,13 @@ class EmpireMinion(EmpireBase):
                 IpProtocol='-1', FromPort='-1', ToPort='-1',
                 SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
                 GroupId=Ref(CLUSTER_SG_NAME)))
+
+        t.add_resource(
+            ec2.SecurityGroupIngress(
+                "EmpireMinionDBAccess",
+                IpProtocol='tcp', FromPort=5432, ToPort=5432,
+                SourceSecurityGroupId=Ref(CLUSTER_SG_NAME),
+                GroupId=Ref('DBSecurityGroup')))
 
         # Application ELB Security Groups
         # Internal
@@ -183,6 +193,40 @@ class EmpireMinion(EmpireBase):
             ]
         return seed
 
+    def generate_shell_script_contents(self):
+        script = [
+                "#!/bin/bash\n",
+                "yum install -y jq aws-cli\n",
+                "cluster=",
+                Ref("EmpireMinionCluster"),
+                "\n",
+                "echo ECS_CLUSTER=$cluster >> /etc/ecs/ecs.config\n",
+                ". /etc/empire/seed\n"
+                "echo ECS_ENGINE_AUTH_TYPE=docker >> /etc/ecs/ecs.config\n"
+                "auth_data=$(printf 'ECS_ENGINE_AUTH_DATA={\"%s\":{\"username\":\"%s\",\"password\":\"%s\",\"email\":\"%s\"}}' $DOCKER_REGISTRY $DOCKER_USER $DOCKER_PASS $DOCKER_EMAIL)\n"
+                "echo $auth_data >> /etc/ecs/ecs.config\n"
+                "start ecs\n", 
+                "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
+                "while [ \"$instance_arn\" = \"\" ]\n",
+                "do\n",
+                "instance_arn=$(curl -s http://localhost:51678/v1/metadata | jq -r '. | .ContainerInstanceArn' | awk -F/ '{print $NF}' )\n",
+                "sleep 5\n",
+                "done\n",
+                "az=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n",
+                "region=${az:0:${#az} - 1}\n",
+                "echo \" \n",
+                "cluster=$cluster\n",
+                "az=$az\n",
+                "region=$region\n",
+                "instance_arn=$instance_arn\n"
+                "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",
+                "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region \" > /etc/rc.local\n"
+                # "aws ecs start-task --cluster $cluster --task-definition dd-agent-task-bauxy:1 --container-instances $instance_arn --region $region\n",
+                # "aws ecs start-task --cluster $cluster --task-definition logspout-task-bauxy:1 --container-instances $instance_arn --region $region"
+        ]
+
+        return script
+
     def create_autoscaling_group(self):
         t = self.template
         t.add_resource(
@@ -207,3 +251,27 @@ class EmpireMinion(EmpireBase):
                 MaxSize=Ref("MaxSize"),
                 VPCZoneIdentifier=Ref("PrivateSubnets"),
                 Tags=[ASTag('Name', 'empire_minion', True)]))
+
+    def generate_user_data(self):
+        contents = Join("", self.generate_seed_contents())
+        script_contents = Join("", self.generate_shell_script_contents())
+        stanza = Base64(Join(
+            "",
+            [
+                "#cloud-config\n",
+                "write_files:\n",
+                "  - encoding: b64\n",
+                "    content: ", Base64(contents), "\n",
+                "    owner: root:root\n",
+                "    path: /etc/empire/seed\n",
+                "    permissions: 0640\n",
+                "  - encoding: b64\n",
+                "    content: ", Base64(script_contents), "\n",
+                "    owner: root:root\n",
+                "    path: /etc/empire/script\n",
+                "    permissions: 0640\n",
+                "runcmd:\n"
+                "  - [ bash, -c, \"bash /etc/empire/script\" ]"
+            ]
+        ))
+        return stanza

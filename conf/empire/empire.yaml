@@ -39,15 +39,15 @@ mappings:
     us-east-1:
       NAT: ami-c02b04a8
       ubuntu1404: ami-c135f3aa
-      empire: ami-a18d2fca
+      empire: ami-1963c872
     us-west-1:
       NAT: ami-67a54423
       ubuntu1404: ami-bf3dccfb
-      empire: ami-ade11ee9
+      empire: ami-25d02e61
     us-west-2:
       NAT: ami-2dae821d
       ubuntu1404: ami-f15b5dc1
-      empire: ami-f5ccc4c5
+      empire: ami-85ede7b5
 
 # Many stacks need these settings, or a subset of them, from the VPC -
 # this makes it easy to pass them around. Stacker will drop unused Parameters
@@ -71,12 +71,15 @@ stacks:
   - name: vpc
     class_path: stacker.blueprints.vpc.VPC
     parameters:
-      # Only build in 4 AZs, can be overridden with -p on the command line
-      # Note: If you want more than 4 AZs you should add more subnets below
-      #       Also you need at least 2 AZs in order to use the DB because
-      #       of the fact that the DB blueprint uses MultiAZ
-      # Note: You will create a NAT instance PER Availability zone.
-      AZCount: 4
+      # AZCount is the # of AvailabilityZones to attempt to build in. You
+      # should build in as many as you can afford in order to provide for
+      # better fault tolerance. Note: Since this is all done in a VPC, you
+      # need to find out how many AZs can handle VPC subnets for the
+      # region you are building in. As of this writing, here are the max
+      # allowed AZCount's for each zone:
+      #     us-east-1: 4, us-west-1: 2, us-west-2: 3, eu-west-1: 3
+      # Note: The minimum allowed AZCount is 2.
+      AZCount: ${azcount}
       # Enough subnets for 4 AZs
       PublicSubnets: 10.128.0.0/24,10.128.1.0/24,10.128.2.0/24,10.128.3.0/24
       PrivateSubnets: 10.128.8.0/22,10.128.12.0/22,10.128.16.0/22,10.128.20.0/22
@@ -106,6 +109,9 @@ stacks:
       ImageName: ubuntu1404
   - name: empireDB
     class_path: stacker.blueprints.postgres.PostgresRDS
+    # this stack is locked, which means it will not update unless you pass the
+    # stack name "empireDB" on the command line with --force
+    locked: true
     parameters:
       << : *vpc_parameters
       InstanceType: ${empiredb_instance_type}

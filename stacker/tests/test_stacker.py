@@ -12,7 +12,8 @@ class TestStacker(unittest.TestCase):
         stacker.add_subcommands(parser)
         args = parser.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
-             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16', 'stacker-test',
+             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
+             'stacker/tests/fixtures/basic.env',
              'stacker/tests/fixtures/vpc-bastion-db-web.yaml']
         )
         # verify parameters
@@ -21,7 +22,6 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(parameters['CidrBlock'], '10.128.0.0/16')
         self.assertEqual(parameters['AZCount'], '2')
         self.assertEqual(args.region, 'us-west-2')
-        self.assertEqual(args.namespace, 'stacker-test')
         self.assertFalse(args.outline)
 
     def test_stacker_build_context_passed_to_blueprint(self):
@@ -30,7 +30,8 @@ class TestStacker(unittest.TestCase):
         stacker.add_subcommands(parser)
         args = parser.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
-             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16', 'stacker-test',
+             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
+             'stacker/tests/fixtures/basic.env',
              'stacker/tests/fixtures/vpc-bastion-db-web.yaml']
         )
         stacker.configure(args)
@@ -52,7 +53,8 @@ class TestStacker(unittest.TestCase):
         stacker.add_subcommands(parser)
         args = parser.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
-             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16', 'stacker-test',
+             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
+             'stacker/tests/fixtures/basic.env',
              'stacker/tests/fixtures/vpc-bastion-db-web.yaml']
         )
         stacker.configure(args)
@@ -68,7 +70,8 @@ class TestStacker(unittest.TestCase):
         stacker.add_subcommands(parser)
         args = parser.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
-             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16', 'stacker-test',
+             'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
+             'stacker/tests/fixtures/basic.env',
              'stacker/tests/fixtures/vpc-bastion-db-web.yaml', '--stacks',
              'vpc', '--stacks', 'bastion']
         )

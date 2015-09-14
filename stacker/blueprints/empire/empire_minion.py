@@ -68,6 +68,7 @@ class EmpireMinion(EmpireBase):
             "description": "User for authentication with docker registry."},
         "DockerRegistryPassword": {
             "type": "String",
+            "no_echo": True,
             "description": "Password for authentication with docker "
                            "registry."},
         "DockerRegistryEmail": {

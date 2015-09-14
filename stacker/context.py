@@ -1,3 +1,4 @@
+from .exceptions import MissingEnvironment
 from .config import parse_config
 from .stack import Stack
 
@@ -8,16 +9,37 @@ class Context(object):
     The stacker Context is responsible for translating the values passed in via
     the command line and specified in the config to `Stack` objects.
 
+    Args:
+        namespace (string): A unique namespace for the stacks being built.
+        environment (dict): A dictionary used to pass in information about
+            the environment. Useful for templating.
+        stack_names (list): A list of stack_names to operate on. If not passed,
+            usually all stacks defined in the config will be operated on.
+        parameters (dict): Parameters passed down to each blueprint to
+            parameterize the templates.
+        mappings (dict): Used as Cloudformation mappings for the blueprint.
+        config (dict): The configuration being operated on, containing the
+            stack definitions.
+        force_stacks (list): A list of stacks to force work on. Used to work
+            on locked stacks.
+
     """
 
-    _optional_keys = ('environment', 'stack_names', 'parameters', 'mappings',
-                      'config')
+    def __init__(self, environment, stack_names=None,
+                 parameters=None, mappings=None, config=None,
+                 force_stacks=None):
+        try:
+            self.namespace = environment['namespace']
+        except KeyError:
+            raise MissingEnvironment(['namespace'])
 
-    def __init__(self, namespace, **kwargs):
-        self.namespace = namespace
-        for key in self._optional_keys:
-            setattr(self, key, kwargs.get(key))
-        self._base_fqn = namespace.replace('.', '-').lower()
+        self.environment = environment
+        self.stack_names = stack_names or []
+        self.parameters = parameters or {}
+        self.mappings = mappings or {}
+        self.config = config or {}
+        self.force_stacks = force_stacks or []
+        self._base_fqn = self.namespace.replace('.', '-').lower()
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
@@ -38,7 +60,7 @@ class Context(object):
         mappings specified in the config.
 
         Returns:
-            list: a list of `stacker.stack.Stack` objects
+            list: a list of :class:`stacker.stack.Stack` objects
 
         """
         if not hasattr(self, '_stacks'):
@@ -50,6 +72,8 @@ class Context(object):
                     context=self,
                     parameters=self.parameters,
                     mappings=self.mappings,
+                    force=stack_def['name'] in self.force_stacks,
+                    locked=stack_def.get('locked', False),
                 )
                 self._stacks.append(stack)
         return self._stacks
@@ -58,5 +82,13 @@ class Context(object):
         return dict((stack.fqn, stack) for stack in self.get_stacks())
 
     def get_fqn(self, name=None):
-        """Return the fully qualified name of an object within this context."""
+        """Return the fully qualified name of an object within this context.
+
+        If the name passed already appears to be a fully qualified name, it
+        will be returned with no further processing.
+
+        """
+        if name and name.startswith(self._base_fqn + '-'):
+            return name
+
         return '-'.join(filter(None, [self._base_fqn, name]))

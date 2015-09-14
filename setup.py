@@ -5,11 +5,10 @@ import glob
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    'aws_helper>=0.2.0',
-    'troposphere>=1.0.0',
+    'troposphere>=1.2.1',
     'boto>=2.25.0',
     'PyYAML>=3.11',
-    'awacs>=0.5.2',
+    'awacs>=0.5.3',
 ]
 
 tests_require = [
@@ -27,7 +26,7 @@ def read(filename):
 if __name__ == '__main__':
     setup(
         name='stacker',
-        version='0.4.1',
+        version='0.5.2',
         author='Michael Barrett',
         author_email='loki77@gmail.com',
         license="New BSD license",

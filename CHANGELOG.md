@@ -1,4 +1,33 @@
-## pending
+## 0.5.2 (2015-09-10)
+
+- Add Dockerfile/image [GH-87]
+- Clean up environment docs [GH-88]
+- Make StorageType configurable in RDS v2 [GH-92]
+
+## 0.5.1 (2015-09-08)
+
+- Add info subcommand [GH-73]
+- Move namespace into environment [GH-72]
+- Simplified basecommand [GH-74]
+- Documentation updates [GH-75, GH-77, GH-78]
+- aws\_helper removal [GH-79]
+- Move VPC to use LOCAL\_PARAMETERS [GH-81]
+- Lower default AZ count to 2 [GH-82]
+- Allow use of all parameter properties [GH-83]
+- Parameter gathering in method [GH-84]
+- NoEcho on sensitive parameters in blueprnts [GH-85]
+- Version 2 RDS Blueprints [GH-86]
+
+## 0.5.0 (2015-08-13)
+
+- stacker subcommands [GH-35]
+- Added Empire production stacks [GH-43]
+  - Major change in internal code layout & added testing
+- added destroy subcommand [GH-59]
+- Local Blueprint Parameters [GH-61]
+- Lockable stacks [GH-62]
+- Deal with Cloudformation API throttling [GH-64]
+- Clarify Remind's usage of stacker in README [GH-70]
 
 ## 0.4.1 (2015-07-23)
 

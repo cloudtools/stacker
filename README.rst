@@ -17,13 +17,24 @@ At this point this is very much alpha software - it is still in heavy
 development, and interfaces/configuration/etc may/will likely/most definitely
 change :)
 
+That said, at Remind we use stacker to manage all of our Cloudformation stacks-
+both in development, staging and production without any major issues.
+
+Stacker Command
+===============
+
+The stacker command is built to have sub-commands, much like git. Currently the
+only implemented command is ``build``, which handles taking your stack config
+and then launching or updating stacks as necessary.
+
 Example
 =======
 
 We've provided an example stack in *conf/example.yaml* that can be launched
 in your account.  It creates 4 stacks:
 
-- A VPC (including NAT hosts in each AZ)
+- A VPC (including NAT hosts in each AZ, and dns entries in *BaseDomain*)
+- A public, route53 zone (*BaseDomain* parameter)
 - A bastion stack (for ssh'ing into other stacks on the VPC)
 - A RDS stack (postgres)
 - An autoscaling group stack
@@ -33,45 +44,7 @@ if you'd like to play with something smaller. To launch the stacks, after
 installing stacker and loading your AWS API keys in your environment
 (AWS\_ACCESS\_KEY\_ID & AWS\_SECRET\_ACCESS\_KEY), call the following::
 
-    stacker -v -p BaseDomain=example.com -r us-east-1 -p AZCount=2 -p CidrBlock=10.128.0.0/16 example.com conf/example.yaml
-
-Here's the syntax help from the command::
-
-  # stacker -h
-  usage: stacker [-h] [-r REGION] [-m MAX_ZONES] [-v] [-p PARAMETER=VALUE]
-                 [--stacks STACKNAME]
-                 namespace config
-
-  Launches or updates cloudformation stacks based on the given config. The
-  script is smart enough to figure out if anything (the template, or parameters)
-  has changed for a given stack. If not, it will skip that stack. Can also pull
-  parameters from other stack's outputs.
-
-  positional arguments:
-    namespace             The namespace for the stack collection. This will be
-                          used as the prefix to the cloudformation stacks as
-                          well as the s3 bucket where templates are stored.
-    config                The config file where stack configuration is located.
-                          Must be in yaml format.
-
-  optional arguments:
-    -h, --help            show this help message and exit
-    -r REGION, --region REGION
-                          The AWS region to launch in. Default: us-east-1
-    -m MAX_ZONES, --max-zones MAX_ZONES
-                          Gives you the ability to limit the # of zones that
-                          resources will be launched in. If not given, then
-                          resources will be launched in all available
-                          availability zones.
-    -v, --verbose         Increase output verbosity. May be specified up to
-                          twice.
-    -p PARAMETER=VALUE, --parameter PARAMETER=VALUE
-                          Adds parameters from the command line that can be used
-                          inside any of the stacks being built. Can be specified
-                          more than once.
-    --stacks STACKNAME    Only work on the stacks given. Can be specified more
-                          than once. If not specified then stacker will work on
-                          all stacks in the config file.
+    stacker build -v -p BaseDomain=blahblah.com -r us-east-1 conf/stage.env conf/example.yaml
 
 As of now there is no option to tear down the stack in the tool (we plan to
 add it), so you'll need to tear the stacks it creates down manually. When doing
@@ -92,7 +65,7 @@ different ways:
 - from an existing stack
 
 Each of those overrides similarly named parameters beneath it, so if you
-use ``-p CidrBlock`` on the command line, it doesn't matter what is in the
+use ``-p CidrBlock=`` on the command line, it doesn't matter what is in the
 config file or any existing stacks. This is useful if, for example, you want
 to keep sensitive information (passwords, etc) out of the config file (which
 you'll likely check into a RCS), but need a way to supply them.
@@ -104,12 +77,10 @@ parameter. If it finds it, it will use that automatically.
 Environments
 ============
 
-As well as definining the stack config, you can further customize the stack
-config via an environment (ie the ``-e or --environment`` argument).
-
-The environment should point at a yaml formatted file that contains a flat
-dictionary (ie: only key: value pairs).  Those keys can be used in the
-stack config as python `string.Template`_ mappings.
+As well as defining the stack config, you'll need to specify an
+environment. The environment should point to a yaml formatted file that
+contains a flat dictionary (ie: only ``key: value`` pairs).  Those keys
+can be used in the stack config as python `string.Template`_ mappings.
 
 For example, if you wanted to name a stack based on the environment you were
 building it in, first you would create an environment file with the
@@ -124,6 +95,24 @@ stack), you would have the following::
 
 Stacker would then name the VPC stack ``stageVPC``.
 
+At a minimum the environment must define the ``namespace`` parameter::
+
+  namespace: example.com
+
+The namespace should be a unique name that the stacks will be built under.
+This value will be used to prefix the CloudFormation stack names as well
+as the s3 bucket that contains the stacker templates. Specifying the
+namespace in the environment file helps preserve the namespace for the
+stacks between subsequent builds.
+
 .. _Remind: http://www.remind.com/
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _string.Template: https://docs.python.org/2/library/string.html#template-strings
+
+Docker
+======
+
+Stack can also be executed from Docker. Use this method to run stacker if you
+want to avoid setting up a python environment::
+
+  docker run -v `pwd`:/stacks remind101/stacker build ...

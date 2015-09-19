@@ -174,6 +174,11 @@ class BaseRDS(Blueprint):
                 "max_length": "63",
                 "allowed_pattern": "[a-zA-Z][a-zA-Z0-9-]*",
                 "default": self.name},
+            "DBSnapshotIdentifier": {
+                "type": "String",
+                "description": "The snapshot you want the db restored from.",
+                "default": "",
+            },
             "EngineVersion": {
                 "type": "String",
                 "description": "Database engine version for the RDS Instance.",
@@ -238,6 +243,9 @@ class BaseRDS(Blueprint):
         t.add_condition(
             "HasStorageType",
             Not(Equals(Ref("StorageType"), "default")))
+        t.add_condition(
+            "HasDBSnapshotIdentifier",
+            Not(Equals(Ref("DBSnapshotIdentifier"), "")))
 
     def create_subnet_group(self):
         t = self.template
@@ -399,6 +407,11 @@ class MasterInstance(BaseRDS):
             "DBName": Ref("DatabaseName"),
             "DBInstanceClass": Ref("InstanceType"),
             "DBInstanceIdentifier": Ref("DBInstanceIdentifier"),
+            "DBSnapshotIdentifier": If(
+                "HasDBSnapshotIdentifier",
+                Ref("DBSnapshotIdentifier"),
+                Ref("AWS::NoValue"),
+            ),
             "DBParameterGroupName": Ref("ParameterGroup"),
             "DBSubnetGroupName": Ref(SUBNET_GROUP),
             "Engine": self.engine() or Ref("Engine"),

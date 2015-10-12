@@ -78,7 +78,15 @@ def empire_policy():
                     route53.ListHostedZones, route53.GetHostedZone
                 ],
                 # TODO: Limit to specific zones
-                Resource=["*"])
+                Resource=["*"]),
+            Statement(
+                Effect=Allow,
+                Action=[
+                    kinesis.DescribeStream,
+                    Action(kinesis.prefix, "Get*"),
+                    Action(kinesis.prefix, "List*")
+                ],
+                Resource=["*"]),
         ]
     )
     return p

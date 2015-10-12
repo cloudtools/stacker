@@ -1,8 +1,9 @@
 import logging
+import copy
 
 logger = logging.getLogger(__name__)
 
-from troposphere import Ref, Output, GetAtt, Tags, FindInMap
+from troposphere import Ref, Output, GetAtt, Tags, FindInMap, If, Equals
 from troposphere import ec2, autoscaling, ecs
 from troposphere.autoscaling import Tag as ASTag
 from troposphere.iam import Role, InstanceProfile, Policy
@@ -11,7 +12,7 @@ from awacs.helpers.trust import get_default_assumerole_policy
 
 from .empire_base import EmpireBase
 
-from .policies import ecs_agent_policy
+from .policies import ecs_agent_policy, logstream_policy
 
 CLUSTER_SG_NAME = "EmpireMinionSecurityGroup"
 
@@ -74,7 +75,20 @@ class EmpireMinion(EmpireBase):
         "DockerRegistryEmail": {
             "type": "String",
             "description": "Email for authentication with docker registry."},
+        "DisableStreamingLogs": {
+            "type": "String",
+            "description": "Disables streaming logging if set to anything."
+                           "Note: Without this Empire creates a kinesis "
+                           "stream per app that you deploy in Empire.",
+            "default": "",
+        },
     }
+
+    def create_conditions(self):
+        t = self.template
+        t.add_condition(
+            "EnableStreamingLogs",
+            Equals(Ref("DisableStreamingLogs"), ""))
 
     def create_security_groups(self):
         t = self.template
@@ -144,22 +158,32 @@ class EmpireMinion(EmpireBase):
 
         return [docker_volume, swap_volume]
 
+    def generate_iam_policies(self):
+        ns = self.context.namespace
+        base_policies = [
+            Policy(
+                PolicyName="%s-ecs-agent" % ns,
+                PolicyDocument=ecs_agent_policy()),
+        ]
+        with_logging = copy.deepcopy(base_policies)
+        with_logging.append(
+            Policy(
+                PolicyName="%s-kinesis-logging" % ns,
+                PolicyDocument=logstream_policy()
+            )
+        )
+        policies = If("EnableStreamingLogs", with_logging, base_policies)
+        return policies
+
     def create_iam_profile(self):
         t = self.template
-        ns = self.context.namespace
-        # Create the EmpireMinionRole - this has all the permissions
-        # that the ECS Agent needs.
         ec2_role_policy = get_default_assumerole_policy()
         t.add_resource(
             Role(
                 "EmpireMinionRole",
                 AssumeRolePolicyDocument=ec2_role_policy,
                 Path="/",
-                Policies=[
-                    Policy(
-                        PolicyName="%s-ecs-agent" % ns,
-                        PolicyDocument=ecs_agent_policy()),
-                ]))
+                Policies=self.generate_iam_policies()))
         t.add_resource(
             InstanceProfile(
                 "EmpireMinionProfile",
@@ -180,6 +204,8 @@ class EmpireMinion(EmpireBase):
             "DOCKER_USER=", Ref("DockerRegistryUser"), "\n",
             "DOCKER_PASS=", Ref("DockerRegistryPassword"), "\n",
             "DOCKER_EMAIL=", Ref("DockerRegistryEmail"), "\n",
+            "ENABLE_STREAMING_LOGS=", If("EnableStreamingLogs",
+                                         "true", "false"), "\n"
             ]
         return seed
 

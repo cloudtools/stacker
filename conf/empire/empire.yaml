@@ -39,15 +39,15 @@ mappings:
     us-east-1:
       NAT: ami-c02b04a8
       ubuntu1404: ami-c135f3aa
-      empire: ami-1963c872
+      empire: ami-8fbaf1ea # https://circleci.com/gh/remind101/empire_ami/43
     us-west-1:
       NAT: ami-67a54423
       ubuntu1404: ami-bf3dccfb
-      empire: ami-25d02e61
+      empire: ami-6b57962f # https://circleci.com/gh/remind101/empire_ami/43
     us-west-2:
       NAT: ami-2dae821d
       ubuntu1404: ami-f15b5dc1
-      empire: ami-85ede7b5
+      empire: ami-4628ce75 # https://circleci.com/gh/remind101/empire_ami/43
 
 # Many stacks need these settings, or a subset of them, from the VPC -
 # this makes it easy to pass them around. Stacker will drop unused Parameters
@@ -134,6 +134,7 @@ stacks:
       MaxSize: ${empire_minion_max_instance_count}
       SshKeyName: ${ssh_key_name}
       ImageName: empire
+      DisableStreamingLogs: ${empire_disable_streaming_logs}
   - name: empireController
     class_path: stacker.blueprints.empire.empire_controller.EmpireController
     parameters:
@@ -160,3 +161,4 @@ stacks:
       EmpireGithubClientSecret: ${empire_controller_github_client_secret}
       EmpireGithubOrganization: ${empire_controller_github_organization}
       EmpireTokenSecret: ${empire_controller_token_secret}
+      DisableStreamingLogs: ${empire_disable_streaming_logs}

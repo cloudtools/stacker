@@ -127,6 +127,12 @@ class EmpireController(EmpireBase):
         "DockerRegistryEmail": {
             "type": "String",
             "description": "Email for authentication with docker registry."},
+        "DisableStreamingLogs": {
+            "type": "String",
+            "description": "Disables streaming logging if set to anything."
+                           "Note: Without this Empire creates a kinesis "
+                           "stream per app that you deploy in Empire.",
+            "default": ""},
     }
 
     def create_conditions(self):
@@ -136,6 +142,9 @@ class EmpireController(EmpireBase):
         self.template.add_condition(
             "UseDNS",
             Not(Equals(Ref("ExternalDomain"), "")))
+        self.template.add_condition(
+            "EnableStreamingLogs",
+            Equals(Ref("DisableStreamingLogs"), ""))
 
     def create_security_groups(self):
         t = self.template
@@ -286,6 +295,8 @@ class EmpireController(EmpireBase):
             "DOCKER_USER=", Ref("DockerRegistryUser"), "\n",
             "DOCKER_PASS=", Ref("DockerRegistryPassword"), "\n",
             "DOCKER_EMAIL=", Ref("DockerRegistryEmail"), "\n",
+            "ENABLE_STREAMING_LOGS=", If("EnableStreamingLogs",
+                                         "true", "false"), "\n"
             ]
         return seed
 

@@ -3,7 +3,7 @@ import copy
 
 logger = logging.getLogger(__name__)
 
-from troposphere import Ref, Output, GetAtt, Tags, FindInMap, If, Not, Equals
+from troposphere import Ref, Output, GetAtt, Tags, FindInMap, If, Equals
 from troposphere import ec2, autoscaling, ecs
 from troposphere.autoscaling import Tag as ASTag
 from troposphere.iam import Role, InstanceProfile, Policy
@@ -88,7 +88,7 @@ class EmpireMinion(EmpireBase):
         t = self.template
         t.add_condition(
             "EnableStreamingLogs",
-            Not(Equals(Ref("DisableStreamingLogs"), "")))
+            Equals(Ref("DisableStreamingLogs"), ""))
 
     def create_security_groups(self):
         t = self.template
@@ -204,8 +204,8 @@ class EmpireMinion(EmpireBase):
             "DOCKER_USER=", Ref("DockerRegistryUser"), "\n",
             "DOCKER_PASS=", Ref("DockerRegistryPassword"), "\n",
             "DOCKER_EMAIL=", Ref("DockerRegistryEmail"), "\n",
-            "ENABLE_STREAMING_LOGS=", If(Ref("DisableStreamingLogs"),
-                                         "false", "true"), "\n"
+            "ENABLE_STREAMING_LOGS=", If("EnableStreamingLogs",
+                                         "true", "false"), "\n"
             ]
         return seed
 

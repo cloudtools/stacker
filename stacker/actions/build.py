@@ -87,11 +87,8 @@ class Action(BaseAction):
         logger.debug("Stack %s required stacks: %s",
                      stack.name, requires)
         tags = {
-            'template_url': template_url,
             'stacker_namespace': self.context.namespace,
         }
-        if requires:
-            tags['required_stacks'] = ':'.join(requires)
         return tags
 
     def _launch_stack(self, stack, **kwargs):

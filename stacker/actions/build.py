@@ -90,8 +90,6 @@ class Action(BaseAction):
             'template_url': template_url,
             'stacker_namespace': self.context.namespace,
         }
-        if requires:
-            tags['required_stacks'] = ':'.join(requires)
         return tags
 
     def _launch_stack(self, stack, **kwargs):

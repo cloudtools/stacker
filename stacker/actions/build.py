@@ -81,17 +81,11 @@ class Action(BaseAction):
             params[k] = value
         return params
 
-    def _build_stack_tags(self, stack, template_url):
+    def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""
-        requires = [req for req in stack.requires]
-        logger.debug("Stack %s required stacks: %s",
-                     stack.name, requires)
         tags = {
-            'template_url': template_url,
             'stacker_namespace': self.context.namespace,
         }
-        if requires:
-            tags['required_stacks'] = ':'.join(requires)
         return tags
 
     def _launch_stack(self, stack, **kwargs):
@@ -120,7 +114,7 @@ class Action(BaseAction):
 
         logger.info("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
-        tags = self._build_stack_tags(stack, template_url)
+        tags = self._build_stack_tags(stack)
         parameters = self._resolve_parameters(stack.parameters,
                                               stack.blueprint)
         required_params = [k for k, v in stack.blueprint.required_parameters]

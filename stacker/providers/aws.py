@@ -144,12 +144,6 @@ class Provider(BaseProvider):
             raise
         return True
 
-    def get_required_stacks(self, stack, **kwargs):
-        required_stacks = []
-        if 'required_stacks' in stack.tags:
-            required_stacks = stack.tags['required_stacks']
-        return required_stacks
-
     def get_stack_name(self, stack, **kwargs):
         return stack.stack_name
 

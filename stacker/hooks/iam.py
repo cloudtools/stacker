@@ -68,12 +68,15 @@ def ensure_server_cert_exists(region, namespace, mappings, parameters, **kwargs)
             return False
 
         paths = {
-            'certificate': None,
-            'private_key': None,
-            'chain': None,
+            'certificate': kwargs.get('path_to_certificate'),
+            'private_key': kwargs.get('path_to_private_key'),
+            'chain': kwargs.get('path_to_chain'),
         }
 
-        for key in paths.keys():
+        for key, value in paths.iteritems():
+            if value is not None:
+                continue
+
             path = raw_input('Path to %s (skip): ' % (key,))
             if path == 'skip':
                 continue

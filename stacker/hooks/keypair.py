@@ -25,7 +25,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
     )
     if create_or_upload == 'import':
         path = raw_input('path to keypair file: ')
-        full_path = os.path.abspath(os.path.expanduser(path))
+        full_path = utils.full_path(path)
         if not os.path.exists(full_path):
             logger.error('Failed to find keypair at path: %s', full_path)
             return False

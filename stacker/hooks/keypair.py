@@ -17,7 +17,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
 
     logger.info('keypair: "%s" not found', keypair_name)
     create_or_upload = raw_input(
-        'import or create keypair "%s"? (import/create/cancel) ' % (
+        'import or create keypair "%s"? (import/create/Cancel) ' % (
             keypair_name,
         ),
     )

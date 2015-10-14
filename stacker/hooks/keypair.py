@@ -3,6 +3,8 @@ import os
 
 from boto.ec2 import connect_to_region
 
+from . import utils
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +38,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
         return True
     elif create_or_upload == 'create':
         path = raw_input('directory to save keyfile: ')
-        full_path = os.path.abspath(os.path.expanduser(path))
+        full_path = utils.full_path(path)
         if not os.path.exists(full_path) and not os.path.isdir(full_path):
             logger.error('"%s" is not a valid directory', full_path)
             return False

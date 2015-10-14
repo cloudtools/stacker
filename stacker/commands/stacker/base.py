@@ -151,7 +151,7 @@ class BaseCommand(object):
                                  "up to twice.")
         parser.add_argument('environment', type=environment_file,
                             default={},
-                            help="Path to a simple key/value pair environment "
+                            help="Path to a simple `key: value` pair environment "
                                  "file. The values in the environment file can "
                                  "be used in the stack config as if it were a "
                                  "string.Template type: "

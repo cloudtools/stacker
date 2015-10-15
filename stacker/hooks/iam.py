@@ -78,7 +78,7 @@ def ensure_server_cert_exists(region, namespace, mappings, parameters, **kwargs)
                 continue
 
             path = raw_input('Path to %s (skip): ' % (key,))
-            if path == 'skip':
+            if path == 'skip' or not path.strip():
                 continue
 
             full_path = utils.full_path(path)

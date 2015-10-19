@@ -2,7 +2,7 @@ import argparse
 from collections import Mapping
 import logging
 
-import yaml
+from ...environment import parse_environment
 
 DEBUG_FORMAT = ('[%(asctime)s] %(levelname)s %(name)s:%(lineno)d'
                 '(%(funcName)s): %(message)s')
@@ -37,10 +37,10 @@ def key_value_arg(string):
     return {k: v}
 
 
-def yaml_file_type(yaml_file):
-    """ Reads a yaml file and returns the resulting data. """
-    with open(yaml_file) as fd:
-        return yaml.load(fd)
+def environment_file(input_file):
+    """Reads a stacker environment file and returns the resulting data."""
+    with open(input_file) as fd:
+        return parse_environment(fd.read())
 
 
 class BaseCommand(object):
@@ -147,11 +147,12 @@ class BaseCommand(object):
         parser.add_argument("-v", "--verbose", action="count", default=0,
                             help="Increase output verbosity. May be specified "
                                  "up to twice.")
-        parser.add_argument('environment', type=yaml_file_type,
+        parser.add_argument('environment', type=environment_file,
                             default={},
-                            help="Path to a yaml environment file. The values in "
-                                 "the environment file can be used in the stack "
-                                 "config as if it were a string.Template type: "
+                            help="Path to a simple `key: value` pair environment "
+                                 "file. The values in the environment file can "
+                                 "be used in the stack config as if it were a "
+                                 "string.Template type: "
                                  "https://docs.python.org/2/library/string.html"
                                  "#template-strings. Must define at least a "
                                  "'namespace'.")

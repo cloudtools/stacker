@@ -63,20 +63,19 @@ class Context(object):
             list: a list of :class:`stacker.stack.Stack` objects
 
         """
-        if not hasattr(self, '_stacks'):
-            definitions = self._get_stack_definitions()
-            self._stacks = []
-            for stack_def in definitions:
-                stack = Stack(
-                    definition=stack_def,
-                    context=self,
-                    parameters=self.parameters,
-                    mappings=self.mappings,
-                    force=stack_def['name'] in self.force_stacks,
-                    locked=stack_def.get('locked', False),
-                )
-                self._stacks.append(stack)
-        return self._stacks
+        stacks = []
+        definitions = self._get_stack_definitions()
+        for stack_def in definitions:
+            stack = Stack(
+                definition=stack_def,
+                context=self,
+                parameters=self.parameters,
+                mappings=self.mappings,
+                force=stack_def['name'] in self.force_stacks,
+                locked=stack_def.get('locked', False),
+            )
+            stacks.append(stack)
+        return stacks
 
     def get_stacks_dict(self):
         return dict((stack.fqn, stack) for stack in self.get_stacks())

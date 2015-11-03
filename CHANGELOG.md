@@ -1,3 +1,14 @@
+## 0.5.3 (2015-11-03)
+
+- Add --version [GH-91]
+- Simplify environment file to key: value, rather than YAML [GH-94]
+- Ensure certificate exists hook [GH-94]
+- Ensure keypair exists hook [GH-99]
+- Custom field constructors & vault encryption [GH-95]
+- DBSnapshotIdentifier to RDS blueprints [GH-105]
+- Empire ECS Agent telemetry support fixes, use new Empire AMI [GH-107]
+- Remove stack tags [GH-110]
+
 ## 0.5.2 (2015-09-10)
 
 - Add Dockerfile/image [GH-87]

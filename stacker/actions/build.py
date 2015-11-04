@@ -111,6 +111,9 @@ class Action(BaseAction):
         it is already updating or creating.
 
         """
+        if not should_submit(stack):
+            return SKIPPED
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except exceptions.StackDoesNotExist:
@@ -137,9 +140,6 @@ class Action(BaseAction):
         parameters = self._handle_missing_parameters(parameters,
                                                      required_params,
                                                      provider_stack)
-
-        if not should_submit(stack):
-            return SKIPPED
 
         try:
             if not provider_stack:

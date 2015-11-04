@@ -239,3 +239,17 @@ class TestBuildAction(unittest.TestCase):
             mock_stack.locked = t.locked
             mock_stack.force = t.force
             self.assertEqual(build.should_update(mock_stack), t.result)
+
+    def test_should_submit(self):
+        test_scenario = namedtuple('test_scenario',
+                                   ['enabled', 'result'])
+        test_scenarios = (
+            test_scenario(enabled=False, result=False),
+            test_scenario(enabled=True, result=True),
+        )
+
+        mock_stack = mock.MagicMock(["enabled", "name"])
+        mock_stack.name = "test-stack"
+        for t in test_scenarios:
+            mock_stack.enabled = t.enabled
+            self.assertEqual(build.should_submit(mock_stack), t.result)

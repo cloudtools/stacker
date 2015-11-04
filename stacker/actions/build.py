@@ -28,6 +28,22 @@ def should_update(stack):
     return True
 
 
+def should_submit(stack):
+    """Tests whether a stack should be submitted to CF for update/create
+
+    Args:
+        stack (stacker.stack.Stack): The stack object to check.
+
+    Returns:
+        bool: If the stack should be updated, return True.
+    """
+    if stack.enabled:
+        return True
+
+    logger.info("Stack %s is not enabled.  Skipping.", stack.name)
+    return False
+
+
 class Action(BaseAction):
     """Responsible for building & coordinating CloudFormation stacks.
 
@@ -122,8 +138,7 @@ class Action(BaseAction):
                                                      required_params,
                                                      provider_stack)
 
-        if not stack.enabled:
-            logger.info("Stack %s is not enabled.  Skipping.", stack.name)
+        if not should_submit(stack):
             return SKIPPED
 
         try:

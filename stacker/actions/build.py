@@ -122,6 +122,10 @@ class Action(BaseAction):
                                                      required_params,
                                                      provider_stack)
 
+        if not stack.enabled:
+            logger.info("Stack %s is not enabled.  Skipping.", stack.name)
+            return SKIPPED
+
         try:
             if not provider_stack:
                 self.provider.create_stack(stack.fqn, template_url, parameters,

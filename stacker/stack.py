@@ -54,10 +54,11 @@ class Stack(object):
             blueprint.
         locked (Optional(bool)): Whether or not the stack is locked.
         force (Optional(bool)): Whether to force updates on this stack.
+        enabled (Optional(bool)): Wether this stack is enabled
     """
 
     def __init__(self, definition, context, parameters=None, mappings=None,
-                 locked=False, force=False):
+                 locked=False, force=False, enabled=True):
         self.name = definition['name']
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
@@ -65,6 +66,7 @@ class Stack(object):
         self.mappings = mappings
         self.locked = locked
         self.force = force
+        self.enabled = enabled
         # XXX this is temporary until we remove passing context down to the
         # blueprint
         self.context = copy.deepcopy(context)

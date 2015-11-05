@@ -35,7 +35,7 @@ def should_submit(stack):
         stack (stacker.stack.Stack): The stack object to check.
 
     Returns:
-        bool: If the stack should be updated, return True.
+        bool: If the stack should be submitted, return True.
     """
     if stack.enabled:
         return True

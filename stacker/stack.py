@@ -54,7 +54,7 @@ class Stack(object):
             blueprint.
         locked (Optional(bool)): Whether or not the stack is locked.
         force (Optional(bool)): Whether to force updates on this stack.
-        enabled (Optional(bool)): Wether this stack is enabled
+        enabled (Optional(bool)): Whether this stack is enabled
     """
 
     def __init__(self, definition, context, parameters=None, mappings=None,

@@ -12,7 +12,7 @@ def should_update(stack):
     """Tests whether a stack should be submitted for updates to CF.
 
     Args:
-        stack (stacker.stack.Stack): The stack object to check.
+        stack (:class:`stacker.stack.Stack`): The stack object to check.
 
     Returns:
         bool: If the stack should be updated, return True.
@@ -32,7 +32,7 @@ def should_submit(stack):
     """Tests whether a stack should be submitted to CF for update/create
 
     Args:
-        stack (stacker.stack.Stack): The stack object to check.
+        stack (:class:`stacker.stack.Stack`): The stack object to check.
 
     Returns:
         bool: If the stack should be submitted, return True.

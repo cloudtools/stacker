@@ -12,7 +12,7 @@ def should_update(stack):
     """Tests whether a stack should be submitted for updates to CF.
 
     Args:
-        stack (stacker.stack.Stack): The stack object to check.
+        stack (:class:`stacker.stack.Stack`): The stack object to check.
 
     Returns:
         bool: If the stack should be updated, return True.
@@ -26,6 +26,22 @@ def should_update(stack):
             logger.debug("Stack %s locked, but is in --force "
                          "list.", stack.name)
     return True
+
+
+def should_submit(stack):
+    """Tests whether a stack should be submitted to CF for update/create
+
+    Args:
+        stack (:class:`stacker.stack.Stack`): The stack object to check.
+
+    Returns:
+        bool: If the stack should be submitted, return True.
+    """
+    if stack.enabled:
+        return True
+
+    logger.info("Stack %s is not enabled.  Skipping.", stack.name)
+    return False
 
 
 class Action(BaseAction):
@@ -95,6 +111,9 @@ class Action(BaseAction):
         it is already updating or creating.
 
         """
+        if not should_submit(stack):
+            return SKIPPED
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except exceptions.StackDoesNotExist:

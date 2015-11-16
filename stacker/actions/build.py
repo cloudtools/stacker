@@ -87,13 +87,18 @@ class Action(BaseAction):
                 continue
             value = v
             if isinstance(value, basestring) and '::' in value:
-                # Get from the Output of another stack in the stack_map
-                stack_name, output = value.split('::')
-                stack_fqn = self.context.get_fqn(stack_name)
-                try:
-                    value = self.provider.get_output(stack_fqn, output)
-                except KeyError:
-                    raise exceptions.OutputDoesNotExist(stack_fqn, value)
+                # Get from the Output(s) of another stack(s) in the stack_map
+                v_list = []
+                values = value.split(',')
+                for v in values:
+                    stack_name, output = v.split('::')
+                    stack_fqn = self.context.get_fqn(stack_name)
+                    try:
+                        v_list.append(
+                            self.provider.get_output(stack_fqn, output))
+                    except KeyError:
+                        raise exceptions.OutputDoesNotExist(stack_fqn, v)
+                value = ','.join(v_list)
             params[k] = value
         return params
 

@@ -1,3 +1,7 @@
+## 0.5.4 (???)
+
+- Add support for List<AWS::EC2::*> parameters
+
 ## 0.5.3 (2015-11-03)
 
 - Add --version [GH-91]

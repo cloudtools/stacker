@@ -73,10 +73,13 @@ class TestBuildAction(unittest.TestCase):
         parameters = {
             'param_1': 'mock::output_1',
             'param_2': 'other::output_2',
+            'param_3': 'foo::output_3,bar::output_4',
         }
         self.build_action.provider.set_outputs({
             self.context.get_fqn('mock'): {'output_1': 'output1'},
             self.context.get_fqn('other'): {'output_2': 'output2'},
+            self.context.get_fqn('foo'): {'output_3': 'output3'},
+            self.context.get_fqn('bar'): {'output_4': 'output4'},
         })
 
         mock_blueprint = mock.MagicMock()
@@ -87,6 +90,7 @@ class TestBuildAction(unittest.TestCase):
         )
         self.assertEqual(resolved_parameters['param_1'], 'output1')
         self.assertEqual(resolved_parameters['param_2'], 'output2')
+        self.assertEqual(resolved_parameters['param_3'], 'output3,output4')
 
     def test_resolve_parameters_referencing_non_existant_stack(self):
         parameters = {

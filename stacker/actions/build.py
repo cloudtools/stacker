@@ -64,9 +64,9 @@ class Action(BaseAction):
         """Resolves parameters for a given blueprint.
 
         Given a list of parameters, first discard any parameters that the
-        blueprint does not use. Then, if a remaining parameter is in the format
-        <stack_name>::<output_name>, pull that output from the foreign
-        stack.
+        blueprint does not use. Then, if a parameter is a list of outputs
+        in the format of <stack_name>::<output_name>,... pull those output(s)
+        from the foreign stack(s).
 
         Args:
             parameters (dict): A dictionary of parameters provided by the

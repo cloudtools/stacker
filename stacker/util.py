@@ -4,6 +4,7 @@ import re
 import sys
 import time
 
+from pkg_resources import iter_entry_points
 from boto.route53.record import ResourceRecordSets
 
 logger = logging.getLogger(__name__)
@@ -140,12 +141,18 @@ def load_object_from_string(fqcn):
     load_object_from_string('logging.Logger')
     load_object_from_string('LocalClassName')
     """
+    modules = sys.modules
     module_path = '__main__'
     object_name = fqcn
     if '.' in fqcn:
         module_path, object_name = fqcn.rsplit('.', 1)
-        importlib.import_module(module_path)
-    return getattr(sys.modules[module_path], object_name)
+        try:
+          importlib.import_module(module_path)
+        except:
+          modules = {}
+          for ep in iter_entry_points(group='stacker.blueprints'):
+            modules[module_path] = ep.load()
+    return getattr(modules[module_path], object_name)
 
 
 def uppercase_first_letter(s):

@@ -64,9 +64,9 @@ class Action(BaseAction):
         """Resolves parameters for a given blueprint.
 
         Given a list of parameters, first discard any parameters that the
-        blueprint does not use. Then, if a remaining parameter is in the format
-        <stack_name>::<output_name>, pull that output from the foreign
-        stack.
+        blueprint does not use. Then, if a parameter is a list of outputs
+        in the format of <stack_name>::<output_name>,... pull those output(s)
+        from the foreign stack(s).
 
         Args:
             parameters (dict): A dictionary of parameters provided by the
@@ -87,13 +87,18 @@ class Action(BaseAction):
                 continue
             value = v
             if isinstance(value, basestring) and '::' in value:
-                # Get from the Output of another stack in the stack_map
-                stack_name, output = value.split('::')
-                stack_fqn = self.context.get_fqn(stack_name)
-                try:
-                    value = self.provider.get_output(stack_fqn, output)
-                except KeyError:
-                    raise exceptions.OutputDoesNotExist(stack_fqn, value)
+                # Get from the Output(s) of another stack(s) in the stack_map
+                v_list = []
+                values = value.split(',')
+                for v in values:
+                    stack_name, output = v.split('::')
+                    stack_fqn = self.context.get_fqn(stack_name)
+                    try:
+                        v_list.append(
+                            self.provider.get_output(stack_fqn, output))
+                    except KeyError:
+                        raise exceptions.OutputDoesNotExist(stack_fqn, v)
+                value = ','.join(v_list)
             params[k] = value
         return params
 

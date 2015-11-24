@@ -3,6 +3,19 @@ from .config import parse_config
 from .stack import Stack
 
 
+def get_fqn(base_fqn, name=None):
+    """Return the fully qualified name of an object within this context.
+
+    If the name passed already appears to be a fully qualified name, it
+    will be returned with no further processing.
+
+    """
+    if name and name.startswith(base_fqn + '-'):
+        return name
+
+    return '-'.join(filter(None, [base_fqn, name]))
+
+
 class Context(object):
     """The context under which the current stacks are being executed.
 
@@ -88,7 +101,4 @@ class Context(object):
         will be returned with no further processing.
 
         """
-        if name and name.startswith(self._base_fqn + '-'):
-            return name
-
-        return '-'.join(filter(None, [self._base_fqn, name]))
+        return get_fqn(self._base_fqn, name)

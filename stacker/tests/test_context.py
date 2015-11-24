@@ -1,6 +1,6 @@
 import unittest
 
-from ..context import Context
+from ..context import Context, get_fqn
 from ..exceptions import MissingEnvironment
 
 
@@ -64,3 +64,20 @@ class TestContext(unittest.TestCase):
         context = Context(self.environment)
         fqn = context.get_fqn('stack1')
         self.assertEqual(fqn, 'namespace-stack1')
+
+
+class TestFunctions(unittest.TestCase):
+    """ Test the module level functions """
+    def test_get_fqn_redundant_base(self):
+        base = "woot"
+        name = "woot-blah"
+        self.assertEqual(get_fqn(base, name), name)
+
+    def test_get_fqn_only_base(self):
+        base = "woot"
+        self.assertEqual(get_fqn(base), base)
+
+    def test_get_fqn_full(self):
+        base = "woot"
+        name = "blah"
+        self.assertEqual(get_fqn(base, name), "%s-%s" % (base, name))

@@ -88,9 +88,10 @@ def resolve_parameters(parameters, blueprint, context, provider):
                     raise exceptions.OutputDoesNotExist(stack_fqn, v)
             value = ','.join(v_list)
         if value is None:
-            logger.debug("Got None value for parameter %s, converting to a "
-                         "blank string.", k)
-            value = ''
+            logger.debug("Got None value for parameter %s, not submitting it "
+                         "to cloudformation, default value should be used.",
+                         k)
+            continue
         params[k] = value
     return params
 

@@ -255,7 +255,7 @@ class TestFunctions(unittest.TestCase):
                 }}
         params = {"a": None, "c": "Carrot"}
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)
-        self.assertEqual(p["a"], "")
+        self.assertNotIn("a", p)
 
     def test_resolve_parameters_resolve_outputs(self):
         self.bp.parameters = {

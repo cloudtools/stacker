@@ -1,6 +1,12 @@
-## 0.5.4 (???)
+## 0.5.4 (2015-12-03)
 
-- Add support for List<AWS::EC2::*> parameters
+- Fix memory leak issue (GH-111) [GH-114]
+- Add enabled flag to stacks [GH-115]
+- Add support for List<AWS::EC2::*> parameters [GH-117]
+- Add eu-west-1 support for empire [GH-116]
+- Move get\_fqn to a function, add tests [GH-119]
+- Add new postgres versions (9.4.4, 9.4.5) [GH-121]
+- Handle blank parameter values [GH-120]
 
 ## 0.5.3 (2015-11-03)
 

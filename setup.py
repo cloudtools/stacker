@@ -2,6 +2,8 @@ import os
 from setuptools import setup, find_packages
 import glob
 
+VERSION = '0.5.4'
+
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
@@ -26,7 +28,7 @@ def read(filename):
 if __name__ == '__main__':
     setup(
         name='stacker',
-        version='0.5.3',
+        version=VERSION,
         author='Michael Barrett',
         author_email='loki77@gmail.com',
         license="New BSD license",

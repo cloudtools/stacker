@@ -44,6 +44,58 @@ def should_submit(stack):
     return False
 
 
+def resolve_parameters(parameters, blueprint, context, provider):
+    """Resolves parameters for a given blueprint.
+
+    Given a list of parameters, first discard any parameters that the
+    blueprint does not use. Then, if a parameter is a list of outputs
+    in the format of <stack_name>::<output_name>,... pull those output(s)
+    from the foreign stack(s).
+
+    Args:
+        parameters (dict): A dictionary of parameters provided by the
+            stack definition
+        blueprint (:class:`stacker.blueprint.base.Blueprint`): A Blueprint
+            object that is having the parameters applied to it.
+        context (:class:`stacker.context.Context`): The context object used
+            to get the FQN of stacks.
+        provider (:class:`stacker.providers.base.BaseProvider`): The provider
+            used for looking up stacks & their outputs.
+
+    Returns:
+        dict: The resolved parameters.
+
+    """
+    params = {}
+    blueprint_params = blueprint.parameters
+    for k, v in parameters.items():
+        if k not in blueprint_params:
+            logger.debug("Template %s does not use parameter %s.",
+                         blueprint.name, k)
+            continue
+        value = v
+        if isinstance(value, basestring) and '::' in value:
+            # Get from the Output(s) of another stack(s) in the stack_map
+            v_list = []
+            values = value.split(',')
+            for v in values:
+                stack_name, output = v.split('::')
+                stack_fqn = context.get_fqn(stack_name)
+                try:
+                    v_list.append(
+                        provider.get_output(stack_fqn, output))
+                except KeyError:
+                    raise exceptions.OutputDoesNotExist(stack_fqn, v)
+            value = ','.join(v_list)
+        if value is None:
+            logger.debug("Got None value for parameter %s, not submitting it "
+                         "to cloudformation, default value should be used.",
+                         k)
+            continue
+        params[k] = value
+    return params
+
+
 class Action(BaseAction):
     """Responsible for building & coordinating CloudFormation stacks.
 
@@ -71,36 +123,15 @@ class Action(BaseAction):
         Args:
             parameters (dict): A dictionary of parameters provided by the
                 stack definition
-            blueprint (`stacker.blueprint.base.Blueprint`): A Blueprint object
-                that is having the parameters applied to it.
+            blueprint (:class:`stacker.blueprint.base.Blueprint`): A Blueprint
+                object that is having the parameters applied to it.
 
         Returns:
             dict: The resolved parameters.
 
         """
-        params = {}
-        blueprint_params = blueprint.parameters
-        for k, v in parameters.items():
-            if k not in blueprint_params:
-                logger.debug("Template %s does not use parameter %s.",
-                             blueprint.name, k)
-                continue
-            value = v
-            if isinstance(value, basestring) and '::' in value:
-                # Get from the Output(s) of another stack(s) in the stack_map
-                v_list = []
-                values = value.split(',')
-                for v in values:
-                    stack_name, output = v.split('::')
-                    stack_fqn = self.context.get_fqn(stack_name)
-                    try:
-                        v_list.append(
-                            self.provider.get_output(stack_fqn, output))
-                    except KeyError:
-                        raise exceptions.OutputDoesNotExist(stack_fqn, v)
-                value = ','.join(v_list)
-            params[k] = value
-        return params
+        return resolve_parameters(parameters, blueprint, self.context,
+                                  self.provider)
 
     def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""

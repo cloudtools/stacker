@@ -39,3 +39,8 @@ class TestEnvironment(unittest.TestCase):
     def test_simple_key_value_parsing_exception(self):
         with self.assertRaises(ValueError):
             parse_environment(test_error_env)
+
+    def test_blank_value(self):
+        e = """key1:"""
+        parsed = parse_environment(e)
+        self.assertEqual(parsed["key1"], "")

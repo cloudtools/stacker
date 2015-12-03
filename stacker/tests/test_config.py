@@ -1,8 +1,8 @@
-import json
 import unittest
 
 from mock import patch
 from stacker.config import parse_config
+from stacker.environment import parse_environment
 from stacker import exceptions
 
 config = """a: $a
@@ -36,3 +36,12 @@ class TestConfig(unittest.TestCase):
         patched.check_output.return_value = 'secret\n'
         c = parse_config('a: $a', {'a': '!vault secret/hello@value'})
         self.assertEqual(c['a'], 'secret')
+
+    def test_blank_env_values(self):
+        conf = """a: ${key1}"""
+        e = parse_environment("""key1:""")
+        c = parse_config(conf, e)
+        self.assertEqual(c['a'], None)
+        e = parse_environment("""key1: !!str""")
+        c = parse_config(conf, e)
+        self.assertEqual(c['a'], "")

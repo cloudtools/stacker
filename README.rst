@@ -74,6 +74,14 @@ When updating an existing stack, if you don't supply a parameter in either the
 config or CLI, it will fall back on checking the existing stack for the
 parameter. If it finds it, it will use that automatically.
 
+One additional bit of functionality that should be noted is that if a Parameter
+is defined, but has no value, for example in the stack config like this::
+
+    MyParameter:
+
+That parameter will not be submitted to the stack. This allows you to control
+whether a parameter is submitted to a stack by using environments.
+
 Environments
 ============
 

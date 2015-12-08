@@ -447,6 +447,7 @@ class ReadReplica(BaseRDS):
             "AutoMinorVersionUpgrade": Ref("AutoMinorVersionUpgrade"),
             "DBInstanceClass": Ref("InstanceType"),
             "DBInstanceIdentifier": Ref("DBInstanceIdentifier"),
+            "DBParameterGroupName": Ref("ParameterGroup"),
             "Engine": self.engine() or Ref("Engine"),
             "EngineVersion": Ref("EngineVersion"),
             "OptionGroupName": Ref("OptionGroup"),

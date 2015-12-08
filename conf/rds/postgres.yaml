@@ -29,7 +29,7 @@ vpc_parameters: &vpc_parameters
 
 stacks:
   - name: vpc
-    class_path: stacker.blueprints.vpc.VPC
+    class_path: stacker_blueprints.vpc.VPC
     parameters:
       # AZCount is the # of AvailabilityZones to attempt to build in. You
       # should build in as many as you can afford in order to provide for
@@ -51,7 +51,7 @@ stacks:
       CidrBlock: 10.128.0.0/16
       ImageName: NAT
   - name: postgresMaster
-    class_path: stacker.blueprints.rds.postgres.MasterInstance
+    class_path: stacker_blueprints.rds.postgres.MasterInstance
     parameters:
       << : *vpc_parameters
       Subnets: vpc::PrivateSubnets
@@ -74,7 +74,7 @@ stacks:
       DatabaseName: ${db_name}
       MultiAZ: "true"
   - name: postgresSlave
-    class_path: stacker.blueprints.rds.postgres.ReadReplica
+    class_path: stacker_blueprints.rds.postgres.ReadReplica
     parameters:
       << : *vpc_parameters
       Subnets: vpc::PrivateSubnets

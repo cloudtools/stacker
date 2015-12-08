@@ -4,7 +4,7 @@ import warnings
 
 warnings.warn("The included blueprints are deprecated. You should install "
               "the `stacker_blueprints` module instead.",
-              warnings.DeprecationWarning)
+              DeprecationWarning)
 
 logger = logging.getLogger(__name__)
 

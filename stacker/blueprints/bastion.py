@@ -11,7 +11,7 @@ import warnings
 
 warnings.warn("The included blueprints are deprecated. You should install "
               "the `stacker_blueprints` module instead.",
-              warnings.DeprecationWarning)
+              DeprecationWarning)
 
 from troposphere import Ref, ec2, autoscaling, FindInMap
 from troposphere.autoscaling import Tag as ASTag

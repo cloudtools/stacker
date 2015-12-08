@@ -1,5 +1,11 @@
 import logging
 
+import warnings
+
+warnings.warn("The included blueprints are deprecated. You should install "
+              "the `stacker_blueprints` module instead.",
+              warnings.DeprecationWarning)
+
 logger = logging.getLogger(__name__)
 
 from troposphere import Base64, Join

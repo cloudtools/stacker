@@ -2,6 +2,11 @@
 
 This includes the VPC, it's subnets, availability zones, etc.
 """
+import warnings
+
+warnings.warn("The included blueprints are deprecated. You should install "
+              "the `stacker_blueprints` module instead.",
+              warnings.DeprecationWarning)
 
 from troposphere import (
     Ref, Output, Join, FindInMap, Select, GetAZs, Not, Equals, Tags, Or,

@@ -1,5 +1,11 @@
 import copy
 
+import warnings
+
+warnings.warn("The included blueprints are deprecated. You should install "
+              "the `stacker_blueprints` module instead.",
+              warnings.DeprecationWarning)
+
 from troposphere import (
     Ref, FindInMap, Not, Equals, And, Condition, Join, ec2, autoscaling,
     If, GetAtt

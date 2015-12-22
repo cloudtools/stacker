@@ -9,6 +9,7 @@ src_dir = os.path.dirname(__file__)
 install_requires = [
     'troposphere>=1.2.1',
     'boto>=2.25.0',
+    'botocore>=1.3.15',
     'PyYAML>=3.11',
     'awacs>=0.5.3',
 ]

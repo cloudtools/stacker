@@ -1,5 +1,4 @@
 import subprocess
-import yaml
 
 
 def get_vaulted_value(value):
@@ -29,12 +28,10 @@ def get_vaulted_value(value):
             ' "<path in vault>@<key in stored data>" (got %s)' % (value,)
         )
 
-    return subprocess.check_output(['vault', 'read', '-field=%s' % (key,), path]).strip()
+    return subprocess.check_output(
+        ['vault', 'read', '-field=%s' % (key,), path]).strip()
 
 
 def vault_constructor(loader, node):
     value = loader.construct_scalar(node)
     return get_vaulted_value(value)
-
-
-yaml.add_constructor('!vault', vault_constructor)

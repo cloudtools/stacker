@@ -72,6 +72,34 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(self.count, 9)
         self.assertEqual(len(plan.list_skipped()), 1)
 
+    @mock.patch('stacker.plan.multiprocessing')
+    def test_execute_plan_with_watchers(self, patched_multiprocessing):
+        watch_func = mock.MagicMock()
+        plan = Plan(description='Test', sleep_time=0, watch_func=watch_func)
+        previous_stack = None
+        for i in range(5):
+            overrides = {}
+            if previous_stack:
+                overrides['requires'] = [previous_stack.fqn]
+            stack = Stack(
+                definition=generate_definition('vpc', i, **overrides),
+                context=self.context,
+            )
+            previous_stack = stack
+            plan.add(
+                stack=stack,
+                run_func=self._run_func,
+                requires=stack.requires,
+            )
+
+        plan.execute()
+        self.assertEqual(self.count, 9)
+        self.assertEqual(len(plan.list_skipped()), 1)
+        self.assertEqual(patched_multiprocessing.Process().start.call_count, 5)
+        # verify we terminate the process when the stack is finished and also
+        # redundantly terminate the process after execution
+        self.assertEqual(patched_multiprocessing.Process().terminate.call_count, 10)
+
     def test_step_must_return_status(self):
         plan = Plan(description='Test', sleep_time=0)
         stack = Stack(definition=generate_definition('vpc', 1),

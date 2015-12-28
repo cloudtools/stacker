@@ -37,11 +37,14 @@ class Build(BaseCommand):
                                  "specified more than once. If not specified "
                                  "then stacker will work on all stacks in the "
                                  "config file.")
+        parser.add_argument('-t', '--tail', action='store_true',
+                            help='Tail the CloudFormation logs while working'
+                                 'with stacks')
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
-        action.execute(outline=options.outline)
+        action.execute(outline=options.outline, tail=options.tail)
 
     def get_context_kwargs(self, options, **kwargs):
         return {'stack_names': options.stacks, 'force_stacks': options.force}

@@ -38,8 +38,11 @@ class Action(BaseAction):
                 dependencies.setdefault(requirement, set()).add(stack_name)
         return dependencies
 
-    def _generate_plan(self):
-        plan = Plan(description='Destroy stacks')
+    def _generate_plan(self, tail=False):
+        plan_kwargs = {}
+        if tail:
+            plan_kwargs['watch_func'] = self.provider.tail_stack
+        plan = Plan(description='Destroy stacks', **plan_kwargs)
         stacks_dict = self.context.get_stacks_dict()
         dependencies = self._get_dependencies(stacks_dict)
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -76,8 +79,8 @@ class Action(BaseAction):
             self.provider.destroy_stack(provider_stack)
         return SUBMITTED
 
-    def run(self, force, *args, **kwargs):
-        plan = self._generate_plan()
+    def run(self, force, tail=False, *args, **kwargs):
+        plan = self._generate_plan(tail=tail)
         if force:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them

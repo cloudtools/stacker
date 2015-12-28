@@ -7,7 +7,7 @@ VERSION = '0.5.4'
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    'troposphere>=1.2.1',
+    'troposphere>=1.2.2',
     'boto>=2.25.0',
     'botocore>=1.3.15',
     'PyYAML>=3.11',

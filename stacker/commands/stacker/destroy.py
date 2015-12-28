@@ -19,6 +19,9 @@ class Destroy(BaseCommand):
         parser.add_argument('-f', '--force', action='store_true',
                             help="Whehter or not you want to go through "
                                  " with destroying the stacks")
+        parser.add_argument('-t', '--tail', action='store_true',
+                            help='Tail the CloudFormation logs while working'
+                                 'with stacks')
 
     def run(self, options, **kwargs):
         super(Destroy, self).run(options, **kwargs)
@@ -33,4 +36,4 @@ class Destroy(BaseCommand):
             force = confirm.lower() == 'yes'
             if not force:
                 self.logger.info('Confirmation failed, printing ouline...')
-        action.execute(force=force)
+        action.execute(force=force, tail=options.tail)

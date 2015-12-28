@@ -54,10 +54,11 @@ class Stack(object):
             blueprint.
         locked (Optional(bool)): Whether or not the stack is locked.
         force (Optional(bool)): Whether to force updates on this stack.
+        enabled (Optional(bool)): Whether this stack is enabled
     """
 
     def __init__(self, definition, context, parameters=None, mappings=None,
-                 locked=False, force=False):
+                 locked=False, force=False, enabled=True):
         self.name = definition['name']
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
@@ -65,6 +66,7 @@ class Stack(object):
         self.mappings = mappings
         self.locked = locked
         self.force = force
+        self.enabled = enabled
         # XXX this is temporary until we remove passing context down to the
         # blueprint
         self.context = copy.deepcopy(context)
@@ -81,13 +83,19 @@ class Stack(object):
         # Auto add dependencies when parameters reference the Ouptuts of
         # another stack.
         for value in self.parameters.values():
+            stack_names = []
             if isinstance(value, basestring) and '::' in value:
-                stack_name, _ = value.split('::')
+                # support for list of Outputs
+                values = value.split(',')
+                for x in values:
+                    stack_name, _ = x.split('::')
+                    stack_names.append(stack_name)
             else:
                 continue
-            stack_fqn = self.context.get_fqn(stack_name)
-            if stack_fqn not in requires:
-                requires.add(stack_fqn)
+            for stack_name in stack_names:
+                stack_fqn = self.context.get_fqn(stack_name)
+                if stack_fqn not in requires:
+                    requires.add(stack_fqn)
         return requires
 
     @property

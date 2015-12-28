@@ -28,6 +28,9 @@ class MissingLocalParameterException(Exception):
 class OutputDoesNotExist(Exception):
 
     def __init__(self, stack_name, output, *args, **kwargs):
+        self.stack_name = stack_name
+        self.output = output
+
         message = 'Output %s does not exist on stack %s' % (output,
                                                             stack_name)
         super(OutputDoesNotExist, self).__init__(message, *args, **kwargs)

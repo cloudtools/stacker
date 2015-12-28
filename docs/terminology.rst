@@ -48,8 +48,9 @@ parameter
 .. _parameters:
 
 Dynamic variables that are passed into stacks when they are being built. In
-general these are `Cloudformation Parameters`_, which are passed to the
-blueprint upon creation. Can be defined on the command line, or in the config_.
+general these are one or more comma delimited `Cloudformation Parameters`_, 
+which are passed to the blueprint upon creation. Can be defined on the command 
+line, or in the config_.
 
 stack
 =====

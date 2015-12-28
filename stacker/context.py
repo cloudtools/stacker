@@ -3,6 +3,19 @@ from .config import parse_config
 from .stack import Stack
 
 
+def get_fqn(base_fqn, name=None):
+    """Return the fully qualified name of an object within this context.
+
+    If the name passed already appears to be a fully qualified name, it
+    will be returned with no further processing.
+
+    """
+    if name and name.startswith(base_fqn + '-'):
+        return name
+
+    return '-'.join(filter(None, [base_fqn, name]))
+
+
 class Context(object):
     """The context under which the current stacks are being executed.
 
@@ -63,20 +76,20 @@ class Context(object):
             list: a list of :class:`stacker.stack.Stack` objects
 
         """
-        if not hasattr(self, '_stacks'):
-            definitions = self._get_stack_definitions()
-            self._stacks = []
-            for stack_def in definitions:
-                stack = Stack(
-                    definition=stack_def,
-                    context=self,
-                    parameters=self.parameters,
-                    mappings=self.mappings,
-                    force=stack_def['name'] in self.force_stacks,
-                    locked=stack_def.get('locked', False),
-                )
-                self._stacks.append(stack)
-        return self._stacks
+        stacks = []
+        definitions = self._get_stack_definitions()
+        for stack_def in definitions:
+            stack = Stack(
+                definition=stack_def,
+                context=self,
+                parameters=self.parameters,
+                mappings=self.mappings,
+                force=stack_def['name'] in self.force_stacks,
+                locked=stack_def.get('locked', False),
+                enabled=stack_def.get('enabled', True),
+            )
+            stacks.append(stack)
+        return stacks
 
     def get_stacks_dict(self):
         return dict((stack.fqn, stack) for stack in self.get_stacks())
@@ -88,7 +101,4 @@ class Context(object):
         will be returned with no further processing.
 
         """
-        if name and name.startswith(self._base_fqn + '-'):
-            return name
-
-        return '-'.join(filter(None, [self._base_fqn, name]))
+        return get_fqn(self._base_fqn, name)

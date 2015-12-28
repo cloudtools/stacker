@@ -12,7 +12,7 @@ def should_update(stack):
     """Tests whether a stack should be submitted for updates to CF.
 
     Args:
-        stack (stacker.stack.Stack): The stack object to check.
+        stack (:class:`stacker.stack.Stack`): The stack object to check.
 
     Returns:
         bool: If the stack should be updated, return True.
@@ -26,6 +26,74 @@ def should_update(stack):
             logger.debug("Stack %s locked, but is in --force "
                          "list.", stack.name)
     return True
+
+
+def should_submit(stack):
+    """Tests whether a stack should be submitted to CF for update/create
+
+    Args:
+        stack (:class:`stacker.stack.Stack`): The stack object to check.
+
+    Returns:
+        bool: If the stack should be submitted, return True.
+    """
+    if stack.enabled:
+        return True
+
+    logger.info("Stack %s is not enabled.  Skipping.", stack.name)
+    return False
+
+
+def resolve_parameters(parameters, blueprint, context, provider):
+    """Resolves parameters for a given blueprint.
+
+    Given a list of parameters, first discard any parameters that the
+    blueprint does not use. Then, if a parameter is a list of outputs
+    in the format of <stack_name>::<output_name>,... pull those output(s)
+    from the foreign stack(s).
+
+    Args:
+        parameters (dict): A dictionary of parameters provided by the
+            stack definition
+        blueprint (:class:`stacker.blueprint.base.Blueprint`): A Blueprint
+            object that is having the parameters applied to it.
+        context (:class:`stacker.context.Context`): The context object used
+            to get the FQN of stacks.
+        provider (:class:`stacker.providers.base.BaseProvider`): The provider
+            used for looking up stacks & their outputs.
+
+    Returns:
+        dict: The resolved parameters.
+
+    """
+    params = {}
+    blueprint_params = blueprint.parameters
+    for k, v in parameters.items():
+        if k not in blueprint_params:
+            logger.debug("Template %s does not use parameter %s.",
+                         blueprint.name, k)
+            continue
+        value = v
+        if isinstance(value, basestring) and '::' in value:
+            # Get from the Output(s) of another stack(s) in the stack_map
+            v_list = []
+            values = value.split(',')
+            for v in values:
+                stack_name, output = v.split('::')
+                stack_fqn = context.get_fqn(stack_name)
+                try:
+                    v_list.append(
+                        provider.get_output(stack_fqn, output))
+                except KeyError:
+                    raise exceptions.OutputDoesNotExist(stack_fqn, v)
+            value = ','.join(v_list)
+        if value is None:
+            logger.debug("Got None value for parameter %s, not submitting it "
+                         "to cloudformation, default value should be used.",
+                         k)
+            continue
+        params[k] = value
+    return params
 
 
 class Action(BaseAction):
@@ -48,50 +116,28 @@ class Action(BaseAction):
         """Resolves parameters for a given blueprint.
 
         Given a list of parameters, first discard any parameters that the
-        blueprint does not use. Then, if a remaining parameter is in the format
-        <stack_name>::<output_name>, pull that output from the foreign
-        stack.
+        blueprint does not use. Then, if a parameter is a list of outputs
+        in the format of <stack_name>::<output_name>,... pull those output(s)
+        from the foreign stack(s).
 
         Args:
             parameters (dict): A dictionary of parameters provided by the
                 stack definition
-            blueprint (`stacker.blueprint.base.Blueprint`): A Blueprint object
-                that is having the parameters applied to it.
+            blueprint (:class:`stacker.blueprint.base.Blueprint`): A Blueprint
+                object that is having the parameters applied to it.
 
         Returns:
             dict: The resolved parameters.
 
         """
-        params = {}
-        blueprint_params = blueprint.parameters
-        for k, v in parameters.items():
-            if k not in blueprint_params:
-                logger.debug("Template %s does not use parameter %s.",
-                             blueprint.name, k)
-                continue
-            value = v
-            if isinstance(value, basestring) and '::' in value:
-                # Get from the Output of another stack in the stack_map
-                stack_name, output = value.split('::')
-                stack_fqn = self.context.get_fqn(stack_name)
-                try:
-                    value = self.provider.get_output(stack_fqn, output)
-                except KeyError:
-                    raise exceptions.OutputDoesNotExist(stack_fqn, value)
-            params[k] = value
-        return params
+        return resolve_parameters(parameters, blueprint, self.context,
+                                  self.provider)
 
-    def _build_stack_tags(self, stack, template_url):
+    def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""
-        requires = [req for req in stack.requires]
-        logger.debug("Stack %s required stacks: %s",
-                     stack.name, requires)
         tags = {
-            'template_url': template_url,
             'stacker_namespace': self.context.namespace,
         }
-        if requires:
-            tags['required_stacks'] = ':'.join(requires)
         return tags
 
     def _launch_stack(self, stack, **kwargs):
@@ -101,6 +147,9 @@ class Action(BaseAction):
         it is already updating or creating.
 
         """
+        if not should_submit(stack):
+            return SKIPPED
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except exceptions.StackDoesNotExist:
@@ -120,7 +169,7 @@ class Action(BaseAction):
 
         logger.info("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
-        tags = self._build_stack_tags(stack, template_url)
+        tags = self._build_stack_tags(stack)
         parameters = self._resolve_parameters(stack.parameters,
                                               stack.blueprint)
         required_params = [k for k, v in stack.blueprint.required_parameters]

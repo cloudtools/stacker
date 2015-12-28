@@ -6,6 +6,7 @@ from .info import Info
 from .base import BaseCommand
 from ...context import Context
 from ...providers import aws
+from ... import __version__
 
 
 class Stacker(BaseCommand):
@@ -27,3 +28,7 @@ class Stacker(BaseCommand):
             **options.get_context_kwargs(options)
         )
         options.context.load_config(options.config.read())
+
+    def add_arguments(self, parser):
+        parser.add_argument('--version', action='version',
+                            version='%%(prog)s %s' % (__version__,))

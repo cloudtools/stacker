@@ -4,6 +4,7 @@ import unittest
 import mock
 
 from stacker.actions import build
+from stacker.actions.build import resolve_parameters
 from stacker.context import Context
 from stacker import exceptions
 from stacker.plan import COMPLETE, PENDING, SKIPPED, SUBMITTED
@@ -53,40 +54,6 @@ class TestBuildAction(unittest.TestCase):
             {'name': 'other', 'parameters': {}}
         ]}
         return Context({'namespace': 'namespace'}, config=config, **kwargs)
-
-    def test_resolve_parameters_referencing_non_existant_output(self):
-        parameters = {
-            'param_1': 'mock::output_1',
-            'param_2': 'other::does_not_exist',
-        }
-        self.build_action.provider.set_outputs({
-            self.context.get_fqn('mock'): {'output_1': 'output'},
-            self.context.get_fqn('other'): {},
-        })
-        mock_blueprint = mock.MagicMock()
-        type(mock_blueprint).parameters = parameters
-        with self.assertRaises(exceptions.OutputDoesNotExist):
-            self.build_action._resolve_parameters(parameters,
-                                                  mock_blueprint)
-
-    def test_resolve_parameters(self):
-        parameters = {
-            'param_1': 'mock::output_1',
-            'param_2': 'other::output_2',
-        }
-        self.build_action.provider.set_outputs({
-            self.context.get_fqn('mock'): {'output_1': 'output1'},
-            self.context.get_fqn('other'): {'output_2': 'output2'},
-        })
-
-        mock_blueprint = mock.MagicMock()
-        type(mock_blueprint).parameters = parameters
-        resolved_parameters = self.build_action._resolve_parameters(
-            parameters,
-            mock_blueprint,
-        )
-        self.assertEqual(resolved_parameters['param_1'], 'output1')
-        self.assertEqual(resolved_parameters['param_2'], 'output2')
 
     def test_resolve_parameters_referencing_non_existant_stack(self):
         parameters = {
@@ -239,3 +206,115 @@ class TestBuildAction(unittest.TestCase):
             mock_stack.locked = t.locked
             mock_stack.force = t.force
             self.assertEqual(build.should_update(mock_stack), t.result)
+
+    def test_should_submit(self):
+        test_scenario = namedtuple('test_scenario',
+                                   ['enabled', 'result'])
+        test_scenarios = (
+            test_scenario(enabled=False, result=False),
+            test_scenario(enabled=True, result=True),
+        )
+
+        mock_stack = mock.MagicMock(["enabled", "name"])
+        mock_stack.name = "test-stack"
+        for t in test_scenarios:
+            mock_stack.enabled = t.enabled
+            self.assertEqual(build.should_submit(mock_stack), t.result)
+
+
+class TestFunctions(unittest.TestCase):
+    """ test module level functions """
+
+    def setUp(self):
+        self.ctx = Context({'namespace': 'test'})
+        self.prov = mock.MagicMock()
+        self.bp = mock.MagicMock()
+
+    def test_resolve_parameters_unused_parameter(self):
+        self.bp.parameters = {
+            "a": {
+                "type": "String",
+                "description": "A"},
+            "b": {
+                "type": "String",
+                "description": "B"
+                }}
+        params = {"a": "Apple", "c": "Carrot"}
+        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        self.assertNotIn("c", p)
+        self.assertIn("a", p)
+
+    def test_resolve_parameters_none_conversion(self):
+        self.bp.parameters = {
+            "a": {
+                "type": "String",
+                "description": "A"},
+            "b": {
+                "type": "String",
+                "description": "B"
+                }}
+        params = {"a": None, "c": "Carrot"}
+        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        self.assertNotIn("a", p)
+
+    def test_resolve_parameters_resolve_outputs(self):
+        self.bp.parameters = {
+            "a": {
+                "type": "String",
+                "description": "A"},
+            "b": {
+                "type": "String",
+                "description": "B"
+                }}
+        params = {"a": "other-stack::a", "b": "Banana"}
+        self.prov.get_output.return_value = "Apple"
+        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        kall = self.prov.get_output.call_args
+        args, kwargs = kall
+        self.assertTrue(args[0], "test-other-stack")
+        self.assertTrue(args[1], "a")
+        self.assertEqual(p["a"], "Apple")
+        self.assertEqual(p["b"], "Banana")
+
+    def test_resolve_parameters_multiple_outputs(self):
+        def get_output(stack, param):
+            d = {'a': 'Apple', 'c': 'Carrot'}
+            return d[param]
+
+        self.bp.parameters = {
+            "a": {
+                "type": "String",
+                "description": "A"},
+            "b": {
+                "type": "String",
+                "description": "B"
+                }}
+        params = {"a": "other-stack::a,other-stack::c", "b": "Banana"}
+        self.prov.get_output.side_effect = get_output
+        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        self.assertEqual(self.prov.get_output.call_count, 2)
+        self.assertEqual(p["a"], "Apple,Carrot")
+        self.assertEqual(p["b"], "Banana")
+
+    def test_resolve_parameters_output_does_not_exist(self):
+        def get_output(stack, param):
+            d = {'c': 'Carrot'}
+            return d[param]
+
+        self.bp.parameters = {
+            "a": {
+                "type": "String",
+                "description": "A"
+            },
+        }
+        params = {"a": "other-stack::a"}
+        self.prov.get_output.side_effect = get_output
+        with self.assertRaises(exceptions.OutputDoesNotExist) as cm:
+            resolve_parameters(params, self.bp, self.ctx, self.prov)
+
+        exc = cm.exception
+        self.assertEqual(exc.stack_name, "test-other-stack")
+        # Not sure this is actually what we want - should probably change it
+        # so the output is just the output name, not the stack name + the
+        # output name
+        self.assertEqual(exc.output, "other-stack::a")

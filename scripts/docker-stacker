@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# This script is meant to be used from within the Docker image for stacker. It
+# simply installs the stacks at /stacks and then runs stacker.
+
+set -e
+
+cd /stacks
+python setup.py install
+
+exec stacker $@

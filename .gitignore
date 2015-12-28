@@ -51,6 +51,7 @@ objdir/
 dist/
 *.egg-info
 .eggs/
+*.egg
 
 # nosetest --with-coverage dumps these in CWD
 .coverage
@@ -58,3 +59,7 @@ dist/
 Vagrantfile
 
 vm_setup.sh
+
+# Ignore development conf/env files
+dev.yaml
+dev.env

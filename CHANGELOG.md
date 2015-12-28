@@ -1,4 +1,43 @@
-## pending
+## 0.5.4 (2015-12-03)
+
+- Fix memory leak issue (GH-111) [GH-114]
+- Add enabled flag to stacks [GH-115]
+- Add support for List<AWS::EC2::*> parameters [GH-117]
+- Add eu-west-1 support for empire [GH-116]
+- Move get\_fqn to a function, add tests [GH-119]
+- Add new postgres versions (9.4.4, 9.4.5) [GH-121]
+- Handle blank parameter values [GH-120]
+
+## 0.5.3 (2015-11-03)
+
+- Add --version [GH-91]
+- Simplify environment file to key: value, rather than YAML [GH-94]
+- Ensure certificate exists hook [GH-94]
+- Ensure keypair exists hook [GH-99]
+- Custom field constructors & vault encryption [GH-95]
+- DBSnapshotIdentifier to RDS blueprints [GH-105]
+- Empire ECS Agent telemetry support fixes, use new Empire AMI [GH-107]
+- Remove stack tags [GH-110]
+
+## 0.5.2 (2015-09-10)
+
+- Add Dockerfile/image [GH-87]
+- Clean up environment docs [GH-88]
+- Make StorageType configurable in RDS v2 [GH-92]
+
+## 0.5.1 (2015-09-08)
+
+- Add info subcommand [GH-73]
+- Move namespace into environment [GH-72]
+- Simplified basecommand [GH-74]
+- Documentation updates [GH-75, GH-77, GH-78]
+- aws\_helper removal [GH-79]
+- Move VPC to use LOCAL\_PARAMETERS [GH-81]
+- Lower default AZ count to 2 [GH-82]
+- Allow use of all parameter properties [GH-83]
+- Parameter gathering in method [GH-84]
+- NoEcho on sensitive parameters in blueprnts [GH-85]
+- Version 2 RDS Blueprints [GH-86]
 
 ## 0.5.0 (2015-08-13)
 

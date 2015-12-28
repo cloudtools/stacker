@@ -4,7 +4,7 @@ logger = logging.getLogger(__name__)
 
 from awacs.aws import Statement, Allow, Policy, Action
 
-from awacs import ecs, ec2, iam, route53
+from awacs import ecs, ec2, iam, route53, kinesis
 from awacs import elasticloadbalancing as elb
 
 
@@ -17,7 +17,7 @@ def ecs_agent_policy():
                 Action=[ecs.CreateCluster, ecs.RegisterContainerInstance,
                         ecs.DeregisterContainerInstance,
                         ecs.DiscoverPollEndpoint, ecs.ECSAction("Submit*"),
-                        ecs.Poll]
+                        ecs.Poll, ecs.ECSAction("StartTelemetrySession")]
             )
         ]
     )
@@ -78,7 +78,32 @@ def empire_policy():
                     route53.ListHostedZones, route53.GetHostedZone
                 ],
                 # TODO: Limit to specific zones
-                Resource=["*"])
+                Resource=["*"]),
+            Statement(
+                Effect=Allow,
+                Action=[
+                    kinesis.DescribeStream,
+                    Action(kinesis.prefix, "Get*"),
+                    Action(kinesis.prefix, "List*")
+                ],
+                Resource=["*"]),
+        ]
+    )
+    return p
+
+
+def logstream_policy():
+    """Policy needed for logspout -> kinesis log streaming."""
+    p = Policy(
+        Statement=[
+            Statement(
+                Effect=Allow,
+                Resource=["*"],
+                Action=[
+                    kinesis.CreateStream, kinesis.DescribeStream,
+                    Action(kinesis.prefix, "AddTagsToStream"),
+                    Action(kinesis.prefix, "PutRecords")
+                ])
         ]
     )
     return p

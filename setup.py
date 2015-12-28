@@ -2,11 +2,14 @@ import os
 from setuptools import setup, find_packages
 import glob
 
+VERSION = '0.5.4'
+
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
     'troposphere>=1.2.1',
     'boto>=2.25.0',
+    'botocore>=1.3.15',
     'PyYAML>=3.11',
     'awacs>=0.5.3',
 ]
@@ -26,7 +29,7 @@ def read(filename):
 if __name__ == '__main__':
     setup(
         name='stacker',
-        version='0.5.0',
+        version=VERSION,
         author='Michael Barrett',
         author_email='loki77@gmail.com',
         license="New BSD license",

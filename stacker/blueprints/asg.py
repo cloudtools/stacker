@@ -165,28 +165,43 @@ class AutoscalingGroup(Blueprint):
                     GetAtt(elb_name, 'DNSName')],
                 Condition="SetupELBDNS"))
 
+    def get_launch_configuration_parameters(self):
+        return {
+            'ImageId': FindInMap('AmiMap', Ref("AWS::Region"),
+                                 Ref('ImageName')),
+            'InstanceType': Ref("InstanceType"),
+            'KeyName': Ref("SshKeyName"),
+            'SecurityGroups': self.get_launch_configuration_security_groups(),
+        }
+
+    def get_autoscaling_group_parameters(self, launch_config_name, elb_name):
+        return {
+            'AvailabilityZones': Ref("AvailabilityZones"),
+            'LaunchConfigurationName': Ref(launch_config_name),
+            'MinSize': Ref("MinSize"),
+            'MaxSize': Ref("MaxSize"),
+            'VPCZoneIdentifier': Ref("PrivateSubnets"),
+            'LoadBalancerNames': If("CreateELB", [Ref(elb_name), ], []),
+            'Tags': [ASTag('Name', self.name, True)],
+        }
+
+    def get_launch_configuration_security_groups(self):
+        sg_name = CLUSTER_SG_NAME % self.name
+        return [Ref("DefaultSG"), Ref(sg_name)]
+
     def create_autoscaling_group(self):
         name = "%sASG" % self.name
-        sg_name = CLUSTER_SG_NAME % self.name
         launch_config = "%sLaunchConfig" % name
         elb_name = ELB_NAME % self.name
         t = self.template
         t.add_resource(autoscaling.LaunchConfiguration(
             launch_config,
-            ImageId=FindInMap('AmiMap', Ref("AWS::Region"),
-                              Ref('ImageName')),
-            InstanceType=Ref("InstanceType"),
-            KeyName=Ref("SshKeyName"),
-            SecurityGroups=[Ref("DefaultSG"), Ref(sg_name)]))
+            **self.get_launch_configuration_parameters(launch_config, elb_name)
+        ))
         t.add_resource(autoscaling.AutoScalingGroup(
             name,
-            AvailabilityZones=Ref("AvailabilityZones"),
-            LaunchConfigurationName=Ref(launch_config),
-            MinSize=Ref("MinSize"),
-            MaxSize=Ref("MaxSize"),
-            VPCZoneIdentifier=Ref("PrivateSubnets"),
-            LoadBalancerNames=If("CreateELB", [Ref(elb_name), ], []),
-            Tags=[ASTag('Name', self.name, True)]))
+            **self.get_autoscaling_group_parameters()
+        ))
 
     def create_template(self):
         self.create_conditions()

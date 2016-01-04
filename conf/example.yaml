@@ -29,7 +29,7 @@ vpc_parameters: &vpc_parameters
 
 stacks:
   - name: vpc
-    class_path: stacker.blueprints.vpc.VPC
+    class_path: stacker_blueprints.vpc.VPC
     # Flag to enable/disable a stack. Default is true
     enabled: true
     parameters:
@@ -50,7 +50,7 @@ stacks:
       # Options
       #InternalDomain: internal
   - name: bastion
-    class_path: stacker.blueprints.bastion.Bastion
+    class_path: stacker_blueprints.bastion.Bastion
     enabled: true
     parameters:
       # Extends the parameters dict with the contents of the vpc_parameters
@@ -67,7 +67,7 @@ stacks:
       SshKeyName: default
       ImageName: bastion
   - name: myDB
-    class_path: stacker.blueprints.postgres.PostgresRDS
+    class_path: stacker_blueprints.postgres.PostgresRDS
     # this stack is locked, which means it will not update unless you pass the
     # stack name "myDB" on the command line with --force
     locked: true
@@ -86,7 +86,7 @@ stacks:
       #InternalZoneName: vpc::InternalZoneName
       #InternalHostname: mydb
   - name: myWeb
-    class_path: stacker.blueprints.asg.AutoscalingGroup
+    class_path: stacker_blueprints.asg.AutoscalingGroup
     enabled: true
     parameters:
       << : *vpc_parameters

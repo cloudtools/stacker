@@ -1,8 +1,15 @@
+import warnings
+
+warnings.warn("The included blueprints are deprecated. You should install "
+              "the `stacker_blueprints` module instead.",
+              DeprecationWarning)
+
 from troposphere import (
     Ref, ec2, Output, GetAtt, Not, Equals, Condition, And, Join
 )
 from troposphere.rds import DBInstance, DBSubnetGroup
 from troposphere.route53 import RecordSetType
+
 
 from .base import Blueprint
 

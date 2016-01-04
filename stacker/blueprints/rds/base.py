@@ -1,3 +1,9 @@
+import warnings
+
+warnings.warn("The included blueprints are deprecated. You should install "
+              "the `stacker_blueprints` module instead.",
+              DeprecationWarning)
+
 from troposphere import (
     Ref, ec2, Output, GetAtt, Not, Equals, Condition, And, Join, If, Tags
 )

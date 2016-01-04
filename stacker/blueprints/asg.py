@@ -196,11 +196,11 @@ class AutoscalingGroup(Blueprint):
         t = self.template
         t.add_resource(autoscaling.LaunchConfiguration(
             launch_config,
-            **self.get_launch_configuration_parameters(launch_config, elb_name)
+            **self.get_launch_configuration_parameters()
         ))
         t.add_resource(autoscaling.AutoScalingGroup(
             name,
-            **self.get_autoscaling_group_parameters()
+            **self.get_autoscaling_group_parameters(launch_config, elb_name)
         ))
 
     def create_template(self):

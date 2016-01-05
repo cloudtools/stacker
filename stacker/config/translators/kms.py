@@ -1,5 +1,25 @@
 import base64
+import os
+
 import botocore.session
+
+
+def _get_config_directory():
+    # avoid circular import
+    from ...commands.stacker import Stacker
+    command = Stacker()
+    namespace = command.parse_args()
+    return os.path.dirname(namespace.config.name)
+
+
+def _value_from_path(value):
+    if value.startswith('file://'):
+        path = value.split('file://', 1)[1]
+        config_directory = _get_config_directory()
+        relative_path = os.path.join(config_directory, path)
+        with open(relative_path) as read_file:
+            value = read_file.read()
+    return value
 
 
 def kms_simple_decrypt(value):
@@ -28,7 +48,8 @@ def kms_simple_decrypt(value):
         kms_value.txt
         us-east-1@CiD6bC8t2Y<...encrypted blob...>
 
-        and reference it within stacker:
+        and reference it within stacker (NOTE: the path should be relative to
+        the stacker config file):
 
         conf_key: !kms file://kms_value.txt
 
@@ -36,10 +57,7 @@ def kms_simple_decrypt(value):
         conf_key: PASSWORD
 
     """
-    if value.startswith('file://'):
-        path = value.split('file://', 1)[1]
-        with open(path) as read_file:
-            value = read_file.read()
+    value = _value_from_path(value)
 
     region = 'us-east-1'
     if '@' in value:

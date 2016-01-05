@@ -17,7 +17,7 @@ class Destroy(BaseCommand):
     def add_arguments(self, parser):
         super(Destroy, self).add_arguments(parser)
         parser.add_argument('-f', '--force', action='store_true',
-                            help="Whehter or not you want to go through "
+                            help="Whether or not you want to go through "
                                  " with destroying the stacks")
         parser.add_argument('-t', '--tail', action='store_true',
                             help='Tail the CloudFormation logs while working'

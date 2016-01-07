@@ -26,14 +26,4 @@ class Destroy(BaseCommand):
     def run(self, options, **kwargs):
         super(Destroy, self).run(options, **kwargs)
         action = destroy.Action(options.context, provider=options.provider)
-        stack_names = ['  - %s' % (s.fqn,) for s in options.context.get_stacks()]
-        message = '\nAre you sure you want to destroy the following stacks:\n%s\n\n(yes/no): ' % (
-            '\n'.join(stack_names),
-        )
-        force = False
-        if options.force:
-            confirm = raw_input(message)
-            force = confirm.lower() == 'yes'
-            if not force:
-                self.logger.info('Confirmation failed, printing ouline...')
-        action.execute(force=force, tail=options.tail)
+        action.execute(force=options.force, tail=options.tail)

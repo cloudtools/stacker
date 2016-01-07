@@ -1,3 +1,13 @@
+## 0.6.0 (2016-01-07)
+
+- Support tailing cloudformation event stream when building/destroying stacks [GH-90]
+- More customizable ASG userdata & options [GH-100]
+- Deprecate 'blueprints' in favor of 'stacker\_blueprints' package [GH-125]
+- Add KMS based encryption translator [GH-126]
+- Fix typo in ASG customization [GH-127]
+- Allow file:// prefix with KMS encryption translator [GH-128]
+- No longer require a confirmation if the user passes the `--force` flag when destroying [GH-131]
+
 ## 0.5.4 (2015-12-03)
 
 - Fix memory leak issue (GH-111) [GH-114]

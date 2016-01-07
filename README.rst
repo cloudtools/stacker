@@ -147,6 +147,14 @@ encrypt the value using ``kms``. For example::
 This requires that the person using stacker has access to the master key used
 to encrypt the value.
 
+It is also possible to store the encrypted blob in a file (useful if the
+value is large) using the `file://` prefix, ie::
+
+  DockerConfig: !kms file://dockercfg
+
+NOTE: Translators resolve the path specified with `file://` relative to
+the location of the config file, not where the stacker command is run.
+
 Docker
 ======
 

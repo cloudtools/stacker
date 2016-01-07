@@ -1,25 +1,8 @@
 import base64
-import os
 
 import botocore.session
 
-
-def _get_config_directory():
-    # avoid circular import
-    from ...commands.stacker import Stacker
-    command = Stacker()
-    namespace = command.parse_args()
-    return os.path.dirname(namespace.config.name)
-
-
-def _value_from_path(value):
-    if value.startswith('file://'):
-        path = value.split('file://', 1)[1]
-        config_directory = _get_config_directory()
-        relative_path = os.path.join(config_directory, path)
-        with open(relative_path) as read_file:
-            value = read_file.read()
-    return value
+from .base import read_value_from_path
 
 
 def kms_simple_decrypt(value):
@@ -57,7 +40,7 @@ def kms_simple_decrypt(value):
         conf_key: PASSWORD
 
     """
-    value = _value_from_path(value)
+    value = read_value_from_path(value)
 
     region = 'us-east-1'
     if '@' in value:

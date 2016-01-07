@@ -1,5 +1,8 @@
 import base64
+
 import botocore.session
+
+from .base import read_value_from_path
 
 
 def kms_simple_decrypt(value):
@@ -23,9 +26,22 @@ def kms_simple_decrypt(value):
         # In stacker we would reference the encrypted value like:
         conf_key: !kms us-east-1@CiD6bC8t2Y<...encrypted blob...>
 
-        # The above would resolve to
+        You can optionally store the encrypted value in a file, ie:
+
+        kms_value.txt
+        us-east-1@CiD6bC8t2Y<...encrypted blob...>
+
+        and reference it within stacker (NOTE: the path should be relative to
+        the stacker config file):
+
+        conf_key: !kms file://kms_value.txt
+
+        # Both of the above would resolve to
         conf_key: PASSWORD
+
     """
+    value = read_value_from_path(value)
+
     region = 'us-east-1'
     if '@' in value:
         region, value = value.split('@', 1)

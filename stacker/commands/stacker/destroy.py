@@ -31,7 +31,7 @@ class Destroy(BaseCommand):
             '\n'.join(stack_names),
         )
         force = False
-        if options.force:
+        if not options.force:
             confirm = raw_input(message)
             force = confirm.lower() == 'yes'
             if not force:

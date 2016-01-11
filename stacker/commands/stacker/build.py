@@ -26,6 +26,10 @@ class Build(BaseCommand):
         parser.add_argument("-o", "--outline", action="store_true",
                             help="Print an outline of what steps will be "
                                  "taken to build the stacks")
+        parser.add_argument("-d", "--diff", action="store_true",
+                            help="Instead of deploying, print an diff of the "
+                                 "currently deployed stack(s) vs. the new "
+                                 "template(s) to be built")
         parser.add_argument("--force", action="append", default=[],
                             metavar="STACKNAME", type=str,
                             help="If a stackname is provided to --force, it "
@@ -44,7 +48,9 @@ class Build(BaseCommand):
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
-        action.execute(outline=options.outline, tail=options.tail)
+        action.execute(outline=options.outline,
+                       tail=options.tail,
+                       diff=options.diff)
 
     def get_context_kwargs(self, options, **kwargs):
         return {'stack_names': options.stacks, 'force_stacks': options.force}

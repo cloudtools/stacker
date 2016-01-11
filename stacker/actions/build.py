@@ -4,8 +4,13 @@ from .base import BaseAction
 from .. import exceptions, util
 from ..exceptions import StackDidNotChange
 from ..plan import COMPLETE, SKIPPED, SUBMITTED, Plan
+import json
+import os
+import subprocess
+import tempfile
 
 logger = logging.getLogger(__name__)
+DIFF_ARGS="-C3"
 
 
 def should_update(stack):
@@ -103,8 +108,8 @@ class Action(BaseAction):
     are determined automatically based on references to output values from
     other stacks).
 
-    The plan can then either be printed out as an outline or executed. If
-    executed, each stack will get launched in order which entails:
+    The plan can then either be printed out as an outline, diffed or executed.
+    If executed, each stack will get launched in order which entails:
         - Pushing the generated CloudFormation template to S3 if it has changed
         - Submitting either a build or update of the given stack to the
           `Provider`.
@@ -228,17 +233,76 @@ class Action(BaseAction):
 
         return params.items()
 
-    def _generate_plan(self, tail=False):
+    def _normalize_json(self, json_str):
+        """Takes a string representing a JSON object and normalizes it"""
+        obj = json.loads(json_str)
+        return json.dumps(obj, sort_keys=True, indent=4)
+
+    def _diff_stack(self, stack, **kwargs):
+        """Handles the diffing a stack in CloudFormation vs. our config"""
+        if not should_submit(stack):
+            return SKIPPED
+
+        if not should_update(stack):
+            return SKIPPED
+
+        try:
+            old_stack = self.provider.get_template(stack.fqn)
+        except exceptions.StackDoesNotExist:
+            old_stack = None
+
+        new_stack = self._normalize_json(stack.blueprint.rendered)
+
+        logger.info("============== Stack: %s ===============", stack.fqn)
+        if not old_stack:
+            logger.info("New template contents:")
+            print new_stack
+        else:
+            old_stack = self._normalize_json(old_stack)
+            old = tempfile.NamedTemporaryFile(
+                prefix="old_stack_",
+                delete=False,
+            )
+            new = tempfile.NamedTemporaryFile(
+                prefix="new_stack_",
+                delete=False,
+            )
+            try:
+                old.write(old_stack)
+                new.write(new_stack)
+                old.close()
+                new.close()
+                pobj = subprocess.Popen(
+                    ['/usr/bin/diff', DIFF_ARGS, old.name, new.name],
+                )
+                ret = pobj.wait()
+                if ret == 0:
+                    # no difference between the templates!
+                    print "*** No changes ***"
+                    return SKIPPED
+
+            finally:
+                # We have to clean up after mkstemp
+                os.unlink(old.name)
+                os.unlink(new.name)
+        return COMPLETE
+
+    def _generate_plan(self, tail=False, diff=False):
         plan_kwargs = {}
         if tail:
             plan_kwargs['watch_func'] = self.provider.tail_stack
+
         plan = Plan(description='Create/Update stacks', **plan_kwargs)
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
+        run_func = self._launch_stack
+        if diff:
+            run_func = self._diff_stack
+
         for stack_name in self.get_stack_execution_order(dependencies):
             plan.add(
                 stacks[stack_name],
-                run_func=self._launch_stack,
+                run_func=run_func,
                 requires=dependencies.get(stack_name),
             )
         return plan
@@ -249,20 +313,20 @@ class Action(BaseAction):
             dependencies[stack.fqn] = stack.requires
         return dependencies
 
-    def pre_run(self, outline=False, *args, **kwargs):
+    def pre_run(self, outline=False, diff=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
         pre_build = self.context.config.get('pre_build')
-        if not outline and pre_build:
+        if not outline and not diff and pre_build:
             util.handle_hooks('pre_build', pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, tail=False, *args, **kwargs):
+    def run(self, outline=False, tail=False, diff=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
-        plan = self._generate_plan(tail=tail)
+        plan = self._generate_plan(tail=tail, diff=diff)
         if not outline:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them
@@ -270,11 +334,11 @@ class Action(BaseAction):
             debug_plan.outline(logging.DEBUG)
             logger.info("Launching stacks: %s", ', '.join(plan.keys()))
             plan.execute()
-        else:
+        elif outline:
             plan.outline()
 
-    def post_run(self, outline=False, *args, **kwargs):
+    def post_run(self, outline=False, diff=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""
         post_build = self.context.config.get('post_build')
-        if not outline and post_build:
+        if not outline and not diff and post_build:
             util.handle_hooks('post_build', post_build, self.context)

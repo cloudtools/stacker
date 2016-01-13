@@ -183,3 +183,16 @@ class Provider(BaseProvider):
             stack = self.get_stack(stack_name)
             self._outputs[stack_name] = get_output_dict(stack)
         return self._outputs[stack_name]
+
+    def get_template(self, stack_name):
+        try:
+            ret = retry_on_throttling(self.cloudformation.get_template,
+                                       args=[stack_name])
+            result = ret['GetTemplateResponse']['GetTemplateResult']
+            return result['TemplateBody']
+        except boto.exception.BotoServerError as e:
+            if 'does not exist' not in e.message:
+                raise
+            raise exceptions.StackDoesNotExist(stack_name)
+        except KeyError:
+            raise exceptions.StackDoesNotExist(stack_name)

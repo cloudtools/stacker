@@ -24,8 +24,14 @@ Stacker Command
 ===============
 
 The stacker command is built to have sub-commands, much like git. Currently the
-only implemented command is ``build``, which handles taking your stack config
-and then launching or updating stacks as necessary.
+comands are:
+
+- ``build`` which handles taking your stack config and then launching or 
+  updating stacks as necessary.
+- ``destroy`` which tears down your stacks
+- ``diff`` which compares your currently deployed stack templates to your 
+  config files 
+- ``info`` which prints information about your currently deployed stacks
 
 Example
 =======

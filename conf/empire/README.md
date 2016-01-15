@@ -4,11 +4,14 @@ This is meant to be a base guideline for building a production ready
 [Empire][Empire] cluster.
 
 In order to use these examples, you'll need to install the
-[stacker\_blueprints][stacker\_blueprints] module:
+[stacker_blueprints][stacker_blueprints] module:
 
 ```
 pip install stacker_blueprints
 ```
+
+**NOTE:** You should also use the [example.env][example.env] and
+[empire.yaml][empire.yaml] from that project.
 
 In order to launch it, you'll want to modify the
 [example.env][example.env] to fit your needs. It's worth reading through the
@@ -48,7 +51,7 @@ likely be tightened up quite a bit more to suit your needs. Some basics:
 That said - if you see something that we missed, please let me know!
 
 [Empire]: https://github.com/remind101/empire/
-[example.env]: https://github.com/remind101/stacker/blob/master/conf/empire/example.env
-[empire.yaml]: https://github.com/remind101/stacker/blob/master/conf/empire/empire.yaml
+[example.env]: https://github.com/remind101/stacker_blueprints/blob/master/conf/empire/example.env
+[empire.yaml]: https://github.com/remind101/stacker_blueprints/blob/master/conf/empire/empire.yaml
 [empire_ami]: https://github.com/remind101/empire_ami
 [stacker_blueprints]: https://github.com/remind101/stacker_blueprints

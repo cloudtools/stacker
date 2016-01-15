@@ -17,7 +17,7 @@ class Diff(BaseCommand):
         parser.add_argument("--force", action="append", default=[],
                             metavar="STACKNAME", type=str,
                             help="If a stackname is provided to --force, it "
-                                 "will be updated, even if it is locked in "
+                                 "will be diffed, even if it is locked in "
                                  "the config.")
         parser.add_argument("--stacks", action="append",
                             metavar="STACKNAME", type=str,

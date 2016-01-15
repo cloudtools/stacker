@@ -184,12 +184,23 @@ class Provider(BaseProvider):
             self._outputs[stack_name] = get_output_dict(stack)
         return self._outputs[stack_name]
 
-    def get_template(self, stack_name):
+    def get_stack_info(self, stack_name):
+        """ Get the template and parameters of the stack currently in AWS
+
+        Returns [ template, parameters ]
+        """
         try:
-            ret = retry_on_throttling(self.cloudformation.get_template,
-                                       args=[stack_name])
-            result = ret['GetTemplateResponse']['GetTemplateResult']
-            return result['TemplateBody']
+            stacks = retry_on_throttling(
+                self.cloudformation.describe_stacks,
+                kwargs=dict(stack_name_or_id=stack_name))
+            stack = stacks[0]
+            parameters = dict()
+            for p in stack.parameters:
+                parameters[p.key] = p.value
+            ret = stack.get_template()
+            template = ret['GetTemplateResponse']['GetTemplateResult']
+            template = template['TemplateBody']
+            return [template, parameters]
         except boto.exception.BotoServerError as e:
             if 'does not exist' not in e.message:
                 raise

@@ -1,3 +1,7 @@
+**WARNING:** This example is deprecated, and shouldn't be used. Instead, please use the
+corresponding examples in the new [stacker_blueprints][stacker_blueprints] repo. These
+examples will be removed soon.
+
 # 'production' Empire example
 
 This is meant to be a base guideline for building a production ready

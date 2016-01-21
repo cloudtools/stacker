@@ -22,25 +22,46 @@ class Action(build.Action):
     config.
     """
 
-    def _normalize_json(self, json_str, parameters):
-        """Normalizes our template & parameters for diffing
+    def _diff_parameters(self, old_params, new_params):
+        """Compares the old vs. new parameters and returns a 'diff'
 
         Args:
-            json_str(str): json string representing the template
-            parameters(dict): parameters passed to the template
+            old_params(dict): old paramters
+            new_params(dict): new parameters
 
         Returns:
-            list: json representation of the parameters & template
+            int: number of changed entries
+            string: "diff" of all parameters and how they changed
         """
-        obj = json.loads(json_str)
-        json_str = json.dumps(obj, sort_keys=True, indent=4)
-        param_str = '"Parameters:" ' + \
-            json.dumps(parameters, sort_keys=True, indent=4)
-        result = []
-        lines = param_str.split("\n")
-        for line in lines:
-            result.append(line + "\n")
+        output = []
+        count = 0
+        for k, v in old_params.iteritems():
+            new_val = new_params.get(k, "_Undef_")
+            if str(v) != str(new_val):
+                output.append("CHANGED   %s: %s => %s\n" % (k, v, new_val))
+                count += 1
+            else:
+                output.append("NO CHANGE %s: %s\n" % (k, v))
 
+        for k, v in new_params.iteritems():
+            if not k in old_params:
+                output.append("NEW       %s: %s\n" % (k, v))
+                count += 1
+
+        return [count, "".join(output)]
+
+    def _normalize_json(self, template):
+        """Normalizes our template for diffing
+
+        Args:
+            template(str): json string representing the template
+
+        Returns:
+            list: json representation of the parameters
+        """
+        obj = json.loads(template)
+        json_str = json.dumps(obj, sort_keys=True, indent=4)
+        result = []
         lines = json_str.split("\n")
         for line in lines:
             result.append(line + "\n")
@@ -53,45 +74,60 @@ class Action(build.Action):
 
         # get the current stack template & params from AWS
         try:
-            [old_template, old_params] = self.provider.get_stack_info(stack.fqn)
+            [old_template, old_params] = self.provider.get_stack_info(
+                stack.fqn)
         except exceptions.StackDoesNotExist:
             old_template = None
             old_params = {}
 
         # generate our own template & params
         new_template = stack.blueprint.rendered
-        parameters = self._resolve_parameters(stack.parameters,
-                                              stack.blueprint)
+        resolved_parameters = self._resolve_parameters(stack.parameters,
+                                                       stack.blueprint)
         required_params = [k for k, v in stack.blueprint.required_parameters]
-        parameters = self._handle_missing_parameters(parameters,
+        parameters = self._handle_missing_parameters(resolved_parameters,
                                                      required_params)
         new_params = dict()
         for p in parameters:
             new_params[p[0]] = p[1]
-        new_stack = self._normalize_json(new_template, new_params)
+        new_stack = self._normalize_json(new_template)
+        [param_changes, param_diff] = self._diff_parameters(
+            old_params, new_params)
 
-        logger.info("============== Stack: %s ==============", stack)
+        print "============== Stack: %s ==============" % (stack,)
         if not old_template:
-            logger.info("New template contents:")
+            print "Input parameters:"
+            print param_diff
+            print "New template contents:"
             sys.stdout.write(''.join(new_stack))
         else:
-            old_stack = self._normalize_json(old_template, old_params)
-            count = 0
+            old_stack = self._normalize_json(old_template)
+
             lines = difflib.context_diff(
                 old_stack, new_stack,
                 fromfile="old_stack", tofile="new_stack")
 
+            count = 0
+            # lines is a generator, not a list hence this is a bit fugly
             for line in lines:
+                if count == 0:
+                    print "Input parameters:"
+                    print param_diff
+
                 sys.stdout.write(line)
                 count += 1
-            if not count:
-                print "*** No changes ***"
+
+            if count == 0:
+                print "*** No changes to template ***"
                 return SKIPPED
+            elif param_changes:
+                print "Input parameters:"
+                print param_diff
+
         return COMPLETE
 
     def _generate_plan(self):
-        plan_kwargs = {}
-        plan = Plan(description='Diff stacks', **plan_kwargs)
+        plan = Plan(description='Diff stacks')
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):

@@ -193,17 +193,20 @@ class Provider(BaseProvider):
             stacks = retry_on_throttling(
                 self.cloudformation.describe_stacks,
                 kwargs=dict(stack_name_or_id=stack_name))
-            stack = stacks[0]
-            parameters = dict()
-            for p in stack.parameters:
-                parameters[p.key] = p.value
-            ret = stack.get_template()
-            template = ret['GetTemplateResponse']['GetTemplateResult']
-            template = template['TemplateBody']
-            return [template, parameters]
         except boto.exception.BotoServerError as e:
             if 'does not exist' not in e.message:
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
+
+        stack = stacks[0]
+        parameters = dict()
+        for p in stack.parameters:
+            parameters[p.key] = p.value
+        ret = stack.get_template()
+        try:
+            template = ret['GetTemplateResponse']['GetTemplateResult']
+            template = template['TemplateBody']
         except KeyError:
             raise exceptions.StackDoesNotExist(stack_name)
+
+        return [template, parameters]

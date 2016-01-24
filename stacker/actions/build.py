@@ -92,6 +92,10 @@ def resolve_parameters(parameters, blueprint, context, provider):
                          "to cloudformation, default value should be used.",
                          k)
             continue
+        if isinstance(value, bool):
+            logger.debug("Converting parameter %s boolean '%s' to string.",
+                         k, value)
+            value = str(value).lower()
         params[k] = value
     return params
 

@@ -318,3 +318,17 @@ class TestFunctions(unittest.TestCase):
         # so the output is just the output name, not the stack name + the
         # output name
         self.assertEqual(exc.output, "other-stack::a")
+
+    def test_resolve_parameters_booleans(self):
+        self.bp.parameters = {
+            "a": {
+                "type": "String",
+                "description": "A"},
+            "b": {
+                "type": "String",
+                "description": "B"},
+        }
+        params = {"a": True, "b": False}
+        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        self.assertEquals("true", p["a"])
+        self.assertEquals("false", p["b"])

@@ -23,7 +23,7 @@ def diff_dictionaries(old_dict, new_dict):
         int: number of changed records
         list: [str(<change type>), <key>, <value>]
 
-        Where <change type>: +, - or empty string
+        Where <change type>: +, - or <space>
     """
 
     old_set = set(old_dict)
@@ -49,7 +49,7 @@ def diff_dictionaries(old_dict, new_dict):
             output.append(['-', key, old_dict[key]])
             output.append(['+', key, new_dict[key]])
         else:
-            output.append(['', key, new_dict[key]])
+            output.append([' ', key, new_dict[key]])
 
     return [changes, output]
 
@@ -79,12 +79,12 @@ class Action(build.Action):
         if changes == 0:
             return
 
-        print """*** New Parameters
---- Old Parameters
+        print """--- Old Parameters
++++ New Parameters
 ******************"""
 
         for line in diff:
-            print "%s\t%s = %s" % (line[0], line[1], line[2])
+            print "%s%s = %s" % (line[0], line[1], line[2])
 
     def _normalize_json(self, template):
         """Normalizes our template for diffing
@@ -121,7 +121,6 @@ class Action(build.Action):
             old_stack, new_stack,
             fromfile=from_file, tofile=to_file)
 
-        # lines is a generator, not a list hence this is a bit fugly
         template_changes = list(lines)
         if not template_changes:
             print "*** No changes to template ***"

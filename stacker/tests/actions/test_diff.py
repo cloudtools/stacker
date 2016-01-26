@@ -20,7 +20,7 @@ class TestDiffDictionary(unittest.TestCase):
         [count, changes] = diff_dictionaries(self.old_dict, self.new_dict)
         self.assertEqual(count, 3)
         expected_output = [
-            ["", "a", "Apple"],
+            [" ", "a", "Apple"],
             ["-", "b", "Banana"],
             ["+", "b", "Bob"],
             ["-", "c", "Corn"],

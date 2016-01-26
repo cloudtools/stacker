@@ -203,10 +203,7 @@ class Provider(BaseProvider):
         for p in stack.parameters:
             parameters[p.key] = p.value
         ret = stack.get_template()
-        try:
-            template = ret['GetTemplateResponse']['GetTemplateResult']
-            template = template['TemplateBody']
-        except KeyError:
-            raise exceptions.StackDoesNotExist(stack_name)
+        template = ret['GetTemplateResponse']['GetTemplateResult']
+        template = template['TemplateBody']
 
         return [template, parameters]

@@ -5,9 +5,53 @@ from ..plan import COMPLETE, SKIPPED, Plan
 from . import build
 import difflib
 import json
-import sys
 
 logger = logging.getLogger(__name__)
+
+
+def diff_dictionaries(old_dict, new_dict):
+    """Diffs two single dimension dictionaries
+
+    Returns the number of changes and an unordered list
+    expressing the common entries and changes.
+
+    Args:
+        old_dict(dict): old dictionary
+        new_dict(dict): new dictionary
+
+    Returns: list()
+        int: number of changed records
+        list: [str(<change type>), <key>, <value>]
+
+        Where <change type>: +, - or empty string
+    """
+
+    old_set = set(old_dict)
+    new_set = set(new_dict)
+
+    added_set = new_set - old_set
+    removed_set = old_set - new_set
+    common_set = old_set & new_set
+
+    changes = 0
+    output = []
+    for key in added_set:
+        changes += 1
+        output.append(['+', key, new_dict[key]])
+
+    for key in removed_set:
+        changes += 1
+        output.append(['-', key, old_dict[key]])
+
+    for key in common_set:
+        if str(old_dict[key]) != str(new_dict[key]):
+            changes += 1
+            output.append(['-', key, old_dict[key]])
+            output.append(['+', key, new_dict[key]])
+        else:
+            output.append(['', key, new_dict[key]])
+
+    return [changes, output]
 
 
 class Action(build.Action):
@@ -23,32 +67,24 @@ class Action(build.Action):
     """
 
     def _diff_parameters(self, old_params, new_params):
-        """Compares the old vs. new parameters and returns a 'diff'
+        """Compares the old vs. new parameters and prints a 'diff'
+
+        If there are no changes, we print nothing.
 
         Args:
             old_params(dict): old paramters
             new_params(dict): new parameters
-
-        Returns:
-            int: number of changed entries
-            string: "diff" of all parameters and how they changed
         """
-        output = []
-        count = 0
-        for k, v in old_params.iteritems():
-            new_val = new_params.get(k, "_Undef_")
-            if str(v) != str(new_val):
-                output.append("CHANGED   %s: %s => %s\n" % (k, v, new_val))
-                count += 1
-            else:
-                output.append("NO CHANGE %s: %s\n" % (k, v))
+        [changes, diff] = diff_dictionaries(old_params, new_params)
+        if changes == 0:
+            return
 
-        for k, v in new_params.iteritems():
-            if not k in old_params:
-                output.append("NEW       %s: %s\n" % (k, v))
-                count += 1
+        print """*** New Parameters
+--- Old Parameters
+******************"""
 
-        return [count, "".join(output)]
+        for line in diff:
+            print "%s\t%s = %s" % (line[0], line[1], line[2])
 
     def _normalize_json(self, template):
         """Normalizes our template for diffing
@@ -67,6 +103,32 @@ class Action(build.Action):
             result.append(line + "\n")
         return result
 
+    def _print_new_stack(self, stack, parameters):
+        """Prints out the parameters & stack contents of a new stack"""
+        print "New template parameters:"
+        for key in parameters.keys().sort():
+            print "%s = %s" % (key, parameters[key])
+
+        print "New template contents:"
+        print "".join(stack)
+
+    def _print_stack_changes(self, stack_name, new_stack, old_stack,
+                             new_params, old_params):
+        """Prints out the paramters (if changed) and stack diff"""
+        from_file = "old_%s" % (stack_name,)
+        to_file = "new_%s" % (stack_name,)
+        lines = difflib.context_diff(
+            old_stack, new_stack,
+            fromfile=from_file, tofile=to_file)
+
+        # lines is a generator, not a list hence this is a bit fugly
+        template_changes = list(lines)
+        if not template_changes:
+            print "*** No changes to template ***"
+        else:
+            self._diff_parameters(old_params, new_params)
+            print "".join(template_changes)
+
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
         if not build.should_submit(stack) or not build.should_update(stack):
@@ -82,48 +144,21 @@ class Action(build.Action):
 
         # generate our own template & params
         new_template = stack.blueprint.rendered
-        resolved_parameters = self._resolve_parameters(stack.parameters,
-                                                       stack.blueprint)
-        required_params = [k for k, v in stack.blueprint.required_parameters]
-        parameters = self._handle_missing_parameters(resolved_parameters,
-                                                     required_params)
+        parameters = self.build_parameters(stack)
         new_params = dict()
         for p in parameters:
             new_params[p[0]] = p[1]
         new_stack = self._normalize_json(new_template)
-        [param_changes, param_diff] = self._diff_parameters(
-            old_params, new_params)
 
-        print "============== Stack: %s ==============" % (stack,)
+        print "============== Stack: %s ==============" % (stack.name,)
+        # If this is a completely new template dump our params & stack
         if not old_template:
-            print "Input parameters:"
-            print param_diff
-            print "New template contents:"
-            sys.stdout.write(''.join(new_stack))
+            self._print_new_stack(new_stack, parameters)
         else:
+            # Diff our old & new stack/parameters
             old_stack = self._normalize_json(old_template)
-
-            lines = difflib.context_diff(
-                old_stack, new_stack,
-                fromfile="old_stack", tofile="new_stack")
-
-            count = 0
-            # lines is a generator, not a list hence this is a bit fugly
-            for line in lines:
-                if count == 0:
-                    print "Input parameters:"
-                    print param_diff
-
-                sys.stdout.write(line)
-                count += 1
-
-            if count == 0:
-                print "*** No changes to template ***"
-                return SKIPPED
-            elif param_changes:
-                print "Input parameters:"
-                print param_diff
-
+            self._print_stack_changes(stack.name, new_stack, old_stack,
+                                      new_params, old_params)
         return COMPLETE
 
     def _generate_plan(self):

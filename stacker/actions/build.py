@@ -137,6 +137,25 @@ class Action(BaseAction):
         return resolve_parameters(parameters, blueprint, self.context,
                                   self.provider)
 
+    def build_parameters(self, stack, provider_stack=None):
+        """Builds the parameters for our stack
+
+        Args:
+            stack (:class:`cloudformation.stack`): A Cloudformation stack
+            provider_stack (:class:`stacker.providers.base.Provider`): An
+                optional Stacker provider object
+
+        Returns:
+            dict: The parameters for the given stack
+        """
+        parameters = self._resolve_parameters(stack.parameters,
+                                              stack.blueprint)
+        required_params = [k for k, v in stack.blueprint.required_parameters]
+        parameters = self._handle_missing_parameters(parameters,
+                                                     required_params,
+                                                     provider_stack)
+        return parameters
+
     def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""
         tags = {
@@ -174,12 +193,7 @@ class Action(BaseAction):
         logger.info("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack)
-        parameters = self._resolve_parameters(stack.parameters,
-                                              stack.blueprint)
-        required_params = [k for k, v in stack.blueprint.required_parameters]
-        parameters = self._handle_missing_parameters(parameters,
-                                                     required_params,
-                                                     provider_stack)
+        parameters = self.build_parameters(stack, provider_stack)
 
         try:
             if not provider_stack:

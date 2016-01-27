@@ -1,3 +1,6 @@
+## x.x.x
+- Add support for the 'stacker diff' command
+
 ## 0.6.0 (2016-01-07)
 
 - Support tailing cloudformation event stream when building/destroying stacks [GH-90]

@@ -2,8 +2,10 @@ class Status(object):
     def __init__(self, name, code, reason=None):
         self.name = name
         self.code = code
-        self.reason = reason
+        self.reason = reason or getattr(self, 'reason', None)
 
+    # Only compares code - should it compare reason too?  I think probably
+    # not
     def __cmp__(self, other):
         if hasattr(other, "code"):
             return cmp(self.code, other.code)
@@ -26,24 +28,21 @@ class CompleteStatus(Status):
 
 
 class SkippedStatus(Status):
-    reason = None
-
     def __init__(self, reason=None):
-        super(SkippedStatus, self).__init__('skipped', 3,
-                                            reason or self.reason)
+        super(SkippedStatus, self).__init__('skipped', 3, reason)
 
 
 class NotSubmittedStatus(SkippedStatus):
-    reason = "Stack would not be submitted."
+    reason = "disabled"
 
 
 class NotUpdatedStatus(SkippedStatus):
-    reason = "Stack would not be updated."
+    reason = "locked"
 
 
 class DidNotChangeStatus(SkippedStatus):
-    reason = "Stack did not change."
+    reason = "nochange"
 
 
 class StackDoesNotExist(SkippedStatus):
-    reason = "Stack does not exist."
+    reason = "does not exist in cloudformation"

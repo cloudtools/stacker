@@ -196,8 +196,11 @@ class Plan(OrderedDict):
                 )
                 continue
 
-            if not step.done and self._watch_func and \
-                    step_name not in self._watchers:
+            if (
+                not step.done and
+                self._watch_func and
+                step_name not in self._watchers
+            ):
                 process = multiprocessing.Process(
                     target=self._watch_func,
                     args=(step.stack,)

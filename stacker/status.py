@@ -4,8 +4,6 @@ class Status(object):
         self.code = code
         self.reason = reason or getattr(self, 'reason', None)
 
-    # Only compares code - should it compare reason too?  I think probably
-    # not
     def __cmp__(self, other):
         if hasattr(other, "code"):
             return cmp(self.code, other.code)

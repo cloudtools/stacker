@@ -1,7 +1,8 @@
 import logging
 
 from .. import exceptions
-from ..plan import COMPLETE, SKIPPED, Plan
+from ..plan import COMPLETE, Plan
+from ..status import NotSubmittedStatus, NotUpdatedStatus
 from . import build
 import difflib
 import json
@@ -130,8 +131,11 @@ class Action(build.Action):
 
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
-        if not build.should_submit(stack) or not build.should_update(stack):
-            return SKIPPED
+        if not build.should_submit(stack):
+            return NotSubmittedStatus()
+
+        if not build.should_update(stack):
+            return NotUpdatedStatus()
 
         # get the current stack template & params from AWS
         try:

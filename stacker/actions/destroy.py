@@ -4,10 +4,11 @@ from .base import BaseAction
 from ..exceptions import StackDoesNotExist
 from ..plan import (
     COMPLETE,
-    SKIPPED,
     SUBMITTED,
     Plan,
 )
+
+from ..status import StackDoesNotExist as StackDoesNotExistStatus
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class Action(BaseAction):
             if kwargs.get('status', None) is SUBMITTED:
                 return COMPLETE
             else:
-                return SKIPPED
+                return StackDoesNotExistStatus()
 
         logger.debug(
             "Stack %s provider status: %s",

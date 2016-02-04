@@ -3,17 +3,22 @@ import logging
 import multiprocessing
 import time
 
-from collections import namedtuple
-
 from .exceptions import ImproperlyConfigured
+
+from .status import (
+    Status,
+    PendingStatus,
+    SubmittedStatus,
+    CompleteStatus,
+    SkippedStatus
+)
 
 logger = logging.getLogger(__name__)
 
-Status = namedtuple('Status', ['name', 'code'])
-PENDING = Status('pending', 0)
-SUBMITTED = Status('submitted', 1)
-COMPLETE = Status('complete', 2)
-SKIPPED = Status('skipped', 3)
+PENDING = PendingStatus()
+SUBMITTED = SubmittedStatus()
+COMPLETE = CompleteStatus()
+SKIPPED = SkippedStatus()
 
 
 class Step(object):
@@ -56,7 +61,7 @@ class Step(object):
     @property
     def submitted(self):
         """Returns True if the step is SUBMITTED, COMPLETE, or SKIPPED."""
-        return self.status.code >= SUBMITTED.code
+        return self.status >= SUBMITTED
 
     def run(self):
         return self._run_func(self.stack, status=self.status)
@@ -106,8 +111,8 @@ class Plan(OrderedDict):
 
     """
 
-    def __init__(self, description, sleep_time=5, wait_func=None, watch_func=None, *args,
-                 **kwargs):
+    def __init__(self, description, sleep_time=5, wait_func=None,
+                 watch_func=None, *args, **kwargs):
         self.description = description
         self.sleep_time = sleep_time
         if wait_func is not None:
@@ -191,7 +196,11 @@ class Plan(OrderedDict):
                 )
                 continue
 
-            if not step.done and self._watch_func and step_name not in self._watchers:
+            if (
+                not step.done and
+                self._watch_func and
+                step_name not in self._watchers
+            ):
                 process = multiprocessing.Process(
                     target=self._watch_func,
                     args=(step.stack,)
@@ -272,4 +281,7 @@ class Plan(OrderedDict):
         """Outputs the current status of all steps in the plan."""
         logger.info('Plan Status:')
         for step_name, step in self.iteritems():
-            logger.info('  - step "%s": %s', step_name, step.status.name)
+            msg = "  - step \"%s\": %s" % (step_name, step.status.name)
+            if step.status.reason:
+                msg += " (%s)" % (step.status.reason)
+            logger.info(msg)

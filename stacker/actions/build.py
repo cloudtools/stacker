@@ -4,7 +4,12 @@ from .base import BaseAction
 from .. import exceptions, util
 from ..exceptions import StackDidNotChange
 from ..plan import COMPLETE, SUBMITTED, Plan
-from ..status import SkippedStatus
+from ..status import (
+    NotSubmittedStatus,
+    NotUpdatedStatus,
+    DidNotChangeStatus
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +177,7 @@ class Action(BaseAction):
 
         """
         if not should_submit(stack):
-            return SkippedStatus("Stack should not be submitted.")
+            return NotSubmittedStatus()
 
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
@@ -202,11 +207,11 @@ class Action(BaseAction):
                                            tags)
             else:
                 if not should_update(stack):
-                    return SkippedStatus("Stack should not be updated.")
+                    return NotUpdatedStatus()
                 self.provider.update_stack(stack.fqn, template_url, parameters,
                                            tags)
         except StackDidNotChange:
-            return SkippedStatus("Stack did not change.")
+            return DidNotChangeStatus()
 
         return SUBMITTED
 

@@ -26,5 +26,24 @@ class CompleteStatus(Status):
 
 
 class SkippedStatus(Status):
+    reason = None
+
     def __init__(self, reason=None):
-        super(SkippedStatus, self).__init__('skipped', 3, reason)
+        super(SkippedStatus, self).__init__('skipped', 3,
+                                            reason or self.reason)
+
+
+class NotSubmittedStatus(SkippedStatus):
+    reason = "Stack would not be submitted."
+
+
+class NotUpdatedStatus(SkippedStatus):
+    reason = "Stack would not be updated."
+
+
+class DidNotChangeStatus(SkippedStatus):
+    reason = "Stack did not change."
+
+
+class StackDoesNotExist(SkippedStatus):
+    reason = "Stack does not exist."

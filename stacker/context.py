@@ -56,7 +56,7 @@ class Context(object):
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
-        self.mappings = self.config['mappings']
+        self.mappings = self.config.get('mappings', {})
 
     def _get_stack_definitions(self):
         if not self.stack_names:

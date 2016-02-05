@@ -301,4 +301,5 @@ class Action(BaseAction):
         """Any steps that need to be taken after running the action."""
         post_build = self.context.config.get('post_build')
         if not outline and post_build:
-            util.handle_hooks('post_build', post_build, self.context)
+            util.handle_hooks('post_build', post_build, self.provider.region,
+                              self.context)

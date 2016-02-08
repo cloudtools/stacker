@@ -2,6 +2,7 @@ import logging
 
 from .base import BaseAction
 from ..exceptions import StackDoesNotExist
+from .. import util
 from ..plan import (
     COMPLETE,
     SUBMITTED,
@@ -80,6 +81,13 @@ class Action(BaseAction):
             self.provider.destroy_stack(provider_stack)
         return SUBMITTED
 
+    def pre_run(self, outline=False, *args, **kwargs):
+        """Any steps that need to be taken prior to running the action."""
+        pre_destroy = self.context.config.get('pre_destroy')
+        if not outline and pre_destroy:
+            util.handle_hooks('pre_destroy', pre_destroy, self.provider.region,
+                              self.context)
+
     def run(self, force, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)
         if force:
@@ -91,3 +99,10 @@ class Action(BaseAction):
         else:
             plan.outline(message='To execute this plan, run with "--force" '
                                  'flag.')
+
+    def post_run(self, outline=False, *args, **kwargs):
+        """Any steps that need to be taken after running the action."""
+        post_destroy = self.context.config.get('post_destroy')
+        if not outline and post_destroy:
+            util.handle_hooks('post_destroy', post_destroy,
+                              self.provider.region, self.context)

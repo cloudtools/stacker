@@ -1,5 +1,8 @@
-## x.x.x
-- Add support for the 'stacker diff' command
+## 0.6.1 (2016-02-11)
+- Add support for the 'stacker diff' command [GH-133]
+- Python boolean parameters automatically converted to strings for CloudFormation [GH-136]
+- No longer require mappings in config [GH-140]
+- Skipped steps now include a reason [GH-141]
 
 ## 0.6.0 (2016-01-07)
 

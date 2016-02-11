@@ -182,3 +182,10 @@ class Action(build.Action):
         debug_plan.outline(logging.DEBUG)
         logger.info("Diffing stacks: %s", ', '.join(plan.keys()))
         plan.execute()
+
+    """Don't ever do anything for pre_run or post_run"""
+    def pre_run(self, *args, **kwargs):
+        pass
+
+    def post_run(self, *args, **kwargs):
+        pass

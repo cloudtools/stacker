@@ -53,7 +53,7 @@ class BaseAction(object):
     def __init__(self, context, provider=None):
         self.context = context
         self.provider = provider
-        self.bucket_name = 'stacker-%s' % (context.get_fqn(),)
+        self.bucket_name = context.bucket_name
         self._conn = None
         self._cfn_bucket = None
 

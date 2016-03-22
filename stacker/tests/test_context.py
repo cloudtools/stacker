@@ -80,6 +80,40 @@ class TestContext(unittest.TestCase):
         context.load_config("""stacker_bucket: bucket123""")
         self.assertEqual(context.bucket_name, "bucket123")
 
+    def test_context_default_bucket_server_side_encryption(self):
+        context = Context({'namespace': 'test'})
+        context.load_config("""mappings:""")
+        self.assertEqual(context.bucket_sse, False)
+
+    def test_context_bucket_server_side_encryption_true(self):
+        context = Context({'namespace': 'test'})
+        context.load_config("""stacker_bucket_sse: true""")
+        self.assertEqual(context.bucket_sse, True)
+
+    def test_context_bucket_server_side_encryption_other_reverts_to_default(
+            self
+    ):
+        context = Context({'namespace': 'test'})
+        context.load_config("""stacker_bucket_sse: blah""")
+        self.assertEqual(context.bucket_sse, False)
+
+    def test_context_default_bucket_server_side_encryption(self):
+        context = Context({'namespace': 'test'})
+        context.load_config("""mappings:""")
+        self.assertEqual(context.bucket_sse, False)
+
+    def test_context_bucket_server_side_encryption_true(self):
+        context = Context({'namespace': 'test'})
+        context.load_config("""stacker_bucket_sse: true""")
+        self.assertEqual(context.bucket_sse, True)
+
+    def test_context_bucket_server_side_encryption_other_reverts_to_default(
+            self
+    ):
+        context = Context({'namespace': 'test'})
+        context.load_config("""stacker_bucket_sse: blah""")
+        self.assertEqual(context.bucket_sse, False)
+
 
 class TestFunctions(unittest.TestCase):
     """ Test the module level functions """

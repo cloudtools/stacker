@@ -123,6 +123,21 @@ stacks between subsequent builds.
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _string.Template: https://docs.python.org/2/library/string.html#template-strings
 
+Overriding CLoudFormation S3 bucket
+===================================
+
+Stacker uploads your CloudFormation templates to S3 prior to creating your
+stacks. This is to get around limitations imposed by the CloudFormation API. By
+default all templates are uploaded to a ``stacker-${namespace}`` bucket in your
+AWS account, where ``namespace`` is the one that you defined in your
+environment.
+
+You can override where Stacker uploads your template by specifying the
+following in your stack configuration file::
+
+  stacker_bucket: my-bucket
+
+
 Translators
 ===========
 

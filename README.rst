@@ -123,7 +123,7 @@ stacks between subsequent builds.
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _string.Template: https://docs.python.org/2/library/string.html#template-strings
 
-Overriding CLoudFormation S3 bucket
+Overriding CloudFormation S3 bucket
 ===================================
 
 Stacker uploads your CloudFormation templates to S3 prior to creating your

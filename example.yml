@@ -1,0 +1,30 @@
+stacks:
+  - name: vpc
+    # Define a template inline
+    template: |
+      {
+        "Resources": {
+          "Vpc": {
+            "Type": "AWS::EC2::Vpc"
+          }
+        },
+
+        "Outputs": {
+          "Id": { "Ref": "Vpc" }
+        }
+      }
+  - name: bastion
+    template: file://bastion.json
+    parameters:
+      VpcId: vpc::Id
+  - name: cluster
+    template: file://cluster.json
+  - name: database
+    template: file://database.json
+    parameters:
+      VpcId: vpc::Id
+  - name: application
+    template: file://application.json
+    parameters:
+      Name: "myapp"
+      Cluster: cluster::Id

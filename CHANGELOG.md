@@ -1,3 +1,6 @@
+## x.x.x (2016-xx-xx)
+- Add support for passing environment variables on the cli via --env
+
 ## 0.6.1 (2016-02-11)
 - Add support for the 'stacker diff' command [GH-133]
 - Python boolean parameters automatically converted to strings for CloudFormation [GH-136]

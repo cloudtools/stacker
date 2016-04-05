@@ -1,18 +1,13 @@
 stacks:
   - name: vpc
     # Define a template inline
-    template: |
-      {
-        "Resources": {
-          "Vpc": {
-            "Type": "AWS::EC2::Vpc"
-          }
-        },
-
-        "Outputs": {
-          "Id": { "Ref": "Vpc" }
-        }
-      }
+    template:
+      Resources:
+        Vpc:
+          Type: "AWS::EC2::Vpc"
+      Outputs:
+        Id: 
+          Ref: "Vpc"
   - name: bastion
     template: file://bastion.json
     parameters:

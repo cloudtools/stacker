@@ -103,11 +103,13 @@ class BaseCommand(object):
             level=log_level,
         )
 
-    def parse_args(self):
+    def parse_args(self, *vargs):
         parser = argparse.ArgumentParser(description=self.description)
         self.add_subcommands(parser)
         self.add_arguments(parser)
-        return parser.parse_args()
+        args = parser.parse_args(*vargs)
+        args.environment.update(args.cli_envs)
+        return args
 
     def run(self, options, **kwargs):
         self.setup_logging(options.verbose)
@@ -141,6 +143,13 @@ class BaseCommand(object):
                                  "that can be used inside any of the stacks "
                                  "being built. Can be specified more than "
                                  "once.")
+        parser.add_argument("-e", "--env", dest="cli_envs",
+                            metavar="ENV=VALUE", type=key_value_arg,
+                            action=KeyValueAction, default={},
+                            help="Adds environment key/value pairs from "
+                                 "the command line. Overrides your "
+                                 "environment file settings. Can be specified "
+                                 "more than once.")
         parser.add_argument("-r", "--region", default="us-east-1",
                             help="The AWS region to launch in. Default: "
                                  "%(default)s")

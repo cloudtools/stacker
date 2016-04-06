@@ -8,11 +8,10 @@ class TestStacker(unittest.TestCase):
 
     def test_stacker_build_parse_args(self):
         stacker = Stacker()
-        parser = argparse.ArgumentParser(description=stacker.description)
-        stacker.add_subcommands(parser)
-        args = parser.parse_args(
+        args = stacker.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
              'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
+             '-e', 'namespace=test.override',
              'stacker/tests/fixtures/basic.env',
              'stacker/tests/fixtures/vpc-bastion-db-web.yaml']
         )
@@ -23,12 +22,12 @@ class TestStacker(unittest.TestCase):
         self.assertEqual(parameters['AZCount'], '2')
         self.assertEqual(args.region, 'us-west-2')
         self.assertFalse(args.outline)
+        # verify namespace was modified
+        self.assertEqual(args.environment['namespace'], 'test.override')
 
     def test_stacker_build_context_passed_to_blueprint(self):
         stacker = Stacker()
-        parser = argparse.ArgumentParser(description=stacker.description)
-        stacker.add_subcommands(parser)
-        args = parser.parse_args(
+        args = stacker.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
              'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
              'stacker/tests/fixtures/basic.env',
@@ -49,9 +48,7 @@ class TestStacker(unittest.TestCase):
 
     def test_stacker_blueprint_property_access_does_not_reset_blueprint(self):
         stacker = Stacker()
-        parser = argparse.ArgumentParser(description=stacker.description)
-        stacker.add_subcommands(parser)
-        args = parser.parse_args(
+        args = stacker.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
              'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
              'stacker/tests/fixtures/basic.env',
@@ -66,9 +63,7 @@ class TestStacker(unittest.TestCase):
 
     def test_stacker_build_context_stack_names_specified(self):
         stacker = Stacker()
-        parser = argparse.ArgumentParser(description=stacker.description)
-        stacker.add_subcommands(parser)
-        args = parser.parse_args(
+        args = stacker.parse_args(
             ['build', '-p', 'BaseDomain=mike.com', '-r', 'us-west-2', '-p',
              'AZCount=2', '-p', 'CidrBlock=10.128.0.0/16',
              'stacker/tests/fixtures/basic.env',

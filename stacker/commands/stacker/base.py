@@ -147,9 +147,9 @@ class BaseCommand(object):
                             metavar="ENV=VALUE", type=key_value_arg,
                             action=KeyValueAction, default={},
                             help="Adds environment key/value pairs from "
-                            "the command line. Overrides your environment "
-                            "file settings. Can be specified more than "
-                            "once.")
+                                 "the command line. Overrides your "
+                                 "environment file settings. Can be specified "
+                                 "more than once.")
         parser.add_argument("-r", "--region", default="us-east-1",
                             help="The AWS region to launch in. Default: "
                                  "%(default)s")

@@ -65,6 +65,21 @@ class TestContext(unittest.TestCase):
         fqn = context.get_fqn('stack1')
         self.assertEqual(fqn, 'namespace-stack1')
 
+    def test_context_default_bucket_name(self):
+        context = Context({'namespace': 'test'})
+        context.load_config("""mappings:""")
+        self.assertEqual(context.bucket_name, 'stacker-test')
+
+    def test_context_bucket_name_is_overriden_but_is_none(self):
+        context = Context({'namespace': 'test'})
+        context.load_config("""stacker_bucket:""")
+        self.assertEqual(context.bucket_name, 'stacker-test')
+
+    def test_context_bucket_name_is_overriden(self):
+        context = Context({'namespace': 'test'})
+        context.load_config("""stacker_bucket: bucket123""")
+        self.assertEqual(context.bucket_name, 'bucket123')
+
 
 class TestFunctions(unittest.TestCase):
     """ Test the module level functions """

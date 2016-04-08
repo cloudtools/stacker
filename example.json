@@ -1,0 +1,120 @@
+{
+  "Stacks": [
+    {
+      "Name": "vpc",
+      "Template": {
+        "Parameters": {
+          "AvailabilityZones": {
+            "Type": "List<AWS::EC2::AvailabilityZone::Name>",
+            "Description": "Comma delimited list of availability zones. MAX 2",
+            "Default": "us-east-1a,us-east-1b"
+          }
+        },
+        "Resources": {
+          "Vpc": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+              "CidrBlock": "10.0.0.0/16"
+            }
+          },
+
+          "PubSubnetAz1": {
+            "Type": "AWS::EC2::Subnet",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+              "VpcId": { "Ref" : "Vpc" },
+              "CidrBlock": "10.0.0.0/24",
+              "AvailabilityZone": {
+                "Fn::Select": ["0", { "Ref": "AvailabilityZones" }]
+              }
+            }
+          },
+
+          "PubSubnetAz2": {
+            "Type": "AWS::EC2::Subnet",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+              "VpcId": { "Ref" : "Vpc" },
+              "CidrBlock": "10.0.1.0/24",
+              "AvailabilityZone": {
+                "Fn::Select": ["1", { "Ref": "AvailabilityZones" }]
+              }
+            }
+          },
+
+          "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+          },
+
+          "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+              "VpcId": { "Ref": "Vpc" },
+              "InternetGatewayId": { "Ref": "InternetGateway" }
+            }
+          },
+
+          "RouteViaIgw" : {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+              "VpcId": { "Ref": "Vpc" }
+            }
+          },
+
+          "PublicRouteViaIgw": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+              "RouteTableId": { "Ref": "RouteViaIgw" },
+              "DestinationCidrBlock": "0.0.0.0/0",
+              "GatewayId": { "Ref": "InternetGateway" }
+            }
+          },
+
+          "PubSubnet1RouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+              "SubnetId": { "Ref": "PubSubnetAz1" },
+              "RouteTableId": { "Ref": "RouteViaIgw" }
+            }
+          },
+
+          "PubSubnet2RouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+              "SubnetId": { "Ref": "PubSubnetAz2" },
+              "RouteTableId": { "Ref": "RouteViaIgw" }
+            }
+          }
+        },
+        "Outputs": {
+          "Id": {
+            "Value": { "Ref": "Vpc" }
+          }
+        }
+      }
+    },
+    {
+      "Name": "cluster",
+      "Parameters": {
+        "VpcId": "vpc::Id"
+      },
+      "Template": {
+        "Parameters": {
+          "AmiId": {
+            "Type": "AWS::EC2::Image::Id",
+            "Description": "AMI Id. Defaults to the official ECS Optimized Linux.",
+            "Default": "ami-67a3a90d"
+          },
+          "VpcId": {
+            "Type": "String"
+          }
+        },
+        "Resources": {
+          "Cluster": {
+            "Type": "AWS::ECS::Cluster"
+          }
+        }
+      }
+    }
+  ]
+}

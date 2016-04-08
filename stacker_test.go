@@ -95,14 +95,14 @@ func TestStacker(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, strings.TrimSpace(tt.plan)+"\n", plan.String())
 
-		s := stacker.New(new(mockStackProvisioner))
+		s := stacker.New(new(mockStackBuilder))
 		err = s.Execute(plan)
 		assert.NoError(t, err)
 	}
 }
 
-type mockStackProvisioner struct{}
+type mockStackBuilder struct{}
 
-func (p *mockStackProvisioner) Provision(stack *stacker.Stack) (map[string]string, error) {
+func (p *mockStackBuilder) Build(stack *stacker.Stack) (map[string]string, error) {
 	return nil, nil
 }

@@ -2,6 +2,10 @@
 
 This is a Go rewrite of stacker.
 
+## Usage
+
+Stacker revolves around the idea of a compiled "meta" template, that includes multiple CloudFormation stacks that depend on each other. Child stacks can use the outputs defined in a parent stack as input parameters. For example, you might define a "vpc" stack that has an output with the Vpc ID, then define a "bastion" stack that uses the Vpc ID is an input parameter.
+
 ## Goals
 
 * Use a true dependency graph (directed acyclic graph), because:

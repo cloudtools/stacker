@@ -9,7 +9,13 @@ import (
 
 func TestCompile(t *testing.T) {
 	vpc := &Stack{Name: "vpc"}
-	bastion := &Stack{Name: "bastion", Parameters: map[string]string{"VpcId": "vpc::Id"}}
+	bastion := &Stack{
+		Name: "bastion",
+		Parameters: map[string]string{
+			"Something": "Thing",
+			"VpcId":     "vpc::Id",
+		},
+	}
 	metaStack := &MetaStack{
 		Stacks: []*Stack{vpc, bastion},
 	}

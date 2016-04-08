@@ -62,12 +62,14 @@ func Compile(metaStack *MetaStack) (*Plan, error) {
 
 	for _, stack := range metaStack.Stacks {
 		for _, value := range stack.Parameters {
-			parts := strings.Split(value, "::")
-			dep := metaStack.Stack(parts[0])
-			if dep == nil {
-				panic(fmt.Sprintf("%s not found in stack", parts[0]))
+			if strings.Contains(value, "::") {
+				parts := strings.Split(value, "::")
+				dep := metaStack.Stack(parts[0])
+				if dep == nil {
+					panic(fmt.Sprintf("%s not found in stack", parts[0]))
+				}
+				plan.graph.Connect(dag.BasicEdge(stack, dep))
 			}
-			plan.graph.Connect(dag.BasicEdge(stack, dep))
 		}
 	}
 

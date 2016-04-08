@@ -45,6 +45,7 @@ Thumbs.db
 
 # Package directory
 build/
+bin/
 
 # Build object file directory
 objdir/

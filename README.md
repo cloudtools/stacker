@@ -24,3 +24,7 @@ Stacker revolves around the idea of a compiled "meta" template, that includes mu
 ## Maybe Goals
 
 * Support an API (e.g. POST a tarball, stacker provisions it)
+
+## TODO
+
+* Set parameters

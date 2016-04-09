@@ -45,6 +45,17 @@ func (s *Stacker) Execute(plan *Plan) error {
 			return nil
 		}
 
+		for _, p := range stack.Parameters {
+			if p.Ref != nil && p.Value == "" {
+				dep := plan.metaStack.Stack(p.Ref.Stack)
+				value, ok := dep.outputs[p.Ref.Output]
+				if !ok {
+					panic(fmt.Sprintf("%s has no output %s", dep, p.Ref.Output))
+				}
+				p.Value = value
+			}
+		}
+
 		var (
 			outputs map[string]string
 			err     error
@@ -125,23 +136,30 @@ func (b *CloudFormationStackBuilder) Exists(stack *Stack) bool {
 	return true
 }
 
-func (b *CloudFormationStackBuilder) Update(stack *Stack) (map[string]string, error) {
+func (b *CloudFormationStackBuilder) params(stack *Stack) []*cloudformation.Parameter {
 	var params []*cloudformation.Parameter
-	for k, v := range stack.Parameters {
+	for _, p := range stack.Parameters {
 		params = append(params, &cloudformation.Parameter{
-			ParameterKey:   aws.String(k),
-			ParameterValue: aws.String(v),
+			ParameterKey:   aws.String(p.Name),
+			ParameterValue: aws.String(p.Value),
 		})
 	}
+	return params
+}
 
+func (b *CloudFormationStackBuilder) Update(stack *Stack) (map[string]string, error) {
 	_, err := b.cloudformation.UpdateStack(&cloudformation.UpdateStackInput{
 		StackName:    aws.String(stack.Name),
-		Parameters:   params,
+		Parameters:   b.params(stack),
 		TemplateBody: aws.String(stack.Template),
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "ValidationError: No updates are to be performed") {
-			return nil, ErrNoUpdates
+			outputs, err := b.outputs(stack)
+			if err != nil {
+				return outputs, err
+			}
+			return outputs, ErrNoUpdates
 		}
 
 		return nil, err
@@ -152,21 +170,13 @@ func (b *CloudFormationStackBuilder) Update(stack *Stack) (map[string]string, er
 		return nil, err
 	}
 
-	return nil, nil
+	return b.outputs(stack)
 }
 
 func (b *CloudFormationStackBuilder) Create(stack *Stack) (map[string]string, error) {
-	var params []*cloudformation.Parameter
-	for k, v := range stack.Parameters {
-		params = append(params, &cloudformation.Parameter{
-			ParameterKey:   aws.String(k),
-			ParameterValue: aws.String(v),
-		})
-	}
-
 	_, err := b.cloudformation.CreateStack(&cloudformation.CreateStackInput{
 		StackName:    aws.String(stack.Name),
-		Parameters:   params,
+		Parameters:   b.params(stack),
 		TemplateBody: aws.String(stack.Template),
 	})
 	if err != nil {
@@ -179,5 +189,25 @@ func (b *CloudFormationStackBuilder) Create(stack *Stack) (map[string]string, er
 		return nil, err
 	}
 
-	return nil, nil
+	return b.outputs(stack)
+}
+
+func (b *CloudFormationStackBuilder) outputs(stack *Stack) (map[string]string, error) {
+	resp, err := b.cloudformation.DescribeStacks(&cloudformation.DescribeStacksInput{
+		StackName: aws.String(stack.Name),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Stacks) != 1 {
+		return nil, errors.New("expected 1 stack to be described")
+	}
+
+	outputs := make(map[string]string)
+	for _, output := range resp.Stacks[0].Outputs {
+		outputs[*output.OutputKey] = *output.OutputValue
+	}
+
+	return outputs, nil
 }

@@ -22,7 +22,9 @@ func Parse(r io.Reader) (*MetaStack, error) {
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal(raw, &config)
+	if err := json.Unmarshal(raw, &config); err != nil {
+		return nil, err
+	}
 	var m MetaStack
 	for _, stack := range config.Stacks {
 		raw, err := jsonTemplate(stack.Template)
@@ -30,10 +32,15 @@ func Parse(r io.Reader) (*MetaStack, error) {
 			return nil, err
 		}
 		template := string(raw)
+
+		var parameters []Parameter
+		for k, v := range stack.Parameters {
+			parameters = append(parameters, newParameter(k, v))
+		}
 		m.Stacks = append(m.Stacks, &Stack{
 			Name:       stack.Name,
 			Template:   template,
-			Parameters: stack.Parameters,
+			Parameters: parameters,
 		})
 	}
 	return &m, nil

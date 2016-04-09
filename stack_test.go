@@ -11,9 +11,9 @@ func TestCompile(t *testing.T) {
 	vpc := &Stack{Name: "vpc"}
 	bastion := &Stack{
 		Name: "bastion",
-		Parameters: map[string]string{
-			"Something": "Thing",
-			"VpcId":     "vpc::Id",
+		Parameters: []Parameter{
+			{Name: "Something", Value: "Thing"},
+			{Name: "VpcId", Ref: &Ref{Stack: "vpc", Output: "Id"}},
 		},
 	}
 	metaStack := &MetaStack{
@@ -34,8 +34,18 @@ vpc
 
 func TestCompile_CircularDependencies(t *testing.T) {
 	vpc := &Stack{Name: "vpc"}
-	db := &Stack{Name: "db", Parameters: map[string]string{"AppName": "app::Name"}}
-	app := &Stack{Name: "app", Parameters: map[string]string{"DatabaseUrl": "db::Url"}}
+	db := &Stack{
+		Name: "db",
+		Parameters: []Parameter{
+			{Name: "AppName", Ref: &Ref{Stack: "app", Output: "Name"}},
+		},
+	}
+	app := &Stack{
+		Name: "app",
+		Parameters: []Parameter{
+			{Name: "DatabaseUrl", Ref: &Ref{Stack: "db", Output: "Url"}},
+		},
+	}
 	metaStack := &MetaStack{
 		Stacks: []*Stack{vpc, db, app},
 	}

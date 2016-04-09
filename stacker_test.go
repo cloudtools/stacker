@@ -14,13 +14,20 @@ var planTests = []struct {
 	plan   string
 }{
 	{
-		config: strings.NewReader(`---
-stacks:
-  - name: vpc
-  - name: bastion
-    parameters:
-      VpcId: vpc::Id
-`),
+		config: strings.NewReader(`
+{
+  "Stacks": [
+    {
+      "Name": "vpc"
+    },
+    {
+      "Name": "bastion",
+      "Parameters": {
+        "VpcId": "vpc::Id"
+      }
+    }
+  ]
+}`),
 		plan: `
 (root)
   bastion
@@ -32,16 +39,26 @@ vpc
 	},
 
 	{
-		config: strings.NewReader(`---
-stacks:
-  - name: vpc
-  - name: database
-    parameters:
-      VpcId: vpc::Id
-  - name: application
-    parameters:
-      DatabseUrl: database::Url
-`),
+		config: strings.NewReader(`
+{
+  "Stacks": [
+    {
+      "Name": "vpc"
+    },
+    {
+      "Name": "database",
+      "Parameters": {
+        "VpcId": "vpc::Id"
+      }
+    },
+    {
+      "Name": "application",
+      "Parameters": {
+        "DatabaseUrl": "database::Url"
+      }
+    }
+  ]
+}`),
 		plan: `
 (root)
   application
@@ -56,19 +73,32 @@ vpc
 	},
 
 	{
-		config: strings.NewReader(`---
-stacks:
-  - name: vpc
-  - name: bastion
-    parameters:
-      VpcId: vpc::Id
-  - name: database
-    parameters:
-      VpcId: vpc::Id
-  - name: application
-    parameters:
-      DatabseUrl: database::Url
-`),
+		config: strings.NewReader(`
+{
+  "Stacks": [
+    {
+      "Name": "vpc"
+    },
+    {
+      "Name": "bastion",
+      "Parameters": {
+        "VpcId": "vpc::Id"
+      }
+    },
+    {
+      "Name": "database",
+      "Parameters": {
+	"VpcId": "vpc::Id"
+      }
+    },
+    {
+      "Name": "application",
+      "Parameters": {
+	"DatabaseUrl": "database::Url"
+      }
+    }
+  ]
+}`),
 		plan: `
 (root)
   application
@@ -103,6 +133,14 @@ func TestStacker(t *testing.T) {
 
 type mockStackBuilder struct{}
 
-func (p *mockStackBuilder) Build(stack *stacker.Stack) (map[string]string, error) {
+func (p *mockStackBuilder) Exists(stack *stacker.Stack) bool {
+	return false
+}
+
+func (p *mockStackBuilder) Create(stack *stacker.Stack) (map[string]string, error) {
+	return nil, nil
+}
+
+func (p *mockStackBuilder) Update(stack *stacker.Stack) (map[string]string, error) {
 	return nil, nil
 }

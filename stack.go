@@ -1,11 +1,6 @@
 package stacker
 
-import (
-	"fmt"
-	"strings"
-
-	"github.com/remind101/stacker/dag"
-)
+import "strings"
 
 // MetaStack represents the combined list of stacks.
 type MetaStack struct {
@@ -28,6 +23,40 @@ func (s *MetaStack) String() string {
 	return "(root)"
 }
 
+type Ref struct {
+	Stack  string
+	Output string
+}
+
+// Parameter represents a parameter to a Stack.
+type Parameter struct {
+	// The name of the parameter.
+	Name string
+
+	// The value of the parameter.
+	Value string
+
+	// If provided, the output from a different stack
+	Ref *Ref
+}
+
+// newParameter returns a new Parameter instance.
+func newParameter(name, value string) (p Parameter) {
+	p.Name = name
+
+	if strings.Contains(value, "::") {
+		parts := strings.Split(value, "::")
+		p.Ref = &Ref{
+			Stack:  parts[0],
+			Output: parts[1],
+		}
+	} else {
+		p.Value = value
+	}
+
+	return
+}
+
 // Stack represents a single cloudformation stack and it's dependencies.
 type Stack struct {
 	// Name of the stack
@@ -37,7 +66,7 @@ type Stack struct {
 	Template string
 
 	// Parameters to apply.
-	Parameters map[string]string
+	Parameters []Parameter
 
 	// outputs from the stack. This is only populated after the stack is
 	// updated or created.
@@ -49,29 +78,4 @@ type Stack struct {
 
 func (s *Stack) String() string {
 	return s.Name
-}
-
-// Compile takes a MetaStack and compiles it into a dependency tree.
-func Compile(metaStack *MetaStack) (*Plan, error) {
-	var plan Plan
-	plan.graph.Add(metaStack)
-	for _, stack := range metaStack.Stacks {
-		plan.graph.Add(stack)
-		plan.graph.Connect(dag.BasicEdge(metaStack, stack))
-	}
-
-	for _, stack := range metaStack.Stacks {
-		for _, value := range stack.Parameters {
-			if strings.Contains(value, "::") {
-				parts := strings.Split(value, "::")
-				dep := metaStack.Stack(parts[0])
-				if dep == nil {
-					panic(fmt.Sprintf("%s not found in stack", parts[0]))
-				}
-				plan.graph.Connect(dag.BasicEdge(stack, dep))
-			}
-		}
-	}
-
-	return &plan, plan.Validate()
 }

@@ -291,6 +291,10 @@ class Action(BaseAction):
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them
             debug_plan = self._generate_plan()
+
+            # don't actually deploy anything if we're just running the hooks
+            if self.context.run_hook:
+                return
             debug_plan.outline(logging.DEBUG)
             logger.info("Launching stacks: %s", ', '.join(plan.keys()))
             plan.execute()

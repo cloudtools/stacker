@@ -110,7 +110,8 @@ class Provider(BaseProvider):
 
     def tail_stack(self, stack, retries=0, **kwargs):
         def log_func(e):
-            event_args = [e.resource_status, e.resource_type, e.resource_status_reason]
+            event_args = [e.resource_status, e.resource_type,
+                          e.resource_status_reason]
             # filter out any values that are empty
             event_args = [arg for arg in event_args if arg]
             template = ' '.join(['[%s]'] + ['%s' for _ in event_args])
@@ -136,13 +137,13 @@ class Provider(BaseProvider):
                 raise
 
     def destroy_stack(self, stack, **kwargs):
-        logger.info("Destroying stack: %s" % (stack.stack_name,))
+        logger.debug("Destroying stack: %s" % (stack.stack_name,))
         retry_on_throttling(self.cloudformation.delete_stack,
                             args=[stack.stack_id])
         return True
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
-        logger.info("Stack %s not found, creating.", fqn)
+        logger.debug("Stack %s not found, creating.", fqn)
         logger.debug("Using parameters: %s", parameters)
         logger.debug("Using tags: %s", tags)
         retry_on_throttling(
@@ -156,7 +157,7 @@ class Provider(BaseProvider):
 
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
         try:
-            logger.info("Attempting to update stack %s.", fqn)
+            logger.debug("Attempting to update stack %s.", fqn)
             retry_on_throttling(
                 self.cloudformation.update_stack,
                 args=[fqn],
@@ -167,7 +168,7 @@ class Provider(BaseProvider):
             )
         except boto.exception.BotoServerError as e:
             if 'No updates are to be performed.' in e.message:
-                logger.info(
+                logger.debug(
                     "Stack %s did not change, not updating.",
                     fqn,
                 )

@@ -98,7 +98,8 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(patched_multiprocessing.Process().start.call_count, 5)
         # verify we terminate the process when the stack is finished and also
         # redundantly terminate the process after execution
-        self.assertEqual(patched_multiprocessing.Process().terminate.call_count, 10)
+        self.assertEqual(
+            patched_multiprocessing.Process().terminate.call_count, 10)
 
     def test_step_must_return_status(self):
         plan = Plan(description='Test', sleep_time=0)
@@ -171,7 +172,8 @@ class TestPlan(unittest.TestCase):
 
     def test_plan_steps_listed_with_fqn(self):
         plan = Plan(description='Test', sleep_time=0)
-        stack = Stack(definition=generate_definition('vpc', 1), context=self.context)
+        stack = Stack(definition=generate_definition('vpc', 1),
+                      context=self.context)
         plan.add(stack=stack, run_func=lambda x, y: (x, y))
         steps = plan.list_pending()
         self.assertEqual(steps[0][0], stack.fqn)

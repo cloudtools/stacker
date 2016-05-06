@@ -196,6 +196,7 @@ class Plan(OrderedDict):
                 )
                 continue
 
+            # Kick off watchers - used for tailing the stack
             if (
                 not step.done and
                 self._watch_func and
@@ -210,10 +211,12 @@ class Plan(OrderedDict):
 
             status = step.run()
             if not isinstance(status, Status):
-                raise ValueError('Step run_func must return a valid '
-                                 'Status')
+                raise ValueError(
+                    "Step run_func must return a valid Status object. "
+                    "(Returned type: %s)" % (type(status)))
             step.set_status(status)
 
+            # Terminate any watchers when step completes
             if step.done and step_name in self._watchers:
                 self._terminate_watcher(self._watchers[step_name])
 
@@ -239,6 +242,8 @@ class Plan(OrderedDict):
                     self._check_point()
 
                 if not self._single_run():
+                    if attempts == 1:
+                        self._check_point()
                     self._wait_func(self.sleep_time)
         finally:
             for watcher in self._watchers.values():

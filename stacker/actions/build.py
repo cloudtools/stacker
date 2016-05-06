@@ -3,11 +3,13 @@ import logging
 from .base import BaseAction
 from .. import exceptions, util
 from ..exceptions import StackDidNotChange
-from ..plan import COMPLETE, SUBMITTED, Plan
+from ..plan import SUBMITTED, Plan
 from ..status import (
     NotSubmittedStatus,
     NotUpdatedStatus,
-    DidNotChangeStatus
+    DidNotChangeStatus,
+    SubmittedStatus,
+    CompleteStatus
 )
 
 
@@ -184,36 +186,44 @@ class Action(BaseAction):
         except exceptions.StackDoesNotExist:
             provider_stack = None
 
-        if provider_stack and kwargs.get('status') is SUBMITTED:
+        old_status = kwargs.get("status")
+        if provider_stack and old_status == SUBMITTED:
             logger.debug(
                 "Stack %s provider status: %s",
                 stack.fqn,
                 self.provider.get_stack_status(provider_stack),
             )
             if self.provider.is_stack_completed(provider_stack):
-                return COMPLETE
+                submit_reason = getattr(old_status, "reason", None)
+                return CompleteStatus(submit_reason)
             elif self.provider.is_stack_in_progress(provider_stack):
                 logger.debug("Stack %s in progress.", stack.fqn)
-                return SUBMITTED
+                return old_status
 
-        logger.info("Launching stack %s now.", stack.fqn)
+        logger.debug("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
 
-        try:
-            if not provider_stack:
-                self.provider.create_stack(stack.fqn, template_url, parameters,
-                                           tags)
-            else:
-                if not should_update(stack):
-                    return NotUpdatedStatus()
+        new_status = None
+
+        if not provider_stack:
+            new_status = SubmittedStatus("creating new stack")
+            logger.info("Creating new stack: %s", stack.fqn)
+            self.provider.create_stack(stack.fqn, template_url, parameters,
+                                       tags)
+        else:
+            if not should_update(stack):
+                return NotUpdatedStatus()
+            try:
+                new_status = SubmittedStatus("updating existing stack")
                 self.provider.update_stack(stack.fqn, template_url, parameters,
                                            tags)
-        except StackDidNotChange:
-            return DidNotChangeStatus()
+                logger.info("Updating existing stack: %s", stack.fqn)
+            except StackDidNotChange:
+                return DidNotChangeStatus()
 
-        return SUBMITTED
+        return new_status
 
     def _handle_missing_parameters(self, params, required_params,
                                    existing_stack=None):

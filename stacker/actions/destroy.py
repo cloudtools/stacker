@@ -3,8 +3,11 @@ import logging
 from .base import BaseAction
 from ..exceptions import StackDoesNotExist
 from .. import util
+from ..status import (
+    CompleteStatus,
+    SubmittedStatus
+)
 from ..plan import (
-    COMPLETE,
     SUBMITTED,
     Plan,
 )
@@ -12,6 +15,9 @@ from ..plan import (
 from ..status import StackDoesNotExist as StackDoesNotExistStatus
 
 logger = logging.getLogger(__name__)
+
+DestroyedStatus = CompleteStatus("stack destroyed")
+DestroyingStatus = SubmittedStatus("submitted for destruction")
 
 
 class Action(BaseAction):
@@ -63,8 +69,8 @@ class Action(BaseAction):
             # Once the stack has been destroyed, it doesn't exist. If the
             # status of the step was SUBMITTED, we know we just deleted it,
             # otherwise it should be skipped
-            if kwargs.get('status', None) is SUBMITTED:
-                return COMPLETE
+            if kwargs.get('status', None) == SUBMITTED:
+                return DestroyedStatus
             else:
                 return StackDoesNotExistStatus()
 
@@ -74,12 +80,13 @@ class Action(BaseAction):
             self.provider.get_stack_status(provider_stack),
         )
         if self.provider.is_stack_destroyed(provider_stack):
-            return COMPLETE
+            return DestroyedStatus
         elif self.provider.is_stack_in_progress(provider_stack):
-            return SUBMITTED
+            return DestroyingStatus
         else:
+            logger.info("Destroying stack: %s", stack.fqn)
             self.provider.destroy_stack(provider_stack)
-        return SUBMITTED
+        return DestroyingStatus
 
     def pre_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""

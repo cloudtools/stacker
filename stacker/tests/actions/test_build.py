@@ -157,9 +157,13 @@ class TestBuildAction(unittest.TestCase):
         # launched
         mock_provider.get_stack.return_value = None
         with mock.patch.object(build_action, 's3_stack_push'):
+            # initial status should be PENDING
+            self.assertEqual(step.status, PENDING)
             # initial run should return SUBMITTED since we've passed off to CF
             status = step.run()
+            step.set_status(status)
             self.assertEqual(status, SUBMITTED)
+            self.assertEqual(status.reason, "creating new stack")
 
             # provider should now return the CF stack since it exists
             mock_provider.get_stack.return_value = mock_stack
@@ -171,24 +175,32 @@ class TestBuildAction(unittest.TestCase):
             # status should still be SUBMITTED since we're waiting for it to
             # complete
             self.assertEqual(status, SUBMITTED)
+            self.assertEqual(status.reason, "creating new stack")
             # simulate completed stack
             mock_provider.is_stack_completed.return_value = True
             mock_provider.is_stack_in_progress.return_value = False
             status = step.run()
+            step.set_status(status)
             self.assertEqual(status, COMPLETE)
+            self.assertEqual(status.reason, "creating new stack")
+
             # simulate stack should be skipped
             mock_provider.is_stack_completed.return_value = False
             mock_provider.is_stack_in_progress.return_value = False
             mock_provider.update_stack.side_effect = StackDidNotChange
             status = step.run()
+            step.set_status(status)
             self.assertEqual(status, SKIPPED)
+            self.assertEqual(status.reason, "nochange")
 
             # simulate an update is required
             mock_provider.reset_mock()
             mock_provider.update_stack.side_effect = None
             step.set_status(PENDING)
             status = step.run()
+            step.set_status(status)
             self.assertEqual(status, SUBMITTED)
+            self.assertEqual(status.reason, "updating existing stack")
             self.assertEqual(mock_provider.update_stack.call_count, 1)
 
     def test_should_update(self):

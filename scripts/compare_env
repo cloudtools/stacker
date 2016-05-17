@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+""" A script to compare environment files. """
+
+import argparse
+import os.path
+
+from stacker.environment import parse_environment
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-i", "--ignore-changed", action="store_true",
+        help="Only print added & deleted keys, not changed keys.")
+    parser.add_argument(
+        "-s", "--show-changes", action="store_true",
+        help="Print content changes.")
+    parser.add_argument(
+        "first_env", type=str,
+        help="The first environment file to compare.")
+    parser.add_argument(
+        "second_env", type=str,
+        help="The second environment file to compare.")
+
+    return parser.parse_args()
+
+
+def parse_env_file(path):
+    expanded_path = os.path.expanduser(path)
+    with open(expanded_path) as fd:
+        return parse_environment(fd.read())
+
+
+def main():
+    args = parse_args()
+
+    first_env = parse_env_file(args.first_env)
+    second_env = parse_env_file(args.second_env)
+
+    first_env_keys = set(first_env.keys())
+    second_env_keys = set(second_env.keys())
+
+    common_keys = first_env_keys & second_env_keys
+    removed_keys = first_env_keys - second_env_keys
+    added_keys = second_env_keys - first_env_keys
+
+    changed_keys = set()
+
+    for k in common_keys:
+        if first_env[k] != second_env[k]:
+            changed_keys.add(k)
+
+    print "-- Added keys:"
+    print "  %s" % ", ".join(added_keys)
+    print
+    print "-- Removed keys:"
+    print "  %s" % ", ".join(removed_keys)
+    print
+    print "-- Changed keys:"
+    if not args.show_changes:
+        print "  %s" % ", ".join(changed_keys)
+    if args.show_changes:
+        for k in changed_keys:
+            print "  %s:" % (k)
+            print "    < %s" % (first_env[k])
+            print "    > %s" % (second_env[k])
+
+if __name__ == "__main__":
+    main()

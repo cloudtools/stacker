@@ -1,5 +1,8 @@
-## x.x.x (2016-xx-xx)
-- Add support for passing environment variables on the cli via --env
+## 0.6.2 (2016-05-17)
+- Allow users to override name of bucket to store templates [GH-145]
+- Add support for passing environment variables on the cli via --env [GH-148]
+- Cleanup output on non-verbose runs [GH-153]
+- Added `compare_env` command, for easier comparing of environment files [GH-155]
 
 ## 0.6.1 (2016-02-11)
 - Add support for the 'stacker diff' command [GH-133]

@@ -1,9 +1,12 @@
 from collections import OrderedDict
+import json
 import logging
 import multiprocessing
+import os
 import time
 
 from .exceptions import ImproperlyConfigured
+from .actions.base import stack_template_key_name
 
 from .status import (
     Status,
@@ -281,6 +284,24 @@ class Plan(OrderedDict):
 
         if message:
             logger.log(level, message)
+
+    def dump(self, output):
+        steps = 1
+        logger.info('Dumping "%s"...', self.description)
+        if not os.path.exists(output):
+            os.makedirs(output)
+
+        while not self.completed:
+            step_name, step = self.list_pending()[0]
+            blueprint = step.stack.blueprint
+            filename = stack_template_key_name(blueprint)
+            path = os.path.join(output, filename)
+            logger.info('Writing stack "%s" -> %s', step_name, path)
+            with open(path, 'w') as f:
+                f.write(blueprint.rendered)
+
+            step.status = COMPLETE
+            steps += 1
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""

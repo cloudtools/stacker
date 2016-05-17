@@ -290,22 +290,24 @@ class Action(BaseAction):
             util.handle_hooks('pre_build', pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, tail=False, *args, **kwargs):
+    def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
         plan = self._generate_plan(tail=tail)
-        if not outline:
+        if outline:
+            plan.outline()
+        elif dump:
+            plan.dump(dump)
+        else:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them
             debug_plan = self._generate_plan()
             debug_plan.outline(logging.DEBUG)
             logger.info("Launching stacks: %s", ', '.join(plan.keys()))
             plan.execute()
-        else:
-            plan.outline()
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

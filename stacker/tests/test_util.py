@@ -100,6 +100,24 @@ class TestHooks(unittest.TestCase):
         with self.assertRaises(Queue.Empty):
             hook_queue.get_nowait()
 
+    def test_skip_hook(self):
+        context = Context({'namespace': 'namespace'}, skip_hooks=['pre'])
+        hooks = [{'path': 'stacker.hooks.blah', 'required': True}]
+        handle_hooks('pre_build', hooks, 'us-east-1', context)
+        self.assertTrue(hook_queue.empty())
+
+    def test_run_hook_match(self):
+        context = Context({'namespace': 'namespace'}, run_hook='pre')
+        hooks = [{'path': 'stacker.hooks.blah', 'required': True}]
+        with self.assertRaises(AttributeError):
+            handle_hooks('pre_build', hooks, 'us-east-1', context)
+
+    def test_run_hook_no_match(self):
+        context = Context({'namespace': 'namespace'}, run_hook='pre')
+        hooks = [{'path': 'stacker.hooks.blah', 'required': True}]
+        handle_hooks('post_build', hooks, 'us-east-1', context)
+        self.assertTrue(hook_queue.empty())
+
     def test_hook_failure(self):
         hooks = [{'path': 'stacker.tests.test_util.fail_hook',
                   'required': True}]

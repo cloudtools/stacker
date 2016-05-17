@@ -1,5 +1,6 @@
 ## x.x.x (2016-xx-xx)
 - Add support for passing environment variables on the cli via --env
+- Add support for build --skip-hook and --run-hook for pre/post_build hooks
 
 ## 0.6.1 (2016-02-11)
 - Add support for the 'stacker diff' command [GH-133]

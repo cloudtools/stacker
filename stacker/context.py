@@ -40,7 +40,7 @@ class Context(object):
 
     def __init__(self, environment, stack_names=None,
                  parameters=None, mappings=None, config=None,
-                 force_stacks=None):
+                 force_stacks=None, skip_hooks=None, run_hook=None):
         try:
             self.namespace = environment['namespace']
         except KeyError:
@@ -52,6 +52,8 @@ class Context(object):
         self.mappings = mappings or {}
         self.config = config or {}
         self.force_stacks = force_stacks or []
+        self.skip_hooks = skip_hooks or []
+        self.run_hook = run_hook or None
         self._base_fqn = self.namespace.replace('.', '-').lower()
         self.bucket_name = 'stacker-%s' % (self.get_fqn(),)
 

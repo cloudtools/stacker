@@ -164,6 +164,17 @@ def cf_safe_name(name):
     return ''.join([uppercase_first_letter(part) for part in parts])
 
 
+def skip_hook(stage, context):
+    """Determines if the hooks for a given stage should be skipped"""
+    if stage == 'pre_build' and ('pre' in context.skip_hooks or (
+        context.run_hook and context.run_hook != 'pre')):
+        return True
+    elif stage == 'post_build' and ('post' in context.skip_hooks or (
+        context.run_hook and context.run_hook != 'post')):
+        return True
+    return False
+
+
 # TODO: perhaps make this a part of the builder?
 def handle_hooks(stage, hooks, region, context):
     """ Used to handle pre/post_build hooks.
@@ -181,6 +192,10 @@ def handle_hooks(stage, hooks, region, context):
     """
     if not hooks:
         logger.debug("No %s hooks defined.", stage)
+        return
+
+    if skip_hook(stage, context):
+        logger.debug("Skipping %s hooks.", stage)
         return
 
     hook_paths = []

@@ -297,17 +297,15 @@ class Action(BaseAction):
 
         """
         plan = self._generate_plan(tail=tail)
-        if outline:
-            plan.outline()
-        elif dump:
-            plan.dump(dump)
-        else:
-            # need to generate a new plan to log since the outline sets the
-            # steps to COMPLETE in order to log them
-            debug_plan = self._generate_plan()
-            debug_plan.outline(logging.DEBUG)
+        if not outline and not dump:
+            plan.outline(logging.DEBUG)
             logger.info("Launching stacks: %s", ', '.join(plan.keys()))
             plan.execute()
+        else:
+            if outline:
+                plan.outline()
+            if dump:
+                plan.dump(dump)
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

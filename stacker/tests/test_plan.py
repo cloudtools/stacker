@@ -196,3 +196,71 @@ class TestPlan(unittest.TestCase):
 
         plan.execute()
         self.assertEqual(wait_func.call_count, 0)
+
+    def test_reset_plan(self):
+        plan = Plan(description='Test', sleep_time=0)
+        previous_stack = None
+        for i in range(5):
+            overrides = {}
+            if previous_stack:
+                overrides['requires'] = [previous_stack.fqn]
+            stack = Stack(
+                definition=generate_definition('vpc', i, **overrides),
+                context=self.context,
+            )
+            previous_stack = stack
+            plan.add(
+                stack=stack,
+                run_func=self._run_func,
+                requires=stack.requires,
+            )
+
+        plan.execute()
+        self.assertEqual(self.count, 9)
+        self.assertEqual(len(plan.list_skipped()), 1)
+        plan.reset()
+        self.assertEqual(len(plan.list_pending()), len(plan))
+
+    def test_reset_after_outline(self):
+        plan = Plan(description='Test', sleep_time=0)
+        previous_stack = None
+        for i in range(5):
+            overrides = {}
+            if previous_stack:
+                overrides['requires'] = [previous_stack.fqn]
+            stack = Stack(
+                definition=generate_definition('vpc', i, **overrides),
+                context=self.context,
+            )
+            previous_stack = stack
+            plan.add(
+                stack=stack,
+                run_func=self._run_func,
+                requires=stack.requires,
+            )
+
+        plan.outline()
+        self.assertEqual(len(plan.list_pending()), len(plan))
+
+    @mock.patch('stacker.plan.os')
+    @mock.patch('stacker.plan.open', mock.mock_open(), create=True)
+    def test_reset_after_dump(self, *args):
+        plan = Plan(description='Test', sleep_time=0)
+        previous_stack = None
+        for i in range(5):
+            overrides = {}
+            if previous_stack:
+                overrides['requires'] = [previous_stack.fqn]
+            stack = Stack(
+                definition=generate_definition('vpc', i, **overrides),
+                context=self.context,
+            )
+            previous_stack = stack
+            plan.add(
+                stack=stack,
+                run_func=self._run_func,
+                requires=stack.requires,
+            )
+
+        plan.dump('test')
+        self.assertEqual(len(plan.list_pending()), len(plan))

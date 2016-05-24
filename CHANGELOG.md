@@ -1,3 +1,6 @@
+## 0.6.3 (2016-05-24)
+- add `stacker dump` subcommand for testing stack/blueprints [GH-156]
+
 ## 0.6.2 (2016-05-17)
 - Allow users to override name of bucket to store templates [GH-145]
 - Add support for passing environment variables on the cli via --env [GH-148]

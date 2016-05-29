@@ -32,9 +32,9 @@ Main Features
   locked or disabled.
 - Easily pass Outputs from one stack in as Parameters on another (which also
   automatically provides an implicit dependency)
-- Use 'Environments' to manage slightly different configuration in different
+- Use Environments_ to manage slightly different configuration in different
   environments.
-- Use 'Translators' to allow dynamic fetching or altering of data used in
+- Use Translators_ to allow dynamic fetching or altering of data used in
   Parameters. Currently this allows you to encrypt (using kms) fields in
   your stack config (or environment file) so that it is easy to share configs
   without concern for sharing secrets with those who shouldn't have them.
@@ -69,3 +69,5 @@ Indices and tables
 .. _Remind: http://www.remind.com/
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
+.. _Environments: environments.rst
+.. _Translators: translators.rst

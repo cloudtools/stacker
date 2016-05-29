@@ -2,6 +2,8 @@
 stacker
 =======
 
+For full documentation, please see the readthedocs_ site.
+
 About
 =====
 
@@ -119,10 +121,6 @@ as the s3 bucket that contains the stacker templates. Specifying the
 namespace in the environment file helps preserve the namespace for the
 stacks between subsequent builds.
 
-.. _Remind: http://www.remind.com/
-.. _troposphere: https://github.com/cloudtools/troposphere
-.. _string.Template: https://docs.python.org/2/library/string.html#template-strings
-
 Overriding CloudFormation S3 bucket
 ===================================
 
@@ -183,3 +181,8 @@ Stack can also be executed from Docker. Use this method to run stacker if you
 want to avoid setting up a python environment::
 
   docker run -it -v `pwd`:/stacks remind101/stacker build ...
+
+.. _Remind: http://www.remind.com/
+.. _troposphere: https://github.com/cloudtools/troposphere
+.. _string.Template: https://docs.python.org/2/library/string.html#template-strings
+.. _readthedocs: http://stacker.readthedocs.io/en/latest/

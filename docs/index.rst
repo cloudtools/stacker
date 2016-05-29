@@ -32,12 +32,13 @@ Main Features
   locked or disabled.
 - Easily pass Outputs from one stack in as Parameters on another (which also
   automatically provides an implicit dependency)
-- Use Environments_ to manage slightly different configuration in different
-  environments.
-- Use Translators_ to allow dynamic fetching or altering of data used in
-  Parameters. Currently this allows you to encrypt (using kms) fields in
-  your stack config (or environment file) so that it is easy to share configs
-  without concern for sharing secrets with those who shouldn't have them.
+- Use `Environments <environments.rst>`_ to manage slightly different
+  configuration in different environments.
+- Use `Translators <translators.rst>`_ to allow dynamic fetching or altering
+  of data used in Parameters. Currently this allows you to encrypt (using kms)
+  fields in your stack config (or environment file) so that it is easy to share
+  configs without concern for sharing secrets with those who shouldn't have
+  them.
 - A diff command for diffing your config against what is running in a live
   cloudformation environment.
 - A small library of pre-shared Blueprints can be found at the

@@ -150,7 +150,7 @@ a reference::
 
 Even more powerful is the ability to anchor entire dictionaries, and then
 reference them in another dictionary, effectively providing it with default
-values.  For example:
+values.  For example::
 
   common_parameters: &common_parameters
     DomainName: mydomain.com

@@ -205,7 +205,7 @@ to the *vpc* stack, which will cause stacker to submit the *vpc* stack, and
 then wait until it is complete until it submits the *webservers* stack.
 
 Environments
-------------
+============
 
 A pretty common use case is to have separate environments that you want to
 look mostly the same, though with some slight modifications. For example, you
@@ -217,7 +217,7 @@ chosen on the command line. For more information, see the
 `Environments <environments.html>`_ documentation.
 
 Translators
------------
+===========
 
 Translators allow you to create custom methods which take a value, then modify
 it before passing it on to the stack. Currently this is used to allow you to

@@ -214,7 +214,7 @@ environment likely needs more instances, and often those instances will be
 of a larger instance type. Environments allow you to use your existing
 stacker config, but provide different values based on the environment file
 chosen on the command line. For more information, see the
-`Environments <environments.rst>`_ documentation.
+`Environments <environments.html>`_ documentation.
 
 Translators
 -----------
@@ -223,7 +223,7 @@ Translators allow you to create custom methods which take a value, then modify
 it before passing it on to the stack. Currently this is used to allow you to
 pass a KMS encrypted string as a Parameter, then have KMS decrypt it before
 submitting it to Cloudformation. For more information, see the
-`Translators <translators.rst>`_ documentation.
+`Translators <translators.html>`_ documentation.
 
 
 .. _`anchors & references`: https://en.wikipedia.org/wiki/YAML#Repeated_nodes

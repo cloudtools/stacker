@@ -32,9 +32,9 @@ Main Features
   locked or disabled.
 - Easily pass Outputs from one stack in as Parameters on another (which also
   automatically provides an implicit dependency)
-- Use `Environments <environments.rst>`_ to manage slightly different
+- Use `Environments <environments.html>`_ to manage slightly different
   configuration in different environments.
-- Use `Translators <translators.rst>`_ to allow dynamic fetching or altering
+- Use `Translators <translators.html>`_ to allow dynamic fetching or altering
   of data used in Parameters. Currently this allows you to encrypt (using kms)
   fields in your stack config (or environment file) so that it is easy to share
   configs without concern for sharing secrets with those who shouldn't have

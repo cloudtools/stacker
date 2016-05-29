@@ -5,6 +5,14 @@ Commands
 Build
 -----
 
+Build is used to create/update the stacks provided in the config file. It
+automatically figures out any dependencies between stacks, and creates them
+in parallel safely (if a stack depends on another stack, it will wait for 
+that stack to be finished before updating/creating).
+
+It also provides the *--dump* flag for testing out blueprints before
+pushing them up into CloudFormation.
+
 ::
 
   # stacker build -h
@@ -41,6 +49,11 @@ Build
 Destroy
 -------
 
+Destroy handles the tearing down of Cloudformation stacks defined in the
+config file.  It figures out any dependencies that may exist, and destroys
+the stacks in the correct order (in parallel if all dependent stacks have
+already been destroyed).
+
 ::
 
   # stacker destroy -h
@@ -70,6 +83,10 @@ Destroy
 Info
 ----
 
+
+Info displays information on the CloudFormation stacks based on the given
+config.
+
 ::
 
   # stacker info -h
@@ -95,6 +112,11 @@ Info
 
 Diff
 ----
+
+Diff attempts to show the differences between what stacker expects to push up
+into Cloudformation, and what already exists in Cloudformation.  This command
+is not perfect, as following things like *Ref* and *GetAtt* are not currently
+possible, but it should give a good idea if anything has changed.
 
 ::
 

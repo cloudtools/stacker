@@ -216,6 +216,15 @@ stacker config, but provide different values based on the environment file
 chosen on the command line. For more information, see the
 `Environments <environments.rst>`_ documentation.
 
+Translators
+-----------
+
+Translators allow you to create custom methods which take a value, then modify
+it before passing it on to the stack. Currently this is used to allow you to
+pass a KMS encrypted string as a Parameter, then have KMS decrypt it before
+submitting it to Cloudformation. For more information, see the
+`Translators <translators.rst>`_ documentation.
+
 
 .. _`anchors & references`: https://en.wikipedia.org/wiki/YAML#Repeated_nodes
 .. _Mappings: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html

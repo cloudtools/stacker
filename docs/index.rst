@@ -51,8 +51,9 @@ Contents:
 
    terminology
    config
-   commands
    environments
+   translators
+   commands
    blueprints
    API Docs <api/modules>
 

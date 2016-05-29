@@ -10,16 +10,38 @@ stacker is a tool and library used to create & update multiple CloudFormation
 stacks. It was originally written at Remind_ and
 released to the open source community.
 
-stacker StackTemplates are written in troposphere_, though the purpose of
+stacker Blueprints are written in troposphere_, though the purpose of
 most templates is to keep them as generic as possible and then use
 configuration (and CloudFormation Parameters/Outputs) to modify them.
 
-At this point this is very much alpha software - it is still in heavy
-development, and interfaces/configuration/etc may/will likely/most definitely
-change :)
-
-That said, at Remind we use stacker to manage all of our Cloudformation stacks-
+At Remind we use stacker to manage all of our Cloudformation stacks-
 both in development, staging and production without any major issues.
+
+
+Main Features
+-------------
+
+- Easily Create/Update/Destroy many stacks in parallel (though with an
+  understanding of cross-stack dependencies)
+- Makes it easy to manage large environments in a single config, while still
+  allowing you to break each part of the environment up into it's own
+  completely separate stack.
+- Manages dependencies between stacks, only launching one after all the stacks
+  it depends on are finished.
+- Only updates stacks that have changed and that have not been explicitly
+  locked or disabled.
+- Easily pass Outputs from one stack in as Parameters on another (which also
+  automatically provides an implicit dependency)
+- Use 'Environments' to manage slightly different configuration in different
+  environments.
+- Use 'Translators' to allow dynamic fetching or altering of data used in
+  Parameters. Currently this allows you to encrypt (using kms) fields in
+  your stack config (or environment file) so that it is easy to share configs
+  without concern for sharing secrets with those who shouldn't have them.
+- A diff command for diffing your config against what is running in a live
+  cloudformation environment.
+- A small library of pre-shared Blueprints can be found at the
+  stacker_blueprints_ repo, making things like setting up a VPC easy.
 
 
 Contents:
@@ -45,3 +67,4 @@ Indices and tables
 
 .. _Remind: http://www.remind.com/
 .. _troposphere: https://github.com/cloudtools/troposphere
+.. _stacker_blueprints: https://github.com/remind101/stacker_blueprints

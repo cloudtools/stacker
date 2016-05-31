@@ -21,8 +21,9 @@ both in development, staging and production without any major issues.
 Main Features
 -------------
 
-- Easily Create/Update/Destroy many stacks in parallel (though with an
-  understanding of cross-stack dependencies)
+- Easily `Create/Update <commands.html#build>`_/`Destroy <commands.html#destroy>`_
+  many stacks in parallel (though with an understanding of cross-stack
+  dependencies)
 - Makes it easy to manage large environments in a single config, while still
   allowing you to break each part of the environment up into it's own
   completely separate stack.
@@ -70,5 +71,3 @@ Indices and tables
 .. _Remind: http://www.remind.com/
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
-.. _Environments: environments.rst
-.. _Translators: translators.rst

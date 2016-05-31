@@ -25,7 +25,7 @@ Main Features
   many stacks in parallel (though with an understanding of cross-stack
   dependencies)
 - Makes it easy to manage large environments in a single config, while still
-  allowing you to break each part of the environment up into it's own
+  allowing you to break each part of the environment up into its own
   completely separate stack.
 - Manages dependencies between stacks, only launching one after all the stacks
   it depends on are finished.

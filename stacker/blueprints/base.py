@@ -63,7 +63,7 @@ PARAMETER_PROPERTIES = {
     'min_length': 'MinLength',
     'max_value': 'MaxValue',
     'min_value': 'MinValue',
-    'constaint_description': 'ConstraintDescription'
+    'constraint_description': 'ConstraintDescription'
 }
 
 

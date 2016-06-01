@@ -95,6 +95,10 @@ A stack has the following keys:
   (optional) If set to false, the stack is disabled, and will not be
   built or updated. This can allow you to disable stacks in different
   environments.
+**requires:**
+  (optional) a list of other stacks this stack requires. This is for explicit
+  dependencies - you do not need to set this if you refer to another stack in
+  a Parameter, so this is rarely necessary.
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 

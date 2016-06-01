@@ -98,7 +98,7 @@ A stack has the following keys:
 **requires:**
   (optional) a list of other stacks this stack requires. This is for explicit
   dependencies - you do not need to set this if you refer to another stack in
-  a Parameter, so this is rarely necessary.
+  a Parameter, so this is rarely necessary. See `Using Outputs as Parameters`_
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 

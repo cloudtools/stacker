@@ -27,8 +27,8 @@ def should_update(stack):
     """
     if stack.locked:
         if not stack.force:
-            logger.info("Stack %s locked and not in --force list. "
-                        "Refusing to update.", stack.name)
+            logger.debug("Stack %s locked and not in --force list. "
+                         "Refusing to update.", stack.name)
             return False
         else:
             logger.debug("Stack %s locked, but is in --force "

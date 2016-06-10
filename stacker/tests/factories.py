@@ -3,7 +3,7 @@
 def generate_definition(base_name, stack_id, **overrides):
     definition = {
         "name": "%s.%d" % (base_name, stack_id),
-        "class_path": "stacker.blueprints.%s.%s" % (base_name,
+        "class_path": "stacker_blueprints.%s.%s" % (base_name,
                                                     base_name.upper()),
         "namespace": "example-com",
         "parameters": {

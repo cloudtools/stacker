@@ -13,6 +13,15 @@ duplicating config. (See `YAML anchors & references`_ for details)
 Top Level Keywords
 ==================
 
+S3 Bucket
+---------
+
+Stacker, by default, pushes your Cloudformation templates into an S3 bucket
+and points Cloudformation at the template in that bucket when launching or
+updating your stacks. By default it uses a bucket named
+**stacker-${namespace}**, where the namespace is the namespace provied in the
+`environment <environments.html>`_ file.
+
 Pre & Post Hooks
 ----------------
 

@@ -40,7 +40,6 @@ class TestProvider(BaseProvider):
 
 
 class TestBuildAction(unittest.TestCase):
-
     def setUp(self):
         self.context = Context({'namespace': 'namespace'})
         self.build_action = build.Action(self.context, provider=TestProvider())
@@ -305,6 +304,14 @@ class TestFunctions(unittest.TestCase):
         self.prov.get_output.side_effect = get_output
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)
         self.assertEqual(self.prov.get_output.call_count, 2)
+        self.assertEqual(p["a"], "Apple,Carrot")
+        self.assertEqual(p["b"], "Banana")
+
+        # Test multi-output with spaces
+        params = {"a": "other-stack::a, other-stack::c", "b": "Banana"}
+        self.prov.get_output.side_effect = get_output
+        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        self.assertEqual(self.prov.get_output.call_count, 4)
         self.assertEqual(p["a"], "Apple,Carrot")
         self.assertEqual(p["b"], "Banana")
 

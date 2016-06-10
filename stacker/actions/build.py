@@ -87,6 +87,7 @@ def resolve_parameters(parameters, blueprint, context, provider):
             v_list = []
             values = value.split(',')
             for v in values:
+                v = v.strip()
                 stack_name, output = v.split('::')
                 stack_fqn = context.get_fqn(stack_name)
                 try:

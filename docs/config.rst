@@ -208,6 +208,11 @@ Note: Doing this creates an implicit dependency from the *webservers* stack
 to the *vpc* stack, which will cause stacker to submit the *vpc* stack, and
 then wait until it is complete until it submits the *webservers* stack.
 
+You can also pull multiple Outputs into a single, CommaDelimeted Parameter
+by separating them with commas like::
+
+  SomeParameter: stack1::Output1,stack2::Output2
+
 Environments
 ============
 

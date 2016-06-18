@@ -38,11 +38,11 @@ def get_local_parameters(parameter_def, parameters):
             value = parameters[param]
         except KeyError:
             try:
-                value = attrs['default']
+                value = attrs["default"]
             except KeyError:
                 raise MissingLocalParameterException(param)
 
-        _type = attrs.get('type')
+        _type = attrs.get("type")
         if _type:
             try:
                 value = _type(value)
@@ -54,16 +54,16 @@ def get_local_parameters(parameter_def, parameters):
     return local
 
 PARAMETER_PROPERTIES = {
-    'default': 'Default',
-    'description': 'Description',
-    'no_echo': 'NoEcho',
-    'allowed_values': 'AllowedValues',
-    'allowed_pattern': 'AllowedPattern',
-    'max_length': 'MaxLength',
-    'min_length': 'MinLength',
-    'max_value': 'MaxValue',
-    'min_value': 'MinValue',
-    'constraint_description': 'ConstraintDescription'
+    "default": "Default",
+    "description": "Description",
+    "no_echo": "NoEcho",
+    "allowed_values": "AllowedValues",
+    "allowed_pattern": "AllowedPattern",
+    "max_length": "MaxLength",
+    "min_length": "MinLength",
+    "max_value": "MaxValue",
+    "min_value": "MinValue",
+    "constraint_description": "ConstraintDescription"
 }
 
 
@@ -79,7 +79,7 @@ def build_parameter(name, properties):
     Returns:
         :class:`troposphere.Parameter`: The created parameter object.
     """
-    p = Parameter(name, Type=properties.get('type'))
+    p = Parameter(name, Type=properties.get("type"))
     for name, attr in PARAMETER_PROPERTIES.items():
         if name in properties:
             setattr(p, attr, properties[name])
@@ -115,12 +115,12 @@ class Blueprint(object):
         """Returns all template parameters that do not have a default value."""
         required = []
         for k, v in self.parameters.items():
-            if not hasattr(v, 'Default'):
+            if not hasattr(v, "Default"):
                 required.append((k, v))
         return required
 
     def get_local_parameters(self):
-        local_parameters = getattr(self, 'LOCAL_PARAMETERS', {})
+        local_parameters = getattr(self, "LOCAL_PARAMETERS", {})
         return get_local_parameters(local_parameters, self.context.parameters)
 
     def _get_parameters(self):
@@ -137,8 +137,8 @@ class Blueprint(object):
                 are dicts containing key/values for various parameter
                 properties.
         """
-        return getattr(self, 'CF_PARAMETERS',
-                       getattr(self, 'PARAMETERS', {}))
+        return getattr(self, "CF_PARAMETERS",
+                       getattr(self, "PARAMETERS", {}))
 
     def setup_parameters(self):
         t = self.template

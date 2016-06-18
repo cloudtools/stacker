@@ -4,8 +4,8 @@ from troposphere import Ref, GetAtt
 
 
 HELPERS = {
-    'Ref': Ref,
-    'Fn::GetAtt': GetAtt
+    "Ref": Ref,
+    "Fn::GetAtt": GetAtt
 }
 
 split_string = "(" + "|".join([r"%s\([^)]+\)" % h for h in HELPERS]) + ")"
@@ -36,8 +36,8 @@ def cf_tokenize(s):
     for part in parts:
         cf_func = replace_re.search(part)
         if cf_func:
-            args = [a.strip("'\" ") for a in cf_func.group('args').split(',')]
-            t.append(HELPERS[cf_func.group('helper')](*args).data)
+            args = [a.strip("'\" ") for a in cf_func.group("args").split(",")]
+            t.append(HELPERS[cf_func.group("helper")](*args).data)
         else:
             t.append(part)
     return t

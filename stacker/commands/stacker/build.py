@@ -12,7 +12,7 @@ from ...actions import build
 
 class Build(BaseCommand):
 
-    name = 'build'
+    name = "build"
     description = __doc__
 
     def add_arguments(self, parser):
@@ -37,16 +37,19 @@ class Build(BaseCommand):
                                  "specified more than once. If not specified "
                                  "then stacker will work on all stacks in the "
                                  "config file.")
-        parser.add_argument('-t', '--tail', action='store_true',
-                            help='Tail the CloudFormation logs while working'
-                                 'with stacks')
-        parser.add_argument('-d', '--dump', action='store', type=str,
-                            help='Dump the rendered Cloudformation templates to a directory')
+        parser.add_argument("-t", "--tail", action="store_true",
+                            help="Tail the CloudFormation logs while working"
+                                 "with stacks")
+        parser.add_argument("-d", "--dump", action="store", type=str,
+                            help="Dump the rendered Cloudformation templates "
+                                 "to a directory")
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
-        action.execute(outline=options.outline, tail=options.tail, dump=options.dump)
+        action.execute(outline=options.outline,
+                       tail=options.tail,
+                       dump=options.dump)
 
     def get_context_kwargs(self, options, **kwargs):
-        return {'stack_names': options.stacks, 'force_stacks': options.force}
+        return {"stack_names": options.stacks, "force_stacks": options.force}

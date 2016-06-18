@@ -49,8 +49,8 @@ class Action(BaseAction):
     def _generate_plan(self, tail=False):
         plan_kwargs = {}
         if tail:
-            plan_kwargs['watch_func'] = self.provider.tail_stack
-        plan = Plan(description='Destroy stacks', **plan_kwargs)
+            plan_kwargs["watch_func"] = self.provider.tail_stack
+        plan = Plan(description="Destroy stacks", **plan_kwargs)
         stacks_dict = self.context.get_stacks_dict()
         dependencies = self._get_dependencies(stacks_dict)
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -69,7 +69,7 @@ class Action(BaseAction):
             # Once the stack has been destroyed, it doesn't exist. If the
             # status of the step was SUBMITTED, we know we just deleted it,
             # otherwise it should be skipped
-            if kwargs.get('status', None) == SUBMITTED:
+            if kwargs.get("status", None) == SUBMITTED:
                 return DestroyedStatus
             else:
                 return StackDoesNotExistStatus()
@@ -90,9 +90,9 @@ class Action(BaseAction):
 
     def pre_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
-        pre_destroy = self.context.config.get('pre_destroy')
+        pre_destroy = self.context.config.get("pre_destroy")
         if not outline and pre_destroy:
-            util.handle_hooks('pre_destroy', pre_destroy, self.provider.region,
+            util.handle_hooks("pre_destroy", pre_destroy, self.provider.region,
                               self.context)
 
     def run(self, force, tail=False, *args, **kwargs):
@@ -104,12 +104,12 @@ class Action(BaseAction):
             debug_plan.outline(logging.DEBUG)
             plan.execute()
         else:
-            plan.outline(message='To execute this plan, run with "--force" '
-                                 'flag.')
+            plan.outline(message="To execute this plan, run with \"--force\" "
+                                 "flag.")
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""
-        post_destroy = self.context.config.get('post_destroy')
+        post_destroy = self.context.config.get("post_destroy")
         if not outline and post_destroy:
-            util.handle_hooks('post_destroy', post_destroy,
+            util.handle_hooks("post_destroy", post_destroy,
                               self.provider.region, self.context)

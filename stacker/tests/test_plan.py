@@ -14,9 +14,9 @@ count = 0
 class TestStep(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context({'namespace': 'namespace'})
+        self.context = Context({"namespace": "namespace"})
         stack = Stack(
-            definition=generate_definition('vpc', 1),
+            definition=generate_definition("vpc", 1),
             context=self.context,
         )
         self.step = Step(
@@ -39,7 +39,7 @@ class TestPlan(unittest.TestCase):
 
     def setUp(self):
         self.count = 0
-        self.environment = {'namespace': 'namespace'}
+        self.environment = {"namespace": "namespace"}
         self.context = Context(self.environment)
 
     def _run_func(self, stack, **kwargs):
@@ -51,14 +51,14 @@ class TestPlan(unittest.TestCase):
         return SUBMITTED
 
     def test_execute_plan(self):
-        plan = Plan(description='Test', sleep_time=0)
+        plan = Plan(description="Test", sleep_time=0)
         previous_stack = None
         for i in range(5):
             overrides = {}
             if previous_stack:
-                overrides['requires'] = [previous_stack.fqn]
+                overrides["requires"] = [previous_stack.fqn]
             stack = Stack(
-                definition=generate_definition('vpc', i, **overrides),
+                definition=generate_definition("vpc", i, **overrides),
                 context=self.context,
             )
             previous_stack = stack
@@ -72,17 +72,17 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(self.count, 9)
         self.assertEqual(len(plan.list_skipped()), 1)
 
-    @mock.patch('stacker.plan.multiprocessing')
+    @mock.patch("stacker.plan.multiprocessing")
     def test_execute_plan_with_watchers(self, patched_multiprocessing):
         watch_func = mock.MagicMock()
-        plan = Plan(description='Test', sleep_time=0, watch_func=watch_func)
+        plan = Plan(description="Test", sleep_time=0, watch_func=watch_func)
         previous_stack = None
         for i in range(5):
             overrides = {}
             if previous_stack:
-                overrides['requires'] = [previous_stack.fqn]
+                overrides["requires"] = [previous_stack.fqn]
             stack = Stack(
-                definition=generate_definition('vpc', i, **overrides),
+                definition=generate_definition("vpc", i, **overrides),
                 context=self.context,
             )
             previous_stack = stack
@@ -102,8 +102,8 @@ class TestPlan(unittest.TestCase):
             patched_multiprocessing.Process().terminate.call_count, 10)
 
     def test_step_must_return_status(self):
-        plan = Plan(description='Test', sleep_time=0)
-        stack = Stack(definition=generate_definition('vpc', 1),
+        plan = Plan(description="Test", sleep_time=0)
+        stack = Stack(definition=generate_definition("vpc", 1),
                       context=mock.MagicMock())
         plan.add(
             stack=stack,
@@ -130,18 +130,18 @@ class TestPlan(unittest.TestCase):
             work_states[stack.name] += 1
             return SUBMITTED
 
-        vpc_stack = Stack(definition=generate_definition('vpc', 1),
+        vpc_stack = Stack(definition=generate_definition("vpc", 1),
                           context=self.context)
         web_stack = Stack(
-            definition=generate_definition('web', 2, requires=[vpc_stack.fqn]),
+            definition=generate_definition("web", 2, requires=[vpc_stack.fqn]),
             context=self.context,
         )
         db_stack = Stack(
-            definition=generate_definition('db', 3, requires=[vpc_stack.fqn]),
+            definition=generate_definition("db", 3, requires=[vpc_stack.fqn]),
             context=self.context,
         )
 
-        plan = Plan(description='Test', sleep_time=0)
+        plan = Plan(description="Test", sleep_time=0)
         for stack in [vpc_stack, web_stack, db_stack]:
             plan.add(
                 stack=stack,
@@ -168,11 +168,11 @@ class TestPlan(unittest.TestCase):
 
     def test_plan_wait_func_must_be_function(self):
         with self.assertRaises(ImproperlyConfigured):
-            Plan(description='Test', wait_func='invalid')
+            Plan(description="Test", wait_func="invalid")
 
     def test_plan_steps_listed_with_fqn(self):
-        plan = Plan(description='Test', sleep_time=0)
-        stack = Stack(definition=generate_definition('vpc', 1),
+        plan = Plan(description="Test", sleep_time=0)
+        stack = Stack(definition=generate_definition("vpc", 1),
                       context=self.context)
         plan.add(stack=stack, run_func=lambda x, y: (x, y))
         steps = plan.list_pending()
@@ -180,13 +180,13 @@ class TestPlan(unittest.TestCase):
 
     def test_execute_plan_wait_func_not_called_if_complete(self):
         wait_func = mock.MagicMock()
-        plan = Plan(description='Test', wait_func=wait_func)
+        plan = Plan(description="Test", wait_func=wait_func)
 
         def run_func(*args, **kwargs):
             return COMPLETE
 
         for i in range(2):
-            stack = Stack(definition=generate_definition('vpc', i),
+            stack = Stack(definition=generate_definition("vpc", i),
                           context=self.context)
             plan.add(
                 stack=stack,
@@ -198,14 +198,14 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(wait_func.call_count, 0)
 
     def test_reset_plan(self):
-        plan = Plan(description='Test', sleep_time=0)
+        plan = Plan(description="Test", sleep_time=0)
         previous_stack = None
         for i in range(5):
             overrides = {}
             if previous_stack:
-                overrides['requires'] = [previous_stack.fqn]
+                overrides["requires"] = [previous_stack.fqn]
             stack = Stack(
-                definition=generate_definition('vpc', i, **overrides),
+                definition=generate_definition("vpc", i, **overrides),
                 context=self.context,
             )
             previous_stack = stack
@@ -222,14 +222,14 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(len(plan.list_pending()), len(plan))
 
     def test_reset_after_outline(self):
-        plan = Plan(description='Test', sleep_time=0)
+        plan = Plan(description="Test", sleep_time=0)
         previous_stack = None
         for i in range(5):
             overrides = {}
             if previous_stack:
-                overrides['requires'] = [previous_stack.fqn]
+                overrides["requires"] = [previous_stack.fqn]
             stack = Stack(
-                definition=generate_definition('vpc', i, **overrides),
+                definition=generate_definition("vpc", i, **overrides),
                 context=self.context,
             )
             previous_stack = stack
@@ -242,17 +242,17 @@ class TestPlan(unittest.TestCase):
         plan.outline()
         self.assertEqual(len(plan.list_pending()), len(plan))
 
-    @mock.patch('stacker.plan.os')
-    @mock.patch('stacker.plan.open', mock.mock_open(), create=True)
+    @mock.patch("stacker.plan.os")
+    @mock.patch("stacker.plan.open", mock.mock_open(), create=True)
     def test_reset_after_dump(self, *args):
-        plan = Plan(description='Test', sleep_time=0)
+        plan = Plan(description="Test", sleep_time=0)
         previous_stack = None
         for i in range(5):
             overrides = {}
             if previous_stack:
-                overrides['requires'] = [previous_stack.fqn]
+                overrides["requires"] = [previous_stack.fqn]
             stack = Stack(
-                definition=generate_definition('vpc', i, **overrides),
+                definition=generate_definition("vpc", i, **overrides),
                 context=self.context,
             )
             previous_stack = stack
@@ -262,5 +262,5 @@ class TestPlan(unittest.TestCase):
                 requires=stack.requires,
             )
 
-        plan.dump('test')
+        plan.dump("test")
         self.assertEqual(len(plan.list_pending()), len(plan))

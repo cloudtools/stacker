@@ -10,7 +10,7 @@ from boto.ec2containerservice.layer1 import EC2ContainerServiceConnection
 
 
 def regions():
-    return get_regions('ec2containerservice',
+    return get_regions("ec2containerservice",
                        connection_cls=EC2ContainerServiceConnection)
 
 
@@ -24,15 +24,15 @@ def connect_to_region(region_name, **kw_params):
 def create_clusters(region, namespace, mappings, parameters, **kwargs):
     """Creates ECS clusters.
 
-    Expects a 'clusters' argument, which should contain a list of cluster
+    Expects a "clusters" argument, which should contain a list of cluster
     names to create.
 
     """
     conn = connect_to_region(region)
     try:
-        clusters = kwargs['clusters']
+        clusters = kwargs["clusters"]
     except KeyError:
-        logger.error("setup_clusters hook missing 'clusters' argument")
+        logger.error("setup_clusters hook missing \"clusters\" argument")
         return False
 
     if isinstance(clusters, basestring):

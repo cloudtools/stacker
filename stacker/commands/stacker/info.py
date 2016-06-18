@@ -6,7 +6,7 @@ from ...actions import info
 
 class Info(BaseCommand):
 
-    name = 'info'
+    name = "info"
     description = __doc__
 
     def add_arguments(self, parser):
@@ -24,4 +24,4 @@ class Info(BaseCommand):
         action.execute()
 
     def get_context_kwargs(self, options, **kwargs):
-        return {'stack_names': options.stacks}
+        return {"stack_names": options.stacks}

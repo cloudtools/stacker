@@ -23,7 +23,7 @@ def _gather_parameters(stack_def, context_parameters):
     Returns:
         dict: Contains key/value pairs of the collected parameters.
     """
-    parameters = copy.deepcopy(stack_def.get('parameters', {}))
+    parameters = copy.deepcopy(stack_def.get("parameters", {}))
     stack_specific_params = {}
     for key, value in context_parameters.iteritems():
         stack = None
@@ -34,7 +34,7 @@ def _gather_parameters(stack_def, context_parameters):
             parameters[key] = value
             continue
         # Gather stack specific params for later
-        if stack == stack_def['name']:
+        if stack == stack_def["name"]:
             stack_specific_params[key] = value
     # Now update stack parameters with the stack specific parameters
     # ensuring they override generic parameters
@@ -59,7 +59,7 @@ class Stack(object):
 
     def __init__(self, definition, context, parameters=None, mappings=None,
                  locked=False, force=False, enabled=True):
-        self.name = definition['name']
+        self.name = definition["name"]
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
         self.parameters = _gather_parameters(definition, parameters or {})
@@ -79,16 +79,16 @@ class Stack(object):
     @property
     def requires(self):
         requires = set([self.context.get_fqn(r) for r in
-                        self.definition.get('requires', [])])
+                        self.definition.get("requires", [])])
         # Auto add dependencies when parameters reference the Ouptuts of
         # another stack.
         for value in self.parameters.values():
             stack_names = []
-            if isinstance(value, basestring) and '::' in value:
+            if isinstance(value, basestring) and "::" in value:
                 # support for list of Outputs
-                values = value.split(',')
+                values = value.split(",")
                 for x in values:
-                    stack_name, _ = x.split('::')
+                    stack_name, _ = x.split("::")
                     stack_names.append(stack_name)
             else:
                 continue
@@ -100,12 +100,12 @@ class Stack(object):
 
     @property
     def blueprint(self):
-        if not hasattr(self, '_blueprint'):
-            class_path = self.definition['class_path']
+        if not hasattr(self, "_blueprint"):
+            class_path = self.definition["class_path"]
             blueprint_class = util.load_object_from_string(class_path)
-            if not hasattr(blueprint_class, 'rendered'):
+            if not hasattr(blueprint_class, "rendered"):
                 raise AttributeError("Stack class %s does not have a "
-                                     "'rendered' "
+                                     "\"rendered\" "
                                      "attribute." % (class_path,))
             self._blueprint = blueprint_class(
                 name=self.name,

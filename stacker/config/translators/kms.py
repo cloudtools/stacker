@@ -17,7 +17,7 @@ def kms_simple_decrypt(value):
     For example:
 
         # We use the aws cli to get the encrypted value for the string
-        # "PASSWORD" using the master key called 'myStackerKey' in us-east-1
+        # "PASSWORD" using the master key called "myStackerKey" in us-east-1
         $ aws --region us-east-1 kms encrypt --key-id alias/myStackerKey \
                 --plaintext "PASSWORD" --output text --query CiphertextBlob
 
@@ -42,12 +42,12 @@ def kms_simple_decrypt(value):
     """
     value = read_value_from_path(value)
 
-    region = 'us-east-1'
-    if '@' in value:
-        region, value = value.split('@', 1)
+    region = "us-east-1"
+    if "@" in value:
+        region, value = value.split("@", 1)
 
     s = botocore.session.get_session()
-    kms = s.create_client('kms', region_name=region)
+    kms = s.create_client("kms", region_name=region)
     decoded = base64.b64decode(value)
     response = kms.decrypt(CiphertextBlob=decoded)
     return response["Plaintext"]

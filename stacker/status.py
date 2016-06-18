@@ -2,7 +2,7 @@ class Status(object):
     def __init__(self, name, code, reason=None):
         self.name = name
         self.code = code
-        self.reason = reason or getattr(self, 'reason', None)
+        self.reason = reason or getattr(self, "reason", None)
 
     def __cmp__(self, other):
         if hasattr(other, "code"):
@@ -12,22 +12,22 @@ class Status(object):
 
 class PendingStatus(Status):
     def __init__(self, reason=None):
-        super(PendingStatus, self).__init__('pending', 0, reason)
+        super(PendingStatus, self).__init__("pending", 0, reason)
 
 
 class SubmittedStatus(Status):
     def __init__(self, reason=None):
-        super(SubmittedStatus, self).__init__('submitted', 1, reason)
+        super(SubmittedStatus, self).__init__("submitted", 1, reason)
 
 
 class CompleteStatus(Status):
     def __init__(self, reason=None):
-        super(CompleteStatus, self).__init__('complete', 2, reason)
+        super(CompleteStatus, self).__init__("complete", 2, reason)
 
 
 class SkippedStatus(Status):
     def __init__(self, reason=None):
-        super(SkippedStatus, self).__init__('skipped', 3, reason)
+        super(SkippedStatus, self).__init__("skipped", 3, reason)
 
 
 class NotSubmittedStatus(SkippedStatus):

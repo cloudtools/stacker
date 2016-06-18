@@ -2,7 +2,7 @@
 
 from stacker.commands import Stacker
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     stacker = Stacker()
     args = stacker.parse_args()
     stacker.configure(args)

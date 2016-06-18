@@ -12,7 +12,7 @@ from stacker.exceptions import StackDidNotChange
 from stacker.providers.base import BaseProvider
 
 
-Parameter = namedtuple('Parameter', ['key', 'value'])
+Parameter = namedtuple("Parameter", ["key", "value"])
 
 
 class MockStack(object):
@@ -32,31 +32,31 @@ class TestProvider(BaseProvider):
     def get_stack(self, stack_name, **kwargs):
         if stack_name not in self._outputs:
             raise exceptions.StackDoesNotExist(stack_name)
-        return {'name': stack_name, 'outputs': self._outputs[stack_name]}
+        return {"name": stack_name, "outputs": self._outputs[stack_name]}
 
     def get_outputs(self, stack_name, *args, **kwargs):
         stack = self.get_stack(stack_name)
-        return stack['outputs']
+        return stack["outputs"]
 
 
 class TestBuildAction(unittest.TestCase):
     def setUp(self):
-        self.context = Context({'namespace': 'namespace'})
+        self.context = Context({"namespace": "namespace"})
         self.build_action = build.Action(self.context, provider=TestProvider())
 
     def _get_context(self, **kwargs):
-        config = {'stacks': [
-            {'name': 'vpc'},
-            {'name': 'bastion', 'parameters': {'test': 'vpc::something'}},
-            {'name': 'db', 'parameters': {'test': 'vpc::something',
-             'else': 'bastion::something'}},
-            {'name': 'other', 'parameters': {}}
+        config = {"stacks": [
+            {"name": "vpc"},
+            {"name": "bastion", "parameters": {"test": "vpc::something"}},
+            {"name": "db", "parameters": {"test": "vpc::something",
+             "else": "bastion::something"}},
+            {"name": "other", "parameters": {}}
         ]}
-        return Context({'namespace': 'namespace'}, config=config, **kwargs)
+        return Context({"namespace": "namespace"}, config=config, **kwargs)
 
     def test_resolve_parameters_referencing_non_existant_stack(self):
         parameters = {
-            'param_1': 'mock::output_1',
+            "param_1": "mock::output_1",
         }
         self.build_action.provider.set_outputs({})
         mock_blueprint = mock.MagicMock()
@@ -66,10 +66,10 @@ class TestBuildAction(unittest.TestCase):
                                                   mock_blueprint)
 
     def test_gather_missing_from_stack(self):
-        stack_params = {'Address': '10.0.0.1'}
+        stack_params = {"Address": "10.0.0.1"}
         stack = MockStack(stack_params)
         def_params = {}
-        required = ['Address']
+        required = ["Address"]
         self.assertEqual(
             self.build_action._handle_missing_parameters(def_params, required,
                                                          stack),
@@ -77,17 +77,17 @@ class TestBuildAction(unittest.TestCase):
 
     def test_missing_params_no_stack(self):
         params = {}
-        required = ['Address']
+        required = ["Address"]
         with self.assertRaises(exceptions.MissingParameterException) as cm:
             self.build_action._handle_missing_parameters(params, required)
 
         self.assertEqual(cm.exception.parameters, required)
 
     def test_stack_params_dont_override_given_params(self):
-        stack_params = {'Address': '10.0.0.1'}
+        stack_params = {"Address": "10.0.0.1"}
         stack = MockStack(stack_params)
-        def_params = {'Address': '192.168.0.1'}
-        required = ['Address']
+        def_params = {"Address": "192.168.0.1"}
+        required = ["Address"]
         result = self.build_action._handle_missing_parameters(def_params,
                                                               required, stack)
         self.assertEqual(result, def_params.items())
@@ -97,14 +97,14 @@ class TestBuildAction(unittest.TestCase):
         build_action = build.Action(context)
         dependencies = build_action._get_dependencies()
         self.assertEqual(
-            dependencies[context.get_fqn('bastion')],
-            set([context.get_fqn('vpc')]),
+            dependencies[context.get_fqn("bastion")],
+            set([context.get_fqn("vpc")]),
         )
         self.assertEqual(
-            dependencies[context.get_fqn('db')],
-            set([context.get_fqn(s) for s in['vpc', 'bastion']]),
+            dependencies[context.get_fqn("db")],
+            set([context.get_fqn(s) for s in["vpc", "bastion"]]),
         )
-        self.assertFalse(dependencies[context.get_fqn('other')])
+        self.assertFalse(dependencies[context.get_fqn("other")])
 
     def test_get_stack_execution_order(self):
         context = self._get_context()
@@ -113,7 +113,7 @@ class TestBuildAction(unittest.TestCase):
         execution_order = build_action.get_stack_execution_order(dependencies)
         self.assertEqual(
             execution_order,
-            [context.get_fqn(s) for s in ['other', 'vpc', 'bastion', 'db']],
+            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
         )
 
     def test_generate_plan(self):
@@ -122,13 +122,13 @@ class TestBuildAction(unittest.TestCase):
         plan = build_action._generate_plan()
         self.assertEqual(
             plan.keys(),
-            [context.get_fqn(s) for s in ['other', 'vpc', 'bastion', 'db']],
+            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
         )
 
     def test_dont_execute_plan_when_outline_specified(self):
         context = self._get_context()
         build_action = build.Action(context)
-        with mock.patch.object(build_action, '_generate_plan') as \
+        with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=True)
             self.assertEqual(mock_generate_plan().execute.call_count, 0)
@@ -136,7 +136,7 @@ class TestBuildAction(unittest.TestCase):
     def test_execute_plan_when_outline_not_specified(self):
         context = self._get_context()
         build_action = build.Action(context)
-        with mock.patch.object(build_action, '_generate_plan') as \
+        with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=False)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
@@ -155,7 +155,7 @@ class TestBuildAction(unittest.TestCase):
         # mock provider shouldn't return a stack at first since it hasn't been
         # launched
         mock_provider.get_stack.return_value = None
-        with mock.patch.object(build_action, 's3_stack_push'):
+        with mock.patch.object(build_action, "s3_stack_push"):
             # initial status should be PENDING
             self.assertEqual(step.status, PENDING)
             # initial run should return SUBMITTED since we've passed off to CF
@@ -203,8 +203,8 @@ class TestBuildAction(unittest.TestCase):
             self.assertEqual(mock_provider.update_stack.call_count, 1)
 
     def test_should_update(self):
-        test_scenario = namedtuple('test_scenario',
-                                   ['locked', 'force', 'result'])
+        test_scenario = namedtuple("test_scenario",
+                                   ["locked", "force", "result"])
         test_scenarios = (
             test_scenario(locked=False, force=False, result=True),
             test_scenario(locked=False, force=True, result=True),
@@ -219,8 +219,8 @@ class TestBuildAction(unittest.TestCase):
             self.assertEqual(build.should_update(mock_stack), t.result)
 
     def test_should_submit(self):
-        test_scenario = namedtuple('test_scenario',
-                                   ['enabled', 'result'])
+        test_scenario = namedtuple("test_scenario",
+                                   ["enabled", "result"])
         test_scenarios = (
             test_scenario(enabled=False, result=False),
             test_scenario(enabled=True, result=True),
@@ -237,7 +237,7 @@ class TestFunctions(unittest.TestCase):
     """ test module level functions """
 
     def setUp(self):
-        self.ctx = Context({'namespace': 'test'})
+        self.ctx = Context({"namespace": "test"})
         self.prov = mock.MagicMock()
         self.bp = mock.MagicMock()
 
@@ -289,7 +289,7 @@ class TestFunctions(unittest.TestCase):
 
     def test_resolve_parameters_multiple_outputs(self):
         def get_output(stack, param):
-            d = {'a': 'Apple', 'c': 'Carrot'}
+            d = {"a": "Apple", "c": "Carrot"}
             return d[param]
 
         self.bp.parameters = {
@@ -317,7 +317,7 @@ class TestFunctions(unittest.TestCase):
 
     def test_resolve_parameters_output_does_not_exist(self):
         def get_output(stack, param):
-            d = {'c': 'Carrot'}
+            d = {"c": "Carrot"}
             return d[param]
 
         self.bp.parameters = {

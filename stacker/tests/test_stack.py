@@ -9,28 +9,28 @@ class TestStack(unittest.TestCase):
 
     def setUp(self):
         self.sd = {"name": "test"}
-        self.context = Context({'namespace': 'namespace'})
+        self.context = Context({"namespace": "namespace"})
         self.stack = Stack(
-            definition=generate_definition('vpc', 1),
+            definition=generate_definition("vpc", 1),
             context=self.context,
         )
 
     def test_stack_requires(self):
         definition = generate_definition(
-            'vpc',
+            "vpc",
             1,
             parameters={
                 "ExternalParameter": "fakeStack2::FakeParameter",
             },
-            requires=[self.context.get_fqn('fakeStack')],
+            requires=[self.context.get_fqn("fakeStack")],
         )
         stack = Stack(definition=definition, context=self.context)
         self.assertIn(
-            self.context.get_fqn('fakeStack'),
+            self.context.get_fqn("fakeStack"),
             stack.requires,
         )
         self.assertIn(
-            self.context.get_fqn('fakeStack2'),
+            self.context.get_fqn("fakeStack2"),
             stack.requires,
         )
 

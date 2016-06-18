@@ -7,7 +7,12 @@ from stacker.actions import build
 from stacker.actions.build import resolve_parameters
 from stacker.context import Context
 from stacker import exceptions
-from stacker.plan import COMPLETE, PENDING, SKIPPED, SUBMITTED
+from stacker.status import (
+    COMPLETE,
+    PENDING,
+    SKIPPED,
+    SUBMITTED
+)
 from stacker.exceptions import StackDidNotChange
 from stacker.providers.base import BaseProvider
 

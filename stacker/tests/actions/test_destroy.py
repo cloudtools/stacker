@@ -5,7 +5,7 @@ import mock
 from stacker.actions import destroy
 from stacker.context import Context
 from stacker.exceptions import StackDoesNotExist
-from stacker.plan import (
+from stacker.status import (
     COMPLETE,
     PENDING,
     SKIPPED,

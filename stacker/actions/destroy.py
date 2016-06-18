@@ -5,12 +5,10 @@ from ..exceptions import StackDoesNotExist
 from .. import util
 from ..status import (
     CompleteStatus,
-    SubmittedStatus
-)
-from ..plan import (
+    SubmittedStatus,
     SUBMITTED,
-    Plan,
 )
+from ..plan import Plan
 
 from ..status import StackDoesNotExist as StackDoesNotExistStatus
 

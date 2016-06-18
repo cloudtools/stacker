@@ -3,7 +3,15 @@ import mock
 
 from stacker.context import Context
 from stacker.exceptions import ImproperlyConfigured
-from stacker.plan import COMPLETE, SKIPPED, SUBMITTED, Step, Plan
+from stacker.plan import (
+    Step,
+    Plan,
+)
+from stacker.status import (
+    COMPLETE,
+    SKIPPED,
+    SUBMITTED,
+)
 from stacker.stack import Stack
 
 from .factories import generate_definition

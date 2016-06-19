@@ -4,11 +4,11 @@ import logging
 
 from ...environment import parse_environment
 
-DEBUG_FORMAT = ('[%(asctime)s] %(levelname)s %(name)s:%(lineno)d'
-                '(%(funcName)s): %(message)s')
-INFO_FORMAT = ('[%(asctime)s] %(message)s')
+DEBUG_FORMAT = ("[%(asctime)s] %(levelname)s %(name)s:%(lineno)d"
+                "(%(funcName)s): %(message)s")
+INFO_FORMAT = ("[%(asctime)s] %(message)s")
 
-ISO_8601 = '%Y-%m-%dT%H:%M:%S'
+ISO_8601 = "%Y-%m-%dT%H:%M:%S"
 
 
 class KeyValueAction(argparse.Action):
@@ -22,7 +22,7 @@ class KeyValueAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         if not isinstance(values, Mapping):
-            raise ValueError("type must be 'key_value'")
+            raise ValueError("type must be \"key_value\"")
         if not getattr(namespace, self.dest):
             setattr(namespace, self.dest, {})
         getattr(namespace, self.dest).update(values)
@@ -66,7 +66,7 @@ class BaseCommand(object):
 
     def __init__(self, *args, **kwargs):
         if not self.name:
-            raise ValueError('Subcommands must set "name": %s' % (self,))
+            raise ValueError("Subcommands must set \"name\": %s" % (self,))
 
     def add_subcommands(self, parser):
         if self.subcommands:
@@ -84,7 +84,7 @@ class BaseCommand(object):
 
     @property
     def logger(self):
-        if not hasattr(self, '_logger'):
+        if not hasattr(self, "_logger"):
             self._logger = logging.getLogger(self.name)
         return self._logger
 
@@ -95,7 +95,7 @@ class BaseCommand(object):
             log_level = logging.DEBUG
             log_format = DEBUG_FORMAT
         if verbosity < 2:
-            logging.getLogger('boto').setLevel(logging.CRITICAL)
+            logging.getLogger("boto").setLevel(logging.CRITICAL)
 
         return logging.basicConfig(
             format=log_format,
@@ -156,15 +156,15 @@ class BaseCommand(object):
         parser.add_argument("-v", "--verbose", action="count", default=0,
                             help="Increase output verbosity. May be specified "
                                  "up to twice.")
-        parser.add_argument('environment', type=environment_file,
+        parser.add_argument("environment", type=environment_file,
                             default={},
-                            help="Path to a simple `key: value` pair environment "
-                                 "file. The values in the environment file can "
-                                 "be used in the stack config as if it were a "
-                                 "string.Template type: "
-                                 "https://docs.python.org/2/library/string.html"
-                                 "#template-strings. Must define at least a "
-                                 "'namespace'.")
-        parser.add_argument('config', type=argparse.FileType(),
-                            help="The config file where stack configuration is "
-                                 "located. Must be in yaml format.")
+                            help="Path to a simple `key: value` pair "
+                                 "environment file. The values in the "
+                                 "environment file can be used in the stack "
+                                 "config as if it were a string.Template "
+                                 "type: https://docs.python.org/2/library/"
+                                 "string.html#template-strings. Must define "
+                                 "at least a \"namespace\".")
+        parser.add_argument("config", type=argparse.FileType(),
+                            help="The config file where stack configuration "
+                                 "is located. Must be in yaml format.")

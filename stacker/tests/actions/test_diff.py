@@ -6,14 +6,14 @@ from stacker.actions.diff import diff_dictionaries
 class TestDiffDictionary(unittest.TestCase):
     def setUp(self):
         self.old_dict = {
-            'a': 'Apple',
-            'b': 'Banana',
-            'c': 'Corn',
+            "a": "Apple",
+            "b": "Banana",
+            "c": "Corn",
         }
         self.new_dict = {
-            'a': 'Apple',
-            'b': 'Bob',
-            'd': 'Doug',
+            "a": "Apple",
+            "b": "Bob",
+            "d": "Doug",
         }
 
     def test_diff_dictionaries(self):

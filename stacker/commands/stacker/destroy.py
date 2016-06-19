@@ -16,12 +16,12 @@ class Destroy(BaseCommand):
 
     def add_arguments(self, parser):
         super(Destroy, self).add_arguments(parser)
-        parser.add_argument('-f', '--force', action='store_true',
+        parser.add_argument("-f", "--force", action="store_true",
                             help="Whether or not you want to go through "
                                  " with destroying the stacks")
-        parser.add_argument('-t', '--tail', action='store_true',
-                            help='Tail the CloudFormation logs while working'
-                                 'with stacks')
+        parser.add_argument("-t", "--tail", action="store_true",
+                            help="Tail the CloudFormation logs while working"
+                                 "with stacks")
 
     def run(self, options, **kwargs):
         super(Destroy, self).run(options, **kwargs)

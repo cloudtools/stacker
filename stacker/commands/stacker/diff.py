@@ -1,7 +1,7 @@
 """ Diffs the config against the currently running CloudFormation stacks
 
-Sometimes small changes can have big impacts.  Run 'stacker diff' before
-'stacker build' to detect bad things(tm) from happening in advance!
+Sometimes small changes can have big impacts.  Run "stacker diff" before
+"stacker build" to detect bad things(tm) from happening in advance!
 """
 
 from .base import BaseCommand
@@ -9,7 +9,7 @@ from ...actions import diff
 
 
 class Diff(BaseCommand):
-    name = 'diff'
+    name = "diff"
     description = __doc__
 
     def add_arguments(self, parser):
@@ -32,4 +32,4 @@ class Diff(BaseCommand):
         action.execute()
 
     def get_context_kwargs(self, options, **kwargs):
-        return {'stack_names': options.stacks, 'force_stacks': options.force}
+        return {"stack_names": options.stacks, "force_stacks": options.force}

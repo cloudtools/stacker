@@ -38,7 +38,7 @@ class Step(object):
         self._run_func = run_func
 
     def __repr__(self):
-        return '<stacker.plan.Step:%s>' % (self.stack.fqn,)
+        return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
 
     @property
     def completed(self):
@@ -115,7 +115,7 @@ class Plan(OrderedDict):
         if wait_func is not None:
             if not callable(wait_func):
                 raise ImproperlyConfigured(self.__class__,
-                                           '"wait_func" must be a callable')
+                                           "\"wait_func\" must be a callable")
             self._wait_func = wait_func
         else:
             self._wait_func = time.sleep
@@ -187,9 +187,9 @@ class Plan(OrderedDict):
 
             if waiting_on:
                 logger.debug(
-                    'Stack: "%s" waiting on required stacks: %s',
+                    "Stack: \"%s\" waiting on required stacks: %s",
                     step.stack.name,
-                    ', '.join(waiting_on),
+                    ", ".join(waiting_on),
                 )
                 continue
 
@@ -248,7 +248,7 @@ class Plan(OrderedDict):
 
         self._check_point()
 
-    def outline(self, level=logging.INFO, message=''):
+    def outline(self, level=logging.INFO, message=""):
         """Print an outline of the actions the plan is going to take.
 
         The outline will represent the rough ordering of the steps that will be
@@ -261,12 +261,12 @@ class Plan(OrderedDict):
                 the user after the outline has been logged.
         """
         steps = 1
-        logger.log(level, 'Plan "%s":', self.description)
+        logger.log(level, "Plan \"%s\":", self.description)
         while not self.completed:
             step_name, step = self.list_pending()[0]
             logger.log(
                 level,
-                '  - step: %s: target: "%s", action: "%s"',
+                "  - step: %s: target: \"%s\", action: \"%s\"",
                 steps,
                 step_name,
                 step._run_func.__name__,
@@ -287,7 +287,7 @@ class Plan(OrderedDict):
 
     def dump(self, directory):
         steps = 1
-        logger.info('Dumping "%s"...', self.description)
+        logger.info("Dumping \"%s\"...", self.description)
         directory = os.path.expanduser(directory)
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -297,8 +297,8 @@ class Plan(OrderedDict):
             blueprint = step.stack.blueprint
             filename = stack_template_key_name(blueprint)
             path = os.path.join(directory, filename)
-            logger.info('Writing stack "%s" -> %s', step_name, path)
-            with open(path, 'w') as f:
+            logger.info("Writing stack \"%s\" -> %s", step_name, path)
+            with open(path, "w") as f:
                 f.write(blueprint.rendered)
 
             step.status = COMPLETE
@@ -308,7 +308,7 @@ class Plan(OrderedDict):
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""
-        logger.info('Plan Status:')
+        logger.info("Plan Status:")
         for step_name, step in self.iteritems():
             msg = "  - step \"%s\": %s" % (step_name, step.status.name)
             if step.status.reason:

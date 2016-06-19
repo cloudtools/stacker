@@ -83,27 +83,27 @@ def resolve_parameters(parameters, blueprint, context, provider):
                          blueprint.name, k)
             continue
         value = v
-        if isinstance(value, basestring) and '::' in value:
+        if isinstance(value, basestring) and "::" in value:
             # Get from the Output(s) of another stack(s) in the stack_map
             v_list = []
-            values = value.split(',')
+            values = value.split(",")
             for v in values:
                 v = v.strip()
-                stack_name, output = v.split('::')
+                stack_name, output = v.split("::")
                 stack_fqn = context.get_fqn(stack_name)
                 try:
                     v_list.append(
                         provider.get_output(stack_fqn, output))
                 except KeyError:
                     raise exceptions.OutputDoesNotExist(stack_fqn, v)
-            value = ','.join(v_list)
+            value = ",".join(v_list)
         if value is None:
             logger.debug("Got None value for parameter %s, not submitting it "
                          "to cloudformation, default value should be used.",
                          k)
             continue
         if isinstance(value, bool):
-            logger.debug("Converting parameter %s boolean '%s' to string.",
+            logger.debug("Converting parameter %s boolean \"%s\" to string.",
                          k, value)
             value = str(value).lower()
         params[k] = value
@@ -169,7 +169,7 @@ class Action(BaseAction):
     def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""
         tags = {
-            'stacker_namespace': self.context.namespace,
+            "stacker_namespace": self.context.namespace,
         }
         return tags
 
@@ -267,8 +267,8 @@ class Action(BaseAction):
     def _generate_plan(self, tail=False):
         plan_kwargs = {}
         if tail:
-            plan_kwargs['watch_func'] = self.provider.tail_stack
-        plan = Plan(description='Create/Update stacks', **plan_kwargs)
+            plan_kwargs["watch_func"] = self.provider.tail_stack
+        plan = Plan(description="Create/Update stacks", **plan_kwargs)
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -287,9 +287,9 @@ class Action(BaseAction):
 
     def pre_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
-        pre_build = self.context.config.get('pre_build')
+        pre_build = self.context.config.get("pre_build")
         if not outline and pre_build:
-            util.handle_hooks('pre_build', pre_build, self.provider.region,
+            util.handle_hooks("pre_build", pre_build, self.provider.region,
                               self.context)
 
     def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
@@ -301,7 +301,7 @@ class Action(BaseAction):
         plan = self._generate_plan(tail=tail)
         if not outline and not dump:
             plan.outline(logging.DEBUG)
-            logger.info("Launching stacks: %s", ', '.join(plan.keys()))
+            logger.info("Launching stacks: %s", ", ".join(plan.keys()))
             plan.execute()
         else:
             if outline:
@@ -311,7 +311,7 @@ class Action(BaseAction):
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""
-        post_build = self.context.config.get('post_build')
+        post_build = self.context.config.get("post_build")
         if not outline and post_build:
-            util.handle_hooks('post_build', post_build, self.provider.region,
+            util.handle_hooks("post_build", post_build, self.provider.region,
                               self.context)

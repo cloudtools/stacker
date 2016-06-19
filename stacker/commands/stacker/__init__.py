@@ -12,7 +12,7 @@ from ... import __version__
 
 class Stacker(BaseCommand):
 
-    name = 'stacker'
+    name = "stacker"
     subcommands = (Build, Destroy, Info, Diff)
 
     def configure(self, options, **kwargs):
@@ -31,5 +31,5 @@ class Stacker(BaseCommand):
         options.context.load_config(options.config.read())
 
     def add_arguments(self, parser):
-        parser.add_argument('--version', action='version',
-                            version='%%(prog)s %s' % (__version__,))
+        parser.add_argument("--version", action="version",
+                            version="%%(prog)s %s" % (__version__,))

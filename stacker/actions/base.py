@@ -60,22 +60,22 @@ class BaseAction(object):
     @property
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
-        if not hasattr(self, '_s3_conn'):
+        if not hasattr(self, "_s3_conn"):
             self._s3_conn = boto.connect_s3()
         return self._s3_conn
 
     @property
     def cfn_bucket(self):
         """The cloudformation bucket where templates will be stored."""
-        if not getattr(self, '_cfn_bucket', None):
+        if not getattr(self, "_cfn_bucket", None):
             try:
                 self._cfn_bucket = self.s3_conn.get_bucket(self.bucket_name)
             except boto.exception.S3ResponseError, e:
-                if e.error_code == 'NoSuchBucket':
+                if e.error_code == "NoSuchBucket":
                     logger.debug("Creating bucket %s.", self.bucket_name)
                     self._cfn_bucket = self.s3_conn.create_bucket(
                         self.bucket_name)
-                elif e.error_code == 'AccessDenied':
+                elif e.error_code == "AccessDenied":
                     logger.exception("Access denied for bucket %s.",
                                      self.bucket_name)
                     raise
@@ -117,7 +117,7 @@ class BaseAction(object):
         pass
 
     def run(self, *args, **kwargs):
-        raise NotImplementedError('Subclass must implement "run" method')
+        raise NotImplementedError("Subclass must implement \"run\" method")
 
     def post_run(self, *args, **kwargs):
         pass

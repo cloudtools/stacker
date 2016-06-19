@@ -38,19 +38,19 @@ def diff_dictionaries(old_dict, new_dict):
     output = []
     for key in added_set:
         changes += 1
-        output.append(['+', key, new_dict[key]])
+        output.append(["+", key, new_dict[key]])
 
     for key in removed_set:
         changes += 1
-        output.append(['-', key, old_dict[key]])
+        output.append(["-", key, old_dict[key]])
 
     for key in common_set:
         if str(old_dict[key]) != str(new_dict[key]):
             changes += 1
-            output.append(['-', key, old_dict[key]])
-            output.append(['+', key, new_dict[key]])
+            output.append(["-", key, old_dict[key]])
+            output.append(["+", key, new_dict[key]])
         else:
-            output.append([' ', key, new_dict[key]])
+            output.append([" ", key, new_dict[key]])
 
     return [changes, output]
 
@@ -68,7 +68,7 @@ class Action(build.Action):
     """
 
     def _diff_parameters(self, old_params, new_params):
-        """Compares the old vs. new parameters and prints a 'diff'
+        """Compares the old vs. new parameters and prints a "diff"
 
         If there are no changes, we print nothing.
 
@@ -165,7 +165,7 @@ class Action(build.Action):
         return COMPLETE
 
     def _generate_plan(self):
-        plan = Plan(description='Diff stacks')
+        plan = Plan(description="Diff stacks")
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -180,7 +180,7 @@ class Action(build.Action):
         plan = self._generate_plan()
         debug_plan = self._generate_plan()
         debug_plan.outline(logging.DEBUG)
-        logger.info("Diffing stacks: %s", ', '.join(plan.keys()))
+        logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
         plan.execute()
 
     """Don't ever do anything for pre_run or post_run"""

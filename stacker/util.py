@@ -80,8 +80,8 @@ def camel_to_snake(name):
     Returns:
         string: Converted string.
     """
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def convert_class_name(kls):
@@ -97,7 +97,7 @@ def convert_class_name(kls):
 
 
 def create_route53_zone(conn, zone_name):
-    """Create's the given zone_name if it doesn't already exists.
+    """Creates the given zone_name if it doesn't already exists.
 
     Also sets the SOA negative caching TTL to something short (300 seconds).
 
@@ -106,50 +106,50 @@ def create_route53_zone(conn, zone_name):
             to interact with Route53's API.
         zone_name (string): The name of the DNS hosted zone to create.
     """
-    if not zone_name.endswith('.'):
-        zone_name += '.'
+    if not zone_name.endswith("."):
+        zone_name += "."
     zone = conn.get_zone(zone_name)
     if not zone:
         logger.debug("Zone %s does not exist, creating.", zone_name)
         zone = conn.create_zone(zone_name)
     # Update SOA to lower negative caching value
-    soa = zone.find_records(zone_name, 'SOA')
+    soa = zone.find_records(zone_name, "SOA")
     old_soa_body = soa.resource_records[0]
-    old_soa_parts = old_soa_body.split(' ')
+    old_soa_parts = old_soa_body.split(" ")
     # If the negative cache value is already 300, don't update it.
-    if old_soa_parts[-1] == '300':
+    if old_soa_parts[-1] == "300":
         return
     logger.debug("Updating negative caching value on zone %s to 300.",
                  zone_name)
-    new_soa_body = ' '.join(old_soa_body.split(' ')[:-1]) + ' 300'
+    new_soa_body = " ".join(old_soa_body.split(" ")[:-1]) + " 300"
     changes = ResourceRecordSets(conn, zone.id)
-    delete_soa = changes.add_change('DELETE', zone.name, 'SOA', soa.ttl)
+    delete_soa = changes.add_change("DELETE", zone.name, "SOA", soa.ttl)
     delete_soa.add_value(old_soa_body)
-    create_soa = changes.add_change('CREATE', zone.name, 'SOA', soa.ttl)
+    create_soa = changes.add_change("CREATE", zone.name, "SOA", soa.ttl)
     create_soa.add_value(new_soa_body)
     changes.commit()
 
 
 def load_object_from_string(fqcn):
-    """Converts '.' delimited strings to a python object.
+    """Converts "." delimited strings to a python object.
 
-    Given a '.' delimited string representing the full path to an object
+    Given a "." delimited string representing the full path to an object
     (function, class, variable) inside a module, return that object.  Example:
 
-    load_object_from_string('os.path.basename')
-    load_object_from_string('logging.Logger')
-    load_object_from_string('LocalClassName')
+    load_object_from_string("os.path.basename")
+    load_object_from_string("logging.Logger")
+    load_object_from_string("LocalClassName")
     """
-    module_path = '__main__'
+    module_path = "__main__"
     object_name = fqcn
-    if '.' in fqcn:
-        module_path, object_name = fqcn.rsplit('.', 1)
+    if "." in fqcn:
+        module_path, object_name = fqcn.rsplit(".", 1)
         importlib.import_module(module_path)
     return getattr(sys.modules[module_path], object_name)
 
 
 def uppercase_first_letter(s):
-    """Return string 's' with first character upper case."""
+    """Return string "s" with first character upper case."""
     return s[0].upper() + s[1:]
 
 
@@ -159,9 +159,9 @@ def cf_safe_name(name):
     Given a string, returns a name that is safe for use as a CloudFormation
     Resource. (ie: Only alphanumeric characters)
     """
-    alphanumeric = r'[a-zA-Z0-9]+'
+    alphanumeric = r"[a-zA-Z0-9]+"
     parts = re.findall(alphanumeric, name)
-    return ''.join([uppercase_first_letter(part) for part in parts])
+    return "".join([uppercase_first_letter(part) for part in parts])
 
 
 # TODO: perhaps make this a part of the builder?
@@ -186,18 +186,18 @@ def handle_hooks(stage, hooks, region, context):
     hook_paths = []
     for i, h in enumerate(hooks):
         try:
-            hook_paths.append(h['path'])
+            hook_paths.append(h["path"])
         except KeyError:
             raise ValueError("%s hook #%d missing path." % (stage, i))
 
     logger.info("Executing %s hooks: %s", stage, ", ".join(hook_paths))
     for hook in hooks:
-        required = hook.get('required', True)
-        kwargs = hook.get('args', {})
+        required = hook.get("required", True)
+        kwargs = hook.get("args", {})
         try:
-            method = load_object_from_string(hook['path'])
+            method = load_object_from_string(hook["path"])
         except (AttributeError, ImportError):
-            logger.exception("Unable to load method at %s:", hook['path'])
+            logger.exception("Unable to load method at %s:", hook["path"])
             if required:
                 raise
             continue
@@ -210,14 +210,14 @@ def handle_hooks(stage, hooks, region, context):
                 **kwargs
             )
         except Exception:
-            logger.exception("Method %s threw an exception:", hook['path'])
+            logger.exception("Method %s threw an exception:", hook["path"])
             if required:
                 raise
             continue
         if not result:
             if required:
                 logger.error("Required hook %s failed. Return value: %s",
-                             hook['path'], result)
+                             hook["path"], result)
                 sys.exit(1)
             logger.warning("Non-required hook %s failed. Return value: %s",
-                           hook['path'], result)
+                           hook["path"], result)

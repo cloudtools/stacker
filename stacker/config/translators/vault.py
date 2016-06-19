@@ -21,15 +21,15 @@ def get_vaulted_value(value):
 
     """
     try:
-        path, key = value.split('@', 1)
+        path, key = value.split("@", 1)
     except ValueError:
         raise TypeError(
-            'Vaulted vaules must be of the format'
-            ' "<path in vault>@<key in stored data>" (got %s)' % (value,)
+            "Vaulted vaules must be of the format"
+            " \"<path in vault>@<key in stored data>\" (got %s)" % (value,)
         )
 
     return subprocess.check_output(
-        ['vault', 'read', '-field=%s' % (key,), path]).strip()
+        ["vault", "read", "-field=%s" % (key,), path]).strip()
 
 
 def vault_constructor(loader, node):

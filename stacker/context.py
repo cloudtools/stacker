@@ -10,10 +10,10 @@ def get_fqn(base_fqn, name=None):
     will be returned with no further processing.
 
     """
-    if name and name.startswith(base_fqn + '-'):
+    if name and name.startswith(base_fqn + "-"):
         return name
 
-    return '-'.join(filter(None, [base_fqn, name]))
+    return "-".join(filter(None, [base_fqn, name]))
 
 
 class Context(object):
@@ -42,9 +42,9 @@ class Context(object):
                  parameters=None, mappings=None, config=None,
                  force_stacks=None):
         try:
-            self.namespace = environment['namespace']
+            self.namespace = environment["namespace"]
         except KeyError:
-            raise MissingEnvironment(['namespace'])
+            raise MissingEnvironment(["namespace"])
 
         self.environment = environment
         self.stack_names = stack_names or []
@@ -52,20 +52,20 @@ class Context(object):
         self.mappings = mappings or {}
         self.config = config or {}
         self.force_stacks = force_stacks or []
-        self._base_fqn = self.namespace.replace('.', '-').lower()
-        self.bucket_name = 'stacker-%s' % (self.get_fqn(),)
+        self._base_fqn = self.namespace.replace(".", "-").lower()
+        self.bucket_name = "stacker-%s" % (self.get_fqn(),)
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
-        self.mappings = self.config.get('mappings', {})
-        bucket_name = self.config.get('stacker_bucket', None)
+        self.mappings = self.config.get("mappings", {})
+        bucket_name = self.config.get("stacker_bucket", None)
         if bucket_name:
             self.bucket_name = bucket_name
 
     def _get_stack_definitions(self):
         if not self.stack_names:
-            return self.config['stacks']
-        return [s for s in self.config['stacks'] if s['name'] in
+            return self.config["stacks"]
+        return [s for s in self.config["stacks"] if s["name"] in
                 self.stack_names]
 
     def get_stacks(self):
@@ -88,9 +88,9 @@ class Context(object):
                 context=self,
                 parameters=self.parameters,
                 mappings=self.mappings,
-                force=stack_def['name'] in self.force_stacks,
-                locked=stack_def.get('locked', False),
-                enabled=stack_def.get('enabled', True),
+                force=stack_def["name"] in self.force_stacks,
+                locked=stack_def.get("locked", False),
+                enabled=stack_def.get("enabled", True),
             )
             stacks.append(stack)
         return stacks

@@ -64,16 +64,16 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
 class Provider(BaseProvider):
     """AWS CloudFormation Provider"""
 
-    DELETED_STATUS = 'DELETE_COMPLETE'
+    DELETED_STATUS = "DELETE_COMPLETE"
     IN_PROGRESS_STATUSES = (
-        'CREATE_IN_PROGRESS',
-        'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS',
-        'UPDATE_IN_PROGRESS',
-        'DELETE_IN_PROGRESS',
+        "CREATE_IN_PROGRESS",
+        "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS",
+        "UPDATE_IN_PROGRESS",
+        "DELETE_IN_PROGRESS",
     )
     COMPLETE_STATUSES = (
-        'CREATE_COMPLETE',
-        'UPDATE_COMPLETE',
+        "CREATE_COMPLETE",
+        "UPDATE_COMPLETE",
     )
 
     def __init__(self, region, **kwargs):
@@ -82,7 +82,7 @@ class Provider(BaseProvider):
 
     @property
     def cloudformation(self):
-        if not hasattr(self, '_cloudformation'):
+        if not hasattr(self, "_cloudformation"):
             self._cloudformation = cloudformation.connect_to_region(
                 self.region)
         return self._cloudformation
@@ -92,7 +92,7 @@ class Provider(BaseProvider):
             return retry_on_throttling(self.cloudformation.describe_stacks,
                                        args=[stack_name])[0]
         except boto.exception.BotoServerError as e:
-            if 'does not exist' not in e.message:
+            if "does not exist" not in e.message:
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
@@ -114,11 +114,11 @@ class Provider(BaseProvider):
                           e.resource_status_reason]
             # filter out any values that are empty
             event_args = [arg for arg in event_args if arg]
-            template = ' '.join(['[%s]'] + ['%s' for _ in event_args])
+            template = " ".join(["[%s]"] + ["%s" for _ in event_args])
             logger.info(template, *([stack.fqn] + event_args))
 
         if not retries:
-            logger.info('Tailing stack: %s', stack.fqn)
+            logger.info("Tailing stack: %s", stack.fqn)
 
         try:
             tail(
@@ -128,7 +128,7 @@ class Provider(BaseProvider):
                 include_initial=False,
             )
         except boto.exception.BotoServerError as e:
-            if 'does not exist' in e.message and retries < MAX_TAIL_RETRIES:
+            if "does not exist" in e.message and retries < MAX_TAIL_RETRIES:
                 # stack might be in the process of launching, wait for a second
                 # and try again
                 time.sleep(1)
@@ -151,7 +151,7 @@ class Provider(BaseProvider):
             args=[fqn],
             kwargs=dict(template_url=template_url,
                         parameters=parameters, tags=tags,
-                        capabilities=['CAPABILITY_IAM']),
+                        capabilities=["CAPABILITY_IAM"]),
         )
         return True
 
@@ -164,10 +164,10 @@ class Provider(BaseProvider):
                 kwargs=dict(template_url=template_url,
                             parameters=parameters,
                             tags=tags,
-                            capabilities=['CAPABILITY_IAM']),
+                            capabilities=["CAPABILITY_IAM"]),
             )
         except boto.exception.BotoServerError as e:
-            if 'No updates are to be performed.' in e.message:
+            if "No updates are to be performed." in e.message:
                 logger.debug(
                     "Stack %s did not change, not updating.",
                     fqn,
@@ -195,7 +195,7 @@ class Provider(BaseProvider):
                 self.cloudformation.describe_stacks,
                 kwargs=dict(stack_name_or_id=stack_name))
         except boto.exception.BotoServerError as e:
-            if 'does not exist' not in e.message:
+            if "does not exist" not in e.message:
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
@@ -204,7 +204,7 @@ class Provider(BaseProvider):
         for p in stack.parameters:
             parameters[p.key] = p.value
         ret = stack.get_template()
-        template = ret['GetTemplateResponse']['GetTemplateResult']
-        template = template['TemplateBody']
+        template = ret["GetTemplateResponse"]["GetTemplateResult"]
+        template = template["TemplateBody"]
 
         return [template, parameters]

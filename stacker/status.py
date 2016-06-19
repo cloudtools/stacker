@@ -44,3 +44,9 @@ class DidNotChangeStatus(SkippedStatus):
 
 class StackDoesNotExist(SkippedStatus):
     reason = "does not exist in cloudformation"
+
+
+PENDING = PendingStatus()
+SUBMITTED = SubmittedStatus()
+COMPLETE = CompleteStatus()
+SKIPPED = SkippedStatus()

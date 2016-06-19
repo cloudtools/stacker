@@ -9,18 +9,13 @@ from .actions.base import stack_template_key_name
 
 from .status import (
     Status,
-    PendingStatus,
-    SubmittedStatus,
-    CompleteStatus,
-    SkippedStatus
+    PENDING,
+    SUBMITTED,
+    COMPLETE,
+    SKIPPED
 )
 
 logger = logging.getLogger(__name__)
-
-PENDING = PendingStatus()
-SUBMITTED = SubmittedStatus()
-COMPLETE = CompleteStatus()
-SKIPPED = SkippedStatus()
 
 
 class Step(object):

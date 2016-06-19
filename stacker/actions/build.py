@@ -3,13 +3,14 @@ import logging
 from .base import BaseAction
 from .. import exceptions, util
 from ..exceptions import StackDidNotChange
-from ..plan import SUBMITTED, Plan
+from ..plan import Plan
 from ..status import (
     NotSubmittedStatus,
     NotUpdatedStatus,
     DidNotChangeStatus,
     SubmittedStatus,
-    CompleteStatus
+    CompleteStatus,
+    SUBMITTED
 )
 
 

@@ -52,8 +52,8 @@ class Context(object):
         self.mappings = mappings or {}
         self.config = config or {}
         self.force_stacks = force_stacks or []
-        self._base_fqn = self.namespace.replace('.', '-').lower()
-        self.bucket_name = 'stacker-%s' % (self.get_fqn(),)
+        self._base_fqn = self.namespace.replace(".", "-").lower()
+        self.bucket_name = "stacker-%s" % (self.get_fqn(),)
         self.bucket_sse = False
 
     def load_config(self, conf_string):
@@ -62,7 +62,7 @@ class Context(object):
         bucket_name = self.config.get("stacker_bucket", None)
         if bucket_name:
             self.bucket_name = bucket_name
-        bucket_sse = self.config.get('stacker_bucket_sse', False)
+        bucket_sse = self.config.get("stacker_bucket_sse", False)
         if bucket_sse is True:
             self.bucket_sse = bucket_sse
 

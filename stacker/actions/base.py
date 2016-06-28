@@ -54,7 +54,6 @@ class BaseAction(object):
         self.context = context
         self.provider = provider
         self.bucket_name = context.bucket_name
-        self.bucket_sse = context.bucket_sse
         self._conn = None
         self._cfn_bucket = None
 
@@ -104,9 +103,7 @@ class BaseAction(object):
                          template_url)
             return template_url
         key = self.cfn_bucket.new_key(key_name)
-        key.set_contents_from_string(
-            blueprint.rendered, encrypt_key=self.bucket_sse
-        )
+        key.set_contents_from_string(blueprint.rendered, encrypt_key=True)
         logger.debug("Blueprint %s pushed to %s.", blueprint.name,
                      template_url)
         return template_url

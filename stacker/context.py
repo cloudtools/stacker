@@ -54,7 +54,6 @@ class Context(object):
         self.force_stacks = force_stacks or []
         self._base_fqn = self.namespace.replace(".", "-").lower()
         self.bucket_name = "stacker-%s" % (self.get_fqn(),)
-        self.bucket_sse = False
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
@@ -62,10 +61,6 @@ class Context(object):
         bucket_name = self.config.get("stacker_bucket", None)
         if bucket_name:
             self.bucket_name = bucket_name
-        bucket_sse = self.config.get("stacker_bucket_sse", False)
-        if bucket_sse is True:
-            self.bucket_sse = bucket_sse
-
 
     def _get_stack_definitions(self):
         if not self.stack_names:

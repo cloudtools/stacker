@@ -103,7 +103,7 @@ class BaseAction(object):
                          template_url)
             return template_url
         key = self.cfn_bucket.new_key(key_name)
-        key.set_contents_from_string(blueprint.rendered)
+        key.set_contents_from_string(blueprint.rendered, encrypt_key=True)
         logger.debug("Blueprint %s pushed to %s.", blueprint.name,
                      template_url)
         return template_url

@@ -86,13 +86,19 @@ class TestFunctions(unittest.TestCase):
     def test_get_fqn_redundant_base(self):
         base = "woot"
         name = "woot-blah"
-        self.assertEqual(get_fqn(base, name), name)
+        self.assertEqual(get_fqn(base, '-', name), name)
+        self.assertEqual(get_fqn(base, '', name), name)
+        self.assertEqual(get_fqn(base, '_', name), "woot_woot-blah")
 
     def test_get_fqn_only_base(self):
         base = "woot"
-        self.assertEqual(get_fqn(base), base)
+        self.assertEqual(get_fqn(base, '-'), base)
+        self.assertEqual(get_fqn(base, ''), base)
+        self.assertEqual(get_fqn(base, '_'), base)
 
     def test_get_fqn_full(self):
         base = "woot"
         name = "blah"
-        self.assertEqual(get_fqn(base, name), "%s-%s" % (base, name))
+        self.assertEqual(get_fqn(base, '-', name), "%s-%s" % (base, name))
+        self.assertEqual(get_fqn(base, '', name), "%s%s" % (base, name))
+        self.assertEqual(get_fqn(base, '_', name), "%s_%s" % (base, name))

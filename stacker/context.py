@@ -3,17 +3,17 @@ from .config import parse_config
 from .stack import Stack
 
 
-def get_fqn(base_fqn, name=None):
+def get_fqn(base_fqn, delimiter, name=None):
     """Return the fully qualified name of an object within this context.
 
     If the name passed already appears to be a fully qualified name, it
     will be returned with no further processing.
 
     """
-    if name and name.startswith(base_fqn + "-"):
+    if name and name.startswith("%s%s" % (base_fqn, delimiter)):
         return name
 
-    return "-".join(filter(None, [base_fqn, name]))
+    return delimiter.join(filter(None, [base_fqn, name]))
 
 
 class Context(object):
@@ -50,6 +50,7 @@ class Context(object):
         self.stack_names = stack_names or []
         self.parameters = parameters or {}
         self.mappings = mappings or {}
+        self.namespace_delimiter = "-"
         self.config = config or {}
         self.force_stacks = force_stacks or []
         self._base_fqn = self.namespace.replace(".", "-").lower()
@@ -58,6 +59,9 @@ class Context(object):
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
         self.mappings = self.config.get("mappings", {})
+        namespace_delimiter = self.config.get("namespace_delimiter", None)
+        if namespace_delimiter is not None:
+            self.namespace_delimiter = namespace_delimiter
         bucket_name = self.config.get("stacker_bucket", None)
         if bucket_name:
             self.bucket_name = bucket_name
@@ -105,4 +109,4 @@ class Context(object):
         will be returned with no further processing.
 
         """
-        return get_fqn(self._base_fqn, name)
+        return get_fqn(self._base_fqn, self.namespace_delimiter, name)

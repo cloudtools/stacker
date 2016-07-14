@@ -80,19 +80,36 @@ class TestContext(unittest.TestCase):
         context.load_config("""stacker_bucket: bucket123""")
         self.assertEqual(context.bucket_name, "bucket123")
 
+    def test_context_namespace_delimiter_is_overriden_and_not_none(self):
+        context = Context({"namespace": "namespace"})
+        context.load_config("""namespace_delimiter: '_'""")
+        fqn = context.get_fqn("stack1")
+        self.assertEqual(fqn, "namespace_stack1")
+
+    def test_context_namespace_delimiter_is_overriden_and_is_empty(self):
+        context = Context({"namespace": "namespace"})
+        context.load_config("""namespace_delimiter: ''""")
+        fqn = context.get_fqn("stack1")
+        self.assertEqual(fqn, "namespacestack1")
 
 class TestFunctions(unittest.TestCase):
     """ Test the module level functions """
     def test_get_fqn_redundant_base(self):
         base = "woot"
         name = "woot-blah"
-        self.assertEqual(get_fqn(base, name), name)
+        self.assertEqual(get_fqn(base, '-', name), name)
+        self.assertEqual(get_fqn(base, '', name), name)
+        self.assertEqual(get_fqn(base, '_', name), "woot_woot-blah")
 
     def test_get_fqn_only_base(self):
         base = "woot"
-        self.assertEqual(get_fqn(base), base)
+        self.assertEqual(get_fqn(base, '-'), base)
+        self.assertEqual(get_fqn(base, ''), base)
+        self.assertEqual(get_fqn(base, '_'), base)
 
     def test_get_fqn_full(self):
         base = "woot"
         name = "blah"
-        self.assertEqual(get_fqn(base, name), "%s-%s" % (base, name))
+        self.assertEqual(get_fqn(base, '-', name), "%s-%s" % (base, name))
+        self.assertEqual(get_fqn(base, '', name), "%s%s" % (base, name))
+        self.assertEqual(get_fqn(base, '_', name), "%s_%s" % (base, name))

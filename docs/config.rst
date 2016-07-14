@@ -13,13 +13,28 @@ duplicating config. (See `YAML anchors & references`_ for details)
 Top Level Keywords
 ==================
 
+Namespace Delimiter
+-------------------
+
+By default, stacker will use '-' as a delimiter between your namespace and the
+declared stack name to build the actual Cloudformation stack name that gets
+created. Since child resources of your stacks will, by default, use a portion
+of your stack name in the auto-generated resource names, the first characters
+of your fully-qualified stack name potentially convey valuable information to
+someone glancing at resource names. If you prefer to not use a delimiter, you
+can pass the **namespace_delimiter** top level key word in the config as an empty string.
+
+See the `Cloudformation API Reference`_ for allowed stack name characters
+
+.. _`Cloudformation API Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateStack.html
+
 S3 Bucket
 ---------
 
 Stacker, by default, pushes your Cloudformation templates into an S3 bucket
 and points Cloudformation at the template in that bucket when launching or
 updating your stacks. By default it uses a bucket named
-**stacker-${namespace}**, where the namespace is the namespace provied in the
+**stacker-${namespace}**, where the namespace is the namespace provided in the
 `environment <environments.html>`_ file.
 
 If you want to change this, provide the **stacker_bucket** top level key word

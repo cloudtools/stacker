@@ -80,6 +80,17 @@ class TestContext(unittest.TestCase):
         context.load_config("""stacker_bucket: bucket123""")
         self.assertEqual(context.bucket_name, "bucket123")
 
+    def test_context_namespace_delimiter_is_overriden_and_not_none(self):
+        context = Context({"namespace": "namespace"})
+        context.load_config("""namespace_delimiter: '_'""")
+        fqn = context.get_fqn("stack1")
+        self.assertEqual(fqn, "namespace_stack1")
+
+    def test_context_namespace_delimiter_is_overriden_and_is_empty(self):
+        context = Context({"namespace": "namespace"})
+        context.load_config("""namespace_delimiter: ''""")
+        fqn = context.get_fqn("stack1")
+        self.assertEqual(fqn, "namespacestack1")
 
 class TestFunctions(unittest.TestCase):
     """ Test the module level functions """

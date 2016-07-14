@@ -60,7 +60,7 @@ class Context(object):
         self.config = parse_config(conf_string, environment=self.environment)
         self.mappings = self.config.get("mappings", {})
         namespace_delimiter = self.config.get("namespace_delimiter", None)
-        if namespace_delimiter:
+        if namespace_delimiter is not None:
             self.namespace_delimiter = namespace_delimiter
         bucket_name = self.config.get("stacker_bucket", None)
         if bucket_name:

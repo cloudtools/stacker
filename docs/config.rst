@@ -22,6 +22,9 @@ updating your stacks. By default it uses a bucket named
 **stacker-${namespace}**, where the namespace is the namespace provied in the
 `environment <environments.html>`_ file.
 
+If you want to change this, provide the **stacker_bucket** top level key word
+in the config.
+
 Pre & Post Hooks
 ----------------
 

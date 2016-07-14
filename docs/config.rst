@@ -25,6 +25,7 @@ someone glancing at resource names. If you prefer to not use a delimiter, you
 can pass the **namespace_delimiter** top level key word in the config as an empty string.
 
 See the `Cloudformation API Reference`_ for allowed stack name characters
+
 .. _`Cloudformation API Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateStack.html
 
 S3 Bucket

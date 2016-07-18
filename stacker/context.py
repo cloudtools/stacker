@@ -1,5 +1,5 @@
-from .exceptions import MissingEnvironment
 from .config import parse_config
+from .exceptions import MissingEnvironment
 from .stack import Stack
 
 
@@ -55,6 +55,9 @@ class Context(object):
         self.force_stacks = force_stacks or []
         self._base_fqn = self.namespace.replace(".", "-").lower()
         self.bucket_name = "stacker-%s" % (self.get_fqn(),)
+        self.tags = {
+            'stacker_namespace': self.namespace
+        }
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
@@ -65,6 +68,9 @@ class Context(object):
         bucket_name = self.config.get("stacker_bucket", None)
         if bucket_name:
             self.bucket_name = bucket_name
+        tags = self.config.get("tags", None)
+        if tags is not None:
+            self.tags = dict([(str(tag_key), str(tag_value)) for tag_key, tag_value in tags.items()])
 
     def _get_stack_definitions(self):
         if not self.stack_names:

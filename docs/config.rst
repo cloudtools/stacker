@@ -71,6 +71,28 @@ the build action::
       args:
         domain: mydomain.com
 
+Tags
+----
+
+Cloudformation supports arbitrary key-value pair tags. All stack-level, including automatically created tags, are
+propagated to resources that AWS CloudFormation supports. See `AWS Cloudformation Resource Tags Type`_ for more details.
+If no tags are specified, the `stacker_namespace` tag is applied to your stack with the value of `namespace` as the
+tag value.
+
+If you prefer to apply a custom set of tags, specify the top-level keyword `tags` as a map. Example::
+
+  tags:
+    "hello": world
+    "my_tag:with_colons_in_key": ${dynamic_tag_value_from_my_env}
+    simple_tag: simple value
+
+If you prefer to have no tags applied to your stacks (versus the default tags that stacker applies), specify an empty
+map for the top-level keyword::
+
+  tags: {}
+
+.. _`AWS Cloudformation Resource Tags Type`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-resource-tags.html
+
 Mappings
 --------
 

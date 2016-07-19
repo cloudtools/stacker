@@ -168,10 +168,7 @@ class Action(BaseAction):
 
     def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""
-        tags = {
-            "stacker_namespace": self.context.namespace,
-        }
-        return tags
+        return self.context.tags
 
     def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.

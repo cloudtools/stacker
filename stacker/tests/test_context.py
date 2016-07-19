@@ -92,6 +92,32 @@ class TestContext(unittest.TestCase):
         fqn = context.get_fqn("stack1")
         self.assertEqual(fqn, "namespacestack1")
 
+    def test_context_tags(self):
+        context = Context({"namespace": "test", "dynamic_context": "baz"})
+        context.load_config("""
+        tags:
+            "a:b": "c"
+            "hello": 1
+            "test_dynamic": ${dynamic_context}
+            simple_tag: simple value
+        """)
+        self.assertEqual(context.tags, {
+            "a:b": "c",
+            "hello": "1",
+            "test_dynamic": "baz",
+            "simple_tag": "simple value"
+        })
+
+    def test_context_tags_with_empty_map(self):
+        context = Context({"namespace": "test"})
+        context.load_config("""tags: {}""")
+        self.assertEqual(context.tags, {})
+
+    def test_context_no_tags_specified(self):
+        context = Context({"namespace": "test"})
+        self.assertEqual(context.tags, {"stacker_namespace": "test"})
+
+
 class TestFunctions(unittest.TestCase):
     """ Test the module level functions """
     def test_get_fqn_redundant_base(self):

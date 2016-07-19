@@ -11,7 +11,7 @@ stacker is a tool and library used to create & update multiple CloudFormation
 stacks. It was originally written at Remind_ and
 released to the open source community.
 
-stacker StackTemplates are written in troposphere_, though the purpose of
+stacker Blueprints are written in troposphere_, though the purpose of
 most templates is to keep them as generic as possible and then use
 configuration (and CloudFormation Parameters/Outputs) to modify them.
 

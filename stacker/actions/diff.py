@@ -107,8 +107,8 @@ class Action(build.Action):
     def _print_new_stack(self, stack, parameters):
         """Prints out the parameters & stack contents of a new stack"""
         print "New template parameters:"
-        for param in sorted(parameters, key=lambda param: param[0]):
-            print "%s = %s" % (param[0], param[1])
+        for param in sorted(parameters, key=lambda param: param['ParameterKey']):
+            print "%s = %s" % (param['ParameterKey'], param['ParameterValue'])
 
         print "\nNew template contents:"
         print "".join(stack)
@@ -150,7 +150,7 @@ class Action(build.Action):
         parameters = self.build_parameters(stack)
         new_params = dict()
         for p in parameters:
-            new_params[p[0]] = p[1]
+            new_params[p['ParameterKey']] = p['ParameterValue']
         new_stack = self._normalize_json(new_template)
 
         print "============== Stack: %s ==============" % (stack.name,)

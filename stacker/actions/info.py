@@ -23,5 +23,6 @@ class Action(BaseAction):
                 continue
 
             logger.info('%s:', stack.fqn)
-            for output in provider_stack.outputs:
-                logger.info('\t%s: %s', output.key, output.value)
+            if 'Outputs' in provider_stack:
+                for output in provider_stack['Outputs']:
+                    logger.info('\t%s: %s', output['Key'], output['Value'])

@@ -1,30 +1,26 @@
-from collections import namedtuple
 import unittest
+from collections import namedtuple
 
 import mock
 
+from stacker import exceptions
 from stacker.actions import build
 from stacker.actions.build import resolve_parameters
 from stacker.context import Context
-from stacker import exceptions
+from stacker.exceptions import StackDidNotChange
+from stacker.providers.base import BaseProvider
 from stacker.status import (
     COMPLETE,
     PENDING,
     SKIPPED,
     SUBMITTED
 )
-from stacker.exceptions import StackDidNotChange
-from stacker.providers.base import BaseProvider
 
 
-Parameter = namedtuple("Parameter", ["key", "value"])
-
-
-class MockStack(object):
-    def __init__(self, parameters):
-        self.parameters = []
-        for k, v in parameters.items():
-            self.parameters.append(Parameter(key=k, value=v))
+def mock_stack(parameters):
+    return {
+        'Parameters': [{'ParameterKey': k, 'ParameterValue': v} for k, v in parameters.items()]
+    }
 
 
 class TestProvider(BaseProvider):
@@ -54,7 +50,7 @@ class TestBuildAction(unittest.TestCase):
             {"name": "vpc"},
             {"name": "bastion", "parameters": {"test": "vpc::something"}},
             {"name": "db", "parameters": {"test": "vpc::something",
-             "else": "bastion::something"}},
+                                          "else": "bastion::something"}},
             {"name": "other", "parameters": {}}
         ]}
         return Context({"namespace": "namespace"}, config=config, **kwargs)
@@ -72,7 +68,7 @@ class TestBuildAction(unittest.TestCase):
 
     def test_gather_missing_from_stack(self):
         stack_params = {"Address": "10.0.0.1"}
-        stack = MockStack(stack_params)
+        stack = mock_stack(stack_params)
         def_params = {}
         required = ["Address"]
         self.assertEqual(
@@ -90,7 +86,7 @@ class TestBuildAction(unittest.TestCase):
 
     def test_stack_params_dont_override_given_params(self):
         stack_params = {"Address": "10.0.0.1"}
-        stack = MockStack(stack_params)
+        stack = mock_stack(stack_params)
         def_params = {"Address": "192.168.0.1"}
         required = ["Address"]
         result = self.build_action._handle_missing_parameters(def_params,
@@ -107,7 +103,7 @@ class TestBuildAction(unittest.TestCase):
         )
         self.assertEqual(
             dependencies[context.get_fqn("db")],
-            set([context.get_fqn(s) for s in["vpc", "bastion"]]),
+            set([context.get_fqn(s) for s in ["vpc", "bastion"]]),
         )
         self.assertFalse(dependencies[context.get_fqn("other")])
 

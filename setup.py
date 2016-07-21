@@ -8,8 +8,8 @@ src_dir = os.path.dirname(__file__)
 
 install_requires = [
     "troposphere>=1.2.2",
-    "boto>=2.25.0",
-    "botocore>=1.3.15",
+    "boto3>=1.3.1",
+    "botocore>=1.4.38",
     "PyYAML>=3.11",
     "awacs>=0.5.3",
 ]

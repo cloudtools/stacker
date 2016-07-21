@@ -147,9 +147,9 @@ class Provider(BaseProvider):
                 raise
 
     def destroy_stack(self, stack, **kwargs):
-        logger.debug("Destroying stack: %s" % (stack.stack_name,))
+        logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))
         retry_on_throttling(self.cloudformation.delete_stack,
-                            kwargs=dict(StackName=stack.stack_id))
+                            kwargs=dict(StackName=self.get_stack_name(stack)))
         return True
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):

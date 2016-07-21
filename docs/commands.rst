@@ -35,6 +35,7 @@ pushing them up into CloudFormation.
                           Adds environment key/value pairs from the command line. Overrides your environment file settings. Can be specified more than once.
     -r REGION, --region REGION
                           The AWS region to launch in. Default: us-east-1
+    --profile AWS_PROFILE The AWS profile to use for api calls. Default: default
     -v, --verbose         Increase output verbosity. May be specified up to twice.
     -m MAX_ZONES, --max-zones MAX_ZONES
                           Gives you the ability to limit the # of zones that resources will be launched in. If not given, then resources will be launched in all
@@ -75,6 +76,7 @@ already been destroyed).
                           Adds environment key/value pairs from the command line. Overrides your environment file settings. Can be specified more than once.
     -r REGION, --region REGION
                           The AWS region to launch in. Default: us-east-1
+    --profile AWS_PROFILE The AWS profile to use for api calls. Default: default
     -v, --verbose         Increase output verbosity. May be specified up to twice.
     -f, --force           Whether or not you want to go through with destroying the stacks
     -t, --tail            Tail the CloudFormation logs while workingwith stacks
@@ -107,6 +109,7 @@ config.
                           Adds environment key/value pairs from the command line. Overrides your environment file settings. Can be specified more than once.
     -r REGION, --region REGION
                           The AWS region to launch in. Default: us-east-1
+    --profile AWS_PROFILE The AWS profile to use for api calls. Default: default
     -v, --verbose         Increase output verbosity. May be specified up to twice.
     --stacks STACKNAME    Only work on the stacks given. Can be specified more than once. If not specified then stacker will work on all stacks in the config file.
 
@@ -139,6 +142,7 @@ possible, but it should give a good idea if anything has changed.
                           Adds environment key/value pairs from the command line. Overrides your environment file settings. Can be specified more than once.
     -r REGION, --region REGION
                           The AWS region to launch in. Default: us-east-1
+    --profile AWS_PROFILE The AWS profile to use for api calls. Default: default
     -v, --verbose         Increase output verbosity. May be specified up to twice.
     --force STACKNAME     If a stackname is provided to --force, it will be diffed, even if it is locked in the config.
     --stacks STACKNAME    Only work on the stacks given. Can be specified more than once. If not specified then stacker will work on all stacks in the config file.

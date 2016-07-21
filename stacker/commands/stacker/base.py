@@ -95,7 +95,7 @@ class BaseCommand(object):
             log_level = logging.DEBUG
             log_format = DEBUG_FORMAT
         if verbosity < 2:
-            logging.getLogger("boto").setLevel(logging.CRITICAL)
+            logging.getLogger("botocore").setLevel(logging.CRITICAL)
 
         return logging.basicConfig(
             format=log_format,

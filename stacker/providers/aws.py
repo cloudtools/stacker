@@ -4,7 +4,6 @@ import time
 
 import boto3
 import botocore.exceptions
-from troposphere.utils import tail
 
 from .base import BaseProvider
 from .. import exceptions
@@ -120,8 +119,8 @@ class Provider(BaseProvider):
 
     def tail_stack(self, stack, retries=0, **kwargs):
         def log_func(e):
-            event_args = [e.resource_status, e.resource_type,
-                          e.resource_status_reason]
+            event_args = [e['ResourceStatus'], e['ResourceType'],
+                          e.get('ResourceStatusReason', None)]
             # filter out any values that are empty
             event_args = [arg for arg in event_args if arg]
             template = " ".join(["[%s]"] + ["%s" for _ in event_args])
@@ -131,12 +130,9 @@ class Provider(BaseProvider):
             logger.info("Tailing stack: %s", stack.fqn)
 
         try:
-            tail(
-                self.cloudformation,
-                stack.fqn,
-                log_func=log_func,
-                include_initial=False,
-            )
+            self.tail(stack.fqn,
+                      log_func=log_func,
+                      include_initial=False)
         except botocore.exceptions.ClientError as e:
             if "does not exist" in e.message and retries < MAX_TAIL_RETRIES:
                 # stack might be in the process of launching, wait for a second
@@ -145,6 +141,47 @@ class Provider(BaseProvider):
                 self.tail_stack(stack, retries=retries + 1, **kwargs)
             else:
                 raise
+
+    @staticmethod
+    def _tail_print(e):
+        print("%s %s %s" % (e['ResourceStatus'], e['ResourceType'], e['EventId']))
+
+    def get_events(self, stackname):
+        """Get the events in batches and return in chronological order"""
+        next_token = None
+        event_list = []
+        while 1:
+            if next_token is not None:
+                events = self.cloudformation.describe_stack_events(StackName=stackname, NextToken=next_token)
+            else:
+                events = self.cloudformation.describe_stack_events(StackName=stackname)
+            event_list.append(events['StackEvents'])
+            next_token = events.get('NextToken', None)
+            if next_token is None:
+                break
+            time.sleep(1)
+        return reversed(sum(event_list, []))
+
+    def tail(self, stack_name, log_func=_tail_print, sleep_time=5,
+             include_initial=True):
+        """Show and then tail the event log"""
+        # First dump the full list of events in chronological order and keep
+        # track of the events we've seen already
+        seen = set()
+        initial_events = self.get_events(stack_name)
+        for e in initial_events:
+            if include_initial:
+                log_func(e)
+            seen.add(e['EventId'])
+
+        # Now keep looping through and dump the new events
+        while 1:
+            events = self.get_events(stack_name)
+            for e in events:
+                if e['EventId'] not in seen:
+                    log_func(e)
+                    seen.add(e['EventId'])
+            time.sleep(sleep_time)
 
     def destroy_stack(self, stack, **kwargs):
         logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))

@@ -61,7 +61,7 @@ class BaseAction(object):
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
-            session = boto3.Session(profile_name=self.provider.profile, region_name=self.provider.region)
+            session = boto3.Session(region_name=self.provider.region)
             self._s3_conn = session.client('s3')
         return self._s3_conn
 

@@ -84,15 +84,14 @@ class Provider(BaseProvider):
         "UPDATE_COMPLETE",
     )
 
-    def __init__(self, region, profile, **kwargs):
+    def __init__(self, region, **kwargs):
         self.region = region
-        self.profile = profile
         self._outputs = {}
 
     @property
     def cloudformation(self):
         if not hasattr(self, "_cloudformation"):
-            session = boto3.Session(profile_name=self.profile, region_name=self.region)
+            session = boto3.Session(region_name=self.region)
             self._cloudformation = session.client('cloudformation')
         return self._cloudformation
 

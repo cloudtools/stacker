@@ -153,9 +153,6 @@ class BaseCommand(object):
         parser.add_argument("-r", "--region", default="us-east-1",
                             help="The AWS region to launch in. Default: "
                                  "%(default)s")
-        parser.add_argument("--profile", default="default",
-                            help="The AWS profile to use. Default: "
-                                 "%(default)s")
         parser.add_argument("-v", "--verbose", action="count", default=0,
                             help="Increase output verbosity. May be specified "
                                  "up to twice.")

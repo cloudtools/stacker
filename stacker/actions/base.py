@@ -1,8 +1,8 @@
 import copy
 import logging
 
-import botocore.exceptions
 import boto3
+import botocore.exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,8 @@ class BaseAction(object):
         template_url = self.stack_template_url(blueprint)
         self.ensure_cfn_bucket()
         try:
-            template_exists = self.s3_conn.head_object(Bucket=self.bucket_name, Key=key_name) is not None
+            template_exists = self.s3_conn.head_object(Bucket=self.bucket_name,
+                                                       Key=key_name) is not None
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == '404':
                 template_exists = False
@@ -108,8 +109,10 @@ class BaseAction(object):
             logger.debug("Cloudformation template %s already exists.",
                          template_url)
             return template_url
-        self.s3_conn.put_object(Bucket=self.bucket_name, Key=key_name,
-                                      Body=blueprint.rendered, ServerSideEncryption='AES256')
+        self.s3_conn.put_object(Bucket=self.bucket_name,
+                                Key=key_name,
+                                Body=blueprint.rendered,
+                                ServerSideEncryption='AES256')
         logger.debug("Blueprint %s pushed to %s.", blueprint.name,
                      template_url)
         return template_url

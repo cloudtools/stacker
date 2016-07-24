@@ -1,12 +1,12 @@
+import json
 import logging
 import time
 
-import boto
-from boto import cloudformation
-from troposphere.utils import tail
+import boto3
+import botocore.exceptions
 
-from .. import exceptions
 from .base import BaseProvider
+from .. import exceptions
 from ..util import retry_with_backoff
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ def get_output_dict(stack):
     """Returns a dict of key/values for the outputs for a given CF stack.
 
     Args:
-        stack (boto.cloudformation.stack.Stack): The stack object to get
+        stack (dict): The stack object to get
             outputs from.
 
     Returns:
@@ -26,10 +26,10 @@ def get_output_dict(stack):
 
     """
     outputs = {}
-    for output in stack.outputs:
-        logger.debug("    %s %s: %s", stack.stack_name, output.key,
-                     output.value)
-        outputs[output.key] = output.value
+    for output in stack['Outputs']:
+        logger.debug("    %s %s: %s", stack['StackName'], output['OutputKey'],
+                     output['OutputValue'])
+        outputs[output['OutputKey']] = output['OutputValue']
     return outputs
 
 
@@ -51,13 +51,21 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
             retry more than attempts.
     """
     def _throttling_checker(exc):
-        if exc.status == 400 and exc.error_code == "Throttling":
+        """
+
+        Args:
+        exc (botocore.exceptions.ClientError): Expected exception type
+
+        Returns:
+             boolean: indicating whether this error is a throttling error
+        """
+        if exc.response['ResponseMetadata']['HTTPStatusCode'] == 400 and exc.response['Error']['Code'] == "Throttling":
             logger.debug("AWS throttling calls.")
             return True
         return False
 
     return retry_with_backoff(fn, args=args, kwargs=kwargs, attempts=attempts,
-                              exc_list=(boto.exception.BotoServerError, ),
+                              exc_list=(botocore.exceptions.ClientError, ),
                               retry_checker=_throttling_checker)
 
 
@@ -83,35 +91,35 @@ class Provider(BaseProvider):
     @property
     def cloudformation(self):
         if not hasattr(self, "_cloudformation"):
-            self._cloudformation = cloudformation.connect_to_region(
-                self.region)
+            session = boto3.Session(region_name=self.region)
+            self._cloudformation = session.client('cloudformation')
         return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):
         try:
             return retry_on_throttling(self.cloudformation.describe_stacks,
-                                       args=[stack_name])[0]
-        except boto.exception.BotoServerError as e:
+                                       kwargs=dict(StackName=stack_name))['Stacks'][0]
+        except botocore.exceptions.ClientError as e:
             if "does not exist" not in e.message:
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
     def get_stack_status(self, stack, **kwargs):
-        return stack.stack_status
+        return stack['StackStatus']
 
     def is_stack_completed(self, stack, **kwargs):
-        return stack.stack_status in self.COMPLETE_STATUSES
+        return self.get_stack_status(stack) in self.COMPLETE_STATUSES
 
     def is_stack_in_progress(self, stack, **kwargs):
-        return stack.stack_status in self.IN_PROGRESS_STATUSES
+        return self.get_stack_status(stack) in self.IN_PROGRESS_STATUSES
 
     def is_stack_destroyed(self, stack, **kwargs):
-        return stack.stack_status == self.DELETED_STATUS
+        return self.get_stack_status(stack) == self.DELETED_STATUS
 
     def tail_stack(self, stack, retries=0, **kwargs):
         def log_func(e):
-            event_args = [e.resource_status, e.resource_type,
-                          e.resource_status_reason]
+            event_args = [e['ResourceStatus'], e['ResourceType'],
+                          e.get('ResourceStatusReason', None)]
             # filter out any values that are empty
             event_args = [arg for arg in event_args if arg]
             template = " ".join(["[%s]"] + ["%s" for _ in event_args])
@@ -121,13 +129,10 @@ class Provider(BaseProvider):
             logger.info("Tailing stack: %s", stack.fqn)
 
         try:
-            tail(
-                self.cloudformation,
-                stack.fqn,
-                log_func=log_func,
-                include_initial=False,
-            )
-        except boto.exception.BotoServerError as e:
+            self.tail(stack.fqn,
+                      log_func=log_func,
+                      include_initial=False)
+        except botocore.exceptions.ClientError as e:
             if "does not exist" in e.message and retries < MAX_TAIL_RETRIES:
                 # stack might be in the process of launching, wait for a second
                 # and try again
@@ -136,10 +141,51 @@ class Provider(BaseProvider):
             else:
                 raise
 
+    @staticmethod
+    def _tail_print(e):
+        print("%s %s %s" % (e['ResourceStatus'], e['ResourceType'], e['EventId']))
+
+    def get_events(self, stackname):
+        """Get the events in batches and return in chronological order"""
+        next_token = None
+        event_list = []
+        while 1:
+            if next_token is not None:
+                events = self.cloudformation.describe_stack_events(StackName=stackname, NextToken=next_token)
+            else:
+                events = self.cloudformation.describe_stack_events(StackName=stackname)
+            event_list.append(events['StackEvents'])
+            next_token = events.get('NextToken', None)
+            if next_token is None:
+                break
+            time.sleep(1)
+        return reversed(sum(event_list, []))
+
+    def tail(self, stack_name, log_func=_tail_print, sleep_time=5,
+             include_initial=True):
+        """Show and then tail the event log"""
+        # First dump the full list of events in chronological order and keep
+        # track of the events we've seen already
+        seen = set()
+        initial_events = self.get_events(stack_name)
+        for e in initial_events:
+            if include_initial:
+                log_func(e)
+            seen.add(e['EventId'])
+
+        # Now keep looping through and dump the new events
+        while 1:
+            events = self.get_events(stack_name)
+            for e in events:
+                if e['EventId'] not in seen:
+                    log_func(e)
+                    seen.add(e['EventId'])
+            time.sleep(sleep_time)
+
     def destroy_stack(self, stack, **kwargs):
-        logger.debug("Destroying stack: %s" % (stack.stack_name,))
+        logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))
         retry_on_throttling(self.cloudformation.delete_stack,
-                            args=[stack.stack_id])
+                            kwargs=dict(StackName=self.get_stack_name(stack)))
         return True
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
@@ -148,10 +194,11 @@ class Provider(BaseProvider):
         logger.debug("Using tags: %s", tags)
         retry_on_throttling(
             self.cloudformation.create_stack,
-            args=[fqn],
-            kwargs=dict(template_url=template_url,
-                        parameters=parameters, tags=tags,
-                        capabilities=["CAPABILITY_IAM"]),
+            kwargs=dict(StackName=fqn,
+                        TemplateURL=template_url,
+                        Parameters=parameters,
+                        Tags=tags,
+                        Capabilities=["CAPABILITY_IAM"]),
         )
         return True
 
@@ -160,13 +207,13 @@ class Provider(BaseProvider):
             logger.debug("Attempting to update stack %s.", fqn)
             retry_on_throttling(
                 self.cloudformation.update_stack,
-                args=[fqn],
-                kwargs=dict(template_url=template_url,
-                            parameters=parameters,
-                            tags=tags,
-                            capabilities=["CAPABILITY_IAM"]),
+                kwargs=dict(StackName=fqn,
+                            TemplateURL=template_url,
+                            Parameters=parameters,
+                            Tags=tags,
+                            Capabilities=["CAPABILITY_IAM"]),
             )
-        except boto.exception.BotoServerError as e:
+        except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in e.message:
                 logger.debug(
                     "Stack %s did not change, not updating.",
@@ -177,7 +224,7 @@ class Provider(BaseProvider):
         return True
 
     def get_stack_name(self, stack, **kwargs):
-        return stack.stack_name
+        return stack['StackName']
 
     def get_outputs(self, stack_name, *args, **kwargs):
         if stack_name not in self._outputs:
@@ -193,18 +240,24 @@ class Provider(BaseProvider):
         try:
             stacks = retry_on_throttling(
                 self.cloudformation.describe_stacks,
-                kwargs=dict(stack_name_or_id=stack_name))
-        except boto.exception.BotoServerError as e:
+                kwargs=dict(StackName=stack_name))
+        except botocore.exceptions.ClientError as e:
             if "does not exist" not in e.message:
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
-        stack = stacks[0]
-        parameters = dict()
-        for p in stack.parameters:
-            parameters[p.key] = p.value
-        ret = stack.get_template()
-        template = ret["GetTemplateResponse"]["GetTemplateResult"]
-        template = template["TemplateBody"]
+        try:
+            template = retry_on_throttling(
+                self.cloudformation.get_template,
+                kwargs=dict(StackName=stack_name))['TemplateBody']
+        except botocore.exceptions.ClientError as e:
+            if "does not exist" not in e.message:
+                raise
+            raise exceptions.StackDoesNotExist(stack_name)
 
-        return [template, parameters]
+        stack = stacks['Stacks'][0]
+        parameters = dict()
+        for p in stack['Parameters']:
+            parameters[p['ParameterKey']] = p['ParameterValue']
+
+        return [json.dumps(template), parameters]

@@ -164,11 +164,11 @@ class Action(BaseAction):
         parameters = self._handle_missing_parameters(parameters,
                                                      required_params,
                                                      provider_stack)
-        return parameters
+        return [{'ParameterKey': p[0], 'ParameterValue': str(p[1])} for p in parameters]
 
     def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""
-        return self.context.tags
+        return [{'Key': t[0], 'Value': t[1]} for t in self.context.tags.items()]
 
     def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.
@@ -233,8 +233,7 @@ class Action(BaseAction):
         Args:
             params (dict): key/value dictionary of stack definition parameters
             required_params (list): A list of required parameter names.
-            existing_stack (`boto.cloudformation.stack.Stack`): A `Stack`
-                object. If provided, will be searched for any missing
+            existing_stack (dict): A dict representation of the stack. If provided, will be searched for any missing
                 parameters.
 
         Returns:
@@ -248,7 +247,7 @@ class Action(BaseAction):
         """
         missing_params = list(set(required_params) - set(params.keys()))
         if existing_stack:
-            stack_params = {p.key: p.value for p in existing_stack.parameters}
+            stack_params = {p['ParameterKey']: p['ParameterValue'] for p in existing_stack['Parameters']}
             for p in missing_params:
                 if p in stack_params:
                     value = stack_params[p]

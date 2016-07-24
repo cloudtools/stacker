@@ -1,7 +1,8 @@
 import copy
 import logging
 
-import boto
+import boto3
+import botocore.exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -55,35 +56,31 @@ class BaseAction(object):
         self.provider = provider
         self.bucket_name = context.bucket_name
         self._conn = None
-        self._cfn_bucket = None
 
     @property
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
-            self._s3_conn = boto.connect_s3()
+            session = boto3.Session(region_name=self.provider.region)
+            self._s3_conn = session.client('s3')
         return self._s3_conn
 
-    @property
-    def cfn_bucket(self):
+    def ensure_cfn_bucket(self):
         """The cloudformation bucket where templates will be stored."""
-        if not getattr(self, "_cfn_bucket", None):
-            try:
-                self._cfn_bucket = self.s3_conn.get_bucket(self.bucket_name)
-            except boto.exception.S3ResponseError, e:
-                if e.error_code == "NoSuchBucket":
-                    logger.debug("Creating bucket %s.", self.bucket_name)
-                    self._cfn_bucket = self.s3_conn.create_bucket(
-                        self.bucket_name)
-                elif e.error_code == "AccessDenied":
-                    logger.exception("Access denied for bucket %s.",
-                                     self.bucket_name)
-                    raise
-                else:
-                    logger.exception("Error creating bucket %s.",
-                                     self.bucket_name)
-                    raise
-        return self._cfn_bucket
+        try:
+            self.s3_conn.head_bucket(Bucket=self.bucket_name)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Message'] == "Not Found":
+                logger.debug("Creating bucket %s.", self.bucket_name)
+                self.s3_conn.create_bucket(Bucket=self.bucket_name)
+            elif e.response['Error']['Message'] == "Forbidden":
+                logger.exception("Access denied for bucket %s.",
+                                 self.bucket_name)
+                raise
+            else:
+                logger.exception("Error creating bucket %s. Error %s",
+                                 self.bucket_name, e.response)
+                raise
 
     def stack_template_url(self, blueprint):
         return stack_template_url(self.bucket_name, blueprint)
@@ -98,12 +95,24 @@ class BaseAction(object):
         """
         key_name = stack_template_key_name(blueprint)
         template_url = self.stack_template_url(blueprint)
-        if self.cfn_bucket.get_key(key_name) and not force:
+        self.ensure_cfn_bucket()
+        try:
+            template_exists = self.s3_conn.head_object(Bucket=self.bucket_name,
+                                                       Key=key_name) is not None
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                template_exists = False
+            else:
+                raise
+
+        if template_exists and not force:
             logger.debug("Cloudformation template %s already exists.",
                          template_url)
             return template_url
-        key = self.cfn_bucket.new_key(key_name)
-        key.set_contents_from_string(blueprint.rendered, encrypt_key=True)
+        self.s3_conn.put_object(Bucket=self.bucket_name,
+                                Key=key_name,
+                                Body=blueprint.rendered,
+                                ServerSideEncryption='AES256')
         logger.debug("Blueprint %s pushed to %s.", blueprint.name,
                      template_url)
         return template_url

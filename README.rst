@@ -2,6 +2,10 @@
 stacker
 =======
 
+[![readthedocs badge](https://readthedocs.org/projects/pip/badge/?version=latest)](http://stacker.readthedocs.org/en/latest/)
+[![Circle CI](https://circleci.com/gh/remind101/stacker.svg?style=shield)](https://circleci.com/gh/remind101/stacker)
+[![Slack Status](https://empire-slack.herokuapp.com/badge.svg)](https://empire-slack.herokuapp.com)
+
 For full documentation, please see the readthedocs_ site.
 
 About

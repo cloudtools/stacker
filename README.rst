@@ -11,6 +11,12 @@ stacker
 .. image:: https://empire-slack.herokuapp.com/badge.svg
    :target: https://empire-slack.herokuapp.com
 
+.. image:: https://badge.fury.io/py/stacker.svg
+   :target: https://badge.fury.io/py/stacker
+
+.. image:: https://landscape.io/github/remind101/stacker/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/remind101/stacker/master
+   :alt: Code Health
 
 For full documentation, please see the readthedocs_ site.
 

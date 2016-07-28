@@ -6,7 +6,9 @@ from .info import Info
 from .diff import Diff
 from .base import BaseCommand
 from ...context import Context
-from ...providers import aws
+from ...providers.aws import (
+    interactive,
+)
 from ... import __version__
 
 
@@ -17,7 +19,7 @@ class Stacker(BaseCommand):
 
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)
-        options.provider = aws.Provider(region=options.region)
+        options.provider = interactive.Provider(region=options.region)
         options.context = Context(
             environment=options.environment,
             parameters=copy.deepcopy(options.parameters),

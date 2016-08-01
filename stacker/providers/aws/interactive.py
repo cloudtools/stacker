@@ -68,11 +68,14 @@ class Provider(BaseProvider):
         if response["ExecutionStatus"] != "AVAILABLE":
             raise Exception("Unable to execute change set: {}".format(response))
 
-        print "\nCloudformation wants to make the following changes to stack: {}\n".format(fqn)
-        print yaml.safe_dump(response["Changes"])
+        message = (
+            "Cloudformation wants to make the following changes to stack: "
+            "%s\n%s"
+        )
+        logger.info(message, fqn, yaml.safe_dump(response["Changes"]))
         approve = raw_input("Execute the above changes? [y/n] ")
         if approve != "y":
-            raise Exception("Don't execute change set")
+            raise exceptions.CancelExecution
 
         retry_on_throttling(
             self.cloudformation.execute_change_set,

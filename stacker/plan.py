@@ -4,7 +4,11 @@ import multiprocessing
 import os
 import time
 
-from .exceptions import ImproperlyConfigured
+from .exceptions import (
+    CancelExecution,
+    ImproperlyConfigured,
+)
+
 from .actions.base import stack_template_key_name
 
 from .status import (
@@ -242,6 +246,9 @@ class Plan(OrderedDict):
                     if attempts == 1:
                         self._check_point()
                     self._wait_func(self.sleep_time)
+        except CancelExecution:
+            logger.info("Cancelling execution")
+            return
         finally:
             for watcher in self._watchers.values():
                 self._terminate_watcher(watcher)

@@ -1,4 +1,5 @@
 import copy
+import logging
 
 from .build import Build
 from .destroy import Destroy
@@ -12,6 +13,8 @@ from ...providers.aws import (
 )
 from ... import __version__
 
+logger = logging.getLogger(__name__)
+
 
 class Stacker(BaseCommand):
 
@@ -22,8 +25,10 @@ class Stacker(BaseCommand):
         super(Stacker, self).configure(options, **kwargs)
         imode = getattr(options, 'interactive', False)
         if imode:
+            logger.info('Using Interactive AWS Provider')
             options.provider = interactive.Provider(region=options.region)
         else:
+            logger.info('Using Default AWS Provider')
             options.provider = default.Provider(region=options.region)
         options.context = Context(
             environment=options.environment,

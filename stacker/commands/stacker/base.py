@@ -112,10 +112,10 @@ class BaseCommand(object):
         return args
 
     def run(self, options, **kwargs):
-        self.setup_logging(options.verbose)
+        pass
 
     def configure(self, options, **kwargs):
-        pass
+        self.setup_logging(options.verbose)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.

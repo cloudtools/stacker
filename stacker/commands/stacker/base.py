@@ -168,10 +168,16 @@ class BaseCommand(object):
         parser.add_argument("config", type=argparse.FileType(),
                             help="The config file where stack configuration "
                                  "is located. Must be in yaml format.")
-        parser.add_argument("-i", "--interactive", action='store_true',
+        parser.add_argument("-i", "--interactive", action="store_true",
                             help="Enable interactive mode. If specified, this "
                             "will use the AWS interactive provider, which "
                             "leverages Cloudformation Change Sets to display "
                             "changes before running cloudformation templates. "
                             "You'll be asked if you want to execute each change "
-                            "set.")
+                            "set. By default, stacker will only prompt when "
+                            "changes require replacements. To authorize all "
+                            "changes, run with \"--strict\".")
+        parser.add_argument("-s", "--strict", action="store_true",
+                            help="If interactive mode is enabled, stacker will "
+                            "prompt to authorize all change sets. The default "
+                            "is to only prompt for replacements.")

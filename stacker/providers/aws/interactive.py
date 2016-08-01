@@ -24,8 +24,45 @@ def get_change_set_name():
     return 'change-set-{}'.format(int(time.time()))
 
 
+def requires_replacement(changeset):
+    """Return the changes within the changeset that require replacement.
+
+    Args:
+        changeset (List): List of changes
+
+    Returns:
+        List: A list of changes that require replacement, if any.
+
+    """
+    return [r for r in changeset if r["ResourceChange"]["Replacement"] ==
+            'True']
+
+
+def ask_for_approval(full_changeset=None, include_verbose=False):
+    approval_options = ['y', 'n']
+    if include_verbose:
+        approval_options.append('v')
+
+    approve = raw_input("Execute the above changes? [{}] ".format(
+        '/'.join(approval_options)))
+
+    if include_verbose and approve == "v":
+        logger.info(
+            "Full changeset:\n%s",
+            yaml.safe_dump(full_changeset),
+        )
+        return ask_for_approval()
+    elif approve != "y":
+        raise exceptions.CancelExecution
+
+
 class Provider(BaseProvider):
     """AWS Cloudformation Change Set Provider"""
+
+    def __init__(self, *args, **kwargs):
+        strict = kwargs.pop('strict', False)
+        super(Provider, self).__init__(*args, **kwargs)
+        self.strict = strict
 
     def _wait_till_change_set_complete(self, change_set_id):
         response = retry_on_throttling(
@@ -68,14 +105,21 @@ class Provider(BaseProvider):
         if response["ExecutionStatus"] != "AVAILABLE":
             raise Exception("Unable to execute change set: {}".format(response))
 
+        action = "changes" if self.strict else "replacements"
         message = (
-            "Cloudformation wants to make the following changes to stack: "
+            "Cloudformation wants to make the following %s to stack: "
             "%s\n%s"
         )
-        logger.info(message, fqn, yaml.safe_dump(response["Changes"]))
-        approve = raw_input("Execute the above changes? [y/n] ")
-        if approve != "y":
-            raise exceptions.CancelExecution
+        changeset = response["Changes"]
+        if not self.strict:
+            changeset = requires_replacement(changeset)
+
+        if len(changeset):
+            logger.info(message, action, fqn, yaml.safe_dump(changeset))
+            ask_for_approval(
+                full_changeset=response["Changes"],
+                include_verbose=True,
+            )
 
         retry_on_throttling(
             self.cloudformation.execute_change_set,

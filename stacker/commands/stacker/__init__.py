@@ -7,6 +7,7 @@ from .diff import Diff
 from .base import BaseCommand
 from ...context import Context
 from ...providers.aws import (
+    default,
     interactive,
 )
 from ... import __version__
@@ -19,7 +20,11 @@ class Stacker(BaseCommand):
 
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)
-        options.provider = interactive.Provider(region=options.region)
+        imode = getattr(options, 'interactive', False)
+        if imode:
+            options.provider = interactive.Provider(region=options.region)
+        else:
+            options.provider = default.Provider(region=options.region)
         options.context = Context(
             environment=options.environment,
             parameters=copy.deepcopy(options.parameters),

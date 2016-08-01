@@ -1,20 +1,29 @@
 import logging
 import os
 
-from boto.ec2 import connect_to_region
+import boto3
 
 from . import utils
 
 logger = logging.getLogger(__name__)
 
+def find(lst, key, value):
+    for i, dic in enumerate(lst):
+        if dic[key] == value:
+            return lst[i]
+    return False
 
 def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
-    connection = connect_to_region(region)
+    client = boto3.client('ec2', region_name=region)
     keypair_name = kwargs.get("keypair", parameters.get("SshKeyName"))
-    keypair = connection.get_key_pair(keypair_name)
+    resp = client.describe_key_pairs()
+    keypair = find(resp['KeyPairs'], 'KeyName', keypair_name)
     message = "keypair: %s (%s) %s"
     if keypair:
-        logger.info(message, keypair.name, keypair.fingerprint, "exists")
+        logger.info(message,
+                    keypair["KeyName"],
+                    keypair["KeyFingerprint"],
+                    "exists")
         return True
 
     logger.info("keypair: \"%s\" not found", keypair_name)
@@ -33,8 +42,12 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
         with open(full_path) as read_file:
             contents = read_file.read()
 
-        keypair = connection.import_key_pair(keypair_name, contents)
-        logger.info(message, keypair.name, keypair.fingerprint, "imported")
+        keypair = client.import_key_pair(KeyName=keypair_name,
+                                         PublicKeyMaterial=contents)
+        logger.info(message,
+                    keypair["KeyName"],
+                    keypair["KeyFingerprint"],
+                    "imported")
         return True
     elif create_or_upload == "create":
         path = raw_input("directory to save keyfile: ")
@@ -43,9 +56,23 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
             logger.error("\"%s\" is not a valid directory", full_path)
             return False
 
-        keypair = connection.create_key_pair(keypair_name)
-        logger.info(message, keypair.name, keypair.fingerprint, "created")
-        return keypair.save(full_path)
+        file_name = "{0}.pem".format(keypair_name)
+        if os.path.isfile(os.path.join(full_path, file_name)):
+            # This mimics the old boto2 keypair.save error
+            logger.error("\"%s\" already exists in \"%s\" directory",
+                         file_name,
+                         full_path)
+            return False
+
+        keypair = client.create_key_pair(KeyName=keypair_name)
+        logger.info(message,
+                    keypair["KeyName"],
+                    keypair["KeyFingerprint"],
+                    "created")
+        f = open(os.path.join(full_path, file_name), "w")
+        f.write(keypair["KeyMaterial"])
+        f.close()
+        return True
     else:
         logger.warning("no action to find keypair, failing")
         return False

@@ -5,7 +5,7 @@ import yaml
 
 from ... import exceptions
 from .default import (
-    Provider as BaseProvider,
+    Provider as AWSProvider,
     retry_on_throttling,
 )
 
@@ -24,7 +24,7 @@ def get_change_set_name():
     return 'change-set-{}'.format(int(time.time()))
 
 
-class Provider(BaseProvider):
+class Provider(AWSProvider):
     """AWS Cloudformation Change Set Provider"""
 
     def _wait_till_change_set_complete(self, change_set_id):

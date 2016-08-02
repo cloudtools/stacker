@@ -5,8 +5,9 @@
 pre_build:
   - path: stacker.hooks.route53.create_domain
     required: true
-    # Additional args can be passed as a dict of key/value pairs in kwargs
-    # kwargs:
+    # Additional args can be passed as a dict of key/value pairs
+    # args:
+    #   BaseDomain: foo
 # post_build:
 
 mappings:

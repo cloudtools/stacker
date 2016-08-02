@@ -112,10 +112,10 @@ class BaseCommand(object):
         return args
 
     def run(self, options, **kwargs):
-        self.setup_logging(options.verbose)
+        pass
 
     def configure(self, options, **kwargs):
-        pass
+        self.setup_logging(options.verbose)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.
@@ -168,3 +168,10 @@ class BaseCommand(object):
         parser.add_argument("config", type=argparse.FileType(),
                             help="The config file where stack configuration "
                                  "is located. Must be in yaml format.")
+        parser.add_argument("-i", "--interactive", action='store_true',
+                            help="Enable interactive mode. If specified, this "
+                            "will use the AWS interactive provider, which "
+                            "leverages Cloudformation Change Sets to display "
+                            "changes before running cloudformation templates. "
+                            "You'll be asked if you want to execute each change "
+                            "set.")

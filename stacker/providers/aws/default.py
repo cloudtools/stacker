@@ -5,9 +5,9 @@ import time
 import boto3
 import botocore.exceptions
 
-from .base import BaseProvider
-from .. import exceptions
-from ..util import retry_with_backoff
+from ..base import BaseProvider
+from ... import exceptions
+from ...util import retry_with_backoff
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,5 @@
 import copy
+import logging
 
 from .build import Build
 from .destroy import Destroy
@@ -6,8 +7,13 @@ from .info import Info
 from .diff import Diff
 from .base import BaseCommand
 from ...context import Context
-from ...providers import aws
+from ...providers.aws import (
+    default,
+    interactive,
+)
 from ... import __version__
+
+logger = logging.getLogger(__name__)
 
 
 class Stacker(BaseCommand):
@@ -17,7 +23,13 @@ class Stacker(BaseCommand):
 
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)
-        options.provider = aws.Provider(region=options.region)
+        imode = getattr(options, 'interactive', False)
+        if imode:
+            logger.info('Using Interactive AWS Provider')
+            options.provider = interactive.Provider(region=options.region)
+        else:
+            logger.info('Using Default AWS Provider')
+            options.provider = default.Provider(region=options.region)
         options.context = Context(
             environment=options.environment,
             parameters=copy.deepcopy(options.parameters),

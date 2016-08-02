@@ -28,15 +28,18 @@ class Provider(BaseProvider):
     """AWS Cloudformation Change Set Provider"""
 
     def _wait_till_change_set_complete(self, change_set_id):
-        response = retry_on_throttling(
-            self.cloudformation.describe_change_set,
-            kwargs={
-                'ChangeSetName': change_set_id,
-            },
-        )
-        if response["Status"] not in ("FAILED", "CREATE_COMPLETE"):
-            time.sleep(2)
-            return self._wait_till_change_set_complete(change_set_id)
+        complete = False
+        response = None
+        while not complete:
+            response = retry_on_throttling(
+                self.cloudformation.describe_change_set,
+                kwargs={
+                    'ChangeSetName': change_set_id,
+                },
+            )
+            complete = response["Status"] in ("FAILED", "CREATE_COMPLETE")
+            if not complete:
+                time.sleep(2)
         return response
 
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):

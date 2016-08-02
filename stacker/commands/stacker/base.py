@@ -174,10 +174,8 @@ class BaseCommand(object):
                             "leverages Cloudformation Change Sets to display "
                             "changes before running cloudformation templates. "
                             "You'll be asked if you want to execute each change "
-                            "set. By default, stacker will only prompt when "
-                            "changes require replacements. To authorize all "
-                            "changes, run with \"--strict\".")
-        parser.add_argument("-s", "--strict", action="store_true",
+                            "set. If you only want to authorize replacements, "
+                            "run with \"--replacements-only\" as well.")
+        parser.add_argument("--replacements-only", action="store_true",
                             help="If interactive mode is enabled, stacker will "
-                            "prompt to authorize all change sets. The default "
-                            "is to only prompt for replacements.")
+                            "only prompt to authorize replacements.")

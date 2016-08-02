@@ -25,8 +25,10 @@ class Stacker(BaseCommand):
         super(Stacker, self).configure(options, **kwargs)
         if options.interactive:
             logger.info('Using Interactive AWS Provider')
-            options.provider = interactive.Provider(region=options.region,
-                                                    strict=options.strict)
+            options.provider = interactive.Provider(
+                region=options.region,
+                replacements_only=options.replacements_only,
+            )
         else:
             logger.info('Using Default AWS Provider')
             options.provider = default.Provider(region=options.region)

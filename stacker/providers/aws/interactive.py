@@ -56,7 +56,7 @@ def ask_for_approval(full_changeset=None, include_verbose=False):
         raise exceptions.CancelExecution
 
 
-def output_summary(fqn, action, changeset):
+def output_summary(fqn, action, changeset, replacements_only=False):
     replacements = []
     changes = []
     for change in changeset:
@@ -74,21 +74,22 @@ def output_summary(fqn, action, changeset):
 
     summary = ''
     if replacements:
-        summary = 'Replacements:\n%s' % ('\n'.join(replacements))
+        if not replacements_only:
+            summary += 'Replacements:\n'
+        summary += '\n'.join(replacements)
     if changes:
         if summary:
             summary += '\n'
         summary += 'Changes:\n%s' % ('\n'.join(changes))
-    logger.info('%s %s:\n%s\n', fqn, action, summary)
+    logger.info('%s %s:\n%s', fqn, action, summary)
 
 
 class Provider(AWSProvider):
     """AWS Cloudformation Change Set Provider"""
 
     def __init__(self, *args, **kwargs):
-        strict = kwargs.pop('strict', False)
+        self.replacements_only = kwargs.pop('replacements_only', False)
         super(Provider, self).__init__(*args, **kwargs)
-        self.strict = strict
 
     def _wait_till_change_set_complete(self, change_set_id):
         complete = False
@@ -134,13 +135,14 @@ class Provider(AWSProvider):
         if response["ExecutionStatus"] != "AVAILABLE":
             raise Exception("Unable to execute change set: {}".format(response))
 
-        action = "changes" if self.strict else "replacements"
+        action = "replacements" if self.replacements_only else "changes"
         changeset = response["Changes"]
-        if not self.strict:
+        if self.replacements_only:
             changeset = requires_replacement(changeset)
 
         if len(changeset):
-            output_summary(fqn, action, changeset)
+            output_summary(fqn, action, changeset,
+                           replacements_only=self.replacements_only)
             ask_for_approval(
                 full_changeset=response["Changes"],
                 include_verbose=True,

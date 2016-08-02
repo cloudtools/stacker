@@ -40,6 +40,15 @@ updating your stacks. By default it uses a bucket named
 If you want to change this, provide the **stacker_bucket** top level key word
 in the config.
 
+Module Paths
+----------------
+When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to
+load modules from outside the default ``sys.path`` (e.g., to include modules
+inside the same repo as config files).
+
+Adding a path (e.g. ``./``) to the **sys_path** top level key word will allow
+modules from that path location to be used.
+
 Pre & Post Hooks
 ----------------
 

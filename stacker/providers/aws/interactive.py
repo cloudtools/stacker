@@ -56,6 +56,32 @@ def ask_for_approval(full_changeset=None, include_verbose=False):
         raise exceptions.CancelExecution
 
 
+def output_summary(fqn, action, changeset):
+    replacements = []
+    changes = []
+    for change in changeset:
+        resource = change['ResourceChange']
+        replacement = resource['Replacement'] == 'True'
+        summary = '- %s %s (%s)' % (
+            resource['Action'],
+            resource['LogicalResourceId'],
+            resource['ResourceType'],
+        )
+        if replacement:
+            replacements.append(summary)
+        else:
+            changes.append(summary)
+
+    summary = ''
+    if replacements:
+        summary = 'Replacements:\n%s' % ('\n'.join(replacements))
+    if changes:
+        if summary:
+            summary += '\n'
+        summary += 'Changes:\n%s' % ('\n'.join(changes))
+    logger.info('%s %s:\n%s\n', fqn, action, summary)
+
+
 class Provider(AWSProvider):
     """AWS Cloudformation Change Set Provider"""
 
@@ -109,16 +135,12 @@ class Provider(AWSProvider):
             raise Exception("Unable to execute change set: {}".format(response))
 
         action = "changes" if self.strict else "replacements"
-        message = (
-            "Cloudformation wants to make the following %s to stack: "
-            "%s\n%s"
-        )
         changeset = response["Changes"]
         if not self.strict:
             changeset = requires_replacement(changeset)
 
         if len(changeset):
-            logger.info(message, action, fqn, yaml.safe_dump(changeset))
+            output_summary(fqn, action, changeset)
             ask_for_approval(
                 full_changeset=response["Changes"],
                 include_verbose=True,

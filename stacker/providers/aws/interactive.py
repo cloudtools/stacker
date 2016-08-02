@@ -5,7 +5,7 @@ import yaml
 
 from ... import exceptions
 from .default import (
-    Provider as BaseProvider,
+    Provider as AWSProvider,
     retry_on_throttling,
 )
 
@@ -56,7 +56,7 @@ def ask_for_approval(full_changeset=None, include_verbose=False):
         raise exceptions.CancelExecution
 
 
-class Provider(BaseProvider):
+class Provider(AWSProvider):
     """AWS Cloudformation Change Set Provider"""
 
     def __init__(self, *args, **kwargs):

@@ -140,6 +140,10 @@ def load_object_from_string(fqcn):
     load_object_from_string("logging.Logger")
     load_object_from_string("LocalClassName")
     """
+
+    import os, sys
+    sys.path.insert(0, os.getcwd())
+
     module_path = "__main__"
     object_name = fqcn
     if "." in fqcn:

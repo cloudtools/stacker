@@ -88,6 +88,9 @@ class Stack(object):
                 # support for list of Outputs
                 values = value.split(",")
                 for x in values:
+                    # Skip parameters not referencing another stack
+                    if '::' not in x:
+                        continue
                     stack_name, _ = x.split("::")
                     stack_names.append(stack_name)
             else:

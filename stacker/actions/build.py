@@ -83,11 +83,16 @@ def resolve_parameters(parameters, blueprint, context, provider):
                          blueprint.name, k)
             continue
         value = v
-        if isinstance(value, basestring) and "::" in value:
-            # Get from the Output(s) of another stack(s) in the stack_map
-            v_list = []
+        # v_list holds each value in the (potentially) comma-delimited list of
+        # values for each parameter
+        v_list = []
+        if isinstance(value, basestring):
             values = value.split(",")
-            for v in values:
+        else:
+            values = [value]
+        for v in values:
+            if isinstance(v, basestring) and "::" in v:
+                # Get from the Output(s) of another stack(s) in the stack_map
                 v = v.strip()
                 stack_name, output = v.split("::")
                 stack_fqn = context.get_fqn(stack_name)
@@ -96,17 +101,19 @@ def resolve_parameters(parameters, blueprint, context, provider):
                         provider.get_output(stack_fqn, output))
                 except KeyError:
                     raise exceptions.OutputDoesNotExist(stack_fqn, v)
-            value = ",".join(v_list)
-        if value is None:
-            logger.debug("Got None value for parameter %s, not submitting it "
-                         "to cloudformation, default value should be used.",
-                         k)
-            continue
-        if isinstance(value, bool):
-            logger.debug("Converting parameter %s boolean \"%s\" to string.",
-                         k, value)
-            value = str(value).lower()
-        params[k] = value
+            elif v is None:
+                logger.debug("Got None value for parameter %s, not submitting "
+                             "it to cloudformation, default value should be "
+                             "used.", k)
+                continue
+            elif isinstance(v, bool):
+                logger.debug("Converting parameter %s boolean \"%s\" to "
+                             "string.", k, v)
+                v_list.append(str(v).lower())
+            else:
+                v_list.append(v)
+        if v_list != []:
+            params[k] = ",".join(v_list)
     return params
 
 

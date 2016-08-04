@@ -2,6 +2,8 @@ import argparse
 from collections import Mapping
 import logging
 
+from ...logger.handler import LogLoopStreamHandler
+
 from ...environment import parse_environment
 
 DEBUG_FORMAT = ("[%(asctime)s] %(levelname)s %(name)s:%(lineno)d"
@@ -97,11 +99,11 @@ class BaseCommand(object):
         if verbosity < 2:
             logging.getLogger("botocore").setLevel(logging.CRITICAL)
 
-        return logging.basicConfig(
-            format=log_format,
-            datefmt=ISO_8601,
-            level=log_level,
-        )
+        fmt = logging.Formatter(log_format, ISO_8601)
+        hdlr = LogLoopStreamHandler()
+        hdlr.setFormatter(fmt)
+        logging.root.addHandler(hdlr)
+        logging.root.setLevel(log_level)
 
     def parse_args(self, *vargs):
         parser = argparse.ArgumentParser(description=self.description)

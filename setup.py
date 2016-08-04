@@ -12,6 +12,7 @@ install_requires = [
     "botocore>=1.4.38",
     "PyYAML>=3.11",
     "awacs>=0.5.3",
+    "colorama==0.3.7",
 ]
 
 tests_require = [

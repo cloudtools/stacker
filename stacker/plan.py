@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import os
 import time
+import uuid
 
 from .exceptions import (
     CancelExecution,
@@ -126,6 +127,7 @@ class Plan(OrderedDict):
 
         self._watchers = {}
         self._watch_func = watch_func
+        self.id = uuid.uuid4()
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, requires=None):
@@ -235,11 +237,12 @@ class Plan(OrderedDict):
         submit them in parallel based on their dependencies.
         """
 
+        logger.info("Plan Status:")
         attempts = 0
         try:
             while not self.completed:
                 attempts += 1
-                if not attempts % 10:
+                if not attempts % 2:
                     self._check_point()
 
                 if not self._single_run():
@@ -315,9 +318,10 @@ class Plan(OrderedDict):
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""
-        logger.info("Plan Status:")
+        index = 0
         for step_name, step in self.iteritems():
             msg = "  - step \"%s\": %s" % (step_name, step.status.name)
             if step.status.reason:
                 msg += " (%s)" % (step.status.reason)
-            logger.info(msg)
+            logger.info(msg, extra={'index': index, 'loop': self.id})
+            index += 1

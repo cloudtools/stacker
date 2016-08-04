@@ -5,6 +5,8 @@ import os
 import time
 import uuid
 
+from colorama.ansi import Fore
+
 from .exceptions import (
     CancelExecution,
     ImproperlyConfigured,
@@ -237,17 +239,10 @@ class Plan(OrderedDict):
         submit them in parallel based on their dependencies.
         """
 
-        logger.info("Plan Status:")
-        attempts = 0
         try:
             while not self.completed:
-                attempts += 1
-                if not attempts % 2:
-                    self._check_point()
-
+                self._check_point()
                 if not self._single_run():
-                    if attempts == 1:
-                        self._check_point()
                     self._wait_func(self.sleep_time)
         except CancelExecution:
             logger.info("Cancelling execution")
@@ -318,10 +313,16 @@ class Plan(OrderedDict):
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""
-        index = 0
+        status_to_color = {
+            SUBMITTED.code: Fore.YELLOW,
+            COMPLETE.code: Fore.GREEN,
+        }
+        logger.info("Plan Status:", extra={"reset": True, "loop": self.id})
         for step_name, step in self.iteritems():
             msg = "  - step \"%s\": %s" % (step_name, step.status.name)
             if step.status.reason:
                 msg += " (%s)" % (step.status.reason)
-            logger.info(msg, extra={'index': index, 'loop': self.id})
-            index += 1
+            logger.info(msg, extra={
+                'loop': self.id,
+                'color': status_to_color.get(step.status.code, Fore.WHITE),
+            })

@@ -4,11 +4,13 @@ import uuid
 
 from colorama.ansi import (
     Cursor,
+    Fore,
     clear_line,
 )
 from mock import MagicMock
 
 from ...logger.handler import LogLoopStreamHandler
+from ...logger.formatter import ColorFormatter
 
 
 class TestLogStreamLoopHandler(unittest.TestCase):
@@ -30,8 +32,8 @@ class TestLogStreamLoopHandler(unittest.TestCase):
             for i in range(3):
                 record = makeLogRecord({
                     'msg': 'test {}'.format(i),
-                    'index': i,
                     'loop': loop_id,
+                    'reset': i == 0,
                 })
                 self.handler.emit(record)
             loop += 1
@@ -45,3 +47,14 @@ class TestLogStreamLoopHandler(unittest.TestCase):
                 self.assertTrue(line.startswith(Cursor.UP(4)))
             else:
                 self.assertTrue(line.startswith(clear_line()))
+
+
+class TestColorFormatter(unittest.TestCase):
+
+    def setUp(self):
+        self.formatter = ColorFormatter()
+
+    def test_always_end_in_reset(self):
+        record = makeLogRecord({'msg': 'test'})
+        fmt = self.formatter.format(record)
+        self.assertTrue(fmt.endswith(Fore.RESET))

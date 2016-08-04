@@ -20,14 +20,14 @@ class LogLoopStreamHandler(StreamHandler):
     def emit(self, record):
         stream = self.stream
         loop_id = record.__dict__.get("loop")
-        index = record.__dict__.get("index")
+        reset = record.__dict__.get("reset")
         if loop_id:
             first = loop_id not in self.loops
             if first:
                 self.loops[loop_id] = 0
 
             count = self.loops[loop_id]
-            if not first and index == 0:
+            if not first and reset:
                 self.loops[loop_id] = 0
                 stream.write("{}\n".format(Cursor.UP(count + 1)))
                 stream.flush()

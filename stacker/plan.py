@@ -318,11 +318,25 @@ class Plan(OrderedDict):
             COMPLETE.code: Fore.GREEN,
         }
         logger.info("Plan Status:", extra={"reset": True, "loop": self.id})
+
+        longest = 0
+        messages = []
         for step_name, step in self.iteritems():
-            msg = "  - step \"%s\": %s" % (step_name, step.status.name)
+            length = len(step_name)
+            if length > longest:
+                longest = length
+
+            msg = "%s: %s" % (step_name, step.status.name)
             if step.status.reason:
                 msg += " (%s)" % (step.status.reason)
-            logger.info(msg, extra={
+
+            color = status_to_color.get(step.status.code, Fore.WHITE)
+            messages.append((msg, color))
+
+        for msg, color in messages:
+            parts = msg.split(' ', 1)
+            fmt = "\t{0: <%d}{1}" % (longest + 2,)
+            logger.info(fmt.format(*parts), extra={
                 'loop': self.id,
-                'color': status_to_color.get(step.status.code, Fore.WHITE),
+                'color': color,
             })

@@ -43,6 +43,7 @@ class Step(object):
         self.status = PENDING
         self.requires = requires or []
         self._run_func = run_func
+        self.last_updated = time.time()
 
     def __repr__(self):
         return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
@@ -81,6 +82,7 @@ class Step(object):
             logger.debug("Setting %s state to %s.", self.stack.name,
                          status.name)
             self.status = status
+            self.last_updated = time.time()
 
     def complete(self):
         """A shortcut for set_status(COMPLETE)"""
@@ -330,13 +332,14 @@ class Plan(OrderedDict):
             if step.status.reason:
                 msg += " (%s)" % (step.status.reason)
 
-            color = status_to_color.get(step.status.code, Fore.WHITE)
-            messages.append((msg, color))
+            messages.append((msg, step))
 
-        for msg, color in messages:
+        for msg, step in messages:
             parts = msg.split(' ', 1)
             fmt = "\t{0: <%d}{1}" % (longest + 2,)
+            color = status_to_color.get(step.status.code, Fore.WHITE)
             logger.info(fmt.format(*parts), extra={
                 'loop': self.id,
                 'color': color,
+                'last_updated': step.last_updated,
             })

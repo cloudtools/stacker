@@ -21,6 +21,10 @@ class LogLoopStreamHandler(StreamHandler):
         stream = self.stream
         loop_id = record.__dict__.get("loop")
         reset = record.__dict__.get("reset")
+        last_updated = record.__dict__.get("last_updated")
+        if last_updated:
+            record.__dict__["created"] = last_updated
+
         if loop_id:
             first = loop_id not in self.loops
             if first:

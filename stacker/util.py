@@ -1,10 +1,10 @@
+import copy
+import hashlib
 import importlib
 import logging
 import re
 import sys
 import time
-
-from boto.route53.record import ResourceRecordSets
 
 logger = logging.getLogger(__name__)
 
@@ -96,38 +96,121 @@ def convert_class_name(kls):
     return camel_to_snake(kls.__name__)
 
 
-def create_route53_zone(conn, zone_name):
+def get_or_create_hosted_zone(client, zone_name):
+    """Get the Id of an existing zone, or create it.
+
+    Args:
+        client (:class:`botocore.client.Route53`): The connection used to
+            interact with Route53's API.
+        zone_name (string): The name of the DNS hosted zone to create.
+
+    Returns:
+        string: The Id of the Hosted Zone.
+    """
+    response = client.list_hosted_zones_by_name(DNSName=zone_name,
+                                                MaxItems="1")
+    zones = response["HostedZones"]
+
+    try:
+        return zones[0]["Id"]
+    except IndexError:
+        logger.debug("Zone %s does not exist, creating.", zone_name)
+
+    reference = hashlib.sha256(zone_name).hexdigest()
+
+    response = client.create_hosted_zone(Name=zone_name,
+                                         CallerReference=reference)
+
+    return response["HostedZone"]["Id"]
+
+
+class SOARecordText(object):
+    """Represents the actual body of an SOARecord. """
+    def __init__(self, record_text):
+        (self.nameserver, self.contact, self.serial, self.refresh,
+            self.retry, self.expire, self.min_ttl) = record_text.split()
+
+    def __str__(self):
+        return "%s %s %s %s %s %s %s" % (
+            self.nameserver, self.contact, self.serial, self.refresh,
+            self.retry, self.expire, self.min_ttl
+        )
+
+
+class SOARecord(object):
+    """Represents an SOA record. """
+    def __init__(self, record):
+        self.name = record["Name"]
+        self.text = SOARecordText(record["ResourceRecords"][0]["Value"])
+        self.ttl = record["TTL"]
+
+
+def get_soa_record(client, zone_id, zone_name):
+    """Gets the SOA record for zone_name from zone_id.
+
+    Args:
+        client (:class:`botocore.client.Route53`): The connection used to
+            interact with Route53's API.
+        zone_id (string): The AWS Route53 zone id of the hosted zone to query.
+        zone_name (string): The name of the DNS hosted zone to create.
+
+    Returns:
+        :class:`stacker.util.SOARecord`: An object representing the parsed SOA
+            record returned from AWS Route53.
+    """
+
+    response = client.list_resource_record_sets(HostedZoneId=zone_id,
+                                                StartRecordName=zone_name,
+                                                StartRecordType="SOA",
+                                                MaxItems="1")
+    return SOARecord(response["ResourceRecordSets"][0])
+
+
+def create_route53_zone(client, zone_name):
     """Creates the given zone_name if it doesn't already exists.
 
     Also sets the SOA negative caching TTL to something short (300 seconds).
 
     Args:
-        conn (:class:`boto.route53.Route53Connection`): The connection used
-            to interact with Route53's API.
+        client (:class:`botocore.client.Route53`): The connection used to
+            interact with Route53's API.
         zone_name (string): The name of the DNS hosted zone to create.
     """
     if not zone_name.endswith("."):
         zone_name += "."
-    zone = conn.get_zone(zone_name)
-    if not zone:
-        logger.debug("Zone %s does not exist, creating.", zone_name)
-        zone = conn.create_zone(zone_name)
-    # Update SOA to lower negative caching value
-    soa = zone.find_records(zone_name, "SOA")
-    old_soa_body = soa.resource_records[0]
-    old_soa_parts = old_soa_body.split(" ")
+    zone_id = get_or_create_hosted_zone(client, zone_name)
+    old_soa = get_soa_record(client, zone_id, zone_name)
+
     # If the negative cache value is already 300, don't update it.
-    if old_soa_parts[-1] == "300":
+    if old_soa.text.min_ttl == "300":
         return
+
+    new_soa = copy.deepcopy(old_soa)
     logger.debug("Updating negative caching value on zone %s to 300.",
                  zone_name)
-    new_soa_body = " ".join(old_soa_body.split(" ")[:-1]) + " 300"
-    changes = ResourceRecordSets(conn, zone.id)
-    delete_soa = changes.add_change("DELETE", zone.name, "SOA", soa.ttl)
-    delete_soa.add_value(old_soa_body)
-    create_soa = changes.add_change("CREATE", zone.name, "SOA", soa.ttl)
-    create_soa.add_value(new_soa_body)
-    changes.commit()
+    new_soa.text.min_ttl = "300"
+    client.change_resource_record_sets(
+        HostedZoneId=zone_id,
+        ChangeBatch={
+            "Comment": "Update SOA min_ttl to 300.",
+            "Changes": [
+                {
+                    "Action": "UPSERT",
+                    "ResourceRecordSet": {
+                        "Name": zone_name,
+                        "Type": "SOA",
+                        "TTL": old_soa.ttl,
+                        "ResourceRecords": [
+                            {
+                                "Value": str(new_soa.text)
+                            }
+                        ]
+                    }
+                },
+            ]
+        }
+    )
+    return zone_id
 
 
 def load_object_from_string(fqcn):

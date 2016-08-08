@@ -246,7 +246,7 @@ class Action(BaseAction):
 
         """
         missing_params = list(set(required_params) - set(params.keys()))
-        if existing_stack:
+        if existing_stack and 'Parameters' in existing_stack:
             stack_params = {p['ParameterKey']: p['ParameterValue'] for p in existing_stack['Parameters']}
             for p in missing_params:
                 if p in stack_params:

@@ -257,7 +257,8 @@ class Provider(BaseProvider):
 
         stack = stacks['Stacks'][0]
         parameters = dict()
-        for p in stack['Parameters']:
-            parameters[p['ParameterKey']] = p['ParameterValue']
+        if 'Parameters' in stack:
+            for p in stack['Parameters']:
+                parameters[p['ParameterKey']] = p['ParameterValue']
 
         return [json.dumps(template), parameters]

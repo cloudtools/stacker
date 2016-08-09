@@ -175,6 +175,10 @@ def create_route53_zone(client, zone_name):
         client (:class:`botocore.client.Route53`): The connection used to
             interact with Route53's API.
         zone_name (string): The name of the DNS hosted zone to create.
+
+    Returns:
+        string: The zone id returned from AWS for the existing, or newly
+            created zone.
     """
     if not zone_name.endswith("."):
         zone_name += "."
@@ -183,7 +187,7 @@ def create_route53_zone(client, zone_name):
 
     # If the negative cache value is already 300, don't update it.
     if old_soa.text.min_ttl == "300":
-        return
+        return zone_id
 
     new_soa = copy.deepcopy(old_soa)
     logger.debug("Updating negative caching value on zone %s to 300.",

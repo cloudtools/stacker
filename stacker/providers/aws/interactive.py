@@ -39,6 +39,15 @@ def requires_replacement(changeset):
 
 
 def ask_for_approval(full_changeset=None, include_verbose=False):
+    """Prompt the user for approval to execute a change set.
+
+    Args:
+        full_changeset (Optional[list]): A list of the full changeset that will
+            be output if the user specifies verbose.
+        include_verbose (Optional[bool]): Boolean for whether or not to include
+            the verbose option
+
+    """
     approval_options = ['y', 'n']
     if include_verbose:
         approval_options.append('v')
@@ -57,6 +66,16 @@ def ask_for_approval(full_changeset=None, include_verbose=False):
 
 
 def output_summary(fqn, action, changeset, replacements_only=False):
+    """Log a summary of the changeset.
+
+    Args:
+        fqn (string): fully qualified name of the stack
+        action (string): action to include in the log message
+        changeset (list): AWS changeset
+        replacements_only (Optional[bool]): boolean for whether or not we only
+            want to list replacements
+
+    """
     replacements = []
     changes = []
     for change in changeset:

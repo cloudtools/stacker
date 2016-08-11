@@ -3,12 +3,7 @@ from collections import Mapping
 import logging
 
 from ...environment import parse_environment
-
-DEBUG_FORMAT = ("[%(asctime)s] %(levelname)s %(name)s:%(lineno)d"
-                "(%(funcName)s): %(message)s")
-INFO_FORMAT = ("[%(asctime)s] %(message)s")
-
-ISO_8601 = "%Y-%m-%dT%H:%M:%S"
+from ...logger import setup_logging
 
 
 class KeyValueAction(argparse.Action):
@@ -88,21 +83,6 @@ class BaseCommand(object):
             self._logger = logging.getLogger(self.name)
         return self._logger
 
-    def setup_logging(self, verbosity):
-        log_level = logging.INFO
-        log_format = INFO_FORMAT
-        if verbosity > 0:
-            log_level = logging.DEBUG
-            log_format = DEBUG_FORMAT
-        if verbosity < 2:
-            logging.getLogger("botocore").setLevel(logging.CRITICAL)
-
-        return logging.basicConfig(
-            format=log_format,
-            datefmt=ISO_8601,
-            level=log_level,
-        )
-
     def parse_args(self, *vargs):
         parser = argparse.ArgumentParser(description=self.description)
         self.add_subcommands(parser)
@@ -115,7 +95,7 @@ class BaseCommand(object):
         pass
 
     def configure(self, options, **kwargs):
-        self.setup_logging(options.verbose)
+        setup_logging(options.verbose, options.interactive)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.

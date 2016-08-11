@@ -241,9 +241,13 @@ class Plan(OrderedDict):
         submit them in parallel based on their dependencies.
         """
 
+        attempts = 0
         try:
             while not self.completed:
-                self._check_point()
+                if not attempts % 10:
+                    self._check_point()
+
+                attempts += 1
                 if not self._single_run():
                     self._wait_func(self.sleep_time)
         except CancelExecution:

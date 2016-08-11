@@ -28,10 +28,10 @@ def requires_replacement(changeset):
     """Return the changes within the changeset that require replacement.
 
     Args:
-        changeset (List): List of changes
+        changeset (list): List of changes
 
     Returns:
-        List: A list of changes that require replacement, if any.
+        list: A list of changes that require replacement, if any.
 
     """
     return [r for r in changeset if r["ResourceChange"]["Replacement"] ==

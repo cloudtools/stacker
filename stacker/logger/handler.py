@@ -6,6 +6,15 @@ from colorama.ansi import (
 
 
 class LogLoopStreamHandler(StreamHandler):
+    """Logging handler that supports updating log lines while in a loop.
+
+    This is used within the Stacker Plan to make the output while waiting for
+    stacks to complete less verbose. Without this handler, the plan status
+    would be logged as N number of lines each time we output the checkpoint.
+    With this handler, we'll output the plan status once and keep updating the
+    same lines with updated values.
+
+    """
 
     def __init__(self, *args, **kwargs):
         super(LogLoopStreamHandler, self).__init__(*args, **kwargs)

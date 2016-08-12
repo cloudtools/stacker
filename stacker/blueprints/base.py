@@ -1,5 +1,7 @@
 import hashlib
 import logging
+import re
+from string import Template as StringTemplate
 
 from troposphere import Parameter, Template
 
@@ -10,6 +12,19 @@ from ..exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+
+OUTPUT_REGEX = re.compile('([_\-a-zA-Z0-9]*::[_\-a-zA-Z0-9]*)')
+
+
+class OutputTemplate(StringTemplate):
+    """Template we can use to replace references to other stack's output.
+
+    ie.
+
+    postgres://user:password@${empire::DBCname}
+
+    """
+    idpattern = '[_a-z][_a-z0-9:\-]*'
 
 
 def get_local_parameters(parameter_def, parameters):
@@ -203,21 +218,19 @@ class Blueprint(object):
         """
 
         def _resolve_string(value, provider, context):
-            if "::" in value:
+            for match in OUTPUT_REGEX.finditer(value):
                 # Get from the Output(s) of another stack(s) in the
                 # stack_map
-                resolved_values = []
-                values = value.split(",")
-                for v in values:
-                    v = v.strip()
-                    stack_name, output = v.split("::")
-                    stack_fqn = context.get_fqn(stack_name)
-                    try:
-                        ov = provider.get_output(stack_fqn, output)
-                        resolved_values.append(str(ov))
-                    except KeyError:
-                        raise OutputDoesNotExist(stack_fqn, v)
-                value = ",".join(resolved_values)
+                stack_output = match.group()
+                stack_name, output = stack_output.split("::")
+                stack_fqn = context.get_fqn(stack_name)
+                try:
+                    output_value = provider.get_output(stack_fqn, output)
+                except KeyError:
+                    raise OutputDoesNotExist(stack_fqn, stack_output)
+                value = OutputTemplate(value).safe_substitute(
+                    {stack_output: output_value})
+                value = value.replace(stack_output, output_value)
             return value
 
         def _resolve(value, provider, context):

@@ -102,6 +102,29 @@ class TestBlueprintParameters(unittest.TestCase):
         self.assertEqual(blueprint.resolved_parameters["Param2"], "Test Output")
         self.assertIsNone(blueprint.resolved_parameters.get("Param3"))
 
+    def test_resolve_parameters_template_string_syntax(self):
+        class TestBlueprint(Blueprint):
+            BLUEPRINT_PARAMETERS = {
+                "Param1": {"type": str},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        provider = MagicMock()
+        context = MagicMock()
+        values = {
+            "Param1": (
+                "postgres://user:password@${some-stack::CName}/"
+                "${other-stack::DBName}"
+            )
+        }
+        provider.get_output.return_value = "test"
+        blueprint.resolve_parameters(values, provider, context)
+        parameters = blueprint.get_parameters()
+        self.assertEqual(
+            parameters["Param1"],
+            "postgres://user:password@test/test",
+        )
+
     def test_recursive_resolve_parameters(self):
         class TestBlueprint(Blueprint):
             BLUEPRINT_PARAMETERS = {
@@ -121,7 +144,7 @@ class TestBlueprintParameters(unittest.TestCase):
                         "other-stack::Output",
                         "other-stack::Output",
                     ],
-                    "level5": "other-stack::Output,other-stack::Output",
+                    "level5": "other-stack::Output,other-stack2::Output",
                     "level6": {
                         "level7": "other-stack::Output",
                     },

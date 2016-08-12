@@ -1,3 +1,12 @@
+class UnresolvedBlueprintParameters(Exception):
+
+    def __init__(self, blueprint, *args, **kwargs):
+        message = "Blueprint: \"%s\" hasn't resolved it's parameters" % (
+            blueprint.name,)
+        super(UnresolvedBlueprintParameters, self).__init__(message, *args,
+                                                            **kwargs)
+
+
 class StackDoesNotExist(Exception):
 
     def __init__(self, stack_name, *args, **kwargs):

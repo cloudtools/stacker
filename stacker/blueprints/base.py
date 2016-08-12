@@ -3,7 +3,11 @@ import logging
 
 from troposphere import Parameter, Template
 
-from ..exceptions import MissingLocalParameterException
+from ..exceptions import (
+    MissingLocalParameterException,
+    OutputDoesNotExist,
+    UnresolvedBlueprintParameters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +102,7 @@ class Blueprint(object):
             template.
 
     """
+
     def __init__(self, name, context, mappings=None):
         self.name = name
         self.context = context
@@ -105,6 +110,7 @@ class Blueprint(object):
         self.outputs = {}
         self.local_parameters = self.get_local_parameters()
         self.reset_template()
+        self.resolved_parameters = None
 
     @property
     def parameters(self):
@@ -151,6 +157,97 @@ class Blueprint(object):
         for param, attrs in parameters.items():
             p = build_parameter(param, attrs)
             t.add_parameter(p)
+
+    def defined_parameters(self):
+        """Return a dictionary of parameters defined by the blueprint.
+
+        By default, this will just return the values from
+        `BLUEPRINT_PARAMETERS`, but this makes it easy for subclasses to add
+        parameters.
+
+        Returns:
+            dict: parameters defined by the blueprint
+
+        """
+        return getattr(self, "BLUEPRINT_PARAMETERS", {})
+
+    def get_parameters(self):
+        """Return a dictionary of parameters available to the template.
+
+        These parameters will have been defined within `BLUEPRINT_PARAMETERS`
+        or `self.defined_parameters`. Any parameter value that depends on stack
+        output will have been resolved.
+
+        Returns:
+            dict: parameters available to the template
+
+        """
+        if self.resolved_parameters is None:
+            raise UnresolvedBlueprintParameters(self)
+        return self.resolved_parameters
+
+    def resolve_parameters(self, parameter_values, provider, context):
+        """Resolve the values of the blueprint parameters.
+
+        resolve_parameters will resolve the values of the
+        `BLUEPRINT_PARAMETERS` with values from the command lie, the env file,
+        the config, and any references to other stack output.
+
+        Args:
+            parameter_values (dict): dictionary of parameter key to parameter
+                value
+            provider (stacker.Provider): provider to use to resolve references
+                to output
+            context (stacker.Context): context to pull stack fqn from
+
+        """
+
+        def _resolve_string(value, provider, context):
+            if "::" in value:
+                # Get from the Output(s) of another stack(s) in the
+                # stack_map
+                resolved_values = []
+                values = value.split(",")
+                for v in values:
+                    v = v.strip()
+                    stack_name, output = v.split("::")
+                    stack_fqn = context.get_fqn(stack_name)
+                    try:
+                        ov = provider.get_output(stack_fqn, output)
+                        resolved_values.append(str(ov))
+                    except KeyError:
+                        raise OutputDoesNotExist(stack_fqn, v)
+                value = ",".join(resolved_values)
+            return value
+
+        def _resolve(value, provider, context):
+            if isinstance(value, basestring):
+                return _resolve_string(value, provider, context)
+            elif isinstance(value, list):
+                resolved = []
+                for v in value:
+                    resolved.append(_resolve(v, provider, context))
+                return resolved
+            elif isinstance(value, dict):
+                for key, v in value.iteritems():
+                    value[key] = _resolve(v, provider, context)
+                return value
+            return value
+
+        self.resolved_parameters = {}
+        defined_parameters = self.defined_parameters()
+        for key, value in parameter_values.iteritems():
+            if key not in defined_parameters:
+                logger.debug("Blueprint %s does not use parameter %s.",
+                             self.name, key)
+                continue
+            value = _resolve(value, provider, context)
+            if value is None:
+                logger.debug("Got None value for parameter %s, not submitting "
+                             "it to cloudformation, default value should be "
+                             "used.", key)
+                continue
+            self.resolved_parameters[key] = value
 
     def import_mappings(self):
         if not self.mappings:

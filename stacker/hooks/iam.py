@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 
 from awacs.aws import Statement, Allow, Policy
 from awacs import ecs
+from awacs.helpers.trust import get_ecs_assumerole_policy
 
 from . import utils
 
@@ -22,7 +23,19 @@ def create_ecs_service_role(region, namespace, mappings, parameters,
     http://docs.aws.amazon.com/AmazonECS/latest/developerguide/IAM_policies.html#service_IAM_role
 
     """
+    role_name = "ecsServiceRole"
     client = boto3.client("iam", region_name=region)
+
+    try:
+        client.create_role(
+            RoleName=role_name,
+            AssumeRolePolicyDocument=get_ecs_assumerole_policy().to_json()
+        )
+    except ClientError as e:
+        if "already exists" in e.message:
+            pass
+        raise
+
     policy = Policy(
         Statement=[
             Statement(
@@ -30,11 +43,11 @@ def create_ecs_service_role(region, namespace, mappings, parameters,
                 Resource=["*"],
                 Action=[ecs.CreateCluster, ecs.DeregisterContainerInstance,
                         ecs.DiscoverPollEndpoint, ecs.Poll,
-                        ecs.ECSAction("Submit*")]
+                        ecs.Action("Submit*")]
             )
         ])
     client.put_role_policy(
-        RoleName="ecsServiceRole",
+        RoleName=role_name,
         PolicyName="AmazonEC2ContainerServiceRolePolicy",
         PolicyDocument=policy.to_json()
     )
@@ -49,6 +62,62 @@ def _get_cert_arn_from_response(response):
     return result["ServerCertificateMetadata"]["Arn"]
 
 
+def get_cert_contents(kwargs):
+    """Builds parameters with server cert file contents.
+
+    Args:
+        kwargs(dict): The keyword args passed to ensure_server_cert_exists,
+            optionally containing the paths to the cert, key and chain files.
+
+    Returns:
+        dict: A dictionary containing the appropriate parameters to supply to
+            upload_server_certificate. An empty dictionary if there is a
+            problem.
+    """
+    paths = {
+        "certificate": kwargs.get("path_to_certificate"),
+        "private_key": kwargs.get("path_to_private_key"),
+        "chain": kwargs.get("path_to_chain"),
+    }
+
+    for key, value in paths.iteritems():
+        if value is not None:
+            continue
+
+        path = raw_input("Path to %s (skip): " % (key,))
+        if path == "skip" or not path.strip():
+            continue
+
+        full_path = utils.full_path(path)
+        if not os.path.exists(full_path):
+            logger.error("%s path '%s' does not exist", key, full_path)
+            return {}
+        paths[key] = full_path
+
+    parameters = {
+        "ServerCertificateName": kwargs.get("cert_name"),
+    }
+    for key, path in paths.iteritems():
+        if not path:
+            continue
+
+        # Allow passing of file like object for tests
+        try:
+            contents = path.read()
+        except AttributeError:
+            with open(path) as read_file:
+                contents = read_file.read()
+
+        if key == "certificate":
+            parameters["CertificateBody"] = contents
+        elif key == "private_key":
+            parameters["PrivateKey"] = contents
+        elif key == "chain":
+            parameters["CertificateChain"] = contents
+
+    return parameters
+
+
 def ensure_server_cert_exists(region, namespace, mappings, parameters,
                               **kwargs):
     client = boto3.client("iam", region_name=region)
@@ -60,52 +129,18 @@ def ensure_server_cert_exists(region, namespace, mappings, parameters,
         cert_arn = _get_cert_arn_from_response(response)
         logger.info("certificate exists: %s (%s)", cert_name, cert_arn)
     except ClientError:
-        upload = raw_input(
-            "Certificate '%s' wasn't found. Upload it now? (yes/no) " % (
-                cert_name,
+        if kwargs.get("prompt", True):
+            upload = raw_input(
+                "Certificate '%s' wasn't found. Upload it now? (yes/no) " % (
+                    cert_name,
+                )
             )
-        )
-        if upload != "yes":
-            return False
-
-        paths = {
-            "certificate": kwargs.get("path_to_certificate"),
-            "private_key": kwargs.get("path_to_private_key"),
-            "chain": kwargs.get("path_to_chain"),
-        }
-
-        for key, value in paths.iteritems():
-            if value is not None:
-                continue
-
-            path = raw_input("Path to %s (skip): " % (key,))
-            if path == "skip" or not path.strip():
-                continue
-
-            full_path = utils.full_path(path)
-            if not os.path.exists(full_path):
-                print "%s path %s does not exist." % (key, full_path)
-                logger.error("%s path '%s' does not exist", key, full_path)
+            if upload != "yes":
                 return False
-            paths[key] = full_path
 
-        parameters = {
-            "ServerCertificateName": cert_name,
-        }
-        for key, path in paths.iteritems():
-            if not path:
-                continue
-
-            with open(path) as read_file:
-                contents = read_file.read()
-
-            if key == "certificate":
-                parameters["CertificateBody"] = contents
-            elif key == "private_key":
-                parameters["PrivateKey"] = contents
-            elif key == "chain":
-                parameters["CertificateChain"] = contents
-
+        parameters = get_cert_contents(kwargs)
+        if not parameters:
+            return False
         response = client.upload_server_certificate(**parameters)
         cert_arn = _get_cert_arn_from_response(response)
         logger.info(

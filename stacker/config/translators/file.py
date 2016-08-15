@@ -80,8 +80,7 @@ def get_file_value(value):
     return CODECS[codec](value)
 
 
-def userdata_codec(value, b64):
-    raw = read_value_from_path(value)
+def parameterized_codec(raw, b64):
     pattern = re.compile(r'{{(\w+)}}')
 
     parts = []
@@ -108,6 +107,6 @@ def file_constructor(loader, node):
 CODECS = {
     "plain": lambda x: x,
     "base64": base64.b64encode,
-    "parameterized": lambda x: userdata_codec(x, False),
-    "parameterized-b64": lambda x: userdata_codec(x, True)
+    "parameterized": lambda x: parameterized_codec(x, False),
+    "parameterized-b64": lambda x: parameterized_codec(x, True)
 }

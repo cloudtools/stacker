@@ -1,7 +1,5 @@
 import copy
 import logging
-import os
-import os.path
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +21,7 @@ def create_ecs_service_role(region, namespace, mappings, parameters,
     http://docs.aws.amazon.com/AmazonECS/latest/developerguide/IAM_policies.html#service_IAM_role
 
     """
-    role_name = "ecsServiceRole"
+    role_name = kwargs.get("role_name", "ecsServiceRole")
     client = boto3.client("iam", region_name=region)
 
     try:
@@ -34,7 +32,8 @@ def create_ecs_service_role(region, namespace, mappings, parameters,
     except ClientError as e:
         if "already exists" in e.message:
             pass
-        raise
+        else:
+            raise
 
     policy = Policy(
         Statement=[
@@ -88,15 +87,12 @@ def get_cert_contents(kwargs):
         if path == "skip" or not path.strip():
             continue
 
-        full_path = utils.full_path(path)
-        if not os.path.exists(full_path):
-            logger.error("%s path '%s' does not exist", key, full_path)
-            return {}
-        paths[key] = full_path
+        paths[key] = path
 
     parameters = {
         "ServerCertificateName": kwargs.get("cert_name"),
     }
+
     for key, path in paths.iteritems():
         if not path:
             continue
@@ -105,7 +101,7 @@ def get_cert_contents(kwargs):
         try:
             contents = path.read()
         except AttributeError:
-            with open(path) as read_file:
+            with open(utils.full_path(path)) as read_file:
                 contents = read_file.read()
 
         if key == "certificate":

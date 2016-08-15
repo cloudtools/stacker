@@ -1,5 +1,5 @@
 import copy
-import hashlib
+import uuid
 import importlib
 import logging
 import re
@@ -96,6 +96,31 @@ def convert_class_name(kls):
     return camel_to_snake(kls.__name__)
 
 
+def parse_zone_id(full_zone_id):
+    """Parses the returned hosted zone id and returns only the ID itself."""
+    return full_zone_id.split("/")[2]
+
+
+def get_hosted_zone_by_name(client, zone_name):
+    """Get the zone id of an existing zone by name.
+
+    Args:
+        client (:class:`botocore.client.Route53`): The connection used to
+            interact with Route53's API.
+        zone_name (string): The name of the DNS hosted zone to create.
+
+    Returns:
+        string: The Id of the Hosted Zone.
+    """
+    p = client.get_paginator("list_hosted_zones")
+
+    for i in p.paginate():
+        for zone in i["HostedZones"]:
+            if zone["Name"] == zone_name:
+                return parse_zone_id(zone["Id"])
+    return None
+
+
 def get_or_create_hosted_zone(client, zone_name):
     """Get the Id of an existing zone, or create it.
 
@@ -107,21 +132,18 @@ def get_or_create_hosted_zone(client, zone_name):
     Returns:
         string: The Id of the Hosted Zone.
     """
-    response = client.list_hosted_zones_by_name(DNSName=zone_name,
-                                                MaxItems="1")
-    zones = response["HostedZones"]
+    zone_id = get_hosted_zone_by_name(client, zone_name)
+    if zone_id:
+        return zone_id
 
-    try:
-        return zones[0]["Id"]
-    except IndexError:
-        logger.debug("Zone %s does not exist, creating.", zone_name)
+    logger.debug("Zone %s does not exist, creating.", zone_name)
 
-    reference = hashlib.sha256(zone_name).hexdigest()
+    reference = uuid.uuid4().hex
 
     response = client.create_hosted_zone(Name=zone_name,
                                          CallerReference=reference)
 
-    return response["HostedZone"]["Id"]
+    return parse_zone_id(response["HostedZone"]["Id"])
 
 
 class SOARecordText(object):

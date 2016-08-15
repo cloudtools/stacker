@@ -66,6 +66,14 @@ class TestBuildAction(unittest.TestCase):
             self.build_action._resolve_parameters(parameters,
                                                   mock_blueprint)
 
+    def test_handle_missing_params(self):
+        stack = {'StackName': 'teststack'}
+        def_params = {"Address": "192.168.0.1"}
+        required = ["Address"]
+        result = self.build_action._handle_missing_parameters(def_params,
+                                                              required, stack)
+        self.assertEqual(result, def_params.items())
+
     def test_gather_missing_from_stack(self):
         stack_params = {"Address": "10.0.0.1"}
         stack = mock_stack(stack_params)

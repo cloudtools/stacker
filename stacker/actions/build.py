@@ -49,7 +49,7 @@ def should_submit(stack):
     if stack.enabled:
         return True
 
-    logger.info("Stack %s is not enabled.  Skipping.", stack.name)
+    logger.debug("Stack %s is not enabled.  Skipping.", stack.name)
     return False
 
 
@@ -208,7 +208,7 @@ class Action(BaseAction):
 
         if not provider_stack:
             new_status = SubmittedStatus("creating new stack")
-            logger.info("Creating new stack: %s", stack.fqn)
+            logger.debug("Creating new stack: %s", stack.fqn)
             self.provider.create_stack(stack.fqn, template_url, parameters,
                                        tags)
         else:
@@ -218,7 +218,7 @@ class Action(BaseAction):
                 new_status = SubmittedStatus("updating existing stack")
                 self.provider.update_stack(stack.fqn, template_url, parameters,
                                            tags)
-                logger.info("Updating existing stack: %s", stack.fqn)
+                logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()
 
@@ -246,7 +246,7 @@ class Action(BaseAction):
 
         """
         missing_params = list(set(required_params) - set(params.keys()))
-        if existing_stack:
+        if existing_stack and 'Parameters' in existing_stack:
             stack_params = {p['ParameterKey']: p['ParameterValue'] for p in existing_stack['Parameters']}
             for p in missing_params:
                 if p in stack_params:
@@ -297,7 +297,7 @@ class Action(BaseAction):
         plan = self._generate_plan(tail=tail)
         if not outline and not dump:
             plan.outline(logging.DEBUG)
-            logger.info("Launching stacks: %s", ", ".join(plan.keys()))
+            logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
             plan.execute()
         else:
             if outline:

@@ -6,7 +6,7 @@ from . import util
 def _gather_parameters(stack_def, context_parameters):
     """Merges builder provided & stack defined parameters.
 
-    Ensures that more specificly defined parameters (ie: parameters defined
+    Ensures that more specifically defined parameters (ie: parameters defined
     specifically for the given stack: stack_name::parameter) override less
     specific parameters provided by the builder.
 
@@ -80,7 +80,7 @@ class Stack(object):
     def requires(self):
         requires = set([self.context.get_fqn(r) for r in
                         self.definition.get("requires", [])])
-        # Auto add dependencies when parameters reference the Ouptuts of
+        # Auto add dependencies when parameters reference the Outputs of
         # another stack.
         for value in self.parameters.values():
             stack_names = []

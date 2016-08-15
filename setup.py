@@ -8,7 +8,6 @@ src_dir = os.path.dirname(__file__)
 
 install_requires = [
     "troposphere>=1.2.2",
-    "boto>=2.42",
     "boto3>=1.3.1",
     "botocore>=1.4.38",
     "PyYAML>=3.11",
@@ -20,6 +19,8 @@ tests_require = [
     "nose>=1.0",
     "mock==1.0.1",
     "stacker_blueprints",
+    "moto",
+    "testfixtures",
 ]
 
 

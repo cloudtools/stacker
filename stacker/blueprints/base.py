@@ -205,7 +205,7 @@ class Blueprint(object):
         """Resolve the values of the blueprint parameters.
 
         resolve_parameters will resolve the values of the
-        `BLUEPRINT_PARAMETERS` with values from the command lie, the env file,
+        `BLUEPRINT_PARAMETERS` with values from the command line, the env file,
         the config, and any references to other stack output.
 
         Args:

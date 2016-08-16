@@ -211,9 +211,10 @@ class Blueprint(object):
         Args:
             parameter_values (dict): dictionary of parameter key to parameter
                 value
-            provider (stacker.Provider): provider to use to resolve references
-                to output
-            context (stacker.Context): context to pull stack fqn from
+            provider (:class:`stacker.providers.base.BaseProvider`): provider
+                to use to resolve references to output
+            context (:class:`stacker.context.Context`): context to pull stack
+                fqn from
 
         """
 

@@ -229,6 +229,10 @@ class Blueprint(object):
                     output_value = provider.get_output(stack_fqn, output)
                 except KeyError:
                     raise OutputDoesNotExist(stack_fqn, stack_output)
+                # We do a `safe_substitute` to catch any instances of
+                # `${some-stack::output}` followed by a replace for backwards
+                # compatability with values like:
+                # `some-stack::output,some-other-stack::output`
                 value = OutputTemplate(value).safe_substitute(
                     {stack_output: output_value})
                 value = value.replace(stack_output, output_value)

@@ -72,6 +72,69 @@ def get_local_parameters(parameter_def, parameters):
 
     return local
 
+
+def resolve_string(value, provider, context):
+    """Resolve any output references within a string.
+
+    Args:
+        value (str): string value we're resolving references within
+        provider (:class:`stacker.providers.base.BaseProvider`): provider to
+            use to resolve references to output
+        context (:class:`stacker.context.Context`): context to pull stack
+            fqn from
+
+    Returns:
+        str: value with any output references resolved
+
+    """
+    for match in OUTPUT_REGEX.finditer(value):
+        # Get from the Output(s) of another stack(s) in the
+        # stack_map
+        stack_output = match.group()
+        stack_name, output = stack_output.split("::")
+        stack_fqn = context.get_fqn(stack_name)
+        try:
+            output_value = provider.get_output(stack_fqn, output)
+        except KeyError:
+            raise OutputDoesNotExist(stack_fqn, stack_output)
+        # We do a `safe_substitute` to catch any instances of
+        # `${some-stack::output}` followed by a replace for backwards
+        # compatability with values like:
+        # `some-stack::output,some-other-stack::output`
+        value = OutputTemplate(value).safe_substitute(
+            {stack_output: output_value})
+        value = value.replace(stack_output, output_value)
+    return value
+
+
+def resolve(value, provider, context):
+    """Recursively resolve any output references within the data structure.
+
+    Args:
+        value (Union[str, list, dict]): a structure that contains references to
+            output values
+        provider (:class:`stacker.providers.base.BaseProvider`): provider to
+            use to resolve references to output
+        context (:class:`stacker.context.Context`): context to pull stack
+            fqn from
+
+    Returns:
+        Union[str, list, dict]: value passed in with output values resolved
+
+    """
+    if isinstance(value, basestring):
+        return resolve_string(value, provider, context)
+    elif isinstance(value, list):
+        resolved = []
+        for v in value:
+            resolved.append(resolve(v, provider, context))
+        return resolved
+    elif isinstance(value, dict):
+        for key, v in value.iteritems():
+            value[key] = resolve(v, provider, context)
+        return value
+    return value
+
 PARAMETER_PROPERTIES = {
     "default": "Default",
     "description": "Description",
@@ -218,40 +281,6 @@ class Blueprint(object):
 
         """
 
-        def _resolve_string(value, provider, context):
-            for match in OUTPUT_REGEX.finditer(value):
-                # Get from the Output(s) of another stack(s) in the
-                # stack_map
-                stack_output = match.group()
-                stack_name, output = stack_output.split("::")
-                stack_fqn = context.get_fqn(stack_name)
-                try:
-                    output_value = provider.get_output(stack_fqn, output)
-                except KeyError:
-                    raise OutputDoesNotExist(stack_fqn, stack_output)
-                # We do a `safe_substitute` to catch any instances of
-                # `${some-stack::output}` followed by a replace for backwards
-                # compatability with values like:
-                # `some-stack::output,some-other-stack::output`
-                value = OutputTemplate(value).safe_substitute(
-                    {stack_output: output_value})
-                value = value.replace(stack_output, output_value)
-            return value
-
-        def _resolve(value, provider, context):
-            if isinstance(value, basestring):
-                return _resolve_string(value, provider, context)
-            elif isinstance(value, list):
-                resolved = []
-                for v in value:
-                    resolved.append(_resolve(v, provider, context))
-                return resolved
-            elif isinstance(value, dict):
-                for key, v in value.iteritems():
-                    value[key] = _resolve(v, provider, context)
-                return value
-            return value
-
         self.resolved_parameters = {}
         defined_parameters = self.defined_parameters()
         for key, value in parameter_values.iteritems():
@@ -259,7 +288,7 @@ class Blueprint(object):
                 logger.debug("Blueprint %s does not use parameter %s.",
                              self.name, key)
                 continue
-            value = _resolve(value, provider, context)
+            value = resolve(value, provider, context)
             if value is None:
                 logger.debug("Got None value for parameter %s, not submitting "
                              "it to cloudformation, default value should be "

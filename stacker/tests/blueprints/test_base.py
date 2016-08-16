@@ -5,6 +5,8 @@ from stacker.blueprints.base import (
     Blueprint,
     build_parameter,
     get_local_parameters,
+    resolve_string,
+    resolve,
 )
 from stacker.exceptions import (
     MissingLocalParameterException,
@@ -181,3 +183,48 @@ class TestBlueprintParameters(unittest.TestCase):
         parameters = blueprint.get_parameters()
         self.assertEqual(parameters["Param1"], 1)
         self.assertEqual(parameters["Param2"], "Test Output")
+
+    def test_resolve_string_comma_delmited_list(self):
+        provider = MagicMock()
+        context = MagicMock()
+        provider.get_output.return_value = "Test Output"
+        output = resolve_string("some-stack::Output, other-stack::Output",
+                                provider, context)
+        self.assertEqual(output, "Test Output, Test Output")
+
+    def test_resolve_string(self):
+        provider = MagicMock()
+        context = MagicMock()
+        provider.get_output.return_value = "Test Output"
+        output = resolve_string("some-stack::Output", provider, context)
+        self.assertEqual(output, "Test Output")
+
+    def test_resolve_string_output_ref(self):
+        provider = MagicMock()
+        context = MagicMock()
+        provider.get_output.return_value = "Test Output"
+        output = resolve_string("some.template.here:${some-stack::Output}",
+                                provider, context)
+        self.assertEqual(output, "some.template.here:Test Output")
+
+    def test_resolve_with_string(self):
+        provider = MagicMock()
+        context = MagicMock()
+        provider.get_output.return_value = "Test Output"
+        output = resolve("some.template.here:${some-stack::Output}", provider,
+                         context)
+        self.assertEqual(output, "some.template.here:Test Output")
+
+    def test_resolve_with_list(self):
+        provider = MagicMock()
+        context = MagicMock()
+        provider.get_output.return_value = "Test Output"
+        output = resolve(["${some-stack::Output}"], provider, context)
+        self.assertEqual(output, ["Test Output"])
+
+    def test_resolve_with_dict(self):
+        provider = MagicMock()
+        context = MagicMock()
+        provider.get_output.return_value = "Test Output"
+        output = resolve({"output": "${some-stack::Output}"}, provider, context)
+        self.assertEqual(output, {"output": "Test Output"})

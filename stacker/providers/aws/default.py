@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 
 import boto3
@@ -87,13 +88,15 @@ class Provider(BaseProvider):
     def __init__(self, region, **kwargs):
         self.region = region
         self._outputs = {}
+        self._cloudformation = {}
 
     @property
     def cloudformation(self):
-        if not hasattr(self, "_cloudformation"):
+        pid = os.getpid()
+        if pid not in self._cloudformation:
             session = boto3.Session(region_name=self.region)
-            self._cloudformation = session.client('cloudformation')
-        return self._cloudformation
+            self._cloudformation[pid] = session.client('cloudformation')
+        return self._cloudformation[pid]
 
     def get_stack(self, stack_name, **kwargs):
         try:

@@ -1,6 +1,11 @@
 import copy
 
 from . import util
+from .variables import (
+    Variable,
+    resolve_variables,
+)
+from .lookups.output import deconstruct
 
 
 def _gather_parameters(stack_def, context_parameters):
@@ -42,6 +47,11 @@ def _gather_parameters(stack_def, context_parameters):
     return parameters
 
 
+def _gather_variables(definition):
+    variables = copy.deepcopy(definition.get('variables', {}))
+    return [Variable(key, value) for key, value in variables.iteritems()]
+
+
 class Stack(object):
     """Represents gathered information about a stack to be built/updated.
 
@@ -63,6 +73,7 @@ class Stack(object):
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
         self.parameters = _gather_parameters(definition, parameters or {})
+        self.variables = _gather_variables(definition)
         self.mappings = mappings
         self.locked = locked
         self.force = force
@@ -94,9 +105,21 @@ class Stack(object):
                 continue
             for stack_name in stack_names:
                 stack_fqn = self.context.get_fqn(stack_name)
-                if stack_fqn not in requires:
-                    requires.add(stack_fqn)
+                requires.add(stack_fqn)
+
+        for lookup in self.lookups:
+            d = deconstruct(lookup.input)
+            stack_fqn = self.context.get_fqn(d.stack_name)
+            requires.add(stack_fqn)
+
         return requires
+
+    @property
+    def lookups(self):
+        lookups = set()
+        for variable in self.variables:
+            lookups = lookups.union(variable.lookups)
+        return lookups
 
     @property
     def blueprint(self):
@@ -111,5 +134,10 @@ class Stack(object):
                 name=self.name,
                 context=self.context,
                 mappings=self.mappings,
+                variables=self.variables,
             )
         return self._blueprint
+
+    def resolve_variables(self, context, provider):
+        resolve_variables(self.variables, context, provider)
+        self.blueprint.resolve_variables(self.variables)

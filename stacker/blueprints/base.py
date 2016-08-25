@@ -1,30 +1,15 @@
 import hashlib
 import logging
-import re
-from string import Template as StringTemplate
 
 from troposphere import Parameter, Template
 
 from ..exceptions import (
     MissingLocalParameterException,
-    OutputDoesNotExist,
-    UnresolvedBlueprintParameters,
+    UnresolvedVariables,
+    UnresolvedVariable,
 )
 
 logger = logging.getLogger(__name__)
-
-OUTPUT_REGEX = re.compile('([_\-a-zA-Z0-9]*::[_\-a-zA-Z0-9]*)')
-
-
-class OutputTemplate(StringTemplate):
-    """Template we can use to replace references to other stack's output.
-
-    ie.
-
-    postgres://user:password@${empire::DBCname}
-
-    """
-    idpattern = '[_a-z][_a-z0-9:\-]*'
 
 
 def get_local_parameters(parameter_def, parameters):
@@ -73,68 +58,6 @@ def get_local_parameters(parameter_def, parameters):
     return local
 
 
-def resolve_string(value, provider, context):
-    """Resolve any output references within a string.
-
-    Args:
-        value (str): string value we're resolving references within
-        provider (:class:`stacker.providers.base.BaseProvider`): provider to
-            use to resolve references to output
-        context (:class:`stacker.context.Context`): context to pull stack
-            fqn from
-
-    Returns:
-        str: value with any output references resolved
-
-    """
-    for match in OUTPUT_REGEX.finditer(value):
-        # Get from the Output(s) of another stack(s) in the
-        # stack_map
-        stack_output = match.group()
-        stack_name, output = stack_output.split("::")
-        stack_fqn = context.get_fqn(stack_name)
-        try:
-            output_value = provider.get_output(stack_fqn, output)
-        except KeyError:
-            raise OutputDoesNotExist(stack_fqn, stack_output)
-        # We do a `safe_substitute` to catch any instances of
-        # `${some-stack::output}` followed by a replace for backwards
-        # compatability with values like:
-        # `some-stack::output,some-other-stack::output`
-        value = OutputTemplate(value).safe_substitute(
-            {stack_output: output_value})
-        value = value.replace(stack_output, output_value)
-    return value
-
-
-def resolve(value, provider, context):
-    """Recursively resolve any output references within the data structure.
-
-    Args:
-        value (Union[str, list, dict]): a structure that contains references to
-            output values
-        provider (:class:`stacker.providers.base.BaseProvider`): provider to
-            use to resolve references to output
-        context (:class:`stacker.context.Context`): context to pull stack
-            fqn from
-
-    Returns:
-        Union[str, list, dict]: value passed in with output values resolved
-
-    """
-    if isinstance(value, basestring):
-        return resolve_string(value, provider, context)
-    elif isinstance(value, list):
-        resolved = []
-        for v in value:
-            resolved.append(resolve(v, provider, context))
-        return resolved
-    elif isinstance(value, dict):
-        for key, v in value.iteritems():
-            value[key] = resolve(v, provider, context)
-        return value
-    return value
-
 PARAMETER_PROPERTIES = {
     "default": "Default",
     "description": "Description",
@@ -181,14 +104,14 @@ class Blueprint(object):
 
     """
 
-    def __init__(self, name, context, mappings=None):
+    def __init__(self, name, context, variables=None, mappings=None):
         self.name = name
         self.context = context
         self.mappings = mappings
         self.outputs = {}
         self.local_parameters = self.get_local_parameters()
         self.reset_template()
-        self.resolved_parameters = None
+        self.resolved_variables = None
 
     @property
     def parameters(self):
@@ -236,65 +159,59 @@ class Blueprint(object):
             p = build_parameter(param, attrs)
             t.add_parameter(p)
 
-    def defined_parameters(self):
-        """Return a dictionary of parameters defined by the blueprint.
+    def defined_variables(self):
+        """Return a dictionary of variables defined by the blueprint.
 
-        By default, this will just return the values from
-        `BLUEPRINT_PARAMETERS`, but this makes it easy for subclasses to add
-        parameters.
+        By default, this will just return the values from `VARIABLES`, but this
+        makes it easy for subclasses to add variables.
 
         Returns:
-            dict: parameters defined by the blueprint
+            dict: variables defined by the blueprint
 
         """
-        return getattr(self, "BLUEPRINT_PARAMETERS", {})
+        return getattr(self, "VARIABLES", {})
 
-    def get_parameters(self):
-        """Return a dictionary of parameters available to the template.
+    def get_variables(self):
+        """Return a dictionary of variables available to the template.
 
-        These parameters will have been defined within `BLUEPRINT_PARAMETERS`
-        or `self.defined_parameters`. Any parameter value that depends on stack
+        These variables will have been defined within `VARIABLES` or
+        `self.defined_variables`. Any variable value that depends on stack
         output will have been resolved.
 
         Returns:
-            dict: parameters available to the template
+            dict: variables available to the template
 
         """
-        if self.resolved_parameters is None:
-            raise UnresolvedBlueprintParameters(self)
-        return self.resolved_parameters
+        if self.resolved_variables is None:
+            raise UnresolvedVariables(self)
+        return self.resolved_variables
 
-    def resolve_parameters(self, parameter_values, provider, context):
-        """Resolve the values of the blueprint parameters.
+    def resolve_variables(self, variables):
+        """Resolve the values of the blueprint variables.
 
-        resolve_parameters will resolve the values of the
-        `BLUEPRINT_PARAMETERS` with values from the command line, the env file,
-        the config, and any references to other stack output.
+        This will resolve the values of the `VARIABLES` with values from the
+        env file, the config, and any references to other stack output.
 
         Args:
-            parameter_values (dict): dictionary of parameter key to parameter
-                value
-            provider (:class:`stacker.providers.base.BaseProvider`): provider
-                to use to resolve references to output
-            context (:class:`stacker.context.Context`): context to pull stack
-                fqn from
+            variables (list): list of variables
 
         """
-
-        self.resolved_parameters = {}
-        defined_parameters = self.defined_parameters()
-        for key, value in parameter_values.iteritems():
-            if key not in defined_parameters:
+        self.resolved_variables = {}
+        defined_variables = self.defined_variables()
+        for variable in variables:
+            if variable.name not in defined_variables:
                 logger.debug("Blueprint %s does not use parameter %s.",
-                             self.name, key)
+                             self.name, variable.name)
                 continue
-            value = resolve(value, provider, context)
-            if value is None:
+            if not variable.resolved:
+                raise UnresolvedVariable(self, variable)
+
+            if variable.value is None:
                 logger.debug("Got None value for parameter %s, not submitting "
                              "it to cloudformation, default value should be "
-                             "used.", key)
+                             "used.", variable.name)
                 continue
-            self.resolved_parameters[key] = value
+            self.resolved_variables[variable.name] = variable.value
 
     def import_mappings(self):
         if not self.mappings:

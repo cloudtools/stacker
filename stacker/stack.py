@@ -5,7 +5,10 @@ from .variables import (
     Variable,
     resolve_variables,
 )
-from .lookups.output import deconstruct
+from .lookups.output import (
+    TYPE_NAME as OUTPUT_LOOKUP_TYPE_NAME,
+    deconstruct,
+)
 
 
 def _gather_parameters(stack_def, context_parameters):
@@ -109,14 +112,16 @@ class Stack(object):
 
         # Add any dependencies based on output lookups
         for lookup in self.lookups:
-            d = deconstruct(lookup.input)
-            stack_fqn = self.context.get_fqn(d.stack_name)
-            requires.add(stack_fqn)
+            if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
+                d = deconstruct(lookup.input)
+                stack_fqn = self.context.get_fqn(d.stack_name)
+                requires.add(stack_fqn)
 
         return requires
 
     @property
     def lookups(self):
+        """Return a set of lookups contained by stack variables"""
         lookups = set()
         for variable in self.variables:
             lookups = lookups.union(variable.lookups)
@@ -135,7 +140,6 @@ class Stack(object):
                 name=self.name,
                 context=self.context,
                 mappings=self.mappings,
-                variables=self.variables,
             )
         return self._blueprint
 

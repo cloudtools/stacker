@@ -144,5 +144,16 @@ class Stack(object):
         return self._blueprint
 
     def resolve_variables(self, context, provider):
+        """Resolve the Stack variables.
+
+        This resolves the Stack variables and then prepares the Blueprint for
+        rendering by passing the resolved variables to the Blueprint.
+
+        Args:
+            context (:class:`stacker.context.Context`): stacker context
+            provider (:class:`stacker.provider.base.BaseProvider`): subclass of
+                the base provider
+
+        """
         resolve_variables(self.variables, context, provider)
         self.blueprint.resolve_variables(self.variables)

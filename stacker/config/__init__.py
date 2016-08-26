@@ -31,8 +31,7 @@ def parse_config(raw_config, environment=None):
     except KeyError, e:
         raise exceptions.MissingEnvironment(e.args[0])
     except ValueError:
-        # Support "invalid" placeholders for output values (ie. placeholders
-        # containing `::`)
+        # Support "invalid" placeholders for lookup placeholders.
         buff.write(t.safe_substitute(environment))
 
     buff.seek(0)

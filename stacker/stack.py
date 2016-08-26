@@ -107,6 +107,7 @@ class Stack(object):
                 stack_fqn = self.context.get_fqn(stack_name)
                 requires.add(stack_fqn)
 
+        # Add any dependencies based on output lookups
         for lookup in self.lookups:
             d = deconstruct(lookup.input)
             stack_fqn = self.context.get_fqn(d.stack_name)

@@ -105,7 +105,7 @@ class Blueprint(object):
 
     """
 
-    def __init__(self, name, context, variables=None, mappings=None):
+    def __init__(self, name, context, mappings=None):
         self.name = name
         self.context = context
         self.mappings = mappings
@@ -176,8 +176,8 @@ class Blueprint(object):
         """Return a dictionary of variables available to the template.
 
         These variables will have been defined within `VARIABLES` or
-        `self.defined_variables`. Any variable value that depends on stack
-        output will have been resolved.
+        `self.defined_variables`. Any variable value that contains a lookup
+        will have been resolved.
 
         Returns:
             dict: variables available to the template
@@ -191,7 +191,7 @@ class Blueprint(object):
         """Resolve the values of the blueprint variables.
 
         This will resolve the values of the `VARIABLES` with values from the
-        env file, the config, and any references to other stack output.
+        env file, the config, and any lookups resolved.
 
         Args:
             variables (list): list of variables
@@ -209,9 +209,8 @@ class Blueprint(object):
                 raise UnresolvedVariable(self, variable)
 
             if variable.value is None:
-                logger.debug("Got None value for parameter %s, not submitting "
-                             "it to cloudformation, default value should be "
-                             "used.", variable.name)
+                logger.debug("Got `None` value for variable %s, ignoring it. "
+                             "Default value should be used.", variable.name)
                 continue
             self.resolved_variables[variable.name] = variable.value
 

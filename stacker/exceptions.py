@@ -21,6 +21,14 @@ class UnresolvedVariable(Exception):
         super(UnresolvedVariable, self).__init__(message, *args, **kwargs)
 
 
+class MissingVariable(Exception):
+
+    def __init__(self, blueprint, variable_name, *args, **kwargs):
+        message = "Variable \"%s\" in blueprint \"%s\" is missing" % (
+            variable_name, blueprint.name)
+        super(MissingVariable, self).__init__(message, *args, **kwargs)
+
+
 class StackDoesNotExist(Exception):
 
     def __init__(self, stack_name, *args, **kwargs):

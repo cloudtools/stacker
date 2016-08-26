@@ -5,6 +5,7 @@ from troposphere import Parameter, Template
 
 from ..exceptions import (
     MissingLocalParameterException,
+    MissingVariable,
     UnresolvedVariables,
     UnresolvedVariable,
 )
@@ -198,11 +199,12 @@ class Blueprint(object):
         """
         self.resolved_variables = {}
         defined_variables = self.defined_variables()
-        for variable in variables:
-            if variable.name not in defined_variables:
-                logger.debug("Blueprint %s does not use parameter %s.",
-                             self.name, variable.name)
-                continue
+        variable_dict = dict((var.name, var) for var in variables)
+        for var_name in defined_variables.iterkeys():
+            if var_name not in variable_dict:
+                raise MissingVariable(self, var_name)
+
+            variable = variable_dict[var_name]
             if not variable.resolved:
                 raise UnresolvedVariable(self, variable)
 

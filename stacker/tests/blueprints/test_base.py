@@ -8,13 +8,11 @@ from stacker.blueprints.base import (
 )
 from stacker.exceptions import (
     MissingLocalParameterException,
+    MissingVariable,
     UnresolvedVariables,
 )
 from stacker.lookups import Lookup
-from stacker.variables import (
-    Variable,
-    resolve_variables,
-)
+from stacker.variables import Variable
 
 
 class TestLocalParameters(unittest.TestCase):
@@ -127,3 +125,15 @@ class TestVariables(unittest.TestCase):
         variables = blueprint.get_variables()
         self.assertEqual(variables["Param1"], 1)
         self.assertEqual(variables["Param2"], "Test Output")
+
+    def test_get_variables_missing_variable(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+                "Param2": {"type": str},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", 1)]
+        with self.assertRaises(MissingVariable):
+            blueprint.resolve_variables(variables)

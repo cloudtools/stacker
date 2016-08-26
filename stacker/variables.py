@@ -6,24 +6,24 @@ from .lookups import (
 )
 
 
-class OutputTemplate(Template):
+class LookupTemplate(Template):
     """A custom string template we use to replace lookup values"""
     idpattern = r'[_a-z][_a-z0-9\s\:\-\.\,]*'
 
 
 def resolve_string(value, replacements):
-    """Resolve any output lookups within a string.
+    """Resolve any lookups within a string.
 
     Args:
         value (str): string value we're resolving lookups within
-        replacements (dict): resolved output values
+        replacements (dict): resolved lookup values
 
     Returns:
         str: value with any lookups resolved
 
     """
     # we use safe_substitute to support resolving nested lookups
-    return OutputTemplate(value).safe_substitute(replacements)
+    return LookupTemplate(value).safe_substitute(replacements)
 
 
 def resolve(value, replacements):

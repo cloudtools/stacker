@@ -8,6 +8,13 @@ DEFAULT_LOOKUP = output.TYPE_NAME
 
 
 def register_lookup_handler(lookup_type, handler_or_path):
+    """Register a lookup handler.
+
+    Args:
+        lookup_type (str): Name to register the handler under
+        handler_or_path (OneOf[func, str]): a function or a path to a handler
+
+    """
     handler = handler_or_path
     if isinstance(handler_or_path, basestring):
         handler = load_object_from_string(handler_or_path)
@@ -15,6 +22,19 @@ def register_lookup_handler(lookup_type, handler_or_path):
 
 
 def resolve_lookups(lookups, context, provider):
+    """Resolve a set of lookups.
+
+    Args:
+        lookups (list[:class:`stacker.lookups.Lookup`]): a list of stacker
+            lookups to resolve
+        context (:class:`stacker.context.Context`): stacker context
+        provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
+            base provider
+
+    Returns:
+        dict: dict of Lookup -> resolved value
+
+    """
     resolved_lookups = {}
     for lookup in lookups:
         try:

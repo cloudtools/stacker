@@ -5,7 +5,25 @@ TYPE_NAME = "output"
 Output = namedtuple("Output", ("stack_name", "output_name"))
 
 
-def handler(value, context, provider, **kwargs):
+def handler(value, provider=None, context=None, **kwargs):
+    """Fetch an output from the designated stack.
+
+    Args:
+        value (str): string with the following format:
+            <stack_name>::<output_name>, ie. some-stack::SomeOutput
+        provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
+            base provider
+        context (:class:`stacker.context.Context`): stacker context
+
+    Returns:
+        str: output from the specified stack
+
+    """
+    if provider is None:
+        raise ValueError('Provider is required')
+    if context is None:
+        raise ValueError('Context is required')
+
     d = deconstruct(value)
     stack_fqn = context.get_fqn(d.stack_name)
     output = provider.get_output(stack_fqn, d.output_name)

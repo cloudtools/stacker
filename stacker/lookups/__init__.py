@@ -6,9 +6,16 @@ from .registry import DEFAULT_LOOKUP
 from .registry import resolve_lookups  # NOQA
 from .registry import register_lookup_handler  # NOQA
 
-LOOKUP_REGEX = re.compile(
-    "\$\{((?P<type>[._\-a-zA-Z0-9]*(?=\s))?\s*(?P<input>[,\._\-a-zA-Z0-9\:\s]+))\}"
-)
+LOOKUP_REGEX = re.compile("""
+\$\{                                # opening brace for the lookup
+((?P<type>[._\-a-zA-Z0-9]*(?=\s))   # type of lookup, must be followed by a
+                                    # space to allow for defaulting to "output"
+                                    # type
+?\s*                                # any number of spaces separating the type
+                                    # from the input
+(?P<input>[,\._\-a-zA-Z0-9\:\s]+)   # the input value to the lookup
+)\}                                 # closing brace of the lookup
+""", re.VERBOSE)
 
 Lookup = namedtuple("Lookup", ("type", "input", "raw"))
 

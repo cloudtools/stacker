@@ -2,6 +2,7 @@ from ..exceptions import UnknownLookupType
 from ..util import load_object_from_string
 
 from .handlers import output
+from .handlers import kms
 
 LOOKUP_HANDLERS = {}
 DEFAULT_LOOKUP = output.TYPE_NAME
@@ -49,3 +50,4 @@ def resolve_lookups(lookups, context, provider):
     return resolved_lookups
 
 register_lookup_handler(output.TYPE_NAME, output.handler)
+register_lookup_handler(kms.TYPE_NAME, kms.handler)

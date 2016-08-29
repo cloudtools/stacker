@@ -4,8 +4,10 @@ import botocore.session
 
 from .base import read_value_from_path
 
+TYPE_NAME = "kms"
 
-def kms_simple_decrypt(value):
+
+def handler(value, **kwargs):
     """Decrypt the specified value with a master key in KMS.
 
     kmssimple field types should be in the following format:
@@ -24,7 +26,7 @@ def kms_simple_decrypt(value):
         CiD6bC8t2Y<...encrypted blob...>
 
         # In stacker we would reference the encrypted value like:
-        conf_key: !kms us-east-1@CiD6bC8t2Y<...encrypted blob...>
+        conf_key: ${kms us-east-1@CiD6bC8t2Y<...encrypted blob...>}
 
         You can optionally store the encrypted value in a file, ie:
 
@@ -34,7 +36,7 @@ def kms_simple_decrypt(value):
         and reference it within stacker (NOTE: the path should be relative to
         the stacker config file):
 
-        conf_key: !kms file://kms_value.txt
+        conf_key: ${kms file://kms_value.txt}
 
         # Both of the above would resolve to
         conf_key: PASSWORD
@@ -51,8 +53,3 @@ def kms_simple_decrypt(value):
     decoded = base64.b64decode(value)
     response = kms.decrypt(CiphertextBlob=decoded)
     return response["Plaintext"]
-
-
-def kms_simple_constructor(loader, node):
-    value = loader.construct_scalar(node)
-    return kms_simple_decrypt(value)

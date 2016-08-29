@@ -1,7 +1,7 @@
 from ..exceptions import UnknownLookupType
 from ..util import load_object_from_string
 
-from . import output
+from .handlers import output
 
 LOOKUP_HANDLERS = {}
 DEFAULT_LOOKUP = output.TYPE_NAME

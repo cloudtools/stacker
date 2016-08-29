@@ -5,7 +5,7 @@ from .variables import (
     Variable,
     resolve_variables,
 )
-from .lookups.output import (
+from .lookups.handlers.output import (
     TYPE_NAME as OUTPUT_LOOKUP_TYPE_NAME,
     deconstruct,
 )

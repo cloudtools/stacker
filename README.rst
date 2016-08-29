@@ -29,9 +29,9 @@ released to the open source community.
 
 stacker Blueprints are written in troposphere_, though the purpose of
 most templates is to keep them as generic as possible and then use
-configuration (and CloudFormation Parameters/Outputs) to modify them.
+configuration to modify them.
 
-Remind we use stacker to manage all of our Cloudformation stacks-
+At Remind we use stacker to manage all of our Cloudformation stacks -
 both in development, staging and production without any major issues.
 
 Stacker Command

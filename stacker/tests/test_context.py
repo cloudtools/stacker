@@ -2,6 +2,7 @@ import unittest
 
 from ..context import Context, get_fqn
 from ..exceptions import MissingEnvironment
+from ..lookups.registry import LOOKUP_HANDLERS
 
 
 class TestContext(unittest.TestCase):
@@ -69,6 +70,15 @@ class TestContext(unittest.TestCase):
         context = Context({"namespace": "test"})
         context.load_config("""mappings:""")
         self.assertEqual(context.bucket_name, "stacker-test")
+
+    def test_context_register_custom_lookups(self):
+        context = Context({"namespace": "test"})
+        config = """
+            lookups:
+                custom: importlib.import_module
+        """
+        context.load_config(config)
+        self.assertTrue(callable(LOOKUP_HANDLERS["custom"]))
 
     def test_context_bucket_name_is_overriden_but_is_none(self):
         context = Context({"namespace": "test"})

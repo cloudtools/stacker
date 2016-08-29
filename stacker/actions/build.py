@@ -200,6 +200,9 @@ class Action(BaseAction):
                 logger.debug("Stack %s in progress.", stack.fqn)
                 return old_status
 
+        logger.debug("Resolving stack %s variables", stack.fqn)
+        stack.resolve_variables(self.context, self.provider)
+
         logger.debug("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack)

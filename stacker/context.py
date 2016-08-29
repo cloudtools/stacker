@@ -1,6 +1,7 @@
 from .config import parse_config
 from .exceptions import MissingEnvironment
 from .stack import Stack
+from .lookups import register_lookup_handler
 
 
 def get_fqn(base_fqn, delimiter, name=None):
@@ -28,8 +29,8 @@ class Context(object):
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,
             usually all stacks defined in the config will be operated on.
-        parameters (dict): Parameters passed down to each blueprint to
-            parameterize the templates.
+        parameters (dict): Parameters from the command line passed down to each
+            blueprint to parameterize the templates.
         mappings (dict): Used as Cloudformation mappings for the blueprint.
         config (dict): The configuration being operated on, containing the
             stack definitions.
@@ -70,7 +71,11 @@ class Context(object):
             self.bucket_name = bucket_name
         tags = self.config.get("tags", None)
         if tags is not None:
-            self.tags = dict([(str(tag_key), str(tag_value)) for tag_key, tag_value in tags.items()])
+            self.tags = dict([(str(tag_key), str(tag_value)) for tag_key,
+                              tag_value in tags.items()])
+        lookups = self.config.get("lookups", {})
+        for key, handler in lookups.iteritems():
+            register_lookup_handler(key, handler)
 
     def _get_stack_definitions(self):
         if not self.stack_names:

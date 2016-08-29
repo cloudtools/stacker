@@ -1,3 +1,34 @@
+class UnknownLookupType(Exception):
+
+    def __init__(self, lookup, *args, **kwargs):
+        message = "Unknown lookup type: \"{}\"".format(lookup.type)
+        super(UnknownLookupType, self).__init__(message, *args, **kwargs)
+
+
+class UnresolvedVariables(Exception):
+
+    def __init__(self, blueprint, *args, **kwargs):
+        message = "Blueprint: \"%s\" hasn't resolved it's variables" % (
+            blueprint.name)
+        super(UnresolvedVariables, self).__init__(message, *args, **kwargs)
+
+
+class UnresolvedVariable(Exception):
+
+    def __init__(self, blueprint, variable, *args, **kwargs):
+        message = "Variable \"%s\" in blueprint \"%s\" hasn't been resolved" % (
+            variable.name, blueprint.name)
+        super(UnresolvedVariable, self).__init__(message, *args, **kwargs)
+
+
+class MissingVariable(Exception):
+
+    def __init__(self, blueprint, variable_name, *args, **kwargs):
+        message = "Variable \"%s\" in blueprint \"%s\" is missing" % (
+            variable_name, blueprint.name)
+        super(MissingVariable, self).__init__(message, *args, **kwargs)
+
+
 class StackDoesNotExist(Exception):
 
     def __init__(self, stack_name, *args, **kwargs):

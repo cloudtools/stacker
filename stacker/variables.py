@@ -55,7 +55,8 @@ def resolve_variables(variables, context, provider):
     """Given a list of variables, resolve all of them.
 
     Args:
-        variables (list): list of `stacker.variables.Variables`
+        variables (list of :class:`stacker.variables.Variable`): list of
+            variables
         context (:class:`stacker.context.Context`): stacker context
         provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
             base provider
@@ -122,7 +123,8 @@ class Variable(object):
         """Replace lookups in the Variable with their resolved values.
 
         Args:
-            resolved_lookups (dict): dict of Lookup -> resolved value.
+            resolved_lookups (dict): dict of :class:`stacker.lookups.Lookup` ->
+                resolved value.
 
         """
         replacements = {}

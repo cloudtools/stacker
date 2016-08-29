@@ -194,7 +194,8 @@ class Blueprint(object):
         env file, the config, and any lookups resolved.
 
         Args:
-            variables (list): list of variables
+            variables (list of :class:`stacker.variables.Variable`): list of
+                variables
 
         """
         self.resolved_variables = {}

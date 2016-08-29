@@ -7,20 +7,20 @@ VERSION = "0.6.3"
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "troposphere>=1.8.0",
-    "boto3>=1.3.1",
-    "botocore>=1.4.38",
-    "PyYAML>=3.11",
-    "awacs>=0.6.0",
-    "colorama==0.3.7",
+    "troposphere~=1.8.0",
+    "boto3~=1.3.1",
+    "botocore~=1.4.38",
+    "PyYAML~=3.11",
+    "awacs~=0.6.0",
+    "colorama~=0.3.7",
 ]
 
 tests_require = [
-    "nose>=1.0",
-    "mock==1.0.1",
-    "stacker_blueprints",
-    "moto",
-    "testfixtures",
+    "nose~=1.0",
+    "mock~=2.0.0",
+    "stacker_blueprints~=0.6.0",
+    "moto~=0.4.25",
+    "testfixtures~=4.10.0",
 ]
 
 

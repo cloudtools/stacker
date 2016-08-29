@@ -80,7 +80,7 @@ def output_summary(fqn, action, changeset, replacements_only=False):
     changes = []
     for change in changeset:
         resource = change['ResourceChange']
-        replacement = resource['Replacement'] == 'True'
+        replacement = resource.get('Replacement') == 'True'
         summary = '- %s %s (%s)' % (
             resource['Action'],
             resource['LogicalResourceId'],

@@ -2,7 +2,7 @@ import base64
 
 import botocore.session
 
-from .base import read_value_from_path
+from ...util import read_value_from_path
 
 TYPE_NAME = "kms"
 

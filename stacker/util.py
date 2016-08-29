@@ -242,7 +242,7 @@ def read_value_from_path(value):
 
     The value can be referred to with the `file://` prefix. ie:
 
-        conf_key: !kms file://kms_value.txt
+        conf_key: ${kms file://kms_value.txt}
 
     """
     if value.startswith('file://'):

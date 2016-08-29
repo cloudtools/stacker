@@ -25,18 +25,6 @@ class TestConfig(unittest.TestCase):
         c = parse_config("a: $a", {"a": "A"})
         self.assertEqual(c["a"], "A")
 
-    @patch("stacker.config.translators.vault.get_vaulted_value")
-    def test_custom_constructors(self, patched):
-        patched.return_value = "stub"
-        c = parse_config("a: $a", {"a": "!vault some_encrypted_value"})
-        self.assertEqual(c["a"], "stub")
-
-    @patch("stacker.config.translators.vault.subprocess")
-    def test_vault_constructor(self, patched):
-        patched.check_output.return_value = "secret\n"
-        c = parse_config("a: $a", {"a": "!vault secret/hello@value"})
-        self.assertEqual(c["a"], "secret")
-
     def test_blank_env_values(self):
         conf = """a: ${key1}"""
         e = parse_environment("""key1:""")

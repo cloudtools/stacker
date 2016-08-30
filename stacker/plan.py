@@ -29,10 +29,10 @@ class Step(object):
     """State machine for executing generic actions related to stacks.
 
     Args:
-        stack (`stacker.stack.Stack`): the `Stack` object associated with this
-            step
+        stack (:class:`stacker.stack.Stack`): the stack associated
+            with this step
         run_func (func): the function to be run for the given stack
-        requires (Optional[list]): List of stacks this step depends on being
+        requires (list, optional): List of stacks this step depends on being
             completed before running. This step will not be executed unless the
             required stacks have either completed or skipped.
 
@@ -108,9 +108,9 @@ class Plan(OrderedDict):
 
     Args:
         description (str): description of the plan
-        sleep_time (Optional[int]): the amount of time that will be passed to
+        sleep_time (int, optional): the amount of time that will be passed to
             the `wait_func`. Default: 5 seconds.
-        wait_func (Optional[func]): the function to be called after each pass
+        wait_func (func, optional): the function to be called after each pass
             of running stacks. This defaults to :func:`time.sleep` and will
             sleep for the given `sleep_time` before starting the next pass.
             Default: :func:`time.sleep`
@@ -140,7 +140,7 @@ class Plan(OrderedDict):
         Args:
             stack (:class:`stacker.stack.Stack`): The stack to add to the plan.
             run_func (function): The function to call when the step is ran.
-            requires (Optional(list)): A list of other stacks that are required
+            requires (list, optional): A list of other stacks that are required
                 to be complete before this step is started.
         """
         self[stack.fqn] = Step(
@@ -266,9 +266,9 @@ class Plan(OrderedDict):
         taken.
 
         Args:
-            level (Optional[int]): a valid log level that should be used to log
+            level (int, optional): a valid log level that should be used to log
                 the outline
-            message (Optional[str]): a message that will be logged to
+            message (str, optional): a message that will be logged to
                 the user after the outline has been logged.
         """
         steps = 1

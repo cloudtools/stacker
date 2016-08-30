@@ -5,6 +5,9 @@ import yaml
 
 from .. import exceptions
 
+# register translators (yaml constructors)
+from .translators import *  # NOQA
+
 
 def parse_config(raw_config, environment=None):
     """Parse a config, using it as a template with the environment.

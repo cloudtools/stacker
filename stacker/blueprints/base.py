@@ -213,7 +213,17 @@ class Blueprint(object):
                 logger.debug("Got `None` value for variable %s, ignoring it. "
                              "Default value should be used.", variable.name)
                 continue
-            self.resolved_variables[variable.name] = variable.value
+
+            value = variable.value
+            var_def = defined_variables[var_name]
+            _type = var_def.get("type")
+            if _type:
+                try:
+                    value = _type(value)
+                except ValueError:
+                    raise ValueError("Variable %s must be %s.", var_name,
+                                     _type)
+            self.resolved_variables[variable.name] = value
 
     def import_mappings(self):
         if not self.mappings:

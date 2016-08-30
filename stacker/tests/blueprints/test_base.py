@@ -126,7 +126,7 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(variables["Param1"], 1)
         self.assertEqual(variables["Param2"], "Test Output")
 
-    def test_get_variables_missing_variable(self):
+    def test_resolve_variables_missing_variable(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
                 "Param1": {"type": int},
@@ -137,3 +137,26 @@ class TestVariables(unittest.TestCase):
         variables = [Variable("Param1", 1)]
         with self.assertRaises(MissingVariable):
             blueprint.resolve_variables(variables)
+
+    def test_resolve_variables_incorrect_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "Something")]
+        with self.assertRaises(ValueError):
+            blueprint.resolve_variables(variables)
+
+    def test_resolve_variables_convert_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "1")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], int))

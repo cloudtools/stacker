@@ -7,7 +7,7 @@ Build
 
 Build is used to create/update the stacks provided in the config file. It
 automatically figures out any dependencies between stacks, and creates them
-in parallel safely (if a stack depends on another stack, it will wait for 
+in parallel safely (if a stack depends on another stack, it will wait for
 that stack to be finished before updating/creating).
 
 It also provides the *--dump* flag for testing out blueprints before
@@ -16,41 +16,69 @@ pushing them up into CloudFormation.
 ::
 
   # stacker build -h
-  usage: stacker build [-h] [-p PARAMETER=VALUE] [-e ENV=VALUE] [-r REGION] [-v] [-m MAX_ZONES] [-o] [--force STACKNAME] [--stacks STACKNAME] [-t] [-d DUMP]
+  usage: stacker build [-h] [-p PARAMETER=VALUE] [-e ENV=VALUE] [-r REGION] [-v]
+                       [-i] [--replacements-only] [-m MAX_ZONES] [-o]
+                       [--force STACKNAME] [--stacks STACKNAME] [-t] [-d DUMP]
                        environment config
 
-  Launches or updates CloudFormation stacks based on the given config. Stacker is smart enough to figure out if anything (the template or parameters) have changed for
-  a given stack. If nothing has changed, stacker will correctly skip executing anything against the stack.
+  Launches or updates CloudFormation stacks based on the given config. Stacker
+  is smart enough to figure out if anything (the template or parameters) have
+  changed for a given stack. If nothing has changed, stacker will correctly skip
+  executing anything against the stack.
 
   positional arguments:
-    environment           Path to a simple `key: value` pair environment file. The values in the environment file can be used in the stack config as if it were a
-                          string.Template type: https://docs.python.org/2/library/string.html#template-strings. Must define at least a 'namespace'.
-    config                The config file where stack configuration is located. Must be in yaml format.
+    environment           Path to a simple `key: value` pair environment file.
+                          The values in the environment file can be used in the
+                          stack config as if it were a string.Template type:
+                          https://docs.python.org/2/library/string.html
+                          #template-strings. Must define at least a "namespace".
+    config                The config file where stack configuration is located.
+                          Must be in yaml format.
 
   optional arguments:
     -h, --help            show this help message and exit
     -p PARAMETER=VALUE, --parameter PARAMETER=VALUE
-                          Adds parameters from the command line that can be used inside any of the stacks being built. Can be specified more than once.
+                          Adds parameters from the command line that can be used
+                          inside any of the stacks being built. Can be specified
+                          more than once.
     -e ENV=VALUE, --env ENV=VALUE
-                          Adds environment key/value pairs from the command line. Overrides your environment file settings. Can be specified more than once.
+                          Adds environment key/value pairs from the command
+                          line. Overrides your environment file settings. Can be
+                          specified more than once.
     -r REGION, --region REGION
                           The AWS region to launch in. Default: us-east-1
-    -v, --verbose         Increase output verbosity. May be specified up to twice.
+    -v, --verbose         Increase output verbosity. May be specified up to
+                          twice.
+    -i, --interactive     Enable interactive mode. If specified, this will use
+                          the AWS interactive provider, which leverages
+                          CloudFormation Change Sets to display changes before
+                          running CloudFormation templates. You'll be asked if
+                          you want to execute each change set. If you only want
+                          to authorize replacements, run with "--replacements-
+                          only" as well.
+    --replacements-only   If interactive mode is enabled, stacker will only
+                          prompt to authorize replacements.
     -m MAX_ZONES, --max-zones MAX_ZONES
-                          Gives you the ability to limit the # of zones that resources will be launched in. If not given, then resources will be launched in all
-                          available availability zones.
-    -o, --outline         Print an outline of what steps will be taken to build the stacks
-    --force STACKNAME     If a stackname is provided to --force, it will be updated, even if it is locked in the config.
-    --stacks STACKNAME    Only work on the stacks given. Can be specified more than once. If not specified then stacker will work on all stacks in the config file.
+                          Gives you the ability to limit the # of zones that
+                          resources will be launched in. If not given, then
+                          resources will be launched in all available
+                          availability zones.
+    -o, --outline         Print an outline of what steps will be taken to build
+                          the stacks
+    --force STACKNAME     If a stackname is provided to --force, it will be
+                          updated, even if it is locked in the config.
+    --stacks STACKNAME    Only work on the stacks given. Can be specified more
+                          than once. If not specified then stacker will work on
+                          all stacks in the config file.
     -t, --tail            Tail the CloudFormation logs while workingwith stacks
-    -d DUMP, --dump DUMP  Dump the rendered Cloudformation templates to a directory
+    -d DUMP, --dump DUMP  Dump the rendered CloudFormation templates to a
 
 
 Destroy
 -------
 
-Destroy handles the tearing down of Cloudformation stacks defined in the
-config file.  It figures out any dependencies that may exist, and destroys
+Destroy handles the tearing down of CloudFormation stacks defined in the
+config file. It figures out any dependencies that may exist, and destroys
 the stacks in the correct order (in parallel if all dependent stacks have
 already been destroyed).
 
@@ -114,7 +142,7 @@ Diff
 ----
 
 Diff attempts to show the differences between what stacker expects to push up
-into Cloudformation, and what already exists in Cloudformation.  This command
+into CloudFormation, and what already exists in CloudFormation.  This command
 is not perfect, as following things like *Ref* and *GetAtt* are not currently
 possible, but it should give a good idea if anything has changed.
 

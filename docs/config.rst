@@ -127,6 +127,11 @@ These can be used in each blueprint/stack as usual.
 Lookups
 -------
 
+Lookups allow you to create custom methods which take a value and are
+resolved at build time. The resolved values are passed to the `Blueprints
+<blueprints.html>`_ before it is rendered. For more information, see the
+`Lookups <lookups.html>`_ documentation.
+
 stacker provides some common `lookups <lookups.html>`_, but it is
 sometimes useful to have your own custom lookup that doesn't get shipped
 with stacker. You can register your own lookups by defining a `lookups`
@@ -421,14 +426,6 @@ it before passing it on to the stack. Currently this is used to allow you to
 pass a KMS encrypted string as a Parameter, then have KMS decrypt it before
 submitting it to CloudFormation. For more information, see the
 `Translators <translators.html>`_ documentation.
-
-Lookups
-=======
-
-Lookups allow you to create custom methods which take a value and are
-resolved at build time. The resolved values are passed to the `Blueprints
-<blueprints.html>`_ before it is rendered. For more information, see the
-`Lookups <lookups.html>`_ documentation.
 
 .. _`anchors & references`: https://en.wikipedia.org/wiki/YAML#Repeated_nodes
 .. _Mappings: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html

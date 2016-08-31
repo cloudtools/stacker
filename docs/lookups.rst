@@ -125,3 +125,9 @@ requirements.
 For example::
 
   ConfVariable: ${xref fully-qualified-stack::SomeOutput}
+
+Custom Lookups
+--------------
+
+Custom lookups can be registered within the config. For more information
+see `Configuring Lookups <config.html#lookups`_.

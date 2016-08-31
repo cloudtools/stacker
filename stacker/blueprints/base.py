@@ -24,17 +24,21 @@ class CFNParameter(object):
         Blueprint variables when we submit the CloudFormation parameters.
 
         Args:
-            value (str): the value we're going to submit as a CloudFormation
-                Parameter.
+            value (str or list): the value we're going to submit as a
+                CloudFormation Parameter.
 
         """
+        if not (isinstance(value, basestring) or isinstance(value, list)):
+            raise ValueError("CFNParameter value must be a str or a list")
+
         self.value = value
 
     def __repr__(self):
         return "CFNParameter({})".format(self.value)
 
-    def __str__(self):
-        return str(self.value)
+    def to_parameter_value(self):
+        """Return the value to be submitted to CloudFormation"""
+        return self.value
 
 
 def get_local_parameters(parameter_def, parameters):
@@ -174,10 +178,10 @@ class Blueprint(object):
                              getattr(self, "PARAMETERS", {}))
 
         for var_name, attrs in self.defined_variables().iteritems():
-            _type = attrs.get("type")
-            if isinstance(_type, CFNType):
+            var_type = attrs.get("type")
+            if isinstance(var_type, CFNType):
                 cfn_attrs = copy.deepcopy(attrs)
-                cfn_attrs["type"] = _type.parameter_type
+                cfn_attrs["type"] = var_type.parameter_type
                 parameters[var_name] = cfn_attrs
         return parameters
 
@@ -231,8 +235,8 @@ class Blueprint(object):
         variables = self.get_variables()
         output = {}
         for key, value in variables.iteritems():
-            if isinstance(value, CFNParameter):
-                output[key] = str(value)
+            if hasattr(value, "to_parameter_value"):
+                output[key] = value.to_parameter_value()
         return output
 
     def resolve_variables(self, variables):

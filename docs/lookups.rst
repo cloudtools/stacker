@@ -115,9 +115,12 @@ aren't contained within the current namespace.
 
 The ``output`` type will take a stack name and use the current context to
 expand the fully qualified stack name based on the namespace. ``xref``
-assumes skips this expansion because it assumes you've provided it with
+skips this expansion because it assumes you've provided it with
 the fully qualified stack name already. This allows you to reference
 output values from any CloudFormation stack.
+
+Also, unlike the ``output`` lookup type, ``xref`` doesn't impact stack
+requirements.
 
 For example::
 

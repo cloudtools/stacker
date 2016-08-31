@@ -2,6 +2,7 @@ from ..exceptions import UnknownLookupType
 from ..util import load_object_from_string
 
 from .handlers import output
+from .handlers import kms
 from .handlers import xref
 
 LOOKUP_HANDLERS = {}
@@ -50,4 +51,5 @@ def resolve_lookups(lookups, context, provider):
     return resolved_lookups
 
 register_lookup_handler(output.TYPE_NAME, output.handler)
+register_lookup_handler(kms.TYPE_NAME, kms.handler)
 register_lookup_handler(xref.TYPE_NAME, xref.handler)

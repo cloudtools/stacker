@@ -88,15 +88,20 @@ class Provider(BaseProvider):
     def __init__(self, region, **kwargs):
         self.region = region
         self._outputs = {}
-        self._cloudformation = {}
+        self._cloudformation = None
+        # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
+        # see: https://github.com/remind101/stacker/issues/196
+        self._pid = os.getpid()
 
     @property
     def cloudformation(self):
+        # deals w/ multiprocessing issues w/ sharing ssl conns
+        # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
-        if pid not in self._cloudformation:
+        if pid != self.pid:
             session = boto3.Session(region_name=self.region)
-            self._cloudformation[pid] = session.client('cloudformation')
-        return self._cloudformation[pid]
+            self._cloudformation = session.client('cloudformation')
+        return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):
         try:

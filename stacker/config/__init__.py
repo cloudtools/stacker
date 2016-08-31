@@ -30,6 +30,9 @@ def parse_config(raw_config, environment=None):
         buff.write(t.substitute(environment))
     except KeyError, e:
         raise exceptions.MissingEnvironment(e.args[0])
+    except ValueError:
+        # Support "invalid" placeholders for lookup placeholders.
+        buff.write(t.safe_substitute(environment))
 
     buff.seek(0)
     config = yaml.load(buff)

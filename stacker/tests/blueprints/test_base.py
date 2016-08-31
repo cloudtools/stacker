@@ -3,8 +3,12 @@ import unittest
 from mock import MagicMock
 from stacker.blueprints.base import (
     Blueprint,
+    CFNParameter,
     build_parameter,
     get_local_parameters,
+)
+from stacker.blueprints.types import (
+    CFNString,
 )
 from stacker.exceptions import (
     MissingLocalParameterException,
@@ -160,3 +164,53 @@ class TestVariables(unittest.TestCase):
         blueprint.resolve_variables(variables)
         variables = blueprint.get_variables()
         self.assertTrue(isinstance(variables["Param1"], int))
+
+    def test_resolve_variables_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "Value")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+
+    def test_get_parameters_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        parameters = blueprint._get_parameters()
+        self.assertTrue("Param1" in parameters)
+        parameter = parameters["Param1"]
+        self.assertEqual(parameter["type"], "String")
+
+    def test_required_parameters_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        blueprint.setup_parameters()
+        self.assertEqual(blueprint.required_parameters[0][0], "Param1")
+
+    def test_get_cfn_parameters(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+                "Param2": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "1"), Variable("Param2", "Value")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertEqual(len(variables), 2)
+        parameters = blueprint.get_cfn_parameters()
+        self.assertEqual(len(parameters.keys()), 1)
+        self.assertEqual(parameters["Param2"], "Value")

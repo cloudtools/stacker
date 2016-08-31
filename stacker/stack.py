@@ -143,6 +143,25 @@ class Stack(object):
             )
         return self._blueprint
 
+    @property
+    def cfn_parameters(self):
+        """Return all CloudFormation Parameters for the stack.
+
+        The Stack can have CloudFormation Parameters passed in as `parameters`
+        within the stack definition. This is deprecated and will be removed in
+        a future release.
+
+        The new way to specify CloudFormation Parameters is via Blueprint
+        Variables with a :class:`stacker.blueprints.types.CFNType` `type`.
+
+        This is a backwards compatible way of returning both ways of defining
+        CloudFormation Parameters.
+
+        """
+        parameters = copy.deepcopy(self.parameters)
+        parameters.update(self.blueprint.get_cfn_parameters())
+        return parameters
+
     def resolve_variables(self, context, provider):
         """Resolve the Stack variables.
 

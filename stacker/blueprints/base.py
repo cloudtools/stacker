@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import logging
 
@@ -9,8 +10,27 @@ from ..exceptions import (
     UnresolvedVariables,
     UnresolvedVariable,
 )
+from .types import CFNType
 
 logger = logging.getLogger(__name__)
+
+
+class CFNParameter(object):
+
+    def __init__(self, value):
+        """Wrapper around a value to indicate a CloudFormation Parameter.
+
+        This allows us to filter out non-CloudFormation Parameters from
+        Blueprint variables when we submit the CloudFormation parameters.
+
+        """
+        self.value = value
+
+    def __repr__(self):
+        return "CFNParameter({})".format(self.value)
+
+    def __str__(self):
+        return str(self.value)
 
 
 def get_local_parameters(parameter_def, parameters):
@@ -135,7 +155,8 @@ class Blueprint(object):
         """Get the parameter definitions.
 
         First looks at CF_PARAMETERS, then falls back to PARAMETERS for
-        backwards compatibility.
+        backwards compatibility. This will also return any variables whose
+        `type` is an instance of `CFNType`.
 
         Makes this easy to override going forward for more backwards
         compatibility.
@@ -145,8 +166,16 @@ class Blueprint(object):
                 are dicts containing key/values for various parameter
                 properties.
         """
-        return getattr(self, "CF_PARAMETERS",
-                       getattr(self, "PARAMETERS", {}))
+        parameters = getattr(self, "CF_PARAMETERS",
+                             getattr(self, "PARAMETERS", {}))
+
+        for var_name, attrs in self.defined_variables().iteritems():
+            _type = attrs.get("type")
+            if isinstance(_type, CFNType):
+                cfn_attrs = copy.deepcopy(attrs)
+                cfn_attrs["type"] = _type.parameter_type
+                parameters[var_name] = cfn_attrs
+        return parameters
 
     def setup_parameters(self):
         t = self.template
@@ -187,6 +216,21 @@ class Blueprint(object):
             raise UnresolvedVariables(self)
         return self.resolved_variables
 
+    def get_cfn_parameters(self):
+        """Return a dictionary of variables with `type` :class:`CFNType`.
+
+        Returns:
+            dict: variables that need to be submitted as CloudFormation
+                Parameters.
+
+        """
+        variables = self.get_variables()
+        output = {}
+        for key, value in variables.iteritems():
+            if isinstance(value, CFNParameter):
+                output[key] = str(value)
+        return output
+
     def resolve_variables(self, variables):
         """Resolve the values of the blueprint variables.
 
@@ -216,13 +260,16 @@ class Blueprint(object):
 
             value = variable.value
             var_def = defined_variables[var_name]
-            _type = var_def.get("type")
-            if _type:
-                try:
-                    value = _type(value)
-                except ValueError:
-                    raise ValueError("Variable %s must be %s.", var_name,
-                                     _type)
+            var_type = var_def.get("type")
+            if var_type:
+                if isinstance(var_type, CFNType):
+                    value = CFNParameter(value)
+                else:
+                    try:
+                        value = var_type(value)
+                    except ValueError:
+                        raise ValueError("Variable %s must be %s.", var_name,
+                                         var_type)
             self.resolved_variables[variable.name] = value
 
     def import_mappings(self):

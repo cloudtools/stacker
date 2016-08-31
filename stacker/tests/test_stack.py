@@ -1,3 +1,4 @@
+from mock import MagicMock
 import unittest
 
 from stacker.context import Context
@@ -62,6 +63,23 @@ class TestStack(unittest.TestCase):
             self.context.get_fqn("fakeStack2"),
             stack.requires,
         )
+
+    def test_stack_cfn_parameters(self):
+        definition = generate_definition(
+            base_name="vpc",
+            stack_id=1,
+            parameters={
+                "Param1": "fakeStack::FakeOutput",
+            },
+        )
+        stack = Stack(definition=definition, context=self.context)
+        stack._blueprint = MagicMock()
+        stack._blueprint.get_cfn_parameters.return_value = {
+            "Param2": "Some Resolved Value",
+        }
+        self.assertEqual(len(stack.cfn_parameters.keys()), 2)
+        param = stack.cfn_parameters["Param2"]
+        self.assertEqual(param, "Some Resolved Value")
 
     def test_empty_parameters(self):
         build_action_parameters = {}

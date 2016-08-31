@@ -9,7 +9,7 @@ from stacker.blueprints.base import (
     build_parameter,
     get_local_parameters,
 )
-from stacker.blueprints.types import (
+from stacker.blueprints.variables.types import (
     CFNString,
     EC2AvailabilityZoneNameList,
 )

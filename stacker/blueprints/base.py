@@ -14,7 +14,7 @@ from ..exceptions import (
     UnresolvedVariables,
     UnresolvedVariable,
 )
-from .types import CFNType
+from .variables.types import CFNType
 
 logger = logging.getLogger(__name__)
 

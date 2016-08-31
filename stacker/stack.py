@@ -62,12 +62,12 @@ class Stack(object):
         definition (dict): A stack definition.
         context (:class:`stacker.context.Context`): Current context for
             building the stack.
-        parameters (Optional(dict)): Context parameters.
-        mappings (Optional(dict)): Cloudformation mappings passed to the
+        parameters (dict, optional): Context parameters.
+        mappings (dict, optional): Cloudformation mappings passed to the
             blueprint.
-        locked (Optional(bool)): Whether or not the stack is locked.
-        force (Optional(bool)): Whether to force updates on this stack.
-        enabled (Optional(bool)): Whether this stack is enabled
+        locked (bool, optional): Whether or not the stack is locked.
+        force (bool, optional): Whether to force updates on this stack.
+        enabled (bool, optional): Whether this stack is enabled
     """
 
     def __init__(self, definition, context, parameters=None, mappings=None,

@@ -25,7 +25,7 @@ def resolve_lookups(lookups, context, provider):
     """Resolve a set of lookups.
 
     Args:
-        lookups (list[:class:`stacker.lookups.Lookup`]): a list of stacker
+        lookups (list of :class:`stacker.lookups.Lookup`): a list of stacker
             lookups to resolve
         context (:class:`stacker.context.Context`): stacker context
         provider (:class:`stacker.provider.base.BaseProvider`): subclass of the

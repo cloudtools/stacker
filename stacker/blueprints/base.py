@@ -98,9 +98,9 @@ class Blueprint(object):
     Args:
         name (str): A name for the blueprint. If not provided, one will be
             created from the class name automatically.
-        context (`stacker.context.Context`): the context the blueprint is being
-            executed under.
-        mappings (Optional[dict]): Cloudformation Mappings to be used in the
+        context (:class:`stacker.context.Context`): the context the blueprint
+            is being executed under.
+        mappings (dict, optional): Cloudformation Mappings to be used in the
             template.
 
     """

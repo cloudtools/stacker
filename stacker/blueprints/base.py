@@ -2,7 +2,11 @@ import copy
 import hashlib
 import logging
 
-from troposphere import Parameter, Template
+from troposphere import (
+    Parameter,
+    Ref,
+    Template,
+)
 
 from ..exceptions import (
     MissingLocalParameterException,
@@ -17,13 +21,14 @@ logger = logging.getLogger(__name__)
 
 class CFNParameter(object):
 
-    def __init__(self, value):
+    def __init__(self, name, value):
         """Wrapper around a value to indicate a CloudFormation Parameter.
 
         This allows us to filter out non-CloudFormation Parameters from
         Blueprint variables when we submit the CloudFormation parameters.
 
         Args:
+            name (str): the name of the CloudFormation Parameter
             value (str or list): the value we're going to submit as a
                 CloudFormation Parameter.
 
@@ -31,14 +36,19 @@ class CFNParameter(object):
         if not (isinstance(value, basestring) or isinstance(value, list)):
             raise ValueError("CFNParameter value must be a str or a list")
 
+        self.name = name
         self.value = value
 
     def __repr__(self):
-        return "CFNParameter({})".format(self.value)
+        return "CFNParameter({}: {})".format(self.name, self.value)
 
     def to_parameter_value(self):
         """Return the value to be submitted to CloudFormation"""
         return self.value
+
+    @property
+    def ref(self):
+        return Ref(self.name)
 
 
 def get_local_parameters(parameter_def, parameters):
@@ -271,7 +281,7 @@ class Blueprint(object):
             var_type = var_def.get("type")
             if var_type:
                 if isinstance(var_type, CFNType):
-                    value = CFNParameter(value)
+                    value = CFNParameter(name=var_name, value=value)
                 else:
                     try:
                         value = var_type(value)

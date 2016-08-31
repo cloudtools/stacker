@@ -1,6 +1,8 @@
 import unittest
 
 from mock import MagicMock
+from troposphere import Ref
+
 from stacker.blueprints.base import (
     Blueprint,
     CFNParameter,
@@ -190,6 +192,7 @@ class TestVariables(unittest.TestCase):
         variables = blueprint.get_variables()
         self.assertTrue(isinstance(variables["Param1"], CFNParameter))
         self.assertEqual(variables["Param1"].value, ["us-east-1", "us-west-2"])
+        self.assertEqual(variables["Param1"].ref.data, Ref("Param1").data)
         parameters = blueprint.get_cfn_parameters()
         self.assertEqual(parameters["Param1"], ["us-east-1", "us-west-2"])
 

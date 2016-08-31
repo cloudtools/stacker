@@ -98,7 +98,7 @@ class Provider(BaseProvider):
         # deals w/ multiprocessing issues w/ sharing ssl conns
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
-        if pid != self.pid:
+        if pid != self._pid or not self._cloudformation:
             session = boto3.Session(region_name=self.region)
             self._cloudformation = session.client('cloudformation')
         return self._cloudformation

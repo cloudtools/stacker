@@ -3,6 +3,7 @@ from ..util import load_object_from_string
 
 from .handlers import output
 from .handlers import kms
+from .handlers import xref
 
 LOOKUP_HANDLERS = {}
 DEFAULT_LOOKUP = output.TYPE_NAME
@@ -26,7 +27,7 @@ def resolve_lookups(lookups, context, provider):
     """Resolve a set of lookups.
 
     Args:
-        lookups (list[:class:`stacker.lookups.Lookup`]): a list of stacker
+        lookups (list of :class:`stacker.lookups.Lookup`): a list of stacker
             lookups to resolve
         context (:class:`stacker.context.Context`): stacker context
         provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
@@ -51,3 +52,4 @@ def resolve_lookups(lookups, context, provider):
 
 register_lookup_handler(output.TYPE_NAME, output.handler)
 register_lookup_handler(kms.TYPE_NAME, kms.handler)
+register_lookup_handler(xref.TYPE_NAME, xref.handler)

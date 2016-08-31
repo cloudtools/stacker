@@ -44,7 +44,7 @@ def extract_lookups(value):
     """Recursively extracts any stack lookups within the data structure.
 
     Args:
-        value (Union[str, list, dict]): a structure that contains lookups to
+        value (one of str, list, dict): a structure that contains lookups to
             output values
 
     Returns:

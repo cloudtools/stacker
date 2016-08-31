@@ -5,7 +5,7 @@ TYPE_NAME = "output"
 Output = namedtuple("Output", ("stack_name", "output_name"))
 
 
-def handler(value, provider=None, context=None, **kwargs):
+def handler(value, provider=None, context=None, fqn=False, **kwargs):
     """Fetch an output from the designated stack.
 
     Args:
@@ -14,6 +14,9 @@ def handler(value, provider=None, context=None, **kwargs):
         provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
             base provider
         context (:class:`stacker.context.Context`): stacker context
+        fqn (bool): boolean for whether or not the
+            :class:`stacker.context.Context` should resolve the `fqn` of the
+            stack.
 
     Returns:
         str: output from the specified stack
@@ -25,7 +28,10 @@ def handler(value, provider=None, context=None, **kwargs):
         raise ValueError('Context is required')
 
     d = deconstruct(value)
-    stack_fqn = context.get_fqn(d.stack_name)
+    stack_fqn = d.stack_name
+    if not fqn:
+        stack_fqn = context.get_fqn(d.stack_name)
+
     output = provider.get_output(stack_fqn, d.output_name)
     return output
 

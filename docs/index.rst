@@ -12,9 +12,9 @@ released to the open source community.
 
 stacker Blueprints are written in troposphere_, though the purpose of
 most templates is to keep them as generic as possible and then use
-configuration (and CloudFormation Parameters/Outputs) to modify them.
+configuration to modify them.
 
-At Remind we use stacker to manage all of our Cloudformation stacks-
+At Remind we use stacker to manage all of our Cloudformation stacks -
 both in development, staging and production without any major issues.
 
 
@@ -31,17 +31,14 @@ Main Features
   it depends on are finished.
 - Only updates stacks that have changed and that have not been explicitly
   locked or disabled.
-- Easily pass Outputs from one stack in as Parameters on another (which also
+- Easily pass Outputs from one stack in as Variables on another (which also
   automatically provides an implicit dependency)
 - Use `Environments <environments.html>`_ to manage slightly different
   configuration in different environments.
-- Use `Translators <translators.html>`_ to allow dynamic fetching or altering
-  of data used in Parameters. Currently this allows you to encrypt (using kms)
-  fields in your stack config (or environment file) so that it is easy to share
-  configs without concern for sharing secrets with those who shouldn't have
-  them.
+- Use `Lookups <lookups.html>`_ to allow dynamic fetching or altering of
+  data used in Variables.
 - A diff command for diffing your config against what is running in a live
-  cloudformation environment.
+  CloudFormation environment.
 - A small library of pre-shared Blueprints can be found at the
   stacker_blueprints_ repo, making things like setting up a VPC easy.
 
@@ -55,6 +52,7 @@ Contents:
    config
    environments
    translators
+   lookups
    commands
    blueprints
    API Docs <api/modules>

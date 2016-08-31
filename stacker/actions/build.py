@@ -119,6 +119,7 @@ class Action(BaseAction):
 
     The plan can then either be printed out as an outline or executed. If
     executed, each stack will get launched in order which entails:
+
         - Pushing the generated CloudFormation template to S3 if it has changed
         - Submitting either a build or update of the given stack to the
           `Provider`.

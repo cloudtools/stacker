@@ -14,7 +14,7 @@ def parse_config(raw_config, environment=None):
 
     Args:
         raw_config (str): the raw stacker configuration string.
-        environment (Optional[dict]): any environment values that should be
+        environment (dict, optional): any environment values that should be
             passed to the config
 
     Returns:

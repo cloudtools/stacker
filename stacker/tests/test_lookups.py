@@ -51,3 +51,24 @@ class TestLookupExtraction(unittest.TestCase):
     def test_comma_delimited(self):
         lookups = extract_lookups("${noop val1,val2}")
         self.assertEqual(len(lookups), 1)
+
+    def test_kms_lookup(self):
+        lookups = extract_lookups("${kms CiADsGxJp1mCR21fjsVjVxr7RwuO2FE3ZJqC4iG0Lm+HkRKwAQEBAgB4A7BsSadZgkdtX47FY1ca+0cLjthRN2SaguIhtC5vh5EAAACHMIGEBgkqhkiG9w0BBwagdzB1AgEAMHAGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM3IKyEoNEQVxN3BaaAgEQgEOpqa0rcl3WpHOmblAqL1rOPRyokO3YXcJAAB37h/WKLpZZRAWV2h9C67xjlsj3ebg+QIU91T/}")  # NOQA
+        self.assertEqual(len(lookups), 1)
+        lookup = list(lookups)[0]
+        self.assertEqual(lookup.type, "kms")
+        self.assertEqual(lookup.input, "CiADsGxJp1mCR21fjsVjVxr7RwuO2FE3ZJqC4iG0Lm+HkRKwAQEBAgB4A7BsSadZgkdtX47FY1ca+0cLjthRN2SaguIhtC5vh5EAAACHMIGEBgkqhkiG9w0BBwagdzB1AgEAMHAGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM3IKyEoNEQVxN3BaaAgEQgEOpqa0rcl3WpHOmblAqL1rOPRyokO3YXcJAAB37h/WKLpZZRAWV2h9C67xjlsj3ebg+QIU91T/")  # NOQA
+
+    def test_kms_lookup_with_region(self):
+        lookups = extract_lookups("${kms us-west-2@CiADsGxJp1mCR21fjsVjVxr7RwuO2FE3ZJqC4iG0Lm+HkRKwAQEBAgB4A7BsSadZgkdtX47FY1ca+0cLjthRN2SaguIhtC5vh5EAAACHMIGEBgkqhkiG9w0BBwagdzB1AgEAMHAGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM3IKyEoNEQVxN3BaaAgEQgEOpqa0rcl3WpHOmblAqL1rOPRyokO3YXcJAAB37h/WKLpZZRAWV2h9C67xjlsj3ebg+QIU91T/}")  # NOQA
+        self.assertEqual(len(lookups), 1)
+        lookup = list(lookups)[0]
+        self.assertEqual(lookup.type, "kms")
+        self.assertEqual(lookup.input, "us-west-2@CiADsGxJp1mCR21fjsVjVxr7RwuO2FE3ZJqC4iG0Lm+HkRKwAQEBAgB4A7BsSadZgkdtX47FY1ca+0cLjthRN2SaguIhtC5vh5EAAACHMIGEBgkqhkiG9w0BBwagdzB1AgEAMHAGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM3IKyEoNEQVxN3BaaAgEQgEOpqa0rcl3WpHOmblAqL1rOPRyokO3YXcJAAB37h/WKLpZZRAWV2h9C67xjlsj3ebg+QIU91T/")  # NOQA
+
+    def test_kms_file_lookup(self):
+        lookups = extract_lookups("${kms file://path/to/some/file.txt}")
+        self.assertEqual(len(lookups), 1)
+        lookup = list(lookups)[0]
+        self.assertEqual(lookup.type, "kms")
+        self.assertEqual(lookup.input, "file://path/to/some/file.txt")

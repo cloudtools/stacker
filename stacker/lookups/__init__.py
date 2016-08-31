@@ -7,14 +7,14 @@ from .registry import resolve_lookups  # NOQA
 from .registry import register_lookup_handler  # NOQA
 
 LOOKUP_REGEX = re.compile("""
-\$\{                                # opening brace for the lookup
-((?P<type>[._\-a-zA-Z0-9]*(?=\s))   # type of lookup, must be followed by a
-                                    # space to allow for defaulting to "output"
-                                    # type
-?\s*                                # any number of spaces separating the type
-                                    # from the input
-(?P<input>[,\._\-a-zA-Z0-9\:\s]+)   # the input value to the lookup
-)\}                                 # closing brace of the lookup
+\$\{                                   # opening brace for the lookup
+((?P<type>[._\-a-zA-Z0-9]*(?=\s))      # type of lookup, must be followed by a
+                                       # space to allow for defaulting to
+                                       # "output" type
+?\s*                                   # any number of spaces separating the
+                                       # type from the input
+(?P<input>[@\+\/,\._\-a-zA-Z0-9\:\s]+) # the input value to the lookup
+)\}                                    # closing brace of the lookup
 """, re.VERBOSE)
 
 Lookup = namedtuple("Lookup", ("type", "input", "raw"))
@@ -44,7 +44,7 @@ def extract_lookups(value):
     """Recursively extracts any stack lookups within the data structure.
 
     Args:
-        value (Union[str, list, dict]): a structure that contains lookups to
+        value (one of str, list, dict): a structure that contains lookups to
             output values
 
     Returns:

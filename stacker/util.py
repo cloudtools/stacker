@@ -2,6 +2,7 @@ import copy
 import uuid
 import importlib
 import logging
+import os
 import re
 import sys
 import time
@@ -19,19 +20,19 @@ def retry_with_backoff(function, args=None, kwargs=None, attempts=5,
 
     Args:
         function (function): The function to call.
-        args (Optional(list)): A list of positional arguments to pass to the
+        args (list, optional): A list of positional arguments to pass to the
             given function.
-        kwargs (Optional(dict)): Keyword arguments to pass to the given
+        kwargs (dict, optional): Keyword arguments to pass to the given
             function.
-        attempts (Optional(int)): The # of times to retry the function.
+        attempts (int, optional): The # of times to retry the function.
             Default: 5
-        min_delay (Optional(int)): The minimum time to delay retries, in
+        min_delay (int, optional): The minimum time to delay retries, in
             seconds. Default: 1
-        max_delay (Optional(int)): The maximum time to delay retries, in
+        max_delay (int, optional): The maximum time to delay retries, in
             seconds. Default: 5
-        exc_list (Optional(list)): A list of :class:`Exception` classes that
+        exc_list (list, optional): A list of :class:`Exception` classes that
             should be retried. Default: [:class:`Exception`,]
-        retry_checker (Optional(func)): An optional function that is used to
+        retry_checker (func, optional): An optional function that is used to
             do a deeper analysis on the received :class:`Exception` to
             determine if it qualifies for retry. Receives a single argument,
             the :class:`Exception` object that was caught. Should return
@@ -330,3 +331,33 @@ def handle_hooks(stage, hooks, region, context):
                 sys.exit(1)
             logger.warning("Non-required hook %s failed. Return value: %s",
                            hook["path"], result)
+
+
+def get_config_directory():
+    """Return the directory the config file is located in.
+
+    This enables us to use relative paths in config values.
+
+    """
+    # avoid circular import
+    from ...commands.stacker import Stacker
+    command = Stacker()
+    namespace = command.parse_args()
+    return os.path.dirname(namespace.config.name)
+
+
+def read_value_from_path(value):
+    """Enables translators to read values from files.
+
+    The value can be referred to with the `file://` prefix. ie:
+
+        conf_key: ${kms file://kms_value.txt}
+
+    """
+    if value.startswith('file://'):
+        path = value.split('file://', 1)[1]
+        config_directory = get_config_directory()
+        relative_path = os.path.join(config_directory, path)
+        with open(relative_path) as read_file:
+            value = read_file.read()
+    return value

@@ -7,8 +7,7 @@ class CFNType(object):
 
         :class`CFNType`` can be used as the `type` for a Blueprint variable.
         Unlike other variables, a variable with `type` :class:`CFNType`, will
-        not be available to the Blueprint while rendering via `get_variables`
-        but instead will be submitted to CloudFormation as a Parameter.
+        be submitted to CloudFormation as a Parameter.
 
         Arguments:
             parameter_type (str): An AWS specific parameter type

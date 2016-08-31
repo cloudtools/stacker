@@ -23,6 +23,10 @@ class CFNParameter(object):
         This allows us to filter out non-CloudFormation Parameters from
         Blueprint variables when we submit the CloudFormation parameters.
 
+        Args:
+            value (str): the value we're going to submit as a CloudFormation
+                Parameter.
+
         """
         self.value = value
 

@@ -2,6 +2,10 @@
 Translators
 ===========
 
+.. note::
+  Translators have been deprecated in favor of `Lookups <lookups.html>`_
+  and will be removed in a future release.
+
 Stacker provides the ability to dynamically replace values in the config via a
 concept called translators. A translator is meant to take a value and convert
 it by calling out to another service or system. This is initially meant to
@@ -34,5 +38,6 @@ value is large) using the `file://` prefix, ie::
 
   DockerConfig: !kms file://dockercfg
 
-NOTE: Translators resolve the path specified with `file://` relative to
-the location of the config file, not where the stacker command is run.
+.. note::
+  Translators resolve the path specified with `file://` relative to
+  the location of the config file, not where the stacker command is run.

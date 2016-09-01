@@ -3,7 +3,12 @@ import logging
 
 from troposphere import Parameter, Template
 
-from ..exceptions import MissingLocalParameterException
+from ..exceptions import (
+    MissingLocalParameterException,
+    MissingVariable,
+    UnresolvedVariables,
+    UnresolvedVariable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +58,7 @@ def get_local_parameters(parameter_def, parameters):
 
     return local
 
+
 PARAMETER_PROPERTIES = {
     "default": "Default",
     "description": "Description",
@@ -92,12 +98,13 @@ class Blueprint(object):
     Args:
         name (str): A name for the blueprint. If not provided, one will be
             created from the class name automatically.
-        context (`stacker.context.Context`): the context the blueprint is being
-            executed under.
-        mappings (Optional[dict]): Cloudformation Mappings to be used in the
+        context (:class:`stacker.context.Context`): the context the blueprint
+            is being executed under.
+        mappings (dict, optional): Cloudformation Mappings to be used in the
             template.
 
     """
+
     def __init__(self, name, context, mappings=None):
         self.name = name
         self.context = context
@@ -105,6 +112,7 @@ class Blueprint(object):
         self.outputs = {}
         self.local_parameters = self.get_local_parameters()
         self.reset_template()
+        self.resolved_variables = None
 
     @property
     def parameters(self):
@@ -151,6 +159,61 @@ class Blueprint(object):
         for param, attrs in parameters.items():
             p = build_parameter(param, attrs)
             t.add_parameter(p)
+
+    def defined_variables(self):
+        """Return a dictionary of variables defined by the blueprint.
+
+        By default, this will just return the values from `VARIABLES`, but this
+        makes it easy for subclasses to add variables.
+
+        Returns:
+            dict: variables defined by the blueprint
+
+        """
+        return getattr(self, "VARIABLES", {})
+
+    def get_variables(self):
+        """Return a dictionary of variables available to the template.
+
+        These variables will have been defined within `VARIABLES` or
+        `self.defined_variables`. Any variable value that contains a lookup
+        will have been resolved.
+
+        Returns:
+            dict: variables available to the template
+
+        """
+        if self.resolved_variables is None:
+            raise UnresolvedVariables(self)
+        return self.resolved_variables
+
+    def resolve_variables(self, variables):
+        """Resolve the values of the blueprint variables.
+
+        This will resolve the values of the `VARIABLES` with values from the
+        env file, the config, and any lookups resolved.
+
+        Args:
+            variables (list of :class:`stacker.variables.Variable`): list of
+                variables
+
+        """
+        self.resolved_variables = {}
+        defined_variables = self.defined_variables()
+        variable_dict = dict((var.name, var) for var in variables)
+        for var_name in defined_variables.iterkeys():
+            if var_name not in variable_dict:
+                raise MissingVariable(self, var_name)
+
+            variable = variable_dict[var_name]
+            if not variable.resolved:
+                raise UnresolvedVariable(self, variable)
+
+            if variable.value is None:
+                logger.debug("Got `None` value for variable %s, ignoring it. "
+                             "Default value should be used.", variable.name)
+                continue
+            self.resolved_variables[variable.name] = variable.value
 
     def import_mappings(self):
         if not self.mappings:

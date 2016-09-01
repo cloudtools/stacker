@@ -14,7 +14,7 @@ def parse_config(raw_config, environment=None):
 
     Args:
         raw_config (str): the raw stacker configuration string.
-        environment (Optional[dict]): any environment values that should be
+        environment (dict, optional): any environment values that should be
             passed to the config
 
     Returns:
@@ -30,6 +30,9 @@ def parse_config(raw_config, environment=None):
         buff.write(t.substitute(environment))
     except KeyError, e:
         raise exceptions.MissingEnvironment(e.args[0])
+    except ValueError:
+        # Support "invalid" placeholders for lookup placeholders.
+        buff.write(t.safe_substitute(environment))
 
     buff.seek(0)
     config = yaml.load(buff)

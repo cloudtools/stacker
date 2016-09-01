@@ -119,6 +119,7 @@ class Action(BaseAction):
 
     The plan can then either be printed out as an outline or executed. If
     executed, each stack will get launched in order which entails:
+
         - Pushing the generated CloudFormation template to S3 if it has changed
         - Submitting either a build or update of the given stack to the
           `Provider`.
@@ -198,6 +199,9 @@ class Action(BaseAction):
             elif self.provider.is_stack_in_progress(provider_stack):
                 logger.debug("Stack %s in progress.", stack.fqn)
                 return old_status
+
+        logger.debug("Resolving stack %s variables", stack.fqn)
+        stack.resolve_variables(self.context, self.provider)
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)

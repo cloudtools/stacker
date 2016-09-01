@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 
 import boto3
@@ -87,10 +88,17 @@ class Provider(BaseProvider):
     def __init__(self, region, **kwargs):
         self.region = region
         self._outputs = {}
+        self._cloudformation = None
+        # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
+        # see: https://github.com/remind101/stacker/issues/196
+        self._pid = os.getpid()
 
     @property
     def cloudformation(self):
-        if not hasattr(self, "_cloudformation"):
+        # deals w/ multiprocessing issues w/ sharing ssl conns
+        # see https://github.com/remind101/stacker/issues/196
+        pid = os.getpid()
+        if pid != self._pid or not self._cloudformation:
             session = boto3.Session(region_name=self.region)
             self._cloudformation = session.client('cloudformation')
         return self._cloudformation

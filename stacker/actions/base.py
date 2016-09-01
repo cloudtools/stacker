@@ -47,7 +47,7 @@ class BaseAction(object):
     Args:
         context (:class:`stacker.context.Context`): The stacker context for
             the current run.
-        provider (Optional(:class:`stacker.providers.base.BaseProvider`)):
+        provider (:class:`stacker.providers.base.BaseProvider`, optional):
             The provider that will be interacted with in order to perform
             the necessary actions.
     """

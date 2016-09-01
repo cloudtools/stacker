@@ -145,6 +145,7 @@ class Action(build.Action):
             old_template = None
             old_params = {}
 
+        stack.resolve_variables(self.context, self.provider)
         # generate our own template & params
         new_template = stack.blueprint.rendered
         parameters = self.build_parameters(stack)

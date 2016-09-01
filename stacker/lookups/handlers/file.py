@@ -1,10 +1,13 @@
 import re
 import base64
 
-from .base import read_value_from_path
+from ...util import read_value_from_path
 from troposphere import GenericHelperFn, Base64
 
-def get_file_value(value):
+TYPE_NAME = "file"
+
+
+def handler(value, **kwargs):
     """Translate a filename into the file contents, optionally encoding or interpolating the input
 
     Fields should use the following format:
@@ -17,13 +20,13 @@ def get_file_value(value):
         $ echo "hello there" > /some/path
 
         # In stacker we would reference the contents of this file with the following
-        conf_key: !file plain:file://some/path
+        conf_key: ${file plain:file://some/path}
 
         # The above would resolve to
         conf_key: hello there
 
         # Or, if we used wanted a base64 encoded copy of the file data
-        conf_key: !file base64:file://some/path
+        conf_key: ${file base64:file://some/path}
 
         # The above would resolve to
         conf_key: aGVsbG8gdGhlcmUK
@@ -43,7 +46,7 @@ def get_file_value(value):
 
        and then you could use something like this in the YAML config file:
 
-         UserData: !file parameterized:/path/to/file
+         UserData: ${file parameterized:/path/to/file}
 
        resulting in the UserData parameter being defined as:
 
@@ -67,6 +70,7 @@ def get_file_value(value):
 
     and then assign UserData in a LaunchConfiguration or Instance to self.local_parameters["UserData"]
     """
+
     try:
         codec, path = value.split(":", 1)
     except ValueError:
@@ -97,11 +101,6 @@ def parameterized_codec(raw, b64):
     # Note, since we want a raw JSON object (not a string) output in the template,
     # we wrap the result in GenericHelperFn (not needed if we're using Base64)
     return Base64(result) if b64 else GenericHelperFn(result)
-
-
-def file_constructor(loader, node):
-    value = loader.construct_scalar(node)
-    return get_file_value(value)
 
 
 CODECS = {

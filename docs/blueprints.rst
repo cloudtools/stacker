@@ -93,8 +93,9 @@ CFNType
 The ``CFNType`` can be used to signal that a variable should be submitted
 to CloudFormation as a Parameter instead of only available to the
 Blueprint when rendering. This is useful if you want to leverage AWS
-specific Parameter types like ``List<AWS::EC2::Image::Id>``. These are
-available as sublcasses of the ``CFNType``.
+specific Parameter types like ``List<AWS::EC2::Image::Id>``. See
+``stacker.blueprints.variables.types`` for available subclasses of the
+``CFNType``.
 
 Example
 =======

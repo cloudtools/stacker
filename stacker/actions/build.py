@@ -1,4 +1,3 @@
-import copy
 import logging
 
 from .base import BaseAction

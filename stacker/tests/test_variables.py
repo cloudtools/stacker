@@ -2,16 +2,9 @@ from mock import MagicMock
 import unittest
 
 from stacker.variables import Variable
-from stacker.lookups import (
-    Lookup,
-    register_lookup_handler,
-)
+from stacker.lookups import register_lookup_handler
 
-
-def mock_lookup(lookup_input, lookup_type='output', raw=None):
-    if raw is None:
-        raw = lookup_input
-    return Lookup(type=lookup_type, input=lookup_input, raw=raw)
+from .factories import mock_lookup
 
 
 class TestVariables(unittest.TestCase):

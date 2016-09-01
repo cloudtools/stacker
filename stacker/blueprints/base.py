@@ -285,11 +285,12 @@ class Blueprint(object):
                 if isinstance(var_type, CFNType):
                     value = CFNParameter(name=var_name, value=value)
                 else:
-                    try:
-                        value = var_type(value)
-                    except ValueError:
-                        raise ValueError("Variable %s must be %s.", var_name,
-                                         var_type)
+                    if not isinstance(value, var_type):
+                        try:
+                            value = var_type(value)
+                        except ValueError:
+                            raise ValueError("Variable %s must be %s.",
+                                             var_name, var_type)
             self.resolved_variables[var_name] = value
 
     def import_mappings(self):

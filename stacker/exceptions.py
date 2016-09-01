@@ -1,3 +1,13 @@
+class InvalidLookupCombination(Exception):
+
+    def __init__(self, lookup, lookups, value, *args, **kwargs):
+        message = (
+            "Lookup: \"{}\" has non-string return value, must be only lookup "
+            "present (not {}) in \"{}\""
+        ).format(lookup.raw, len(lookups), value)
+        super(InvalidLookupCombination, self).__init__(message, *args, **kwargs)
+
+
 class UnknownLookupType(Exception):
 
     def __init__(self, lookup, *args, **kwargs):

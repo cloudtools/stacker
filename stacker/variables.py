@@ -8,7 +8,7 @@ from .lookups import (
 
 class LookupTemplate(Template):
     """A custom string template we use to replace lookup values"""
-    idpattern = r'[_a-z][_a-z0-9\s\:\-\.\,]*'
+    idpattern = r'[_a-z][^\$\{\}]*'
 
 
 def resolve_string(value, replacements):

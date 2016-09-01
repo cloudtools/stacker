@@ -14,6 +14,19 @@ Lookups are only resolved within `Variables
 <terminology.html#variables>`_. They can be nested in any part of a YAML
 data structure and within another lookup itself.
 
+.. note::
+  If a lookup has a non-string return value, it can be the only lookup
+  within a value.
+
+  ie. if `custom` returns a list, this would raise an exception::
+
+    Variable: ${custom something}, ${otherStack::Output}
+
+  This is valid::
+
+    Variable: ${custom something}
+
+
 For example, given the following::
 
   stacks:

@@ -1,7 +1,10 @@
 import unittest
 
 from mock import MagicMock
-from troposphere import Ref
+from troposphere import (
+    Base64,
+    Ref,
+)
 
 from stacker.blueprints.base import (
     Blueprint,
@@ -14,12 +17,14 @@ from stacker.blueprints.variables.types import (
     EC2AvailabilityZoneNameList,
 )
 from stacker.exceptions import (
+    InvalidLookupCombination,
     MissingLocalParameterException,
     MissingVariable,
     UnresolvedVariables,
 )
-from stacker.lookups import Lookup
 from stacker.variables import Variable
+
+from ..factories import mock_lookup
 
 
 class TestLocalParameters(unittest.TestCase):
@@ -109,8 +114,9 @@ class TestVariables(unittest.TestCase):
             Variable("Param2", "${other-stack::Output}"),
             Variable("Param3", 3),
         ]
-        lookup = Lookup("other-stack", "Output", "other-stack::Output")
-        resolved_lookups = {lookup: "Test Output"}
+        resolved_lookups = {
+            mock_lookup("other-stack::Output"): "Test Output",
+        }
         for var in variables:
             var.replace(resolved_lookups)
 
@@ -118,6 +124,66 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(blueprint.resolved_variables["Param1"], 1)
         self.assertEqual(blueprint.resolved_variables["Param2"], "Test Output")
         self.assertIsNone(blueprint.resolved_variables.get("Param3"))
+
+    def test_resolve_variables_lookup_returns_non_string(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": list},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "${custom non-string-return-val}")]
+        lookup = mock_lookup("non-string-return-val", "custom",
+                             "custom non-string-return-val")
+        resolved_lookups = {
+            lookup: ["something"],
+        }
+        for var in variables:
+            var.replace(resolved_lookups)
+
+        blueprint.resolve_variables(variables)
+        self.assertEqual(blueprint.resolved_variables["Param1"], ["something"])
+
+    def test_resolve_variables_lookup_returns_troposphere_obj(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": Base64},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "${custom non-string-return-val}")]
+        lookup = mock_lookup("non-string-return-val", "custom",
+                             "custom non-string-return-val")
+        resolved_lookups = {
+            lookup: Base64("test"),
+        }
+        for var in variables:
+            var.replace(resolved_lookups)
+
+        blueprint.resolve_variables(variables)
+        self.assertEqual(blueprint.resolved_variables["Param1"].data,
+                         Base64("test").data)
+
+    def test_resolve_variables_lookup_returns_non_string_invalid_combo(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": list},
+            }
+
+        variables = [
+            Variable(
+                "Param1",
+                "${custom non-string-return-val},${some-stack::Output}",
+            )
+        ]
+        lookup = mock_lookup("non-string-return-val", "custom",
+                             "custom non-string-return-val")
+        resolved_lookups = {
+            lookup: ["something"],
+        }
+        with self.assertRaises(InvalidLookupCombination):
+            for var in variables:
+                var.replace(resolved_lookups)
 
     def test_get_variables(self):
         class TestBlueprint(Blueprint):

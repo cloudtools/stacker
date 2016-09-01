@@ -263,21 +263,23 @@ class Blueprint(object):
         self.resolved_variables = {}
         defined_variables = self.defined_variables()
         variable_dict = dict((var.name, var) for var in variables)
-        for var_name in defined_variables.iterkeys():
-            if var_name not in variable_dict:
+        for var_name, var_def in defined_variables.iteritems():
+            value = var_def.get("default")
+            if value is None and var_name not in variable_dict:
                 raise MissingVariable(self, var_name)
 
-            variable = variable_dict[var_name]
-            if not variable.resolved:
-                raise UnresolvedVariable(self, variable)
+            variable = variable_dict.get(var_name)
+            if variable:
+                if not variable.resolved:
+                    raise UnresolvedVariable(self, variable)
+                if variable.value is not None:
+                    value = variable.value
 
-            if variable.value is None:
+            if value is None:
                 logger.debug("Got `None` value for variable %s, ignoring it. "
-                             "Default value should be used.", variable.name)
+                             "Default value should be used.", var_name)
                 continue
 
-            value = variable.value
-            var_def = defined_variables[var_name]
             var_type = var_def.get("type")
             if var_type:
                 if isinstance(var_type, CFNType):
@@ -288,7 +290,7 @@ class Blueprint(object):
                     except ValueError:
                         raise ValueError("Variable %s must be %s.", var_name,
                                          var_type)
-            self.resolved_variables[variable.name] = value
+            self.resolved_variables[var_name] = value
 
     def import_mappings(self):
         if not self.mappings:

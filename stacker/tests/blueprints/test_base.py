@@ -156,6 +156,20 @@ class TestVariables(unittest.TestCase):
         with self.assertRaises(ValueError):
             blueprint.resolve_variables(variables)
 
+    def test_get_variables_default_value(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int, "default": 1},
+                "Param2": {"type": str},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param2", "Test Output")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertEqual(variables["Param1"], 1)
+        self.assertEqual(variables["Param2"], "Test Output")
+
     def test_resolve_variables_convert_type(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {

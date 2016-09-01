@@ -1,10 +1,17 @@
 import unittest
 
 from mock import MagicMock
+from troposphere import Ref
+
 from stacker.blueprints.base import (
     Blueprint,
+    CFNParameter,
     build_parameter,
     get_local_parameters,
+)
+from stacker.blueprints.variables.types import (
+    CFNString,
+    EC2AvailabilityZoneNameList,
 )
 from stacker.exceptions import (
     MissingLocalParameterException,
@@ -126,7 +133,7 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(variables["Param1"], 1)
         self.assertEqual(variables["Param2"], "Test Output")
 
-    def test_get_variables_missing_variable(self):
+    def test_resolve_variables_missing_variable(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
                 "Param1": {"type": int},
@@ -137,3 +144,131 @@ class TestVariables(unittest.TestCase):
         variables = [Variable("Param1", 1)]
         with self.assertRaises(MissingVariable):
             blueprint.resolve_variables(variables)
+
+    def test_resolve_variables_incorrect_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "Something")]
+        with self.assertRaises(ValueError):
+            blueprint.resolve_variables(variables)
+
+    def test_get_variables_default_value(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int, "default": 1},
+                "Param2": {"type": str},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param2", "Test Output")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertEqual(variables["Param1"], 1)
+        self.assertEqual(variables["Param2"], "Test Output")
+
+    def test_resolve_variables_convert_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "1")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], int))
+
+    def test_resolve_variables_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "Value")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+
+    def test_resolve_variables_cfn_type_list(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": EC2AvailabilityZoneNameList},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", ["us-east-1", "us-west-2"])]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+        self.assertEqual(variables["Param1"].value, ["us-east-1", "us-west-2"])
+        self.assertEqual(variables["Param1"].ref.data, Ref("Param1").data)
+        parameters = blueprint.get_cfn_parameters()
+        self.assertEqual(parameters["Param1"], ["us-east-1", "us-west-2"])
+
+    def test_resolve_variables_cfn_type_list_invalid_value(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": EC2AvailabilityZoneNameList},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", {"main": "us-east-1"})]
+        with self.assertRaises(ValueError):
+            blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+
+    def test_get_parameters_cfn_type_list(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": EC2AvailabilityZoneNameList},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        parameters = blueprint._get_parameters()
+        self.assertTrue("Param1" in parameters)
+        parameter = parameters["Param1"]
+        self.assertEqual(parameter["type"],
+                         "List<AWS::EC2::AvailabilityZone::Name>")
+
+    def test_get_parameters_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        parameters = blueprint._get_parameters()
+        self.assertTrue("Param1" in parameters)
+        parameter = parameters["Param1"]
+        self.assertEqual(parameter["type"], "String")
+
+    def test_required_parameters_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        blueprint.setup_parameters()
+        self.assertEqual(blueprint.required_parameters[0][0], "Param1")
+
+    def test_get_cfn_parameters(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+                "Param2": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "1"), Variable("Param2", "Value")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertEqual(len(variables), 2)
+        parameters = blueprint.get_cfn_parameters()
+        self.assertEqual(len(parameters.keys()), 1)
+        self.assertEqual(parameters["Param2"], "Value")

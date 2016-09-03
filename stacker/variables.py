@@ -94,6 +94,13 @@ class Variable(object):
         return extract_lookups(self.value)
 
     @property
+    def needs_resolution(self):
+        """Return True if the value has any lookups that need resolving."""
+        if self.lookups:
+            return True
+        return False
+
+    @property
     def value(self):
         """Return the current value of the Variable.
 
@@ -109,7 +116,7 @@ class Variable(object):
         Variables only need to be resolved if they contain lookups.
 
         """
-        if self.lookups:
+        if self.needs_resolution:
             return self._resolved_value is not None
         return True
 

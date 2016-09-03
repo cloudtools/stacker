@@ -11,8 +11,9 @@ from troposphere import (
 from ..exceptions import (
     MissingLocalParameterException,
     MissingVariable,
-    UnresolvedVariables,
     UnresolvedVariable,
+    UnresolvedVariables,
+    VariableTypeRequired,
 )
 from .variables.types import CFNType
 
@@ -130,6 +131,90 @@ def build_parameter(name, properties):
     return p
 
 
+def validate_variable_type(var_name, var_type, value):
+    """Ensures the value is the correct variable type.
+
+    Args:
+        var_name (str): The name of the defined variable on a blueprint.
+        var_type (type): The type that the value should be.
+        value (obj): The object representing the value provided for the
+            variable
+
+    Returns:
+        object: A python object of type `var_type` based on the provided
+            `value`.
+
+    Raises:
+        ValueError: If the `value` isn't of `var_type` and can't be cast as
+            that type, this is raised.
+    """
+
+    if isinstance(var_type, CFNType):
+        value = CFNParameter(name=var_name, value=value)
+    else:
+        if not isinstance(value, var_type):
+            try:
+                value = var_type(value)
+            except ValueError:
+                raise ValueError("Variable %s must be %s.",
+                                 var_name, var_type)
+    return value
+
+
+def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
+    """Resolve a provided variable value against the variable definition.
+
+    Args:
+        var_name (str): The name of the defined variable on a blueprint.
+        var_def (dict): A dictionary representing the defined variables
+            attributes.
+        provided_variable (:class:`stacker.variables.Variable`): The variable
+            value provided to the blueprint.
+        blueprint_name (str): The name of the blueprint that the variable is
+            being applied to.
+
+    Returns:
+        object: The resolved variable value, could be any python object.
+
+    Raises:
+        MissingVariable: Raised when a variable with no default is not
+            provided a value.
+        UnresolvedVariable: Raised when the provided variable is not already
+            resolved.
+        ValueError: Raised when the value is not the right type and cannot be
+            cast as the correct type. Raised by
+            :func:`stacker.blueprints.base.validate_variable_type`
+    """
+
+    try:
+        var_type = var_def["type"]
+    except KeyError:
+        raise VariableTypeRequired(blueprint_name, var_name)
+
+    if provided_variable:
+        if not provided_variable.resolved:
+            raise UnresolvedVariable(blueprint_name, provided_variable)
+        if provided_variable.value is not None:
+            value = provided_variable.value
+    else:
+        # Variable value not provided, try using the default, if it exists
+        # in the definition
+        try:
+            value = var_def["default"]
+        except KeyError:
+            raise MissingVariable(blueprint_name, var_name)
+
+    # If no validator, return the value as is, otherwise apply validator
+    validator = var_def.get("validator", lambda v: v)
+    value = validator(value)
+
+    # Ensure that the resulting value is the correct type
+    var_type = var_def.get("type")
+    value = validate_variable_type(var_name, var_type, value)
+
+    return value
+
+
 class Blueprint(object):
     """Base implementation for dealing with a troposphere template.
 
@@ -229,9 +314,11 @@ class Blueprint(object):
         Returns:
             dict: variables available to the template
 
+        Raises:
+
         """
         if self.resolved_variables is None:
-            raise UnresolvedVariables(self)
+            raise UnresolvedVariables(self.name)
         return self.resolved_variables
 
     def get_cfn_parameters(self):
@@ -249,48 +336,27 @@ class Blueprint(object):
                 output[key] = value.to_parameter_value()
         return output
 
-    def resolve_variables(self, variables):
+    def resolve_variables(self, provided_variables):
         """Resolve the values of the blueprint variables.
 
         This will resolve the values of the `VARIABLES` with values from the
         env file, the config, and any lookups resolved.
 
         Args:
-            variables (list of :class:`stacker.variables.Variable`): list of
-                variables
+            provided_variables (list of :class:`stacker.variables.Variable`):
+                list of provided variables
 
         """
         self.resolved_variables = {}
         defined_variables = self.defined_variables()
-        variable_dict = dict((var.name, var) for var in variables)
+        variable_dict = dict((var.name, var) for var in provided_variables)
         for var_name, var_def in defined_variables.iteritems():
-            value = var_def.get("default")
-            if value is None and var_name not in variable_dict:
-                raise MissingVariable(self, var_name)
-
-            variable = variable_dict.get(var_name)
-            if variable:
-                if not variable.resolved:
-                    raise UnresolvedVariable(self, variable)
-                if variable.value is not None:
-                    value = variable.value
-
-            if value is None:
-                logger.debug("Got `None` value for variable %s, ignoring it. "
-                             "Default value should be used.", var_name)
-                continue
-
-            var_type = var_def.get("type")
-            if var_type:
-                if isinstance(var_type, CFNType):
-                    value = CFNParameter(name=var_name, value=value)
-                else:
-                    if not isinstance(value, var_type):
-                        try:
-                            value = var_type(value)
-                        except ValueError:
-                            raise ValueError("Variable %s must be %s.",
-                                             var_name, var_type)
+            value = resolve_variable(
+                var_name,
+                var_def,
+                variable_dict.get(var_name),
+                self.name
+            )
             self.resolved_variables[var_name] = value
 
     def import_mappings(self):

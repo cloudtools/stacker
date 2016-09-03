@@ -27,7 +27,7 @@ def extract_lookups_from_string(value):
         value (str): string value we're extracting lookups from
 
     Returns:
-        list: list of lookups if any
+        list: list of :class:`stacker.lookups.Lookup` if any
 
     """
     lookups = set()

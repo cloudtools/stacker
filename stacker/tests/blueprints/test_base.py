@@ -11,6 +11,8 @@ from stacker.blueprints.base import (
     CFNParameter,
     build_parameter,
     get_local_parameters,
+    validate_variable_type,
+    resolve_variable
 )
 from stacker.blueprints.variables.types import (
     CFNString,
@@ -20,11 +22,21 @@ from stacker.exceptions import (
     InvalidLookupCombination,
     MissingLocalParameterException,
     MissingVariable,
+    UnresolvedVariable,
     UnresolvedVariables,
+    VariableTypeRequired,
 )
 from stacker.variables import Variable
+from stacker.lookups import register_lookup_handler
 
 from ..factories import mock_lookup
+
+
+def mock_lookup_handler(value, provider=None, context=None, fqn=False,
+                        **kwargs):
+    return value
+
+register_lookup_handler("mock", mock_lookup_handler)
 
 
 class TestLocalParameters(unittest.TestCase):
@@ -100,6 +112,121 @@ class TestVariables(unittest.TestCase):
         blueprint = TestBlueprint(name="test", context=MagicMock())
         with self.assertRaises(UnresolvedVariables):
             blueprint.get_variables()
+
+    def test_validate_variable_type_cfntype(self):
+        var_name = "testVar"
+        var_type = CFNString
+        provided_value = "abc"
+        value = validate_variable_type(var_name, var_type, provided_value)
+        self.assertIsInstance(value, CFNParameter)
+        self.assertEqual(value.value, provided_value)
+        self.assertEqual(value.name, var_name)
+
+    def test_validate_variable_type_matching_type(self):
+        var_name = "testVar"
+        var_type = str
+        provided_value = "abc"
+        value = validate_variable_type(var_name, var_type, provided_value)
+        self.assertEqual(value, provided_value)
+
+    def test_validate_variable_type_transformed_type(self):
+        var_name = "testVar"
+        var_type = int
+        provided_value = "1"
+        value = validate_variable_type(var_name, var_type, provided_value)
+        self.assertEqual(value, int(provided_value))
+
+    def test_validate_variable_type_invalid_value(self):
+        var_name = "testVar"
+        var_type = int
+        provided_value = "abc"
+        with self.assertRaises(ValueError):
+            validate_variable_type(var_name, var_type, provided_value)
+
+    def test_resolve_variable_no_type_on_variable_definition(self):
+        var_name = "testVar"
+        var_def = {}
+        provided_variable = None
+        blueprint_name = "testBlueprint"
+
+        with self.assertRaises(VariableTypeRequired):
+            resolve_variable(var_name, var_def, provided_variable,
+                             blueprint_name)
+
+    def test_resolve_variable_no_provided_with_default(self):
+        var_name = "testVar"
+        default_value = "foo"
+        var_def = {"default": default_value, "type": str}
+        provided_variable = None
+        blueprint_name = "testBlueprint"
+
+        value = resolve_variable(var_name, var_def, provided_variable,
+                                 blueprint_name)
+
+        self.assertEqual(default_value, value)
+
+    def test_resolve_variable_no_provided_without_default(self):
+        var_name = "testVar"
+        var_def = {"type": str}
+        provided_variable = None
+        blueprint_name = "testBlueprint"
+
+        with self.assertRaises(MissingVariable):
+            resolve_variable(var_name, var_def, provided_variable,
+                             blueprint_name)
+
+    def test_resolve_variable_provided_not_resolved(self):
+        var_name = "testVar"
+        var_def = {"type": str}
+        provided_variable = Variable(var_name, "${mock abc}")
+        blueprint_name = "testBlueprint"
+
+        with self.assertRaises(UnresolvedVariable):
+            resolve_variable(var_name, var_def, provided_variable,
+                             blueprint_name)
+
+    def test_resolve_variable_provided_resolved(self):
+        var_name = "testVar"
+        var_def = {"type": str}
+        provided_variable = Variable(var_name, "${mock 1}")
+        provided_variable.resolve(context=MagicMock(), provider=MagicMock())
+        blueprint_name = "testBlueprint"
+
+        value = resolve_variable(var_name, var_def, provided_variable,
+                                 blueprint_name)
+        self.assertEqual(value, "1")
+
+    def test_resolve_variable_validator_valid_value(self):
+        def triple_validator(value):
+            if len(value) != 3:
+                raise ValueError
+            return value
+
+        var_name = "testVar"
+        var_def = {"type": list, "validator": triple_validator}
+        var_value = [1, 2, 3]
+        provided_variable = Variable(var_name, var_value)
+        blueprint_name = "testBlueprint"
+
+        value = resolve_variable(var_name, var_def, provided_variable,
+                                 blueprint_name)
+        self.assertEqual(value, var_value)
+
+    def test_resolve_variable_validator_invalid_value(self):
+        def triple_validator(value):
+            if len(value) != 3:
+                raise ValueError
+            return value
+
+        var_name = "testVar"
+        var_def = {"type": list, "validator": triple_validator}
+        var_value = [1, 2]
+        provided_variable = Variable(var_name, var_value)
+        blueprint_name = "testBlueprint"
+
+        with self.assertRaises(ValueError):
+            resolve_variable(var_name, var_def, provided_variable,
+                             blueprint_name)
 
     def test_resolve_variables(self):
         class TestBlueprint(Blueprint):

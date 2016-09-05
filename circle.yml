@@ -7,6 +7,4 @@ dependencies:
 
 test:
   override:
-    - flake8 --exclude stacker/tests/ stacker
-    - flake8 --ignore N802 stacker/tests # ignore setUp naming
-    - python setup.py test
+    - make test

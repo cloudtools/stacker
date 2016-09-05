@@ -39,7 +39,8 @@ class Context(object):
 
     """
 
-    def __init__(self, environment, stack_names=None,
+    def __init__(self, environment,  # pylint: disable-msg=too-many-arguments
+                 stack_names=None,
                  parameters=None, mappings=None, config=None,
                  force_stacks=None):
         try:

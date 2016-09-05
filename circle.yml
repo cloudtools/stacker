@@ -1,2 +1,12 @@
 machine:
   timezone: America/Los_Angeles
+
+dependencies:
+  pre:
+    - pip install flake8
+
+test:
+  override:
+    - flake8 --exclude stacker/tests/ stacker
+    - flake8 --ignore N802 stacker/tests # ignore setUp naming
+    - python setup.py test

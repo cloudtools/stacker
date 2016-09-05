@@ -8,7 +8,7 @@ TYPE_NAME = "file"
 
 
 def handler(value, **kwargs):
-    """Translate a filename into the file contents, optionally encoding or interpolating the input
+    """Translate a filename into the file contents.
 
     Fields should use the following format:
 
@@ -19,7 +19,8 @@ def handler(value, **kwargs):
         # We've written a file to /some/path:
         $ echo "hello there" > /some/path
 
-        # In stacker we would reference the contents of this file with the following
+        # In stacker we would reference the contents of this file with the
+        # following
         conf_key: ${file plain:file://some/path}
 
         # The above would resolve to
@@ -56,12 +57,12 @@ def handler(value, **kwargs):
            "/somepath /somepath"
          ]] }
 
-     - parameterized-b64 - the same as parameterized, with the results additionally
-       wrapped in { "Fn::Base64": ... } , which is what you actually need for
-       EC2 UserData
+     - parameterized-b64 - the same as parameterized, with the results
+       additionally wrapped in { "Fn::Base64": ... } , which is what you
+       actually need for EC2 UserData
 
-    When using parameterized-b64 for UserData, you should use a variable defined
-    as such:
+    When using parameterized-b64 for UserData, you should use a variable
+    defined as such:
 
     from troposphere import AWSHelperFn
 
@@ -71,9 +72,10 @@ def handler(value, **kwargs):
         "default": Ref("AWS::NoValue")
       }
 
-    and then assign UserData in a LaunchConfiguration or Instance to self.get_variables()["UserData"].
-    Note that we use AWSHelperFn as the type because the parameterized-b64 codec returns either a
-    Base64 or a GenericHelperFn troposphere object
+    and then assign UserData in a LaunchConfiguration or Instance to
+    self.get_variables()["UserData"]. Note that we use AWSHelperFn as the
+    type because the parameterized-b64 codec returns either a Base64 or a
+    GenericHelperFn troposphere object
     """
 
     try:
@@ -103,8 +105,9 @@ def parameterized_codec(raw, b64):
     parts.append(raw[s_index:])
     result = {"Fn::Join": ["", parts]}
 
-    # Note, since we want a raw JSON object (not a string) output in the template,
-    # we wrap the result in GenericHelperFn (not needed if we're using Base64)
+    # Note, since we want a raw JSON object (not a string) output in the
+    # template, we wrap the result in GenericHelperFn (not needed if we're
+    # using Base64)
     return Base64(result) if b64 else GenericHelperFn(result)
 
 

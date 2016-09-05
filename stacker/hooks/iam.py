@@ -1,8 +1,6 @@
 import copy
 import logging
 
-logger = logging.getLogger(__name__)
-
 import boto3
 from botocore.exceptions import ClientError
 
@@ -11,6 +9,8 @@ from awacs import ecs
 from awacs.helpers.trust import get_ecs_assumerole_policy
 
 from . import utils
+
+logger = logging.getLogger(__name__)
 
 
 def create_ecs_service_role(region, namespace, mappings, parameters,

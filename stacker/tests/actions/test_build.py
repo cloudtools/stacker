@@ -19,7 +19,10 @@ from stacker.status import (
 
 def mock_stack(parameters):
     return {
-        'Parameters': [{'ParameterKey': k, 'ParameterValue': v} for k, v in parameters.items()]
+        'Parameters': [
+            {'ParameterKey': k, 'ParameterValue': v} for k, v in
+            parameters.items()
+        ]
     }
 
 

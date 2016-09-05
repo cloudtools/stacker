@@ -107,7 +107,9 @@ class Action(build.Action):
     def _print_new_stack(self, stack, parameters):
         """Prints out the parameters & stack contents of a new stack"""
         print "New template parameters:"
-        for param in sorted(parameters, key=lambda param: param['ParameterKey']):
+        for param in sorted(
+                parameters,
+                key=lambda param: param['ParameterKey']):
             print "%s = %s" % (param['ParameterKey'], param['ParameterValue'])
 
         print "\nNew template contents:"

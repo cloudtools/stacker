@@ -7,9 +7,6 @@ from stacker.lookups.handlers.file import parameterized_codec, handler
 
 
 class TestFileTranslator(unittest.TestCase):
-    def setUp(self):
-        pass
-
     def test_parameterized_codec_b64(self):
         expected = {'Fn::Base64': {'Fn::Join': ['', ['Test ', {'Ref': 'Interpolation'}, ' Here']]}}
         self.assertEqual(expected, parameterized_codec('Test {{Interpolation}} Here', True).data)

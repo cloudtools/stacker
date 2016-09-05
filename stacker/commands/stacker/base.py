@@ -153,9 +153,10 @@ class BaseCommand(object):
                             "will use the AWS interactive provider, which "
                             "leverages Cloudformation Change Sets to display "
                             "changes before running cloudformation templates. "
-                            "You'll be asked if you want to execute each change "
-                            "set. If you only want to authorize replacements, "
-                            "run with \"--replacements-only\" as well.")
+                            "You'll be asked if you want to execute each "
+                            "change set. If you only want to authorize "
+                            "replacements, run with \"--replacements-only\" "
+                            "as well.")
         parser.add_argument("--replacements-only", action="store_true",
-                            help="If interactive mode is enabled, stacker will "
-                            "only prompt to authorize replacements.")
+                            help="If interactive mode is enabled, stacker "
+                            "will only prompt to authorize replacements.")

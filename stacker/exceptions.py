@@ -5,7 +5,9 @@ class InvalidLookupCombination(Exception):
             "Lookup: \"{}\" has non-string return value, must be only lookup "
             "present (not {}) in \"{}\""
         ).format(lookup.raw, len(lookups), value)
-        super(InvalidLookupCombination, self).__init__(message, *args, **kwargs)
+        super(InvalidLookupCombination, self).__init__(message,
+                                                       *args,
+                                                       **kwargs)
 
 
 class UnknownLookupType(Exception):
@@ -26,8 +28,9 @@ class UnresolvedVariables(Exception):
 class UnresolvedVariable(Exception):
 
     def __init__(self, blueprint, variable, *args, **kwargs):
-        message = "Variable \"%s\" in blueprint \"%s\" hasn't been resolved" % (
-            variable.name, blueprint.name)
+        message = (
+            "Variable \"%s\" in blueprint \"%s\" hasn't been resolved"
+        ) % (variable.name, blueprint.name)
         super(UnresolvedVariable, self).__init__(message, *args, **kwargs)
 
 

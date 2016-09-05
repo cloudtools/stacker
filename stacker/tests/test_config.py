@@ -1,6 +1,5 @@
 import unittest
 
-from mock import patch
 from stacker.config import parse_config
 from stacker.environment import parse_environment
 from stacker import exceptions

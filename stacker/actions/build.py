@@ -77,6 +77,7 @@ def resolve_parameters(parameters, blueprint, context, provider):
     """
     params = {}
     blueprint_params = blueprint.parameters
+
     for k, v in parameters.items():
         if k not in blueprint_params:
             logger.debug("Template %s does not use parameter %s.",
@@ -159,7 +160,7 @@ class Action(BaseAction):
         Returns:
             dict: The parameters for the given stack
         """
-        parameters = self._resolve_parameters(stack.parameters,
+        parameters = self._resolve_parameters(stack.cfn_parameters,
                                               stack.blueprint)
         required_params = [k for k, v in stack.blueprint.required_parameters]
         parameters = self._handle_missing_parameters(parameters,
@@ -251,7 +252,8 @@ class Action(BaseAction):
         """
         missing_params = list(set(required_params) - set(params.keys()))
         if existing_stack and 'Parameters' in existing_stack:
-            stack_params = {p['ParameterKey']: p['ParameterValue'] for p in existing_stack['Parameters']}
+            stack_params = {p['ParameterKey']: p['ParameterValue'] for p in
+                            existing_stack['Parameters']}
             for p in missing_params:
                 if p in stack_params:
                     value = stack_params[p]

@@ -1,18 +1,30 @@
 import unittest
 
 from mock import MagicMock
+from troposphere import (
+    Base64,
+    Ref,
+)
+
 from stacker.blueprints.base import (
     Blueprint,
+    CFNParameter,
     build_parameter,
     get_local_parameters,
 )
+from stacker.blueprints.variables.types import (
+    CFNString,
+    EC2AvailabilityZoneNameList,
+)
 from stacker.exceptions import (
+    InvalidLookupCombination,
     MissingLocalParameterException,
     MissingVariable,
     UnresolvedVariables,
 )
-from stacker.lookups import Lookup
 from stacker.variables import Variable
+
+from ..factories import mock_lookup
 
 
 class TestLocalParameters(unittest.TestCase):
@@ -102,8 +114,9 @@ class TestVariables(unittest.TestCase):
             Variable("Param2", "${other-stack::Output}"),
             Variable("Param3", 3),
         ]
-        lookup = Lookup("other-stack", "Output", "other-stack::Output")
-        resolved_lookups = {lookup: "Test Output"}
+        resolved_lookups = {
+            mock_lookup("other-stack::Output"): "Test Output",
+        }
         for var in variables:
             var.replace(resolved_lookups)
 
@@ -111,6 +124,66 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(blueprint.resolved_variables["Param1"], 1)
         self.assertEqual(blueprint.resolved_variables["Param2"], "Test Output")
         self.assertIsNone(blueprint.resolved_variables.get("Param3"))
+
+    def test_resolve_variables_lookup_returns_non_string(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": list},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "${custom non-string-return-val}")]
+        lookup = mock_lookup("non-string-return-val", "custom",
+                             "custom non-string-return-val")
+        resolved_lookups = {
+            lookup: ["something"],
+        }
+        for var in variables:
+            var.replace(resolved_lookups)
+
+        blueprint.resolve_variables(variables)
+        self.assertEqual(blueprint.resolved_variables["Param1"], ["something"])
+
+    def test_resolve_variables_lookup_returns_troposphere_obj(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": Base64},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "${custom non-string-return-val}")]
+        lookup = mock_lookup("non-string-return-val", "custom",
+                             "custom non-string-return-val")
+        resolved_lookups = {
+            lookup: Base64("test"),
+        }
+        for var in variables:
+            var.replace(resolved_lookups)
+
+        blueprint.resolve_variables(variables)
+        self.assertEqual(blueprint.resolved_variables["Param1"].data,
+                         Base64("test").data)
+
+    def test_resolve_variables_lookup_returns_non_string_invalid_combo(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": list},
+            }
+
+        variables = [
+            Variable(
+                "Param1",
+                "${custom non-string-return-val},${some-stack::Output}",
+            )
+        ]
+        lookup = mock_lookup("non-string-return-val", "custom",
+                             "custom non-string-return-val")
+        resolved_lookups = {
+            lookup: ["something"],
+        }
+        with self.assertRaises(InvalidLookupCombination):
+            for var in variables:
+                var.replace(resolved_lookups)
 
     def test_get_variables(self):
         class TestBlueprint(Blueprint):
@@ -126,7 +199,7 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(variables["Param1"], 1)
         self.assertEqual(variables["Param2"], "Test Output")
 
-    def test_get_variables_missing_variable(self):
+    def test_resolve_variables_missing_variable(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
                 "Param1": {"type": int},
@@ -137,3 +210,131 @@ class TestVariables(unittest.TestCase):
         variables = [Variable("Param1", 1)]
         with self.assertRaises(MissingVariable):
             blueprint.resolve_variables(variables)
+
+    def test_resolve_variables_incorrect_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "Something")]
+        with self.assertRaises(ValueError):
+            blueprint.resolve_variables(variables)
+
+    def test_get_variables_default_value(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int, "default": 1},
+                "Param2": {"type": str},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param2", "Test Output")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertEqual(variables["Param1"], 1)
+        self.assertEqual(variables["Param2"], "Test Output")
+
+    def test_resolve_variables_convert_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "1")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], int))
+
+    def test_resolve_variables_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "Value")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+
+    def test_resolve_variables_cfn_type_list(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": EC2AvailabilityZoneNameList},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", ["us-east-1", "us-west-2"])]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+        self.assertEqual(variables["Param1"].value, ["us-east-1", "us-west-2"])
+        self.assertEqual(variables["Param1"].ref.data, Ref("Param1").data)
+        parameters = blueprint.get_cfn_parameters()
+        self.assertEqual(parameters["Param1"], ["us-east-1", "us-west-2"])
+
+    def test_resolve_variables_cfn_type_list_invalid_value(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": EC2AvailabilityZoneNameList},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", {"main": "us-east-1"})]
+        with self.assertRaises(ValueError):
+            blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+
+    def test_get_parameters_cfn_type_list(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": EC2AvailabilityZoneNameList},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        parameters = blueprint._get_parameters()
+        self.assertTrue("Param1" in parameters)
+        parameter = parameters["Param1"]
+        self.assertEqual(parameter["type"],
+                         "List<AWS::EC2::AvailabilityZone::Name>")
+
+    def test_get_parameters_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        parameters = blueprint._get_parameters()
+        self.assertTrue("Param1" in parameters)
+        parameter = parameters["Param1"]
+        self.assertEqual(parameter["type"], "String")
+
+    def test_required_parameters_cfn_type(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        blueprint.setup_parameters()
+        self.assertEqual(blueprint.required_parameters[0][0], "Param1")
+
+    def test_get_cfn_parameters(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": int},
+                "Param2": {"type": CFNString},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "1"), Variable("Param2", "Value")]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertEqual(len(variables), 2)
+        parameters = blueprint.get_cfn_parameters()
+        self.assertEqual(len(parameters.keys()), 1)
+        self.assertEqual(parameters["Param2"], "Value")

@@ -1,3 +1,4 @@
+from stacker.lookups import Lookup
 
 
 def generate_definition(base_name, stack_id, **overrides):
@@ -14,3 +15,9 @@ def generate_definition(base_name, stack_id, **overrides):
     }
     definition.update(overrides)
     return definition
+
+
+def mock_lookup(lookup_input, lookup_type='output', raw=None):
+    if raw is None:
+        raw = lookup_input
+    return Lookup(type=lookup_type, input=lookup_input, raw=raw)

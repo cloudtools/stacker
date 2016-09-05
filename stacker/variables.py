@@ -1,5 +1,6 @@
 from string import Template
 
+from .exceptions import InvalidLookupCombination
 from .lookups import (
     extract_lookups,
     resolve_lookups,
@@ -8,7 +9,7 @@ from .lookups import (
 
 class LookupTemplate(Template):
     """A custom string template we use to replace lookup values"""
-    idpattern = r'[_a-z][_a-z0-9\s\:\-\.\,\/]*'
+    idpattern = r'[_a-z][^\$\{\}]*'
 
 
 def resolve_string(value, replacements):
@@ -22,6 +23,13 @@ def resolve_string(value, replacements):
         str: value with any lookups resolved
 
     """
+    lookups = extract_lookups(value)
+    for lookup in lookups:
+        lookup_value = replacements.get(lookup.raw)
+        if not isinstance(lookup_value, basestring):
+            if len(lookups) > 1:
+                raise InvalidLookupCombination(lookup, lookups, value)
+            return lookup_value
     # we use safe_substitute to support resolving nested lookups
     return LookupTemplate(value).safe_substitute(replacements)
 

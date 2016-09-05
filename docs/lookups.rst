@@ -199,12 +199,17 @@ Supported codecs:
 When using parameterized-b64 for UserData, you should use a local_parameter defined
 as such::
 
+  from troposphere import AWSHelperFn
+
   "UserData": {
+    "type": AWSHelperFn,
     "description": "Instance user data",
-    "default": None
+    "default": Ref("AWS::NoValue")
   }
 
-and then assign UserData in a LaunchConfiguration or Instance to self.local_parameters["UserData"]
+and then assign UserData in a LaunchConfiguration or Instance to self.get_variables()["UserData"].
+Note that we use AWSHelperFn as the type because the parameterized-b64 codec returns either a
+Base64 or a GenericHelperFn troposphere object.
 
 Custom Lookups
 --------------

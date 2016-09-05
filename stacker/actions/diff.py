@@ -55,6 +55,59 @@ def diff_dictionaries(old_dict, new_dict):
     return [changes, output]
 
 
+def print_diff_parameters(parameter_diff):
+    """Handles the printing of differences in parameters.
+
+    Args:
+        parameter_diff (list): A list dictionaries detailing the differences
+            between two parameters returned by
+            :func:`stacker.actions.diff.diff_dictionaries`
+    """
+
+    print """--- Old Parameters
++++ New Parameters
+******************"""
+
+    for line in parameter_diff:
+        print "%s%s = %s" % (line[0], line[1], line[2])
+
+
+def diff_parameters(old_params, new_params):
+    """Compares the old vs. new parameters and prints a "diff"
+
+    If there are no changes, we print nothing.
+
+    Args:
+        old_params(dict): old paramters
+        new_params(dict): new parameters
+
+    Returns:
+        list: A list of differences
+    """
+    [changes, diff] = diff_dictionaries(old_params, new_params)
+    if changes == 0:
+        return []
+    return diff
+
+
+def print_stack_changes(stack_name, new_stack, old_stack, new_params,
+                        old_params):
+    """Prints out the paramters (if changed) and stack diff"""
+    from_file = "old_%s" % (stack_name,)
+    to_file = "new_%s" % (stack_name,)
+    lines = difflib.context_diff(
+        old_stack, new_stack,
+        fromfile=from_file, tofile=to_file)
+
+    template_changes = list(lines)
+    if not template_changes:
+        print "*** No changes to template ***"
+    else:
+        param_diffs = diff_parameters(old_params, new_params)
+        print_diff_parameters(param_diffs)
+        print "".join(template_changes)
+
+
 class Action(build.Action):
     """ Responsible for diff'ing CF stacks in AWS and on disk
 
@@ -66,26 +119,6 @@ class Action(build.Action):
     AWS and compare it to the generated templated based on the current
     config.
     """
-
-    def _diff_parameters(self, old_params, new_params):
-        """Compares the old vs. new parameters and prints a "diff"
-
-        If there are no changes, we print nothing.
-
-        Args:
-            old_params(dict): old paramters
-            new_params(dict): new parameters
-        """
-        [changes, diff] = diff_dictionaries(old_params, new_params)
-        if changes == 0:
-            return
-
-        print """--- Old Parameters
-+++ New Parameters
-******************"""
-
-        for line in diff:
-            print "%s%s = %s" % (line[0], line[1], line[2])
 
     def _normalize_json(self, template):
         """Normalizes our template for diffing
@@ -107,29 +140,12 @@ class Action(build.Action):
     def _print_new_stack(self, stack, parameters):
         """Prints out the parameters & stack contents of a new stack"""
         print "New template parameters:"
-        for param in sorted(
-                parameters,
-                key=lambda param: param['ParameterKey']):
+        for param in sorted(parameters,
+                            key=lambda param: param['ParameterKey']):
             print "%s = %s" % (param['ParameterKey'], param['ParameterValue'])
 
         print "\nNew template contents:"
         print "".join(stack)
-
-    def _print_stack_changes(self, stack_name, new_stack, old_stack,
-                             new_params, old_params):
-        """Prints out the paramters (if changed) and stack diff"""
-        from_file = "old_%s" % (stack_name,)
-        to_file = "new_%s" % (stack_name,)
-        lines = difflib.context_diff(
-            old_stack, new_stack,
-            fromfile=from_file, tofile=to_file)
-
-        template_changes = list(lines)
-        if not template_changes:
-            print "*** No changes to template ***"
-        else:
-            self._diff_parameters(old_params, new_params)
-            print "".join(template_changes)
 
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
@@ -163,8 +179,8 @@ class Action(build.Action):
         else:
             # Diff our old & new stack/parameters
             old_stack = self._normalize_json(old_template)
-            self._print_stack_changes(stack.name, new_stack, old_stack,
-                                      new_params, old_params)
+            print_stack_changes(stack.name, new_stack, old_stack, new_params,
+                                old_params)
         return COMPLETE
 
     def _generate_plan(self):

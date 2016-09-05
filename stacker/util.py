@@ -340,7 +340,7 @@ def get_config_directory():
 
     """
     # avoid circular import
-    from ...commands.stacker import Stacker
+    from .commands.stacker import Stacker
     command = Stacker()
     namespace = command.parse_args()
     return os.path.dirname(namespace.config.name)

@@ -1,23 +1,25 @@
 import unittest
 
-from stacker.actions.diff import diff_dictionaries
+from stacker.actions.diff import (
+    diff_dictionaries,
+    diff_parameters
+)
 
 
 class TestDiffDictionary(unittest.TestCase):
-    def setUp(self):
-        self.old_dict = {
+    def test_diff_dictionaries(self):
+        old_dict = {
             "a": "Apple",
             "b": "Banana",
             "c": "Corn",
         }
-        self.new_dict = {
+        new_dict = {
             "a": "Apple",
             "b": "Bob",
             "d": "Doug",
         }
 
-    def test_diff_dictionaries(self):
-        [count, changes] = diff_dictionaries(self.old_dict, self.new_dict)
+        [count, changes] = diff_dictionaries(old_dict, new_dict)
         self.assertEqual(count, 3)
         expected_output = [
             [" ", "a", "Apple"],
@@ -36,3 +38,16 @@ class TestDiffDictionary(unittest.TestCase):
 
         # No extra output
         self.assertEqual(len(changes), 0)
+
+
+class TestDiffParameters(unittest.TestCase):
+    def test_diff_parameters_no_changes(self):
+        old_params = {
+            "a": "Apple"
+        }
+        new_params = {
+            "a": "Apple"
+        }
+
+        param_diffs = diff_parameters(old_params, new_params)
+        self.assertEquals(param_diffs, [])

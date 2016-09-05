@@ -139,6 +139,78 @@ For example::
 
   ConfVariable: ${xref fully-qualified-stack::SomeOutput}
 
+.. file:
+
+File Lookup
+-----------
+
+The ``file`` lookup type allows the loading of arbitrary data from files on
+disk. The lookup additionally supports using a ``codec`` to manipulate or
+wrap the file contents prior to injecting it. The parameterized-b64 ``codec``
+is particularly useful to allow the interpolation of CloudFormation parameters
+in a UserData attribute of an instance or launch configuration.
+
+Basic examples::
+
+  # We've written a file to /some/path:
+  $ echo "hello there" > /some/path
+
+  # In stacker we would reference the contents of this file with the following
+  conf_key: ${file plain:file://some/path}
+
+  # The above would resolve to
+  conf_key: hello there
+
+  # Or, if we used wanted a base64 encoded copy of the file data
+  conf_key: ${file base64:file://some/path}
+
+  # The above would resolve to
+  conf_key: aGVsbG8gdGhlcmUK
+
+Supported codecs:
+ - plain
+ - base64 - encode the plain text file at the given path with base64 prior
+   to returning it
+ - parameterized - the same as plain, but additionally supports
+   referencing CloudFormation parameters to create userdata that's
+   supplemented with information from the template, as is commonly needed
+   in EC2 UserData. For example, given a template parameter of BucketName,
+   the file could contain the following text::
+
+     #!/bin/sh
+     aws s3 sync s3://{{BucketName}}/somepath /somepath
+
+   and then you could use something like this in the YAML config file::
+
+     UserData: ${file parameterized:/path/to/file}
+
+   resulting in the UserData parameter being defined as::
+
+     { "Fn::Join" : ["", [
+       "#!/bin/sh\naws s3 sync s3://",
+       {"Ref" : "BucketName"},
+       "/somepath /somepath"
+     ]] }
+
+ - parameterized-b64 - the same as parameterized, with the results additionally
+   wrapped in { "Fn::Base64": ... } , which is what you actually need for
+   EC2 UserData
+
+When using parameterized-b64 for UserData, you should use a local_parameter defined
+as such::
+
+  from troposphere import AWSHelperFn
+
+  "UserData": {
+    "type": AWSHelperFn,
+    "description": "Instance user data",
+    "default": Ref("AWS::NoValue")
+  }
+
+and then assign UserData in a LaunchConfiguration or Instance to self.get_variables()["UserData"].
+Note that we use AWSHelperFn as the type because the parameterized-b64 codec returns either a
+Base64 or a GenericHelperFn troposphere object.
+
 Custom Lookups
 --------------
 

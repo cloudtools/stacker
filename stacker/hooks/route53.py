@@ -1,10 +1,10 @@
 import logging
 
-logger = logging.getLogger(__name__)
-
 import boto3
 
 from stacker.util import create_route53_zone
+
+logger = logging.getLogger(__name__)
 
 
 def create_domain(region, namespace, mappings, parameters, **kwargs):

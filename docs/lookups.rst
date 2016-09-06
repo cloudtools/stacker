@@ -215,4 +215,4 @@ Custom Lookups
 --------------
 
 Custom lookups can be registered within the config. For more information
-see `Configuring Lookups <config.html#lookups`_.
+see `Configuring Lookups <config.html#lookups>`_.

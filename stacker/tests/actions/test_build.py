@@ -58,17 +58,6 @@ class TestBuildAction(unittest.TestCase):
         ]}
         return Context({"namespace": "namespace"}, config=config, **kwargs)
 
-    def test_resolve_parameters_referencing_non_existant_stack(self):
-        parameters = {
-            "param_1": "mock::output_1",
-        }
-        self.build_action.provider.set_outputs({})
-        mock_blueprint = mock.MagicMock()
-        type(mock_blueprint).parameters = parameters
-        with self.assertRaises(exceptions.StackDoesNotExist):
-            self.build_action._resolve_parameters(parameters,
-                                                  mock_blueprint)
-
     def test_handle_missing_params(self):
         stack = {'StackName': 'teststack'}
         def_params = {"Address": "192.168.0.1"}
@@ -279,76 +268,6 @@ class TestFunctions(unittest.TestCase):
         params = {"a": None, "c": "Carrot"}
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)
         self.assertNotIn("a", p)
-
-    def test_resolve_parameters_resolve_outputs(self):
-        self.bp.parameters = {
-            "a": {
-                "type": "String",
-                "description": "A"},
-            "b": {
-                "type": "String",
-                "description": "B"}
-        }
-        params = {"a": "other-stack::a", "b": "Banana"}
-        self.prov.get_output.return_value = "Apple"
-        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
-        kall = self.prov.get_output.call_args
-        args, kwargs = kall
-        self.assertTrue(args[0], "test-other-stack")
-        self.assertTrue(args[1], "a")
-        self.assertEqual(p["a"], "Apple")
-        self.assertEqual(p["b"], "Banana")
-
-    def test_resolve_parameters_multiple_outputs(self):
-        def get_output(stack, param):
-            d = {"a": "Apple", "c": "Carrot"}
-            return d[param]
-
-        self.bp.parameters = {
-            "a": {
-                "type": "String",
-                "description": "A"},
-            "b": {
-                "type": "String",
-                "description": "B"}
-        }
-        params = {"a": "other-stack::a,other-stack::c", "b": "Banana"}
-        self.prov.get_output.side_effect = get_output
-        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
-        self.assertEqual(self.prov.get_output.call_count, 2)
-        self.assertEqual(p["a"], "Apple,Carrot")
-        self.assertEqual(p["b"], "Banana")
-
-        # Test multi-output with spaces
-        params = {"a": "other-stack::a, other-stack::c", "b": "Banana"}
-        self.prov.get_output.side_effect = get_output
-        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
-        self.assertEqual(self.prov.get_output.call_count, 4)
-        self.assertEqual(p["a"], "Apple,Carrot")
-        self.assertEqual(p["b"], "Banana")
-
-    def test_resolve_parameters_output_does_not_exist(self):
-        def get_output(stack, param):
-            d = {"c": "Carrot"}
-            return d[param]
-
-        self.bp.parameters = {
-            "a": {
-                "type": "String",
-                "description": "A"
-            },
-        }
-        params = {"a": "other-stack::a"}
-        self.prov.get_output.side_effect = get_output
-        with self.assertRaises(exceptions.OutputDoesNotExist) as cm:
-            resolve_parameters(params, self.bp, self.ctx, self.prov)
-
-        exc = cm.exception
-        self.assertEqual(exc.stack_name, "test-other-stack")
-        # Not sure this is actually what we want - should probably change it
-        # so the output is just the output name, not the stack name + the
-        # output name
-        self.assertEqual(exc.output, "other-stack::a")
 
     def test_resolve_parameters_booleans(self):
         self.bp.parameters = {

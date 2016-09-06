@@ -78,36 +78,21 @@ def resolve_parameters(parameters, blueprint, context, provider):
     params = {}
     blueprint_params = blueprint.parameters
 
-    for k, v in parameters.items():
-        if k not in blueprint_params:
+    for key, value in parameters.items():
+        if key not in blueprint_params:
             logger.debug("Template %s does not use parameter %s.",
-                         blueprint.name, k)
+                         blueprint.name, key)
             continue
-        value = v
-        if isinstance(value, basestring) and "::" in value:
-            # Get from the Output(s) of another stack(s) in the stack_map
-            v_list = []
-            values = value.split(",")
-            for v in values:
-                v = v.strip()
-                stack_name, output = v.split("::")
-                stack_fqn = context.get_fqn(stack_name)
-                try:
-                    v_list.append(
-                        provider.get_output(stack_fqn, output))
-                except KeyError:
-                    raise exceptions.OutputDoesNotExist(stack_fqn, v)
-            value = ",".join(v_list)
         if value is None:
             logger.debug("Got None value for parameter %s, not submitting it "
                          "to cloudformation, default value should be used.",
-                         k)
+                         key)
             continue
         if isinstance(value, bool):
             logger.debug("Converting parameter %s boolean \"%s\" to string.",
-                         k, value)
+                         key, value)
             value = str(value).lower()
-        params[k] = value
+        params[key] = value
     return params
 
 

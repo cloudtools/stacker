@@ -9,7 +9,6 @@ from troposphere import (
 )
 
 from ..exceptions import (
-    MissingLocalParameterException,
     MissingVariable,
     UnresolvedVariable,
     UnresolvedVariables,
@@ -51,52 +50,6 @@ class CFNParameter(object):
     @property
     def ref(self):
         return Ref(self.name)
-
-
-def get_local_parameters(parameter_def, parameters):
-    """Gets local parameters from parameter list.
-
-    Given a local parameter definition, and a list of parameters, extract the
-    local parameters, or use a default if provided. If the parameter isn't
-    present, and there is no default, then throw an exception.
-
-    Args:
-        parameter_def (dict): A dictionary of expected/allowed parameters
-            and their defaults. If a parameter is in the list, but does not
-            have a default, it is considered required.
-        parameters (dict): A dictionary of parameters to pull local parameters
-            from.
-
-    Returns:
-        dict: A dictionary of local parameters.
-
-    Raises:
-        MissingLocalParameterException: If a parameter is defined in
-            parameter_def, does not have a default, and does not exist in
-            parameters.
-
-    """
-    local = {}
-
-    for param, attrs in parameter_def.items():
-        try:
-            value = parameters[param]
-        except KeyError:
-            try:
-                value = attrs["default"]
-            except KeyError:
-                raise MissingLocalParameterException(param)
-
-        _type = attrs.get("type")
-        if _type:
-            try:
-                value = _type(value)
-            except ValueError:
-                raise ValueError("Local parameter %s must be %s.", param,
-                                 _type)
-        local[param] = value
-
-    return local
 
 
 PARAMETER_PROPERTIES = {
@@ -239,7 +192,6 @@ class Blueprint(object):
         self.context = context
         self.mappings = mappings
         self.outputs = {}
-        self.local_parameters = self.get_local_parameters()
         self.reset_template()
         self.resolved_variables = None
 
@@ -255,10 +207,6 @@ class Blueprint(object):
             if not hasattr(v, "Default"):
                 required.append((k, v))
         return required
-
-    def get_local_parameters(self):
-        local_parameters = getattr(self, "LOCAL_PARAMETERS", {})
-        return get_local_parameters(local_parameters, self.context.parameters)
 
     def _get_parameters(self):
         """Get the parameter definitions.

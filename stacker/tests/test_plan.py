@@ -250,6 +250,7 @@ class TestPlan(unittest.TestCase):
         plan.outline()
         self.assertEqual(len(plan.list_pending()), len(plan))
 
+    @unittest.skip
     @mock.patch("stacker.plan.os")
     @mock.patch("stacker.plan.open", mock.mock_open(), create=True)
     def test_reset_after_dump(self, *args):

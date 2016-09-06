@@ -10,7 +10,6 @@ from stacker.blueprints.base import (
     Blueprint,
     CFNParameter,
     build_parameter,
-    get_local_parameters,
     validate_variable_type,
     resolve_variable
 )
@@ -20,7 +19,6 @@ from stacker.blueprints.variables.types import (
 )
 from stacker.exceptions import (
     InvalidLookupCombination,
-    MissingLocalParameterException,
     MissingVariable,
     UnresolvedVariable,
     UnresolvedVariables,
@@ -38,31 +36,6 @@ def mock_lookup_handler(value, provider=None, context=None, fqn=False,
     return value
 
 register_lookup_handler("mock", mock_lookup_handler)
-
-
-class TestLocalParameters(unittest.TestCase):
-    def test_default_parameter(self):
-        parameter_def = {"Param1": {"default": 0}}
-        parameters = {}
-
-        local = get_local_parameters(parameter_def, parameters)
-        self.assertEquals(local["Param1"], 0)
-
-    def test_missing_required(self):
-        parameter_def = {"Param1": {"default": 0}, "Param2": {}}
-        parameters = {}
-
-        with self.assertRaises(MissingLocalParameterException) as cm:
-            get_local_parameters(parameter_def, parameters)
-
-        self.assertEquals("Param2", cm.exception.parameter)
-
-    def test_supplied_parameter(self):
-        parameter_def = {"Param1": {"default": 0}, "Param2": {}}
-        parameters = {"Param1": 1, "Param2": 2}
-
-        local = get_local_parameters(parameter_def, parameters)
-        self.assertEquals(parameters, local)
 
 
 class TestBuildParameter(unittest.TestCase):

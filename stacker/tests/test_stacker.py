@@ -36,14 +36,13 @@ class TestStacker(unittest.TestCase):
         stacks_dict = args.context.get_stacks_dict()
         blueprint = stacks_dict[args.context.get_fqn("bastion")].blueprint
         self.assertTrue(hasattr(blueprint, "context"))
-        blueprint.create_template()
-        blueprint.setup_parameters()
+        blueprint.render_template()
         # verify that the bastion blueprint only contains blueprint parameters,
         # not BaseDomain, AZCount or CidrBlock. Any parameters that get passed
         # in from the command line shouldn't be resovled at the blueprint level
-        self.assertNotIn("BaseDomain", blueprint.parameters)
-        self.assertNotIn("AZCount", blueprint.parameters)
-        self.assertNotIn("CidrBlock", blueprint.parameters)
+        self.assertNotIn("BaseDomain", blueprint.template.parameters)
+        self.assertNotIn("AZCount", blueprint.template.parameters)
+        self.assertNotIn("CidrBlock", blueprint.template.parameters)
 
     def test_stacker_blueprint_property_access_does_not_reset_blueprint(self):
         stacker = Stacker()
@@ -56,9 +55,8 @@ class TestStacker(unittest.TestCase):
         stacker.configure(args)
         stacks_dict = args.context.get_stacks_dict()
         bastion_stack = stacks_dict[args.context.get_fqn("bastion")]
-        bastion_stack.blueprint.create_template()
-        bastion_stack.blueprint.setup_parameters()
-        self.assertIn("DefaultSG", bastion_stack.blueprint.parameters)
+        bastion_stack.blueprint.render_template()
+        self.assertIn("DefaultSG", bastion_stack.blueprint.template.parameters)
 
     def test_stacker_build_context_stack_names_specified(self):
         stacker = Stacker()

@@ -147,7 +147,8 @@ class Action(BaseAction):
         """
         parameters = self._resolve_parameters(stack.cfn_parameters,
                                               stack.blueprint)
-        required_params = [k for k, v in stack.blueprint.required_parameters]
+        required_params = [k for k, v in
+                           stack.blueprint.get_required_parameters()]
         parameters = self._handle_missing_parameters(parameters,
                                                      required_params,
                                                      provider_stack)

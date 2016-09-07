@@ -3,9 +3,9 @@
 #   https://github.com/boto/boto/pull/3143
 import logging
 
-logger = logging.getLogger(__name__)
-
 import boto3
+
+logger = logging.getLogger(__name__)
 
 
 def create_clusters(region, namespace, mappings, parameters, **kwargs):

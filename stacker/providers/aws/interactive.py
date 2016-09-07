@@ -152,7 +152,8 @@ class Provider(AWSProvider):
             )
 
         if response["ExecutionStatus"] != "AVAILABLE":
-            raise Exception("Unable to execute change set: {}".format(response))
+            raise Exception("Unable to execute change set: "
+                            "{}".format(response))
 
         action = "replacements" if self.replacements_only else "changes"
         changeset = response["Changes"]

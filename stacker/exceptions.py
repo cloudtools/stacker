@@ -5,7 +5,8 @@ class InvalidLookupCombination(Exception):
             "Lookup: \"{}\" has non-string return value, must be only lookup "
             "present (not {}) in \"{}\""
         ).format(lookup.raw, len(lookups), value)
-        super(InvalidLookupCombination, self).__init__(message, *args,
+        super(InvalidLookupCombination, self).__init__(message,
+                                                       *args,
                                                        **kwargs)
 
 

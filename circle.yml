@@ -1,2 +1,10 @@
 machine:
   timezone: America/Los_Angeles
+
+dependencies:
+  pre:
+    - pip install flake8
+
+test:
+  override:
+    - make test

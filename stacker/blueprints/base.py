@@ -13,6 +13,7 @@ from ..exceptions import (
     MissingVariable,
     UnresolvedVariable,
     UnresolvedVariables,
+    ValidatorError,
     VariableTypeRequired,
 )
 from .variables.types import CFNType
@@ -206,7 +207,10 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
 
     # If no validator, return the value as is, otherwise apply validator
     validator = var_def.get("validator", lambda v: v)
-    value = validator(value)
+    try:
+        value = validator(value)
+    except Exception as exc:
+        raise ValidatorError(var_name, validator.__name__, value, exc)
 
     # Ensure that the resulting value is the correct type
     var_type = var_def.get("type")

@@ -117,3 +117,22 @@ class StackDidNotChange(Exception):
 
 class CancelExecution(Exception):
     """Exception raised when we want to cancel executing the plan."""
+
+
+class ValidatorError(Exception):
+    """Used for errors raised by custom validators of blueprint variables.
+    """
+    def __init__(self, variable, validator, value, exception=None):
+        self.variable = variable
+        self.validator = validator
+        self.value = value
+        self.exception = exception
+        self.message = ("Validator '%s' failed for variable '%s' with value "
+                        "'%s'") % (self.validator, self.variable, self.value)
+
+        if self.exception:
+            self.message += ": %s: %s" % (self.exception.__class__.__name__,
+                                          str(self.exception))
+
+    def __str__(self):
+        return self.message

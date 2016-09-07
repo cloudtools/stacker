@@ -24,6 +24,7 @@ from stacker.exceptions import (
     MissingVariable,
     UnresolvedVariable,
     UnresolvedVariables,
+    ValidatorError,
     VariableTypeRequired,
 )
 from stacker.variables import Variable
@@ -215,7 +216,7 @@ class TestVariables(unittest.TestCase):
     def test_resolve_variable_validator_invalid_value(self):
         def triple_validator(value):
             if len(value) != 3:
-                raise ValueError
+                raise ValueError("Must be a triple.")
             return value
 
         var_name = "testVar"
@@ -224,9 +225,12 @@ class TestVariables(unittest.TestCase):
         provided_variable = Variable(var_name, var_value)
         blueprint_name = "testBlueprint"
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValidatorError) as cm:
             resolve_variable(var_name, var_def, provided_variable,
                              blueprint_name)
+
+        exc = cm.exception.exception  # The wrapped exception
+        self.assertIsInstance(exc, ValueError)
 
     def test_resolve_variables(self):
         class TestBlueprint(Blueprint):

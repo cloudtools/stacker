@@ -185,6 +185,8 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
         ValueError: Raised when the value is not the right type and cannot be
             cast as the correct type. Raised by
             :func:`stacker.blueprints.base.validate_variable_type`
+        ValidatorError: Raised when a validator raises an exception. Wraps the
+            original exception.
     """
 
     try:

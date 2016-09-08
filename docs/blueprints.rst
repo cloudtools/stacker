@@ -45,6 +45,13 @@ supports the following optional keys:
 **description:**
   A string that describes the purpose of the variable.
 
+**validator:**
+  An optional function that can do custom validation of the variable. A
+  validator function should take a single argument, the value being validated,
+  and should return the value if validation is successful. If there is an
+  issue validating the value, an exception (``ValueError``, ``TypeError``, etc)
+  should be raised by the function.
+
 **no_echo:**
   Only valid for variables whose type subclasses ``CFNType``. Whether to
   mask the parameter value whenever anyone makes a call that describes the
@@ -80,6 +87,7 @@ supports the following optional keys:
   Only valid for variables whose type subclasses ``CFNType``. A string
   that explains the constraint when the constraint is violated for the
   CloudFormation Parameter.
+
 
 Variable Types
 ==============

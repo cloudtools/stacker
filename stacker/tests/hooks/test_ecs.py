@@ -24,7 +24,7 @@ class TestECSHooks(unittest.TestCase):
                         region=REGION,
                         namespace="fake",
                         mappings={},
-                        parameters={},
+                        variables={},
                         clusters=cluster
                     )
                 )
@@ -55,7 +55,7 @@ class TestECSHooks(unittest.TestCase):
                             region=REGION,
                             namespace="fake",
                             mappings={},
-                            parameters={},
+                            variables={},
                             clusters=cluster
                         )
                     )

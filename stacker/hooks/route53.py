@@ -7,9 +7,9 @@ from stacker.util import create_route53_zone
 logger = logging.getLogger(__name__)
 
 
-def create_domain(region, namespace, mappings, parameters, **kwargs):
+def create_domain(region, namespace, mappings, variables, **kwargs):
     client = boto3.client("route53", region_name=region)
-    domain = kwargs.get('domain', parameters.get('BaseDomain'))
+    domain = kwargs.get('domain', variables.get('BaseDomain'))
     if not domain:
         logger.error("domain argument or BaseDomain parameter not provided.")
         return False

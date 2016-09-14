@@ -15,9 +15,9 @@ def find(lst, key, value):
     return False
 
 
-def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
+def ensure_keypair_exists(region, namespace, mappings, variables, **kwargs):
     client = boto3.client('ec2', region_name=region)
-    keypair_name = kwargs.get("keypair", parameters.get("SshKeyName"))
+    keypair_name = kwargs.get("keypair", variables.get("SshKeyName"))
     resp = client.describe_key_pairs()
     keypair = find(resp['KeyPairs'], 'KeyName', keypair_name)
     message = "keypair: %s (%s) %s"

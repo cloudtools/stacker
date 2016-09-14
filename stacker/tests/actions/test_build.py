@@ -5,7 +5,11 @@ import mock
 
 from stacker import exceptions
 from stacker.actions import build
-from stacker.actions.build import resolve_parameters
+from stacker.actions.build import (
+    _resolve_parameters,
+    _handle_missing_parameters,
+)
+from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context
 from stacker.exceptions import StackDidNotChange
 from stacker.providers.base import BaseProvider
@@ -51,10 +55,10 @@ class TestBuildAction(unittest.TestCase):
     def _get_context(self, **kwargs):
         config = {"stacks": [
             {"name": "vpc"},
-            {"name": "bastion", "parameters": {"test": "vpc::something"}},
-            {"name": "db", "parameters": {"test": "vpc::something",
-                                          "else": "bastion::something"}},
-            {"name": "other", "parameters": {}}
+            {"name": "bastion", "variables": {"test": "${vpc::something}"}},
+            {"name": "db", "variables": {"test": "${vpc::something}",
+                                          "else": "${bastion::something}"}},
+            {"name": "other", "variables": {}}
         ]}
         return Context({"namespace": "namespace"}, config=config, **kwargs)
 
@@ -62,8 +66,7 @@ class TestBuildAction(unittest.TestCase):
         stack = {'StackName': 'teststack'}
         def_params = {"Address": "192.168.0.1"}
         required = ["Address"]
-        result = self.build_action._handle_missing_parameters(def_params,
-                                                              required, stack)
+        result = _handle_missing_parameters(def_params, required, stack)
         self.assertEqual(result, def_params.items())
 
     def test_gather_missing_from_stack(self):
@@ -72,15 +75,14 @@ class TestBuildAction(unittest.TestCase):
         def_params = {}
         required = ["Address"]
         self.assertEqual(
-            self.build_action._handle_missing_parameters(def_params, required,
-                                                         stack),
+            _handle_missing_parameters(def_params, required, stack),
             stack_params.items())
 
     def test_missing_params_no_stack(self):
         params = {}
         required = ["Address"]
         with self.assertRaises(exceptions.MissingParameterException) as cm:
-            self.build_action._handle_missing_parameters(params, required)
+            _handle_missing_parameters(params, required)
 
         self.assertEqual(cm.exception.parameters, required)
 
@@ -89,8 +91,7 @@ class TestBuildAction(unittest.TestCase):
         stack = mock_stack(stack_params)
         def_params = {"Address": "192.168.0.1"}
         required = ["Address"]
-        result = self.build_action._handle_missing_parameters(def_params,
-                                                              required, stack)
+        result = _handle_missing_parameters(def_params, required, stack)
         self.assertEqual(result, def_params.items())
 
     def test_get_dependencies(self):
@@ -243,42 +244,42 @@ class TestFunctions(unittest.TestCase):
         self.bp = mock.MagicMock()
 
     def test_resolve_parameters_unused_parameter(self):
-        self.bp.parameters = {
+        self.bp.get_parameter_definitions.return_value = {
             "a": {
-                "type": "String",
+                "type": CFNString,
                 "description": "A"},
             "b": {
-                "type": "String",
+                "type": CFNString,
                 "description": "B"}
         }
         params = {"a": "Apple", "c": "Carrot"}
-        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        p = _resolve_parameters(params, self.bp)
         self.assertNotIn("c", p)
         self.assertIn("a", p)
 
     def test_resolve_parameters_none_conversion(self):
-        self.bp.parameters = {
+        self.bp.get_parameter_definitions.return_value = {
             "a": {
-                "type": "String",
+                "type": CFNString,
                 "description": "A"},
             "b": {
-                "type": "String",
+                "type": CFNString,
                 "description": "B"}
         }
         params = {"a": None, "c": "Carrot"}
-        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        p = _resolve_parameters(params, self.bp)
         self.assertNotIn("a", p)
 
     def test_resolve_parameters_booleans(self):
-        self.bp.parameters = {
+        self.bp.get_parameter_definitions.return_value = {
             "a": {
-                "type": "String",
+                "type": CFNString,
                 "description": "A"},
             "b": {
-                "type": "String",
+                "type": CFNString,
                 "description": "B"},
         }
         params = {"a": True, "b": False}
-        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        p = _resolve_parameters(params, self.bp)
         self.assertEquals("true", p["a"])
         self.assertEquals("false", p["b"])

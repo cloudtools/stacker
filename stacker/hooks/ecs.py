@@ -8,7 +8,7 @@ import boto3
 logger = logging.getLogger(__name__)
 
 
-def create_clusters(region, namespace, mappings, parameters, **kwargs):
+def create_clusters(region, namespace, mappings, variables, **kwargs):
     """Creates ECS clusters.
 
     Expects a "clusters" argument, which should contain a list of cluster

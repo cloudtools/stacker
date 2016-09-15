@@ -114,6 +114,11 @@ class Stack(object):
         for lookup in self.lookups:
             if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
                 d = deconstruct(lookup.input)
+                if d.stack_name == self.name:
+                    message = (
+                        "Lookup: \"%s\" is a circular reference to: %s"
+                    ) % (lookup.raw, d.stack_name)
+                    raise ValueError(message)
                 stack_fqn = self.context.get_fqn(d.stack_name)
                 requires.add(stack_fqn)
 

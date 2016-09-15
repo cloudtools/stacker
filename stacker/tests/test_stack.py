@@ -64,6 +64,18 @@ class TestStack(unittest.TestCase):
             stack.requires,
         )
 
+    def test_stack_requires_circular_ref(self):
+        definition = generate_definition(
+            base_name="vpc",
+            stack_id=1,
+            variables={
+                "Var1": "${vpc.1::FakeOutput}",
+            },
+        )
+        stack = Stack(definition=definition, context=self.context)
+        with self.assertRaises(ValueError):
+            stack.requires
+
     def test_stack_cfn_parameters(self):
         definition = generate_definition(
             base_name="vpc",

@@ -57,7 +57,7 @@ class TestBuildAction(unittest.TestCase):
             {"name": "vpc"},
             {"name": "bastion", "variables": {"test": "${vpc::something}"}},
             {"name": "db", "variables": {"test": "${vpc::something}",
-                                          "else": "${bastion::something}"}},
+                                         "else": "${bastion::something}"}},
             {"name": "other", "variables": {}}
         ]}
         return Context({"namespace": "namespace"}, config=config, **kwargs)

@@ -20,7 +20,8 @@ def _gather_variables(stack_def, context_variables):
     specific stack.
 
     Order of precedence:
-        - context defined stack specific variables (ie. SomeStack::SomeVariable)
+        - context defined stack specific variables (ie.
+            SomeStack::SomeVariable)
         - context defined non-specific variables
         - variable defined within the stack definition
 

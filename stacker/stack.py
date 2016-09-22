@@ -99,11 +99,7 @@ class Stack(object):
                         message = (
                             "Variable %s in stack %s has a ciruclar reference "
                             "within lookup: %s"
-                        ) % (
-                            variable.name,
-                            self.name,
-                            lookup.raw,
-                        )
+                        ) % (variable.name, self.name, lookup.raw)
                         raise ValueError(message)
                     stack_fqn = self.context.get_fqn(d.stack_name)
                     requires.add(stack_fqn)

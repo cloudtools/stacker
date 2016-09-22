@@ -16,25 +16,6 @@ class TestStack(unittest.TestCase):
             context=self.context,
         )
 
-    def test_stack_lookups(self):
-        definition = generate_definition(
-            base_name="vpc",
-            stack_id=1,
-            parameters={
-                "Param1": "fakeStack::FakeOutput",
-            },
-            variables={
-                "Var1": "${noop fakeStack::FakeOutput4}",
-                "Var2": (
-                    "some.template.value:${fakeStack2::FakeOutput}:"
-                    "${fakeStack::FakeOutput}"
-                ),
-                "Var3": "${fakeStack::FakeOutput},${fakeStack2::FakeOutput}",
-            },
-        )
-        stack = Stack(definition=definition, context=self.context)
-        self.assertEqual(len(stack.lookups), 3)
-
     def test_stack_requires(self):
         definition = generate_definition(
             base_name="vpc",
@@ -63,6 +44,18 @@ class TestStack(unittest.TestCase):
             self.context.get_fqn("fakeStack2"),
             stack.requires,
         )
+
+    def test_stack_requires_circular_ref(self):
+        definition = generate_definition(
+            base_name="vpc",
+            stack_id=1,
+            variables={
+                "Var1": "${vpc.1::FakeOutput}",
+            },
+        )
+        stack = Stack(definition=definition, context=self.context)
+        with self.assertRaises(ValueError):
+            stack.requires
 
     def test_stack_cfn_parameters(self):
         definition = generate_definition(

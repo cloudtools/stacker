@@ -111,16 +111,22 @@ class Stack(object):
                 requires.add(stack_fqn)
 
         # Add any dependencies based on output lookups
-        for lookup in self.lookups:
-            if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
-                d = deconstruct(lookup.input)
-                if d.stack_name == self.name:
-                    message = (
-                        "Lookup: \"%s\" is a circular reference to: %s"
-                    ) % (lookup.raw, d.stack_name)
-                    raise ValueError(message)
-                stack_fqn = self.context.get_fqn(d.stack_name)
-                requires.add(stack_fqn)
+        for variable in self.variables:
+            for lookup in variable.lookups:
+                if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
+                    d = deconstruct(lookup.input)
+                    if d.stack_name == self.name:
+                        message = (
+                            "Variable %s in stack %s has a ciruclar reference "
+                            "within lookup: %s"
+                        ) % (
+                            variable.name,
+                            self.name,
+                            lookup.raw,
+                        )
+                        raise ValueError(message)
+                    stack_fqn = self.context.get_fqn(d.stack_name)
+                    requires.add(stack_fqn)
 
         return requires
 

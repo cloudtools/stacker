@@ -131,14 +131,6 @@ class Stack(object):
         return requires
 
     @property
-    def lookups(self):
-        """Return a set of lookups contained by stack variables"""
-        lookups = set()
-        for variable in self.variables:
-            lookups = lookups.union(variable.lookups)
-        return lookups
-
-    @property
     def blueprint(self):
         if not hasattr(self, "_blueprint"):
             class_path = self.definition["class_path"]

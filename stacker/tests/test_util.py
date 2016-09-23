@@ -4,7 +4,6 @@ import string
 import os
 import Queue
 
-from stacker.context import Context
 from stacker.util import (
     cf_safe_name, load_object_from_string,
     camel_to_snake, handle_hooks, retry_with_backoff)

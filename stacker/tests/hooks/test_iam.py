@@ -10,6 +10,11 @@ from stacker.hooks.iam import (
     _get_cert_arn_from_response,
 )
 
+from ..factories import (
+    mock_context,
+    mock_provider,
+)
+
 
 REGION = "us-east-1"
 
@@ -19,6 +24,11 @@ REGION = "us-east-1"
 
 
 class TestIAMHooks(unittest.TestCase):
+
+    def setUp(self):
+        self.context = mock_context(namespace="fake")
+        self.provider = mock_provider(region=REGION)
+
     def test_get_cert_arn_from_response(self):
         arn = "fake-arn"
         # Creation response
@@ -45,10 +55,8 @@ class TestIAMHooks(unittest.TestCase):
 
             self.assertTrue(
                 create_ecs_service_role(
-                    region=REGION,
-                    namespace="fake",
-                    mappings={},
-                    parameters={}
+                    context=self.context,
+                    provider=self.provider,
                 )
             )
 

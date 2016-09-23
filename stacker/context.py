@@ -42,7 +42,7 @@ class Context(object):
     def __init__(self, environment,  # pylint: disable-msg=too-many-arguments
                  stack_names=None,
                  variables=None, mappings=None, config=None,
-                 force_stacks=None):
+                 force_stacks=None, logger_type=None):
         try:
             self.namespace = environment["namespace"]
         except KeyError:
@@ -52,6 +52,7 @@ class Context(object):
         self.stack_names = stack_names or []
         self.variables = variables or {}
         self.mappings = mappings or {}
+        self.logger_type = logger_type
         self.namespace_delimiter = "-"
         self.config = config or {}
         self.force_stacks = force_stacks or []

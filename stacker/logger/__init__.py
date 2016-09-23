@@ -11,6 +11,9 @@ COLOR_FORMAT = ("[%(asctime)s] %(color)s%(message)s")
 
 ISO_8601 = "%Y-%m-%dT%H:%M:%S"
 
+BASIC_LOGGER_TYPE = 0
+LOOP_LOGGER_TYPE = 1
+
 
 def setup_logging(verbosity, interactive):
     enable_loop_logger = (
@@ -26,6 +29,7 @@ def setup_logging(verbosity, interactive):
     if verbosity < 2:
         logging.getLogger("botocore").setLevel(logging.CRITICAL)
 
+    log_type = BASIC_LOGGER_TYPE
     if enable_loop_logger:
         fmt = ColorFormatter(COLOR_FORMAT, ISO_8601)
         hdlr = LogLoopStreamHandler()
@@ -38,3 +42,4 @@ def setup_logging(verbosity, interactive):
             datefmt=ISO_8601,
             level=log_level,
         )
+    return log_type

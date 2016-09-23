@@ -1,4 +1,5 @@
 import unittest
+
 import mock
 
 from stacker.context import Context

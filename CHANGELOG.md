@@ -1,3 +1,46 @@
+## 0.8.1 (2016-09-22)
+
+Minor update to remove dependencies on stacker\_blueprints for tests, since it
+resulted in a circular dependency.  This is just a fix to get tests running again,
+and results in no change in functionality.
+
+## 0.8.0 (2016-09-22)
+
+This is a big release which introduces the new concepts of Blueprint Variables
+and Lookups. A lot of folks contributed to this release - in both code, and just
+testing of the new features.  Thanks to:
+
+@kylev, @oliviervg1, @datadotworld, @acmcelwee, @troyready, @danielkza, and @ttarhan
+
+Special thanks to @mhahn who did the bulk of the heavy lifting in this release, and
+the work towards 1.0!
+
+- Add docs on config, environments & translators [GH-157]
+- locked output changed to debug [GH-159]
+- Multi-output parameter doc [GH-160]
+- Remove spaces from multi-item parameters [GH-161]
+- Remove blueprints & configs in favor of stacker\_blueprints [GH-163]
+- Clean up plan/status split [GH-165]
+- Allow s3 server side encryption [GH-167]
+- Support configurable namespace delimiter [GH-169]
+- Support tags as a new top-level keyword [GH-171]
+- Update to boto3 [GH-174]
+- Interactive AWS Provider [GH-178]
+- Add config option for appending to sys.path [GH-179]
+- More condensed output [GH-182]
+- File loading lookup [GH-185]
+- Handle stacks without parameters [GH-193]
+- Implement blueprint variables & lookups [GH-194]
+- Fix traceback on interactive provider when adding resources [GH-198]
+- kms lookup [GH-200]
+- Compatible release version dependencies [GH-201]
+- add xref lookup [GH-202]
+- Update docstrings for consistency [GH-204]
+- Add support for CFN Parameter types in Blueprint Variables [GH-206]
+- Deal w/ multiprocessing library sharing ssl connections [GH-208]
+- Fix issues with slashes inside variable lookups [GH-213]
+- Custom validators for blueprint variables [GH-218]
+
 ## 0.6.3 (2016-05-24)
 - add `stacker dump` subcommand for testing stack/blueprints [GH-156]
 

@@ -1,3 +1,9 @@
+## 0.8.1 (2016-09-22)
+
+Minor update to remove dependencies on stacker\_blueprints for tests, since it
+resulted in a circular dependency.  This is just a fix to get tests running again,
+and results in no change in functionality.
+
 ## 0.8.0 (2016-09-22)
 
 This is a big release which introduces the new concepts of Blueprint Variables

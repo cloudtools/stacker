@@ -2,12 +2,12 @@ import os
 from setuptools import setup, find_packages
 import glob
 
-VERSION = "0.8.0"
+VERSION = "0.8.1"
 
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "troposphere~=1.8.0",
+    "troposphere~=1.8.1",
     "boto3~=1.3.1",
     "botocore~=1.4.38",
     "PyYAML~=3.11",

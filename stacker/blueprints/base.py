@@ -9,7 +9,6 @@ from troposphere import (
 )
 
 from ..exceptions import (
-    MissingLocalParameterException,
     MissingVariable,
     UnresolvedVariable,
     UnresolvedVariables,
@@ -20,14 +19,24 @@ from .variables.types import CFNType
 
 logger = logging.getLogger(__name__)
 
+PARAMETER_PROPERTIES = {
+    "default": "Default",
+    "description": "Description",
+    "no_echo": "NoEcho",
+    "allowed_values": "AllowedValues",
+    "allowed_pattern": "AllowedPattern",
+    "max_length": "MaxLength",
+    "min_length": "MinLength",
+    "max_value": "MaxValue",
+    "min_value": "MinValue",
+    "constraint_description": "ConstraintDescription"
+}
+
 
 class CFNParameter(object):
 
     def __init__(self, name, value):
         """Wrapper around a value to indicate a CloudFormation Parameter.
-
-        This allows us to filter out non-CloudFormation Parameters from
-        Blueprint variables when we submit the CloudFormation parameters.
 
         Args:
             name (str): the name of the CloudFormation Parameter
@@ -35,8 +44,20 @@ class CFNParameter(object):
                 CloudFormation Parameter.
 
         """
-        if not (isinstance(value, basestring) or isinstance(value, list)):
-            raise ValueError("CFNParameter value must be a str or a list")
+        acceptable_types = [basestring, list, int]
+        acceptable = False
+        for acceptable_type in acceptable_types:
+            if isinstance(value, acceptable_type):
+                # Convert integers to strings
+                if acceptable_type == int:
+                    value = str(value)
+
+                acceptable = True
+
+        if not acceptable:
+            raise ValueError(
+                "CFNParameter (%s) value must be one of %s got: %s" % (
+                    name, "str, int, or list", value))
 
         self.name = name
         self.value = value
@@ -51,66 +72,6 @@ class CFNParameter(object):
     @property
     def ref(self):
         return Ref(self.name)
-
-
-def get_local_parameters(parameter_def, parameters):
-    """Gets local parameters from parameter list.
-
-    Given a local parameter definition, and a list of parameters, extract the
-    local parameters, or use a default if provided. If the parameter isn't
-    present, and there is no default, then throw an exception.
-
-    Args:
-        parameter_def (dict): A dictionary of expected/allowed parameters
-            and their defaults. If a parameter is in the list, but does not
-            have a default, it is considered required.
-        parameters (dict): A dictionary of parameters to pull local parameters
-            from.
-
-    Returns:
-        dict: A dictionary of local parameters.
-
-    Raises:
-        MissingLocalParameterException: If a parameter is defined in
-            parameter_def, does not have a default, and does not exist in
-            parameters.
-
-    """
-    local = {}
-
-    for param, attrs in parameter_def.items():
-        try:
-            value = parameters[param]
-        except KeyError:
-            try:
-                value = attrs["default"]
-            except KeyError:
-                raise MissingLocalParameterException(param)
-
-        _type = attrs.get("type")
-        if _type:
-            try:
-                value = _type(value)
-            except ValueError:
-                raise ValueError("Local parameter %s must be %s.", param,
-                                 _type)
-        local[param] = value
-
-    return local
-
-
-PARAMETER_PROPERTIES = {
-    "default": "Default",
-    "description": "Description",
-    "no_echo": "NoEcho",
-    "allowed_values": "AllowedValues",
-    "allowed_pattern": "AllowedPattern",
-    "max_length": "MaxLength",
-    "min_length": "MinLength",
-    "max_value": "MaxValue",
-    "min_value": "MinValue",
-    "constraint_description": "ConstraintDescription"
-}
 
 
 def build_parameter(name, properties):
@@ -222,11 +183,10 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
 
 
 class Blueprint(object):
-    """Base implementation for dealing with a troposphere template.
+    """Base implementation for rendering a troposphere template.
 
     Args:
-        name (str): A name for the blueprint. If not provided, one will be
-            created from the class name automatically.
+        name (str): A name for the blueprint.
         context (:class:`stacker.context.Context`): the context the blueprint
             is being executed under.
         mappings (dict, optional): Cloudformation Mappings to be used in the
@@ -239,63 +199,75 @@ class Blueprint(object):
         self.context = context
         self.mappings = mappings
         self.outputs = {}
-        self.local_parameters = self.get_local_parameters()
         self.reset_template()
         self.resolved_variables = None
 
-    @property
-    def parameters(self):
-        return self.template.parameters
+    def get_required_parameter_definitions(self):
+        """Returns all template parameters that do not have a default value.
 
-    @property
-    def required_parameters(self):
-        """Returns all template parameters that do not have a default value."""
-        required = []
-        for k, v in self.parameters.items():
-            if not hasattr(v, "Default"):
-                required.append((k, v))
+        Returns:
+            dict: dict of required CloudFormation Parameters for the blueprint.
+                Will be a dictionary of <parameter name>: <parameter
+                attributes>.
+
+        """
+        required = {}
+        for name, attrs in self.template.parameters.iteritems():
+            if not hasattr(attrs, "Default"):
+                required[name] = attrs
         return required
 
-    def get_local_parameters(self):
-        local_parameters = getattr(self, "LOCAL_PARAMETERS", {})
-        return get_local_parameters(local_parameters, self.context.parameters)
+    def get_parameter_definitions(self):
+        """Get the parameter definitions to submit to CloudFormation.
 
-    def _get_parameters(self):
-        """Get the parameter definitions.
-
-        First looks at CF_PARAMETERS, then falls back to PARAMETERS for
-        backwards compatibility. This will also return any variables whose
-        `type` is an instance of `CFNType`.
-
-        Makes this easy to override going forward for more backwards
-        compatibility.
+        Any variable definition whose `type` is an instance of `CFNType` will
+        be returned as a CloudFormation Parameter.
 
         Returns:
             dict: parameter definitions. Keys are parameter names, the values
                 are dicts containing key/values for various parameter
                 properties.
-        """
-        parameters = getattr(self, "CF_PARAMETERS",
-                             getattr(self, "PARAMETERS", {}))
 
+        """
+        output = {}
         for var_name, attrs in self.defined_variables().iteritems():
             var_type = attrs.get("type")
             if isinstance(var_type, CFNType):
                 cfn_attrs = copy.deepcopy(attrs)
                 cfn_attrs["type"] = var_type.parameter_type
-                parameters[var_name] = cfn_attrs
-        return parameters
+                output[var_name] = cfn_attrs
+        return output
+
+    def get_parameter_values(self):
+        """Return a dictionary of variables with `type` :class:`CFNType`.
+
+        Returns:
+            dict: variables that need to be submitted as CloudFormation
+                Parameters. Will be a dictionary of <parameter name>:
+                <parameter value>.
+
+        """
+        variables = self.get_variables()
+        output = {}
+        for key, value in variables.iteritems():
+            try:
+                output[key] = value.to_parameter_value()
+            except AttributeError:
+                continue
+
+        return output
 
     def setup_parameters(self):
+        """Add any CloudFormation parameters to the template"""
         t = self.template
-        parameters = self._get_parameters()
+        parameters = self.get_parameter_definitions()
 
         if not parameters:
             logger.debug("No parameters defined.")
             return
 
-        for param, attrs in parameters.items():
-            p = build_parameter(param, attrs)
+        for name, attrs in parameters.items():
+            p = build_parameter(name, attrs)
             t.add_parameter(p)
 
     def defined_variables(self):
@@ -369,17 +341,18 @@ class Blueprint(object):
         if not self.mappings:
             return
 
-        for name, mapping in self.mappings.items():
+        for name, mapping in self.mappings.iteritems():
             logger.debug("Adding mapping %s.", name)
             self.template.add_mapping(name, mapping)
 
     def reset_template(self):
         self.template = Template()
-        self.import_mappings()
         self._rendered = None
         self._version = None
 
     def render_template(self):
+        """Render the Blueprint to a CloudFormation template"""
+        self.import_mappings()
         self.create_template()
         self.setup_parameters()
         rendered = self.template.to_json()

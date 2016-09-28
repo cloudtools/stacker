@@ -48,7 +48,7 @@ class TestIAMHooks(unittest.TestCase):
                     region=REGION,
                     namespace="fake",
                     mappings={},
-                    parameters={}
+                    variables={}
                 )
             )
 

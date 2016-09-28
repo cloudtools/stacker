@@ -316,7 +316,7 @@ def handle_hooks(stage, hooks, region, context):
                 region,
                 context.namespace,
                 context.mappings,
-                context.parameters,
+                context.variables,
                 **kwargs
             )
         except Exception:

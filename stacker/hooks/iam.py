@@ -13,7 +13,7 @@ from . import utils
 logger = logging.getLogger(__name__)
 
 
-def create_ecs_service_role(region, namespace, mappings, parameters,
+def create_ecs_service_role(region, namespace, mappings, variables,
                             **kwargs):
     """Used to create the ecsServieRole, which has to be named exactly that
     currently, so cannot be created via CloudFormation. See:

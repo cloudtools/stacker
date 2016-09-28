@@ -67,7 +67,7 @@ class BaseAction(object):
         return self._s3_conn
 
     def ensure_cfn_bucket(self):
-        """The cloudformation bucket where templates will be stored."""
+        """The CloudFormation bucket where templates will be stored."""
         try:
             self.s3_conn.head_bucket(Bucket=self.bucket_name)
         except botocore.exceptions.ClientError as e:

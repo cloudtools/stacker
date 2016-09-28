@@ -431,7 +431,7 @@ class TestVariables(unittest.TestCase):
         parameter = parameters["Param1"]
         self.assertEqual(parameter["type"], "String")
 
-    def test_get_required_parameter_defintions_cfn_type(self):
+    def test_get_required_parameter_definitions_cfn_type(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
                 "Param1": {"type": CFNString},

@@ -163,7 +163,7 @@ class Action(BaseAction):
 
         """
         resolved = _resolve_parameters(stack.parameter_values, stack.blueprint)
-        required_parameters = stack.required_parameter_defintions.keys()
+        required_parameters = stack.required_parameter_definitions.keys()
         parameters = _handle_missing_parameters(resolved, required_parameters,
                                                 provider_stack)
         return [

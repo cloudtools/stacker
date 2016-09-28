@@ -162,8 +162,8 @@ class Action(BaseAction):
             dict: The parameters for the given stack
 
         """
-        resolved = _resolve_parameters(stack.parameters, stack.blueprint)
-        required_parameters = [name for name, _ in stack.required_parameters]
+        resolved = _resolve_parameters(stack.parameter_values, stack.blueprint)
+        required_parameters = stack.required_parameter_defintions.keys()
         parameters = _handle_missing_parameters(resolved, required_parameters,
                                                 provider_stack)
         return [

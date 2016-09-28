@@ -120,9 +120,8 @@ def get_cert_contents(kwargs):
     return parameters
 
 
-def ensure_server_cert_exists(region, namespace, mappings, parameters,
-                              **kwargs):
-    client = boto3.client("iam", region_name=region)
+def ensure_server_cert_exists(provider, context, **kwargs):
+    client = boto3.client("iam", region_name=provider.region)
     cert_name = kwargs["cert_name"]
     try:
         response = client.get_server_certificate(

@@ -29,7 +29,7 @@ class Context(object):
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,
             usually all stacks defined in the config will be operated on.
-        parameters (dict): Parameters from the command line passed down to each
+        variables (dict): Variables from the command line passed down to each
             blueprint to parameterize the templates.
         mappings (dict): Used as Cloudformation mappings for the blueprint.
         config (dict): The configuration being operated on, containing the
@@ -41,7 +41,9 @@ class Context(object):
 
     def __init__(self, environment,  # pylint: disable-msg=too-many-arguments
                  stack_names=None,
-                 parameters=None, mappings=None, config=None,
+                 variables=None,
+                 mappings=None,
+                 config=None,
                  force_stacks=None):
         try:
             self.namespace = environment["namespace"]
@@ -50,7 +52,7 @@ class Context(object):
 
         self.environment = environment
         self.stack_names = stack_names or []
-        self.parameters = parameters or {}
+        self.variables = variables or {}
         self.mappings = mappings or {}
         self.namespace_delimiter = "-"
         self.config = config or {}
@@ -87,10 +89,8 @@ class Context(object):
     def get_stacks(self):
         """Get the stacks for the current action.
 
-        Handles configuring the `stacker.stack.Stack` objects that will be used
-        in the current action. Responsible for merging the stack definition in
-        the config, the parameters specified on the command line, and any
-        mappings specified in the config.
+        Handles configuring the :class:`stacker.stack.Stack` objects that will
+        be used in the current action.
 
         Returns:
             list: a list of :class:`stacker.stack.Stack` objects
@@ -102,7 +102,7 @@ class Context(object):
             stack = Stack(
                 definition=stack_def,
                 context=self,
-                parameters=self.parameters,
+                variables=self.variables,
                 mappings=self.mappings,
                 force=stack_def["name"] in self.force_stacks,
                 locked=stack_def.get("locked", False),

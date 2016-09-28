@@ -28,10 +28,10 @@ def ensure_keypair_exists(provider, context, **kwargs):
     Returns: boolean for whether or not the hook succeeded.
 
     """
-    client = boto3.client('ec2', region_name=provider.region)
+    client = boto3.client("ec2", region_name=provider.region)
     keypair_name = kwargs.get("keypair", context.parameters.get("SshKeyName"))
     resp = client.describe_key_pairs()
-    keypair = find(resp['KeyPairs'], 'KeyName', keypair_name)
+    keypair = find(resp["KeyPairs"], "KeyName", keypair_name)
     message = "keypair: %s (%s) %s"
     if keypair:
         logger.info(message,

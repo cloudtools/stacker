@@ -72,15 +72,6 @@ class MissingParameterException(Exception):
                                                         **kwargs)
 
 
-class MissingLocalParameterException(Exception):
-
-    def __init__(self, parameter, *args, **kwargs):
-        self.parameter = parameter
-        message = "Missing required local parameter: %s" % parameter
-        super(MissingLocalParameterException, self).__init__(message, *args,
-                                                             **kwargs)
-
-
 class OutputDoesNotExist(Exception):
 
     def __init__(self, stack_name, output, *args, **kwargs):

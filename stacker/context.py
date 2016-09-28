@@ -41,7 +41,9 @@ class Context(object):
 
     def __init__(self, environment,  # pylint: disable-msg=too-many-arguments
                  stack_names=None,
-                 variables=None, mappings=None, config=None,
+                 variables=None,
+                 mappings=None,
+                 config=None,
                  force_stacks=None):
         try:
             self.namespace = environment["namespace"]

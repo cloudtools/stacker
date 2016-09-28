@@ -34,7 +34,7 @@ def _gather_variables(stack_def, context_variables):
         dict: Contains key/value pairs of the collected variables.
 
     """
-    variables = copy.deepcopy(stack_def.get('variables', {}))
+    variable_values = copy.deepcopy(stack_def.get('variables', {}))
     stack_specific_variables = {}
     for key, value in context_variables.iteritems():
         stack = None
@@ -42,7 +42,7 @@ def _gather_variables(stack_def, context_variables):
             stack, key = key.split("::", 1)
         if not stack:
             # Non-stack specific, go ahead and add it
-            variables[key] = value
+            variable_values[key] = value
             continue
         # Gather stack specific params for later
         if stack == stack_def["name"]:
@@ -50,8 +50,8 @@ def _gather_variables(stack_def, context_variables):
 
     # Now update stack definition variables with the stack specific variables
     # ensuring they override generic variables
-    variables.update(stack_specific_variables)
-    return [Variable(k, v) for k, v in variables.iteritems()]
+    variable_values.update(stack_specific_variables)
+    return [Variable(k, v) for k, v in variable_values.iteritems()]
 
 
 class Stack(object):
@@ -123,19 +123,22 @@ class Stack(object):
         return self._blueprint
 
     @property
-    def parameters(self):
+    def parameter_values(self):
         """Return all CloudFormation Parameters for the stack.
 
         CloudFormation Parameters can be specified via Blueprint Variables with
         a :class:`stacker.blueprints.variables.types.CFNType` `type`.
 
+        Returns:
+            dict: dictionary of <parameter name>: <parameter value>.
+
         """
-        return self.blueprint.get_parameters()
+        return self.blueprint.get_parameter_values()
 
     @property
-    def required_parameters(self):
+    def required_parameter_defintions(self):
         """Return all the required CloudFormation Parameters for the stack."""
-        return self.blueprint.get_required_parameters()
+        return self.blueprint.get_required_parameter_defintions()
 
     def resolve(self, context, provider):
         """Resolve the Stack variables.

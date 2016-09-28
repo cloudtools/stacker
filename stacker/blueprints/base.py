@@ -202,12 +202,19 @@ class Blueprint(object):
         self.reset_template()
         self.resolved_variables = None
 
-    def get_required_parameters(self):
-        """Returns all template parameters that do not have a default value."""
-        required = []
+    def get_required_parameter_definitions(self):
+        """Returns all template parameters that do not have a default value.
+
+        Returns:
+            dict: dict of required CloudFormation Parameters for the blueprint.
+                Will be a dictionary of <parameter name>: <parameter
+                attributes>.
+
+        """
+        required = {}
         for name, attrs in self.template.parameters.iteritems():
             if not hasattr(attrs, "Default"):
-                required.append((name, attrs))
+                required[name] = attrs
         return required
 
     def get_parameter_definitions(self):
@@ -218,7 +225,8 @@ class Blueprint(object):
 
         Returns:
             dict: parameter definitions. Keys are parameter names, the values
-            are dicts containing key/values for various parameter properties.
+                are dicts containing key/values for various parameter
+                properties.
 
         """
         output = {}
@@ -230,19 +238,23 @@ class Blueprint(object):
                 output[var_name] = cfn_attrs
         return output
 
-    def get_parameters(self):
+    def get_parameter_values(self):
         """Return a dictionary of variables with `type` :class:`CFNType`.
 
         Returns:
             dict: variables that need to be submitted as CloudFormation
-                Parameters.
+                Parameters. Will be a dictionary of <parameter name>:
+                <parameter value>.
 
         """
         variables = self.get_variables()
         output = {}
         for key, value in variables.iteritems():
-            if hasattr(value, "to_parameter_value"):
+            try:
                 output[key] = value.to_parameter_value()
+            except AttributeError:
+                continue
+
         return output
 
     def setup_parameters(self):

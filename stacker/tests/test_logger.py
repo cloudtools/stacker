@@ -28,17 +28,17 @@ class TestLogStreamLoopHandler(unittest.TestCase):
         self.stream = MagicMock()
         self.handler = LogLoopStreamHandler(self.stream)
 
-    @patch('sys')
-    @patch('logging')
+    @patch('stacker.logger.sys')
+    @patch('stacker.logger.logging')
     def test_setup_logging(self, patched_logging, patched_sys):
-        patched_sys.stdout.isatty.return_value = False
+        patched_sys.stdout.isatty.return_value = True
         logger = setup_logging(verbosity=0, interactive=False)
         self.assertEqual(logger, LOOP_LOGGER_TYPE)
         logger = setup_logging(verbosity=1, interactive=False)
         self.assertEqual(logger, BASIC_LOGGER_TYPE)
         logger = setup_logging(verbosity=0, interactive=True)
         self.assertEqual(logger, BASIC_LOGGER_TYPE)
-        patched_sys.stdout.isatty.return_value = True
+        patched_sys.stdout.isatty.return_value = False
         logger = setup_logging(verbosity=0, interactive=False)
         self.assertEqual(logger, BASIC_LOGGER_TYPE)
 

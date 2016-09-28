@@ -31,6 +31,7 @@ def setup_logging(verbosity, interactive):
 
     log_type = BASIC_LOGGER_TYPE
     if enable_loop_logger:
+        log_type = LOOP_LOGGER_TYPE
         fmt = ColorFormatter(COLOR_FORMAT, ISO_8601)
         hdlr = LogLoopStreamHandler()
         hdlr.setFormatter(fmt)

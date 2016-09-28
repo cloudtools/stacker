@@ -14,6 +14,7 @@ from stacker.blueprints.base import (
     resolve_variable
 )
 from stacker.blueprints.variables.types import (
+    CFNNumber,
     CFNString,
     EC2AvailabilityZoneNameList,
 )
@@ -364,6 +365,19 @@ class TestVariables(unittest.TestCase):
         variables = blueprint.get_variables()
         self.assertTrue(isinstance(variables["Param1"], CFNParameter))
 
+    def test_resolve_variables_cfn_number(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNNumber},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", 1)]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+        self.assertEqual(variables["Param1"].value, "1")
+
     def test_resolve_variables_cfn_type_list(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
@@ -377,7 +391,7 @@ class TestVariables(unittest.TestCase):
         self.assertTrue(isinstance(variables["Param1"], CFNParameter))
         self.assertEqual(variables["Param1"].value, ["us-east-1", "us-west-2"])
         self.assertEqual(variables["Param1"].ref.data, Ref("Param1").data)
-        parameters = blueprint.get_parameters()
+        parameters = blueprint.get_parameter_values()
         self.assertEqual(parameters["Param1"], ["us-east-1", "us-west-2"])
 
     def test_resolve_variables_cfn_type_list_invalid_value(self):
@@ -417,7 +431,7 @@ class TestVariables(unittest.TestCase):
         parameter = parameters["Param1"]
         self.assertEqual(parameter["type"], "String")
 
-    def test_required_parameters_cfn_type(self):
+    def test_get_required_parameter_definitions_cfn_type(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
                 "Param1": {"type": CFNString},
@@ -425,10 +439,10 @@ class TestVariables(unittest.TestCase):
 
         blueprint = TestBlueprint(name="test", context=MagicMock())
         blueprint.setup_parameters()
-        params = blueprint.get_required_parameters()
-        self.assertEqual(params[0][0], "Param1")
+        params = blueprint.get_required_parameter_definitions()
+        self.assertEqual(params.keys()[0], "Param1")
 
-    def test_get_parameters(self):
+    def test_get_parameter_values(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
                 "Param1": {"type": int},
@@ -440,6 +454,6 @@ class TestVariables(unittest.TestCase):
         blueprint.resolve_variables(variables)
         variables = blueprint.get_variables()
         self.assertEqual(len(variables), 2)
-        parameters = blueprint.get_parameters()
+        parameters = blueprint.get_parameter_values()
         self.assertEqual(len(parameters.keys()), 1)
         self.assertEqual(parameters["Param2"], "Value")

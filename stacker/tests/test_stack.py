@@ -64,11 +64,11 @@ class TestStack(unittest.TestCase):
         )
         stack = Stack(definition=definition, context=self.context)
         stack._blueprint = MagicMock()
-        stack._blueprint.get_parameters.return_value = {
+        stack._blueprint.get_parameter_values.return_value = {
             "Param2": "Some Resolved Value",
         }
-        self.assertEqual(len(stack.parameters.keys()), 1)
-        param = stack.parameters["Param2"]
+        self.assertEqual(len(stack.parameter_values.keys()), 1)
+        param = stack.parameter_values["Param2"]
         self.assertEqual(param, "Some Resolved Value")
 
     def test_empty_variables(self):

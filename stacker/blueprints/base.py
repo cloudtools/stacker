@@ -44,8 +44,20 @@ class CFNParameter(object):
                 CloudFormation Parameter.
 
         """
-        if not (isinstance(value, basestring) or isinstance(value, list)):
-            raise ValueError("CFNParameter value must be a str or a list")
+        acceptable_types = [basestring, list, int]
+        acceptable = False
+        for acceptable_type in acceptable_types:
+            if isinstance(value, acceptable_type):
+                # Convert integers to strings
+                if acceptable_type == int:
+                    value = str(value)
+
+                acceptable = True
+
+        if not acceptable:
+            raise ValueError(
+                "CFNParameter (%s) value must be one of %s got: %s" % (
+                    name, "str, int, or list", value))
 
         self.name = name
         self.value = value

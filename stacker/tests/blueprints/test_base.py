@@ -14,6 +14,7 @@ from stacker.blueprints.base import (
     resolve_variable
 )
 from stacker.blueprints.variables.types import (
+    CFNNumber,
     CFNString,
     EC2AvailabilityZoneNameList,
 )
@@ -363,6 +364,19 @@ class TestVariables(unittest.TestCase):
         blueprint.resolve_variables(variables)
         variables = blueprint.get_variables()
         self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+
+    def test_resolve_variables_cfn_number(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": CFNNumber},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", 1)]
+        blueprint.resolve_variables(variables)
+        variables = blueprint.get_variables()
+        self.assertTrue(isinstance(variables["Param1"], CFNParameter))
+        self.assertEqual(variables["Param1"].value, "1")
 
     def test_resolve_variables_cfn_type_list(self):
         class TestBlueprint(Blueprint):

@@ -138,7 +138,7 @@ class Stack(object):
     @property
     def required_parameter_defintions(self):
         """Return all the required CloudFormation Parameters for the stack."""
-        return self.blueprint.get_required_parameter_defintions()
+        return self.blueprint.get_required_parameter_definitions()
 
     def resolve(self, context, provider):
         """Resolve the Stack variables.

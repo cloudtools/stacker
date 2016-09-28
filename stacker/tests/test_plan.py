@@ -81,7 +81,9 @@ class TestPlan(unittest.TestCase):
                 requires=stack.requires,
             )
 
+        pre_md5 = plan.md5
         plan.execute()
+        self.assertNotEqual(pre_md5, plan.md5)
         self.assertEqual(self.count, 9)
         self.assertEqual(len(plan.list_skipped()), 1)
 

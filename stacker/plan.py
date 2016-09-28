@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import hashlib
 import logging
 import multiprocessing
 import os
@@ -247,9 +248,14 @@ class Plan(OrderedDict):
         """
 
         attempts = 0
+        last_md5 = self.md5
         try:
             while not self.completed:
-                if not attempts % self.check_point_interval:
+                if (
+                    not attempts % self.check_point_interval or
+                    self.md5 != last_md5
+                ):
+                    last_md5 = self.md5
                     self._check_point()
 
                 attempts += 1
@@ -321,6 +327,15 @@ class Plan(OrderedDict):
             steps += 1
 
         self.reset()
+
+    @property
+    def md5(self):
+        statuses = []
+        for step_name, step in self.iteritems():
+            current = '{}{}{}'.format(step_name, step.status.name,
+                                      step.status.reason)
+            statuses.append(current)
+        return hashlib.md5(' '.join(statuses)).hexdigest()
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""

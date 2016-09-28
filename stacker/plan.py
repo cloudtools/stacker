@@ -15,6 +15,7 @@ from .exceptions import (
 from .actions.base import stack_template_key_name
 
 from .status import (
+    SkippedStatus,
     Status,
     PENDING,
     SUBMITTED,
@@ -216,7 +217,11 @@ class Plan(OrderedDict):
                 self._watchers[step_name] = process
                 process.start()
 
-            status = step.run()
+            try:
+                status = step.run()
+            except CancelExecution:
+                status = SkippedStatus(reason="canceled execution")
+
             if not isinstance(status, Status):
                 raise ValueError(
                     "Step run_func must return a valid Status object. "
@@ -250,9 +255,6 @@ class Plan(OrderedDict):
                 attempts += 1
                 if not self._single_run():
                     self._wait_func(self.sleep_time)
-        except CancelExecution:
-            logger.info("Cancelling execution")
-            return
         finally:
             for watcher in self._watchers.values():
                 self._terminate_watcher(watcher)

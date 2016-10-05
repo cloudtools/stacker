@@ -8,14 +8,21 @@ import boto3
 logger = logging.getLogger(__name__)
 
 
-def create_clusters(region, namespace, mappings, variables, **kwargs):
+def create_clusters(provider, context, **kwargs):
     """Creates ECS clusters.
 
     Expects a "clusters" argument, which should contain a list of cluster
     names to create.
 
+    Args:
+        provider (:class:`stacker.providers.base.BaseProvider`): provider
+            instance
+        context (:class:`stacker.context.Context`): context instance
+
+    Returns: boolean for whether or not the hook succeeded.
+
     """
-    conn = boto3.client("ecs", region_name=region)
+    conn = boto3.client("ecs", region_name=provider.region)
 
     try:
         clusters = kwargs["clusters"]

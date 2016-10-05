@@ -44,6 +44,7 @@ class Context(object):
                  variables=None,
                  mappings=None,
                  config=None,
+                 logger_type=None,
                  force_stacks=None):
         try:
             self.namespace = environment["namespace"]
@@ -54,6 +55,7 @@ class Context(object):
         self.stack_names = stack_names or []
         self.variables = variables or {}
         self.mappings = mappings or {}
+        self.logger_type = logger_type
         self.namespace_delimiter = "-"
         self.config = config or {}
         self.force_stacks = force_stacks or []

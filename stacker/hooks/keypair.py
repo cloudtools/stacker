@@ -15,11 +15,23 @@ def find(lst, key, value):
     return False
 
 
-def ensure_keypair_exists(region, namespace, mappings, variables, **kwargs):
-    client = boto3.client('ec2', region_name=region)
-    keypair_name = kwargs.get("keypair", variables.get("SshKeyName"))
+def ensure_keypair_exists(provider, context, **kwargs):
+    """Ensure a specific keypair exists within AWS.
+
+    If the key doesn't exist, upload it.
+
+    Args:
+        provider (:class:`stacker.providers.base.BaseProvider`): provider
+            instance
+        context (:class:`stacker.context.Context`): context instance
+
+    Returns: boolean for whether or not the hook succeeded.
+
+    """
+    client = boto3.client("ec2", region_name=provider.region)
+    keypair_name = kwargs.get("keypair", context.parameters.get("SshKeyName"))
     resp = client.describe_key_pairs()
-    keypair = find(resp['KeyPairs'], 'KeyName', keypair_name)
+    keypair = find(resp["KeyPairs"], "KeyName", keypair_name)
     message = "keypair: %s (%s) %s"
     if keypair:
         logger.info(message,

@@ -330,6 +330,12 @@ class Plan(OrderedDict):
 
     @property
     def md5(self):
+        """A hash for the plan's current state.
+
+        This is useful if we want to determine if any of the plan's steps have
+        changed during execution.
+
+        """
         statuses = []
         for step_name, step in self.iteritems():
             current = '{}{}{}'.format(step_name, step.status.name,

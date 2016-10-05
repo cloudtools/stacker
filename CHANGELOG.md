@@ -1,3 +1,12 @@
+## 1.0.0a1 (2016-10-05)
+
+This is a major release with the main change being the removal of the old
+Parameters logic in favor of Blueprint Variables and Lookups.
+
+- Add support for resolving variables when calling `dump`[GH-231]
+- Remove old Parameters code [GH-232]
+- Pass Context & Provider to hooks [GH-233]
+
 ## 0.8.1 (2016-09-22)
 
 Minor update to remove dependencies on stacker\_blueprints for tests, since it

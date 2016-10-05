@@ -4,6 +4,10 @@ import mock
 
 from stacker.context import Context
 from stacker.exceptions import ImproperlyConfigured
+from stacker.logger import (
+    BASIC_LOGGER_TYPE,
+    LOOP_LOGGER_TYPE,
+)
 from stacker.plan import (
     Step,
     Plan,
@@ -77,7 +81,9 @@ class TestPlan(unittest.TestCase):
                 requires=stack.requires,
             )
 
+        pre_md5 = plan.md5
         plan.execute()
+        self.assertNotEqual(pre_md5, plan.md5)
         self.assertEqual(self.count, 9)
         self.assertEqual(len(plan.list_skipped()), 1)
 
@@ -274,3 +280,9 @@ class TestPlan(unittest.TestCase):
 
         plan.dump("test")
         self.assertEqual(len(plan.list_pending()), len(plan))
+
+    def test_plan_checkpoint_interval(self):
+        plan = Plan(description="Test", logger_type=BASIC_LOGGER_TYPE)
+        self.assertEqual(plan.check_point_interval, 10)
+        plan = Plan(description="Test", logger_type=LOOP_LOGGER_TYPE)
+        self.assertEqual(plan.check_point_interval, 1)

@@ -3,7 +3,10 @@ from collections import Mapping
 import logging
 
 from ...environment import parse_environment
-from ...logger import setup_logging
+from ...logger import (
+    BASIC_LOGGER_TYPE,
+    setup_logging,
+)
 
 
 class KeyValueAction(argparse.Action):
@@ -58,6 +61,7 @@ class BaseCommand(object):
     description = None
     subcommands = tuple()
     subcommands_help = None
+    logger_type = BASIC_LOGGER_TYPE
 
     def __init__(self, *args, **kwargs):
         if not self.name:
@@ -95,7 +99,7 @@ class BaseCommand(object):
         pass
 
     def configure(self, options, **kwargs):
-        setup_logging(options.verbose, options.interactive)
+        self.logger_type = setup_logging(options.verbose, options.interactive)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.

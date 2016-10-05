@@ -236,7 +236,9 @@ class Action(BaseAction):
         plan_kwargs = {}
         if tail:
             plan_kwargs["watch_func"] = self.provider.tail_stack
-        plan = Plan(description="Create/Update stacks", **plan_kwargs)
+
+        plan = Plan(description="Create/Update stacks",
+                    logger_type=self.context.logger_type, **plan_kwargs)
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):

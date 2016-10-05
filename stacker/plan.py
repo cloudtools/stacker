@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import hashlib
 import logging
 import multiprocessing
 import os
@@ -7,13 +8,13 @@ import uuid
 
 from colorama.ansi import Fore
 
+
+from .actions.base import stack_template_key_name
 from .exceptions import (
     CancelExecution,
     ImproperlyConfigured,
 )
-
-from .actions.base import stack_template_key_name
-
+from .logger import LOOP_LOGGER_TYPE
 from .status import (
     SkippedStatus,
     Status,
@@ -119,9 +120,10 @@ class Plan(OrderedDict):
     """
 
     def __init__(self, description, sleep_time=5, wait_func=None,
-                 watch_func=None, *args, **kwargs):
+                 watch_func=None, logger_type=None, *args, **kwargs):
         self.description = description
         self.sleep_time = sleep_time
+        self.logger_type = logger_type
         if wait_func is not None:
             if not callable(wait_func):
                 raise ImproperlyConfigured(self.__class__,
@@ -179,6 +181,10 @@ class Plan(OrderedDict):
             step[1].status != COMPLETE and
             step[1].status != SKIPPED
         )]
+
+    @property
+    def check_point_interval(self):
+        return 1 if self.logger_type == LOOP_LOGGER_TYPE else 10
 
     @property
     def completed(self):
@@ -247,9 +253,14 @@ class Plan(OrderedDict):
         """
 
         attempts = 0
+        last_md5 = self.md5
         try:
             while not self.completed:
-                if not attempts % 10:
+                if (
+                    not attempts % self.check_point_interval or
+                    self.md5 != last_md5
+                ):
+                    last_md5 = self.md5
                     self._check_point()
 
                 attempts += 1
@@ -318,6 +329,21 @@ class Plan(OrderedDict):
             steps += 1
 
         self.reset()
+
+    @property
+    def md5(self):
+        """A hash for the plan's current state.
+
+        This is useful if we want to determine if any of the plan's steps have
+        changed during execution.
+
+        """
+        statuses = []
+        for step_name, step in self.iteritems():
+            current = '{}{}{}'.format(step_name, step.status.name,
+                                      step.status.reason)
+            statuses.append(current)
+        return hashlib.md5(' '.join(statuses)).hexdigest()
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""

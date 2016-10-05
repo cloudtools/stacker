@@ -275,7 +275,7 @@ def cf_safe_name(name):
 
 
 # TODO: perhaps make this a part of the builder?
-def handle_hooks(stage, hooks, region, context):
+def handle_hooks(stage, hooks, provider, context):
     """ Used to handle pre/post_build hooks.
 
     These are pieces of code that we want to run before/after the builder
@@ -284,8 +284,8 @@ def handle_hooks(stage, hooks, region, context):
     Args:
         stage (string): The current stage (pre_run, post_run, etc).
         hooks (list): A list of dictionaries containing the hooks to execute.
-        region (string): The AWS region the current stacker run is executing
-            in.
+        provider (:class:`stacker.provider.base.BaseProvider`): The provider
+            the current stack is using.
         context (:class:`stacker.context.Context`): The current stacker
             context.
     """
@@ -312,13 +312,7 @@ def handle_hooks(stage, hooks, region, context):
                 raise
             continue
         try:
-            result = method(
-                region,
-                context.namespace,
-                context.mappings,
-                context.variables,
-                **kwargs
-            )
+            result = method(context=context, provider=provider, **kwargs)
         except Exception:
             logger.exception("Method %s threw an exception:", hook["path"])
             if required:

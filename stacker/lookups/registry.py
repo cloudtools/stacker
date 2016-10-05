@@ -24,6 +24,19 @@ def register_lookup_handler(lookup_type, handler_or_path):
     LOOKUP_HANDLERS[lookup_type] = handler
 
 
+def unregister_lookup_handler(lookup_type):
+    """Unregister the specified lookup type.
+
+    This is useful when testing various lookup types if you want to unregister
+    the lookup type after the test runs.
+
+    Args:
+        lookup_type (str): Name of the lookup type to unregister
+
+    """
+    LOOKUP_HANDLERS.pop(lookup_type, None)
+
+
 def resolve_lookups(lookups, context, provider):
     """Resolve a set of lookups.
 

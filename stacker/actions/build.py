@@ -256,7 +256,12 @@ class Action(BaseAction):
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
         pre_build = self.context.config.get("pre_build")
-        if not outline and not dump and pre_build:
+        should_run_hooks = (
+            not outline and
+            not dump and
+            pre_build
+        )
+        if should_run_hooks:
             util.handle_hooks("pre_build", pre_build, self.provider.region,
                               self.context)
 

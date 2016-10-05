@@ -166,10 +166,19 @@ class Action(BaseAction):
         parameters = self._handle_missing_parameters(parameters,
                                                      required_params,
                                                      provider_stack)
-        return [
+
+        # Handle values that shouldn't be sent ('UsePreviousValue')
+        final_list = []
+        for p in [
             {'ParameterKey': p[0],
-             'ParameterValue': str(p[1])} for p in parameters
-        ]
+             'ParameterValue': str(p[1])} for p in parameters]:
+            stack_p = stack.blueprint.parameters[p['ParameterKey']]
+            if p['ParameterValue'] == '****' and stack_p.properties['NoEcho']:
+                final_list.append({'ParameterKey': p['ParameterKey'],
+                                   'UsePreviousValue': True})
+            else:
+                final_list.append(p)
+        return final_list
 
     def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""

@@ -313,7 +313,7 @@ class Action(BaseAction):
             if outline:
                 plan.outline()
             if dump:
-                plan.dump(dump)
+                plan.dump(dump, self.context, self.provider)
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

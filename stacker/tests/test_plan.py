@@ -50,6 +50,7 @@ class TestPlan(unittest.TestCase):
         self.count = 0
         self.environment = {"namespace": "namespace"}
         self.context = Context(self.environment)
+        self.provider = mock.MagicMock()
 
     def _run_func(self, stack, **kwargs):
         self.count += 1
@@ -271,5 +272,5 @@ class TestPlan(unittest.TestCase):
                 requires=stack.requires,
             )
 
-        plan.dump("test")
+        plan.dump("test", self.context, self.provider)
         self.assertEqual(len(plan.list_pending()), len(plan))

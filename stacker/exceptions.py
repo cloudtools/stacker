@@ -131,8 +131,8 @@ class ValidatorError(Exception):
 
 
 class UnallowedValue(Exception):
-    """Exception raised when the value provided to a variable is not allowed."""
-
+    """Exception raised when the value provided to a variable is not allowed.
+    """
     def __init__(self, variable, value, allowed_values, *args, **kwargs):
         message = (
             "Invalid value passed to '%s', got '%s', expected one of %s"

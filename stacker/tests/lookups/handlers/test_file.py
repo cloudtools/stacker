@@ -58,11 +58,24 @@ class TestFileTranslator(unittest.TestCase):
             self.assertEqual(troposphere.GenericHelperFn, type(out))
 
     def test_handler_parameterized_b64(self):
-        expected = 'Hello, world'
+        expected = 'Regular text {{Psuedo::Var}} {{RegVar}} {{Non-Var}}'
+        processed = {
+            'Fn::Base64': {
+                'Fn::Join': [
+                    '',
+                    ['Regular text ',
+                     {'Ref': 'Psuedo::Var'},
+                     ' ',
+                     {'Ref': 'RegVar'},
+                     ' {{Non-Var}}']
+                ]
+            }
+        }
         with mock.patch('stacker.lookups.handlers.file.read_value_from_path',
                         return_value=expected):
             out = handler('parameterized-b64:file://tmp/test')
             self.assertEqual(troposphere.Base64, type(out))
+            self.assertEqual(processed, out.data)
 
     def test_unknown_codec(self):
         expected = 'Hello, world'

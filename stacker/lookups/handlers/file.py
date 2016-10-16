@@ -92,7 +92,7 @@ def handler(value, **kwargs):
 
 
 def parameterized_codec(raw, b64):
-    pattern = re.compile(r'{{(\w+)}}')
+    pattern = re.compile(r'{{([::|\w]+)}}')
 
     parts = []
     s_index = 0

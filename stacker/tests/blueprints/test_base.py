@@ -22,7 +22,6 @@ from stacker.blueprints.variables.types import (
 from stacker.exceptions import (
     InvalidLookupCombination,
     MissingVariable,
-    UnallowedValue,
     UnresolvedVariable,
     UnresolvedVariables,
     ValidatorError,
@@ -178,7 +177,7 @@ class TestVariables(unittest.TestCase):
         var_def = {"type": str, "allowed_values": ["allowed"]}
         provided_variable = Variable(var_name, "not_allowed")
         blueprint_name = "testBlueprint"
-        with self.assertRaises(UnallowedValue):
+        with self.assertRaises(ValueError):
             resolve_variable(var_name, var_def, provided_variable,
                              blueprint_name)
 

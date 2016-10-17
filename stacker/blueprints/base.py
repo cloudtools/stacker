@@ -10,7 +10,6 @@ from troposphere import (
 
 from ..exceptions import (
     MissingVariable,
-    UnallowedValue,
     UnresolvedVariable,
     UnresolvedVariables,
     ValidatorError,
@@ -203,7 +202,11 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     allowed_values = var_def.get('allowed_values')
     valid = validate_allowed_values(allowed_values, value)
     if not valid:
-        raise UnallowedValue(var_name, value, allowed_values)
+        message = (
+            "Invalid value passed to '%s' in blueprint: %s. Got: '%s', "
+            "expected one of %s"
+        ) % (var_name, blueprint_name, value, allowed_values)
+        raise ValueError(message)
 
     return value
 

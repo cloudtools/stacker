@@ -128,13 +128,3 @@ class ValidatorError(Exception):
 
     def __str__(self):
         return self.message
-
-
-class UnallowedValue(Exception):
-    """Exception raised when the value provided to a variable is not allowed."""
-
-    def __init__(self, variable, value, allowed_values, *args, **kwargs):
-        message = (
-            "Invalid value passed to '%s', got '%s', expected one of %s"
-        ) % (variable, value, allowed_values)
-        super(UnallowedValue, self).__init__(message, *args, **kwargs)

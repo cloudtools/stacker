@@ -10,6 +10,7 @@ from stacker.blueprints.base import (
     Blueprint,
     CFNParameter,
     build_parameter,
+    validate_allowed_values,
     validate_variable_type,
     resolve_variable
 )
@@ -170,6 +171,20 @@ class TestVariables(unittest.TestCase):
         value = resolve_variable(var_name, var_def, provided_variable,
                                  blueprint_name)
         self.assertEqual(value, "1")
+
+    def test_resolve_variable_allowed_values(self):
+        var_name = "testVar"
+        var_def = {"type": str, "allowed_values": ["allowed"]}
+        provided_variable = Variable(var_name, "not_allowed")
+        blueprint_name = "testBlueprint"
+        with self.assertRaises(ValueError):
+            resolve_variable(var_name, var_def, provided_variable,
+                             blueprint_name)
+
+        provided_variable = Variable(var_name, "allowed")
+        value = resolve_variable(var_name, var_def, provided_variable,
+                                 blueprint_name)
+        self.assertEqual(value, "allowed")
 
     def test_resolve_variable_validator_valid_value(self):
         def triple_validator(value):
@@ -457,3 +472,10 @@ class TestVariables(unittest.TestCase):
         parameters = blueprint.get_parameter_values()
         self.assertEqual(len(parameters.keys()), 1)
         self.assertEqual(parameters["Param2"], "Value")
+
+    def test_validate_allowed_values(self):
+        allowed_values = ['allowed']
+        valid = validate_allowed_values(allowed_values, "not_allowed")
+        self.assertFalse(valid)
+        valid = validate_allowed_values(allowed_values, "allowed")
+        self.assertTrue(valid)

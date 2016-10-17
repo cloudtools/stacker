@@ -123,6 +123,26 @@ def validate_variable_type(var_name, var_type, value):
     return value
 
 
+def validate_allowed_values(allowed_values, value):
+    """Support a variable defining which values it allows.
+
+    Args:
+        allowed_values (Optional[list]): A list of allowed values from the
+            variable definition
+        value (obj): The object representing the value provided for the
+            variable
+
+    Returns:
+        bool: Boolean for whether or not the value is valid.
+
+    """
+    # ignore CFNParameter, troposphere handles these for us
+    if not allowed_values or isinstance(value, CFNParameter):
+        return True
+
+    return value in allowed_values
+
+
 def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     """Resolve a provided variable value against the variable definition.
 
@@ -178,6 +198,15 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     # Ensure that the resulting value is the correct type
     var_type = var_def.get("type")
     value = validate_variable_type(var_name, var_type, value)
+
+    allowed_values = var_def.get('allowed_values')
+    valid = validate_allowed_values(allowed_values, value)
+    if not valid:
+        message = (
+            "Invalid value passed to '%s' in blueprint: %s. Got: '%s', "
+            "expected one of %s"
+        ) % (var_name, blueprint_name, value, allowed_values)
+        raise ValueError(message)
 
     return value
 

@@ -29,7 +29,7 @@ def ensure_keypair_exists(provider, context, **kwargs):
 
     """
     client = boto3.client("ec2", region_name=provider.region)
-    keypair_name = kwargs.get("keypair", context.parameters.get("SshKeyName"))
+    keypair_name = kwargs.get("keypair", context.variables.get("SshKeyName"))
     resp = client.describe_key_pairs()
     keypair = find(resp["KeyPairs"], "KeyName", keypair_name)
     message = "keypair: %s (%s) %s"

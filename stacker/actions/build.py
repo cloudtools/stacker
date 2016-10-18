@@ -264,8 +264,11 @@ class Action(BaseAction):
             pre_build
         )
         if should_run_hooks:
-            util.handle_hooks("pre_build", pre_build, self.provider.region,
-                              self.context)
+            util.handle_hooks(
+                stage="pre_build",
+                hooks=pre_build,
+                provider=self.provider,
+                context=self.context)
 
     def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
@@ -288,5 +291,8 @@ class Action(BaseAction):
         """Any steps that need to be taken after running the action."""
         post_build = self.context.config.get("post_build")
         if not outline and not dump and post_build:
-            util.handle_hooks("post_build", post_build, self.provider.region,
-                              self.context)
+            util.handle_hooks(
+                stage="post_build",
+                hooks=post_build,
+                provider=self.provider,
+                context=self.context)

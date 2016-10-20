@@ -229,6 +229,22 @@ class TestLambdaHooks(unittest.TestCase):
         ])
 
     @mock_s3
+    def test_patterns_exclude_all(self):
+        msg = ('Empty list of files for Lambda payload. Check your '
+               'include/exclude options for errors.')
+
+        with self.temp_directory_with_files() as d, \
+             ShouldRaise(RuntimeError(msg)):
+            results = self.run_hook(functions={
+                'MyFunction': {
+                    'path': d.path + '/f1',
+                    'exclude': ['**']
+                }
+            })
+
+            self.assertIsNone(results)
+
+    @mock_s3
     def test_idempotence(self):
         bucket_name = 'test'
 

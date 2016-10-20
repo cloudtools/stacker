@@ -75,6 +75,10 @@ def _zip_from_file_patterns(root, includes, excludes):
     logger.info('lambda: base directory: %s', root)
 
     files = list(_find_files(root, includes, excludes))
+    if not files:
+        raise RuntimeError('Empty list of files for Lambda payload. Check your '
+                           'include/exclude options for errors.')
+
     logger.info('lambda: adding %d files:', len(files))
 
     for fname in files:

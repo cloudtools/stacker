@@ -115,8 +115,9 @@ class TestLambdaHooks(unittest.TestCase):
 
     @mock_s3
     def test_path_relative(self):
+        get_config_directory = 'stacker.hooks.aws_lambda.get_config_directory'
         with self.temp_directory_with_files(['test/test.py']) as d, \
-             mock.patch('stacker.hooks.aws_lambda.get_config_directory') as m1:
+                mock.patch(get_config_directory) as m1:
             m1.return_value = d.path
 
             results = self.run_hook(functions={
@@ -234,7 +235,8 @@ class TestLambdaHooks(unittest.TestCase):
                'include/exclude options for errors.')
 
         with self.temp_directory_with_files() as d, \
-             ShouldRaise(RuntimeError(msg)):
+                ShouldRaise(RuntimeError(msg)):
+
             results = self.run_hook(functions={
                 'MyFunction': {
                     'path': d.path + '/f1',
@@ -256,22 +258,25 @@ class TestLambdaHooks(unittest.TestCase):
             }
 
             # Force the bucket to keep track of versions for us. This is more
-            # complicated than using LastModified, but much more reliable, since
-            # the date only has a 1-second granularity, and dates could seem
-            # equal because insufficient time has elapsed between runs.
+            # complicated than using LastModified, but much more reliable,
+            # since the date only has a 1-second granularity, and dates could
+            # seem equal because insufficient time has elapsed between runs.
             self.s3.create_bucket(Bucket=bucket_name)
-            self.s3.put_bucket_versioning(Bucket=bucket_name,
+            self.s3.put_bucket_versioning(
+                Bucket=bucket_name,
                 VersioningConfiguration={'Status': 'Enabled'})
 
             version = None
             for i in range(2):
-                results = self.run_hook(bucket=bucket_name, functions=functions)
+                results = self.run_hook(bucket=bucket_name,
+                                        functions=functions)
                 self.assertIsNotNone(results)
 
                 code = results.get('lambda:MyFunction')
                 self.assertIsInstance(code, Code)
 
-                info = self.s3.head_object(Bucket=code.S3Bucket, Key=code.S3Key)
+                info = self.s3.head_object(Bucket=code.S3Bucket,
+                                           Key=code.S3Key)
                 if not version:
                     version = info['VersionId']
                 else:

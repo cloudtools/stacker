@@ -23,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 def _zip_files(files, root):
     """
-    Generate a ZIP file in-memory containing the chosen files, specified relative
-    to the root (and stored with those same relative paths in the ZIP).
+    Generate a ZIP file in-memory containing the chosen files, specified
+    relative to the root (and stored with those same relative paths in the
+    ZIP).
     Normalizes UNIX permissions to avoid any problems with Lambda execution.
 
     Returns the contents as a string.
@@ -76,8 +77,8 @@ def _zip_from_file_patterns(root, includes, excludes):
 
     files = list(_find_files(root, includes, excludes))
     if not files:
-        raise RuntimeError('Empty list of files for Lambda payload. Check your '
-                           'include/exclude options for errors.')
+        raise RuntimeError('Empty list of files for Lambda payload. Check '
+                           'your include/exclude options for errors.')
 
     logger.info('lambda: adding %d files:', len(files))
 
@@ -118,8 +119,8 @@ def _upload_code(s3_conn, bucket, name, contents):
     """
     Upload a ZIP file to S3 for use by Lambda.
 
-    The file will be stored with it's MD5 appended to the key, to allow avoiding
-    repeated uploads in subsequent runs with unchanged content.
+    The file will be stored with it's MD5 appended to the key, to allow
+    avoiding repeated uploads in subsequent runs with unchanged content.
 
     Returns a troposphere.aws_lambda.Code object containing the bucket and key
     used.
@@ -250,8 +251,8 @@ def upload_lambda_functions(region, namespace, mappings, parameters,
         otherwise excluded.
     function.exclude:
         Pattern or list of patterns of files to exclude from the payload.
-        If provided, any files that match will be ignored, regardless of whether
-        they match an inclusion pattern.
+        If provided, any files that match will be ignored, regardless of
+        whether they match an inclusion pattern.
 
         Common ignored files are already excluded, such as most VCS information
         directories (``.git``, ``.svn``) , ``__pycache__``, ``.pyc`` files,
@@ -259,18 +260,21 @@ def upload_lambda_functions(region, namespace, mappings, parameters,
 
     Patterns can be defined in similar manner to .gitignore files. They are
     interpreted relative to the base path (or, if no slashes are present, only
-    to the last component of the path). See http://www.aviser.asia/formic/doc/index.html
-    for more details.
+    to the last component of the path). See
+    http://www.aviser.asia/formic/doc/index.html for more details.
 
     Payloads will be stored in the selected bucket with a name in the form
-    ``lambda-{name}-{md5}.zip``, where {md5} is the checksum of the ZIP payload.
+    ``lambda-{name}-{md5}.zip``, where {md5} is the checksum of the ZIP
+    payload.
 
     Subsequent runs with unchanged contents will generate the same payload.
     In such cases, no upload will be made, an the existing object will be used.
 
     To refer to the uploaded payload information inside a blueprint, the
     ``context.hook_data`` dictionary should be used. A
-    ``troposphere.awslambda.Code`` object is stored for each processed function.
+    ``troposphere.awslambda.Code`` object is stored for each processed
+    function.
+
     Example (using the hook configuration outlined above)::
 
         from troposphere.awslambda import Function

@@ -286,7 +286,7 @@ def _upload_function(s3_conn, bucket, name, options):
             through.
     """
     try:
-        root = options['path']
+        root = os.path.expanduser(options['path'])
     except KeyError as e:
         raise ValueError(
             "missing required property '{}' in function '{}'".format(

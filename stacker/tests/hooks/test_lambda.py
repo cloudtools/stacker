@@ -1,3 +1,4 @@
+import os.path
 import unittest
 import mock
 from StringIO import StringIO
@@ -123,6 +124,28 @@ class TestLambdaHooks(unittest.TestCase):
             results = self.run_hook(functions={
                 'MyFunction': {
                     'path': 'test'
+                }
+            })
+
+        self.assertIsNotNone(results)
+
+        code = results.get('lambda:MyFunction')
+        self.assertIsInstance(code, Code)
+        self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, ['test.py'])
+
+    @mock_s3
+    def test_path_home_relative(self):
+        test_path = '~/test'
+
+        orig_expanduser = os.path.expanduser
+        with self.temp_directory_with_files(['test.py']) as d, \
+                mock.patch('os.path.expanduser') as m1:
+            m1.side_effect = lambda p: (d.path if p == test_path
+                                        else orig_expanduser(p))
+
+            results = self.run_hook(functions={
+                'MyFunction': {
+                    'path': test_path
                 }
             })
 

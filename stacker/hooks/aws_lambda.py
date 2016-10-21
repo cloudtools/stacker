@@ -14,21 +14,29 @@ from troposphere.awslambda import Code
 from stacker.util import get_config_directory
 
 
-# UNIX file attributes are stored in the upper 16 bits in the external
-# attributes field of a ZIP entry
+"""Mask to retrieve only UNIX file permissions from the external attributes
+field of a ZIP entry.
+"""
 ZIP_PERMS_MASK = (stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO) << 16
 
 logger = logging.getLogger(__name__)
 
 
 def _zip_files(files, root):
-    """
-    Generate a ZIP file in-memory containing the chosen files, specified
-    relative to the root (and stored with those same relative paths in the
-    ZIP).
-    Normalizes UNIX permissions to avoid any problems with Lambda execution.
+    """Generates a ZIP file in-memory from a list of files.
 
-    Returns the contents as a string.
+    Files will be stored in the archive with relative names, and have their
+    UNIX permissions forced to 755 or 644 (depending on whether they are
+    user-executable in the source filesystem).
+
+    Args:
+        files (list[str]): file names to add to the archive, relative to
+            ``root``.
+        root (str): base directory to retrieve files from.
+
+    Returns:
+        str: content of the ZIP file as a byte string.
+
     """
     zip_data = StringIO()
     with ZipFile(zip_data, 'w', ZIP_DEFLATED) as zip_file:
@@ -58,10 +66,25 @@ def _zip_files(files, root):
 
 
 def _find_files(root, includes, excludes):
-    """
-    Generate a list of files relative to a root path, applying inclusion and
-    exclusion patterns. The documentation for the patterns can be found at:
-    http://www.aviser.asia/formic/doc/index.html
+    """List files inside a directory based on include and exclude rules.
+
+    This is a more advanced version of `glob.glob`, that accepts multiple
+    complex patterns.
+
+    Args:
+        root (str): base directory to list files from.
+        includes (list[str]): inclusion patterns. Only files matching those
+            patterns will be included in the result.
+        includes (list[str]): exclusion patterns. Files matching those
+            patterns will be excluded from the result. Exclusions take
+            precedence over inclusions.
+
+    Yields:
+        str: a file name relative to the root.
+
+    Note:
+        Documentation for the patterns can be found at
+        http://www.aviser.asia/formic/doc/index.html
     """
 
     root = os.path.abspath(root)
@@ -72,7 +95,23 @@ def _find_files(root, includes, excludes):
 
 
 def _zip_from_file_patterns(root, includes, excludes):
-    """Generates a ZIP file from file patterns relative to a root path"""
+    """Generates a ZIP file in-memory from file search patterns.
+
+    Args:
+        root (str): base directory to list files from.
+        includes (list[str]): inclusion patterns. Only files  matching those
+            patterns will be included in the result.
+        includes (list[str]): exclusion patterns. Files matching those
+            patterns will be excluded from the result. Exclusions take
+            precedence over inclusions.
+
+    See Also:
+        :func:`_zip_files`, :func:`_find_files`.
+
+    Raises:
+        RuntimeError: when the generated archive would be empty.
+
+    """
     logger.info('lambda: base directory: %s', root)
 
     files = list(_find_files(root, includes, excludes))
@@ -89,7 +128,21 @@ def _zip_from_file_patterns(root, includes, excludes):
 
 
 def _head_object(s3_conn, bucket, key):
-    """Retrieve information about an object in S3, if it exists"""
+    """Retrieve information about an object in S3 if it exists.
+
+    Args:
+        s3_conn (.S3.Client): S3 connection to use for operations.
+        bucket (str): name of the bucket containing the key.
+        key (str): name of the key to lookup.
+
+    Returns:
+        dict: S3 object information, or None if the object does not exist.
+        See the AWS documentation for explanation of the contents.
+
+    Raises:
+        botocore.exceptions.ClientError: any error from boto3 other than key
+            not found is passed through.
+    """
     try:
         return s3_conn.head_object(Bucket=bucket, Key=key)
     except botocore.exceptions.ClientError as e:
@@ -100,7 +153,20 @@ def _head_object(s3_conn, bucket, key):
 
 
 def _ensure_bucket(s3_conn, bucket):
-    """Create an S3 bucket if it doesn't already exist"""
+    """Create an S3 bucket if it does not already exist.
+
+    Args:
+        s3_conn (.S3.Client): S3 connection to use for operations.
+        bucket (str): name of the bucket to create.
+
+    Returns:
+        dict: S3 object information. See the AWS documentation for explanation
+        of the contents.
+
+    Raises:
+        botocore.exceptions.ClientError: any error from boto3 is passed
+            through.
+    """
     try:
         s3_conn.head_bucket(Bucket=bucket)
     except botocore.exceptions.ClientError as e:
@@ -116,14 +182,26 @@ def _ensure_bucket(s3_conn, bucket):
 
 
 def _upload_code(s3_conn, bucket, name, contents):
-    """
-    Upload a ZIP file to S3 for use by Lambda.
+    """Upload a ZIP file to S3 for use by Lambda.
 
-    The file will be stored with it's MD5 appended to the key, to allow
-    avoiding repeated uploads in subsequent runs with unchanged content.
+    The key used for the upload will be unique based on the checksum of the
+    contents. No changes will be made if the contents in S3 already match the
+    expected contents.
 
-    Returns a troposphere.aws_lambda.Code object containing the bucket and key
-    used.
+    Args:
+        s3_conn (.S3.Client): S3 connection to use for operations.
+        bucket (str): name of the bucket to create.
+        name (str): desired name of the Lambda function. Will be used to
+            construct a key name for the uploaded file.
+        contents (str): byte string with the content of the file upload.
+
+    Returns:
+        troposphere.awslambda.Code: CloudFormation Lambda Code object,
+        pointing to the uploaded payload in S3.
+
+    Raises:
+        botocore.exceptions.ClientError: any error from boto3 is passed
+            through.
     """
 
     hsh = hashlib.md5(contents)
@@ -146,10 +224,25 @@ def _upload_code(s3_conn, bucket, name, contents):
 
 
 def _check_pattern_list(patterns, key, default=None):
-    """
-    Checks whether a include/exclude configuration is valid.
+    """Validates file search patterns from user configuration.
 
-    It can be a string or a list of strings (if defined).
+    Acceptable input is a string (which will be converted to a singleton list),
+    a list of strings, or anything falsy (such as None or an empty dictionary).
+    Empty or unset input will be converted to a default.
+
+    Args:
+        patterns: input from user configuration (YAML).
+        key (str): name of the configuration key the input came from,
+            used for error display purposes.
+
+    Keyword Args:
+        default: value to return in case the input is empty or unset.
+
+    Returns:
+        list[str]: validated list of patterns
+
+    Raises:
+        ValueError: if the input is unacceptable.
     """
     if not patterns:
         return default
@@ -166,12 +259,31 @@ def _check_pattern_list(patterns, key, default=None):
 
 
 def _upload_function(s3_conn, bucket, name, options):
-    """
-    Processes and uploads a complete Lambda payload to S3.
+    """Builds a Lambda payload from user configuration and uploads it to S3.
 
-    The `path` option is mandatory, and can be a relative or absolute path.
-    In the former case, it is interpreted relative to the stacker configuration
-    path.
+    Args:
+        s3_conn (.S3.Client): S3 connection to use for operations.
+        bucket (str): name of the bucket to upload to.
+        name (str): desired name of the Lambda function. Will be used to
+            construct a key name for the uploaded file.
+        options (dict): configuration for how to build the payload.
+            Consists of the following keys:
+                * path:
+                    base path to retrieve files from (mandatory). If not
+                    absolute, it will be interpreted as relative to the stacker
+                    configuration file directory, then converted to an absolute
+                    path. See :func:`stacker.util.get_config_directory`.
+                * include: file patterns to include in the payload (optional).
+                * exclude: file patterns to exclude from the payload (optional).
+
+    Returns:
+        troposphere.awslambda.Code: CloudFormation AWS Lambda Code object,
+        pointing to the uploaded object in S3.
+
+    Raises:
+        ValueError: if any configuration is invalid.
+        botocore.exceptions.ClientError: any error from boto3 is passed
+            through.
     """
     try:
         root = options['path']
@@ -198,101 +310,100 @@ def _upload_function(s3_conn, bucket, name, options):
 
 def upload_lambda_functions(region, namespace, mappings, parameters,
                             context=None, **kwargs):
-    """
-    Prepares and uploads one or more Lambda payloads to Amazon S3.
+    """Builds Lambda payloads from user configuration and uploads then to S3.
 
-    Example configuration::
+    Constructs ZIP archives containing files matching specified patterns for
+    each function, uploads the result to Amazon S3, then stores objects (of
+    type :class:`troposphere.awslambda.Code`) in the context's hook data,
+    ready to be referenced in blueprints.
 
-        pre_build:
-          - path: stacker.hooks.aws_lambda.upload_lambda_functions
-            required: true
-            args:
-              bucket: custom-bucket
-              functions:
-                MyFunction:
-                  path: ./lambda_functions
-                  include:
-                    - '*.py'
-                    - '*.txt'
-                  exclude:
-                    - '*.pyc'
-                    - test/
+    Configuration consists of some global options, and a dictionary of function
+    specifications. In the specifications, each key indicating the name of the
+    function (used for generating names for artifacts), and the value
+    determines what files to include in the ZIP (see more details below).
 
-    bucket:
-        Defines a custom bucket to upload functions to.
-        Omitting it will cause the default stacker bucket to be used.
-    functions:
-        Dictionary of function configurations. Multiple functions
-        can be specified, and all of them will be processed. The keys will be
-        used as the function names while uploading files and for referencing
-        inside templates (see more below).
-    function.path:
-        Base directory of the Lambda function payload content.
-        If it is not an absolute path, it will be considered relative to the
-        stacker configuration file being used.
-        Files found here will be added to the Lambda ZIP, according to the
-        include/exclude patterns (if they are defined).
+    Payloads are uploaded to either a custom bucket or stackers default bucket,
+    with the key containing it's checksum, to allow repeated uploads to be
+    skipped in subsequent runs.
 
-        The *contents* of the directory are used. So, for example, with the
-        following directory structure::
+    The configuration settings are documented as keyword arguments below.
 
-            config.yml
-            lambda_functions/my_function.py
-            lambda_functions/my_lib.py
+    Keyword Arguments:
+        bucket (str, optional): Custom bucket to upload functions to.
+            Omitting it will cause the default stacker bucket to be used.
+        functions (dict):
+            Configurations of desired payloads to build. Keys correspond to
+            function names, used to derive key names for the payload. Each
+            value should itself be a dictionary, with the following data:
+                * path (str):
+                    Base directory of the Lambda function payload content.
+                    If it not an absolute path, it will be considered relative
+                    to the directory containing the stacker configuration file
+                    in use.
 
-        Using ``lambda_functions`` as the base path will cause the ZIP to
-        contain ``my_function.py`` and ``my_lib.py`` in it's root.
-    function.include:
-        Pattern or list of patterns of files to include in the payload.
-        If provided, only files that match *and* do not match any exclude
-        rules will be added to the payload.
+                    Files in this directory will be added to the payload ZIP,
+                    according to the include and exclude patterns. If not
+                    patterns are provided, all files in this directory (respecting
+                    default exclusions) will be used.
 
-        Omitting it is equivalent to accepting all files that are not
-        otherwise excluded.
-    function.exclude:
-        Pattern or list of patterns of files to exclude from the payload.
-        If provided, any files that match will be ignored, regardless of
-        whether they match an inclusion pattern.
+                    Files are stored in the archive with path names relative to
+                    this directory. So, for example, all the files contained
+                    directly under this directory will be added to the root of
+                    the ZIP file.
+                * include(str or list[str], optional):
+                    Pattern or list of patterns of files to include in the payload.
+                    If provided, only files that match these patterns will
+                    be included in the payload.
 
-        Common ignored files are already excluded, such as most VCS information
-        directories (``.git``, ``.svn``) , ``__pycache__``, ``.pyc`` files,
-        etc.
+                    Omitting it is equivalent to accepting all files that are not
+                    otherwise excluded.
+                * exclude(str or list[str], optional):
+                    Pattern or list of patterns of files to exclude from the
+                    payload. If provided, any files that match will be ignored,
+                    regardless of whether they match an inclusion pattern.
 
-    Patterns can be defined in similar manner to .gitignore files. They are
-    interpreted relative to the base path (or, if no slashes are present, only
-    to the last component of the path). See
-    http://www.aviser.asia/formic/doc/index.html for more details.
+                    Commonly ignored files are already excluded by default, such as
+                    ``.git``, ``.svn``, ``__pycache__``, ``*.pyc``, ``.gitignore``,
+                    etc.
 
-    Payloads will be stored in the selected bucket with a name in the form
-    ``lambda-{name}-{md5}.zip``, where {md5} is the checksum of the ZIP
-    payload.
+    Examples:
+        .. Hook configuration.
+        .. code-block:: yaml
 
-    Subsequent runs with unchanged contents will generate the same payload.
-    In such cases, no upload will be made, an the existing object will be used.
+            pre_build:
+              - path: stacker.hooks.aws_lambda.upload_lambda_functions
+                required: true
+                args:
+                  bucket: custom-bucket
+                  functions:
+                    MyFunction:
+                      path: ./lambda_functions
+                      include:
+                        - '*.py'
+                        - '*.txt'
+                      exclude:
+                        - '*.pyc'
+                        - test/
 
-    To refer to the uploaded payload information inside a blueprint, the
-    ``context.hook_data`` dictionary should be used. A
-    ``troposphere.awslambda.Code`` object is stored for each processed
-    function.
+        .. Blueprint usage
+        .. code-block:: python
 
-    Example (using the hook configuration outlined above)::
+            from troposphere.awslambda import Function
+            from stacker.blueprints.base import Blueprint
 
-        from troposphere.awslambda import Function
-        from stacker.blueprints.base import Blueprint
+            class LambdaBlueprint(Blueprint):
+                def create_template(self):
+                    code = self.context.hook_data['lambda:MyFunction']
 
-        class LambdaBlueprint(Blueprint):
-            def create_template(self):
-                code = self.context.hook_data['lambda:MyFunction']
-
-                self.template.add_resource(
-                    Function(
-                        'MyFunction',
-                        Code=code,
-                        Handler='my_function.handler',
-                        Role='...',
-                        Runtime='python2.7'
+                    self.template.add_resource(
+                        Function(
+                            'MyFunction',
+                            Code=code,
+                            Handler='my_function.handler',
+                            Role='...',
+                            Runtime='python2.7'
+                        )
                     )
-                )
     """
     if not context:
         raise RuntimeError('context not received in hook, '

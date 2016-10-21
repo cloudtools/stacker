@@ -273,8 +273,10 @@ def _upload_function(s3_conn, bucket, name, options):
                     absolute, it will be interpreted as relative to the stacker
                     configuration file directory, then converted to an absolute
                     path. See :func:`stacker.util.get_config_directory`.
-                * include: file patterns to include in the payload (optional).
-                * exclude: file patterns to exclude from the payload (optional).
+                * include:
+                    file patterns to include in the payload (optional).
+                * exclude:
+                    file patterns to exclude from the payload (optional).
 
     Returns:
         troposphere.awslambda.Code: CloudFormation AWS Lambda Code object,
@@ -343,28 +345,28 @@ def upload_lambda_functions(region, namespace, mappings, parameters,
 
                     Files in this directory will be added to the payload ZIP,
                     according to the include and exclude patterns. If not
-                    patterns are provided, all files in this directory (respecting
-                    default exclusions) will be used.
+                    patterns are provided, all files in this directory
+                    (respecting default exclusions) will be used.
 
                     Files are stored in the archive with path names relative to
                     this directory. So, for example, all the files contained
                     directly under this directory will be added to the root of
                     the ZIP file.
                 * include(str or list[str], optional):
-                    Pattern or list of patterns of files to include in the payload.
-                    If provided, only files that match these patterns will
-                    be included in the payload.
+                    Pattern or list of patterns of files to include in the
+                    payload. If provided, only files that match these
+                    patterns will be included in the payload.
 
-                    Omitting it is equivalent to accepting all files that are not
-                    otherwise excluded.
+                    Omitting it is equivalent to accepting all files that are
+                    not otherwise excluded.
                 * exclude(str or list[str], optional):
                     Pattern or list of patterns of files to exclude from the
                     payload. If provided, any files that match will be ignored,
                     regardless of whether they match an inclusion pattern.
 
-                    Commonly ignored files are already excluded by default, such as
-                    ``.git``, ``.svn``, ``__pycache__``, ``*.pyc``, ``.gitignore``,
-                    etc.
+                    Commonly ignored files are already excluded by default,
+                    such as ``.git``, ``.svn``, ``__pycache__``, ``*.pyc``,
+                    ``.gitignore``, etc.
 
     Examples:
         .. Hook configuration.

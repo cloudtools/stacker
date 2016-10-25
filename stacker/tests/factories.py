@@ -22,10 +22,6 @@ def generate_definition(base_name, stack_id, **overrides):
         "class_path": "stacker.tests.fixtures.mock_blueprints.%s" % (
             base_name.upper()),
         "namespace": "example-com",
-        "parameters": {
-            "InstanceType": "m3.medium",
-            "AZCount": 2,
-        },
         "requires": []
     }
     definition.update(overrides)

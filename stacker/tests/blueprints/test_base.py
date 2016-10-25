@@ -479,3 +479,20 @@ class TestVariables(unittest.TestCase):
         self.assertFalse(valid)
         valid = validate_allowed_values(allowed_values, "allowed")
         self.assertTrue(valid)
+
+    def test_blueprint_with_parameters_fails(self):
+        class TestBlueprint(Blueprint):
+            PARAMETERS = {
+                "Param2": {"default": 0, "type": "Integer"},
+            }
+
+        with self.assertRaises(AttributeError):
+            TestBlueprint(name="test", context=MagicMock())
+
+        class TestBlueprint(Blueprint):
+            LOCAL_PARAMETERS = {
+                "Param2": {"default": 0, "type": "Integer"},
+            }
+
+        with self.assertRaises(AttributeError):
+            TestBlueprint(name="test", context=MagicMock())

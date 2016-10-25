@@ -42,7 +42,7 @@ def _gather_variables(stack_def, context_variables):
     if "parameters" in stack_def:
         raise AttributeError("Stack definition %s contains deprecated "
                              "'parameters', rather than 'variables'. Please "
-                             "update your config.")
+                             "update your config." % stack_name)
     variable_values = copy.deepcopy(stack_def.get('variables', {}))
     stack_specific_variables = {}
     for key, value in context_variables.iteritems():

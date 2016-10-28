@@ -51,7 +51,7 @@ class Provider(AWSProvider):
                 'TemplateURL': template_url,
                 'Parameters': parameters,
                 'Tags': tags,
-                'Capabilities': ["CAPABILITY_IAM"],
+                'Capabilities': ["CAPABILITY_NAMED_IAM"],
                 'ChangeSetName': get_change_set_name(),
             },
         )

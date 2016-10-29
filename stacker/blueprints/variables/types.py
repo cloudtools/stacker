@@ -1,15 +1,79 @@
 
 
+class TroposphereType(object):
+
+    def __init__(self, defined_type, resource_name=None):
+        """Represents a Troposphere type.
+
+        :class:`TroposphereType` will convert the value for the variable to the
+        given Troposphere type.
+
+        Args:
+            defined_type (Union[list, type]): List of or single Troposphere
+                type
+            resource_name (str): The name to use for the resource when creating
+                the type. If nothing is provided, the class name of the type
+                will be used.
+
+        """
+        self.type = defined_type
+        is_list = isinstance(self.type, list)
+        if is_list:
+            if len(self.type) > 1:
+                raise ValueError(
+                    "TroposphereType only supports lists of one type")
+            elif not len(self.type):
+                raise ValueError("Misisng required type for list")
+            self._validate_type(self.type[0])
+        else:
+            self._validate_type(self.type)
+
+        if resource_name is None:
+            if is_list:
+                resource_name = self.type[0].__name__
+            else:
+                resource_name = self.type.__name__
+
+        self.resource_name = resource_name
+
+    def _validate_type(self, defined_type):
+        if not hasattr(defined_type, "from_dict"):
+            raise ValueError("Type must have `from_dict` attribute")
+
+    def create(self, value):
+        """Create the troposphere type from the value.
+
+        Args:
+            value (Union[list, dict]): either a list of dictionaries or a
+                single dictionary we want to convert to the specified
+                troposphere type.
+
+        Returns:
+            Union[list, type]: Returns the value converted to the troposphere
+                type
+
+        """
+        if isinstance(value, list):
+            new_type = self.type[0]
+            output = []
+            for index, v in enumerate(value):
+                name = "{}{}".format(self.resource_name, index + 1)
+                output.append(new_type.from_dict(name, v))
+        else:
+            output = self.type.from_dict(self.resource_name, value)
+        return output
+
+
 class CFNType(object):
 
     def __init__(self, parameter_type):
         """Represents a CloudFormation Parameter Type.
 
-        :class`CFNType`` can be used as the `type` for a Blueprint variable.
+        :class:`CFNType`` can be used as the `type` for a Blueprint variable.
         Unlike other variables, a variable with `type` :class:`CFNType`, will
         be submitted to CloudFormation as a Parameter.
 
-        Arguments:
+        Args:
             parameter_type (str): An AWS specific parameter type
                 (http://goo.gl/PthovJ)
 

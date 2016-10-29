@@ -1,6 +1,8 @@
 from mock import MagicMock
 import unittest
 
+from troposphere import s3
+from stacker.blueprints.variables.types import TroposphereType
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
 
@@ -165,3 +167,44 @@ class TestVariables(unittest.TestCase):
         var.resolve(self.context, self.provider)
         self.assertTrue(var.resolved)
         self.assertEqual(var.value, "looked up: looked up: resolved")
+
+    def test_troposphere_type_missing_type_with_list(self):
+        with self.assertRaises(ValueError):
+            TroposphereType([])
+
+    def test_troposphere_type_multiple_types_in_list(self):
+        with self.assertRaises(ValueError):
+            TroposphereType([s3.Bucket, s3.BucketPolicy])
+
+    def test_troposphere_type_no_from_dict(self):
+        with self.assertRaises(ValueError):
+            TroposphereType(object)
+
+        with self.assertRaises(ValueError):
+            TroposphereType([object])
+
+    def test_troposphere_type_create(self):
+        troposphere_type = TroposphereType(s3.Bucket)
+        created = troposphere_type.create(
+            {"BucketName": "test-bucket"})
+        self.assertTrue(isinstance(created, s3.Bucket))
+        self.assertTrue(created.properties["BucketName"], "test-bucket")
+
+    def test_troposphere_type_create_multiple(self):
+        troposphere_type = TroposphereType([s3.Bucket])
+        created = troposphere_type.create([
+            {"BucketName": "test-bucket"},
+            {"BucketName": "other-test-bucket"},
+        ])
+        self.assertTrue(isinstance(created, list))
+        for index, bucket in enumerate(created):
+            self.assertEqual(bucket.title, "Bucket{}".format(index + 1))
+
+    def test_troposphere_type_default_resource_name(self):
+        troposphere_type = TroposphereType(s3.Bucket)
+        self.assertEqual(troposphere_type.type, s3.Bucket)
+        self.assertEqual(troposphere_type.resource_name, "Bucket")
+
+    def test_troposphere_type_default_resource_name_list(self):
+        troposphere_type = TroposphereType([s3.Bucket])
+        self.assertEqual(troposphere_type.resource_name, "Bucket")

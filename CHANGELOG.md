@@ -1,4 +1,4 @@
-## 1.0.0a2 (2016-10-31)
+## 1.0.0a3 (2016-10-31)
 
 This is a major release with the main change being the removal of the old
 Parameters logic in favor of Blueprint Variables and Lookups.

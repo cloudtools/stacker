@@ -65,6 +65,10 @@ def exception_hook(*args, **kwargs):
     raise Exception
 
 
+def context_hook(*args, **kwargs):
+    return "context" in kwargs
+
+
 class TestHooks(unittest.TestCase):
 
     def setUp(self):
@@ -104,6 +108,11 @@ class TestHooks(unittest.TestCase):
         self.assertEqual(good["provider"].region, "us-east-1")
         with self.assertRaises(Queue.Empty):
             hook_queue.get_nowait()
+
+    def test_context_provided_to_hook(self):
+        hooks = [{"path": "stacker.tests.test_util.context_hook",
+                  "required": True}]
+        handle_hooks("missing", hooks, "us-east-1", self.context)
 
     def test_hook_failure(self):
         hooks = [{"path": "stacker.tests.test_util.fail_hook",

@@ -1,4 +1,4 @@
-## 0.8.2 (2016-10-31)
+## 0.8.3 (2016-10-31)
 
 - pass context to hooks as a kwarg [GH-234]
 - Fix file handler lookups w/ pseudo parameters [GH-239]

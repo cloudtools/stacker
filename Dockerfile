@@ -5,7 +5,7 @@ COPY scripts/docker-stacker /bin/docker-stacker
 RUN mkdir -p /stacks
 WORKDIR /stacks
 COPY . /tmp/stacker
-RUN cd /tmp/stacker && python setup.py install && rm -rf /tmp/stacker
+RUN cd /tmp/stacker && pip install --upgrade setuptools && python setup.py install && rm -rf /tmp/stacker
 
 ENTRYPOINT ["docker-stacker"]
 CMD ["-h"]

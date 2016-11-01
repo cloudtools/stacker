@@ -1,3 +1,7 @@
+## 0.8.4 (2016-11-01)
+
+- Fix an issue w/ boto3 version string not working with older setuptools
+
 ## 0.8.3 (2016-10-31)
 
 - pass context to hooks as a kwarg [GH-234]

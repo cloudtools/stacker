@@ -112,7 +112,7 @@ Below is an annotated example::
   from troposphere import s3
 
 
-  class Bucket(Blueprint):
+  class Buckets(Blueprint):
 
       VARIABLES = {
           "Buckets": {
@@ -122,15 +122,43 @@ Below is an annotated example::
               "type": TroposphereType([s3.Bucket]),
               "description": "S3 Buckets to create.",
           },
+          "SingleBucket": {
+              # Specify that only a single bucket can be passed.
+              "type": TroposphereType(s3.Bucket),
+              "description": "A single S3 bucket",
+          },
       }
 
       def create_template(self):
           t = self.template
           variables = self.get_variables()
+
           # The Troposphere s3 buckets have already been created when we
           access variables["Buckets"], we just need to add them as
           resources to the template.
           [t.add_resource(bucket) for bucket in variables["Buckets"]]
+
+          # Add the single bucket to the template. You can use
+          `Ref(single_bucket)` to pass CloudFormation references to the
+          bucket just as you would with any other Troposphere type.
+          single_bucket = variables["SingleBucket"]
+          t.add_resource(single_bucket)
+
+A sample config for the above::
+
+  stacks:
+    - name: buckets
+      class_path: path.to.above.Buckets
+      variables:
+        Buckets:
+          # resource name that will be added to CloudFormation
+          FirstBucket:
+            # name of the s3 bucket
+            BucketName: my-first-bucket
+          SecondBucket:
+            BucketName: my-second-bucket
+        SingleBucket:
+          BucketName: my-single-bucket
 
 CFNType
 -------

@@ -186,25 +186,14 @@ class TestVariables(unittest.TestCase):
     def test_troposphere_type_create(self):
         troposphere_type = TroposphereType(s3.Bucket)
         created = troposphere_type.create(
-            {"BucketName": "test-bucket"})
+            {"MyBucket": {"BucketName": "test-bucket"}})
         self.assertTrue(isinstance(created, s3.Bucket))
         self.assertTrue(created.properties["BucketName"], "test-bucket")
 
     def test_troposphere_type_create_multiple(self):
         troposphere_type = TroposphereType([s3.Bucket])
-        created = troposphere_type.create([
-            {"BucketName": "test-bucket"},
-            {"BucketName": "other-test-bucket"},
-        ])
+        created = troposphere_type.create({
+            "FirstBucket": {"BucketName": "test-bucket"},
+            "SecondBucket": {"BucketName": "other-test-bucket"},
+        })
         self.assertTrue(isinstance(created, list))
-        for index, bucket in enumerate(created):
-            self.assertEqual(bucket.title, "Bucket{}".format(index + 1))
-
-    def test_troposphere_type_default_resource_name(self):
-        troposphere_type = TroposphereType(s3.Bucket)
-        self.assertEqual(troposphere_type.type, s3.Bucket)
-        self.assertEqual(troposphere_type.resource_name, "Bucket")
-
-    def test_troposphere_type_default_resource_name_list(self):
-        troposphere_type = TroposphereType([s3.Bucket])
-        self.assertEqual(troposphere_type.resource_name, "Bucket")

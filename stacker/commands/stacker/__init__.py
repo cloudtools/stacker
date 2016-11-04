@@ -2,6 +2,7 @@ import copy
 import logging
 
 from .build import Build
+from .blueprint import Blueprint
 from .destroy import Destroy
 from .info import Info
 from .diff import Diff
@@ -19,10 +20,9 @@ logger = logging.getLogger(__name__)
 class Stacker(BaseCommand):
 
     name = "stacker"
-    subcommands = (Build, Destroy, Info, Diff)
+    subcommands = (Build, Blueprint, Destroy, Info, Diff)
 
-    def configure(self, options, **kwargs):
-        super(Stacker, self).configure(options, **kwargs)
+    def _configure_with_global_arguments(self, options):
         if options.interactive:
             logger.info('Using Interactive AWS Provider')
             options.provider = interactive.Provider(
@@ -41,6 +41,11 @@ class Stacker(BaseCommand):
             **options.get_context_kwargs(options)
         )
         options.context.load_config(options.config.read())
+
+    def configure(self, options, **kwargs):
+        super(Stacker, self).configure(options, **kwargs)
+        if hasattr(options, 'environment'):
+            self._configure_with_global_arguments(options)
 
     def add_arguments(self, parser):
         parser.add_argument("--version", action="version",

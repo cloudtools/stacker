@@ -77,9 +77,19 @@ class BaseCommand(object):
                     description=subcommand.description,
                 )
                 subcommand.add_arguments(subparser)
-                subparser.set_defaults(run=subcommand.run)
-                subparser.set_defaults(
-                    get_context_kwargs=subcommand.get_context_kwargs)
+                subcommand.add_subcommands(subparser)
+                # When argparse parses args it creates a namespace and uses
+                # that namespace for each subparser. As it works through the
+                # subparsers it will set the defaults onto the namespace. For
+                # some reason, it doesn't allow subsequent subparsers to
+                # override earlier parsers defaults which means for us if we
+                # specified: `stacker blueprint info`, `info`'s run method
+                # wouldn't override `blueprint`'s. To get arround this, we'll
+                # only set the defaults if we're not adding more subcommands
+                if not subcommand.subcommands:
+                    subparser.set_defaults(run=subcommand.run)
+                    subparser.set_defaults(
+                        get_context_kwargs=subcommand.get_context_kwargs)
 
     @property
     def logger(self):
@@ -92,14 +102,17 @@ class BaseCommand(object):
         self.add_subcommands(parser)
         self.add_arguments(parser)
         args = parser.parse_args(*vargs)
-        args.environment.update(args.cli_envs)
+        if hasattr(args, 'environment'):
+            args.environment.update(args.cli_envs)
         return args
 
     def run(self, options, **kwargs):
         pass
 
     def configure(self, options, **kwargs):
-        self.logger_type = setup_logging(options.verbose, options.interactive)
+        verbose = getattr(options, 'verbose', False)
+        interactive = getattr(options, 'interactive', False)
+        self.logger_type = setup_logging(verbose, interactive)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.

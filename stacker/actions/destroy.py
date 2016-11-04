@@ -82,7 +82,7 @@ class Action(BaseAction):
         elif self.provider.is_stack_in_progress(provider_stack):
             return DestroyingStatus
         else:
-            logger.info("Destroying stack: %s", stack.fqn)
+            logger.debug("Destroying stack: %s", stack.fqn)
             self.provider.destroy_stack(provider_stack)
         return DestroyingStatus
 

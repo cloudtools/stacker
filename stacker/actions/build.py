@@ -49,7 +49,7 @@ def should_submit(stack):
     if stack.enabled:
         return True
 
-    logger.info("Stack %s is not enabled.  Skipping.", stack.name)
+    logger.debug("Stack %s is not enabled.  Skipping.", stack.name)
     return False
 
 
@@ -77,6 +77,7 @@ def resolve_parameters(parameters, blueprint, context, provider):
     """
     params = {}
     blueprint_params = blueprint.parameters
+
     for k, v in parameters.items():
         if k not in blueprint_params:
             logger.debug("Template %s does not use parameter %s.",
@@ -119,6 +120,7 @@ class Action(BaseAction):
 
     The plan can then either be printed out as an outline or executed. If
     executed, each stack will get launched in order which entails:
+
         - Pushing the generated CloudFormation template to S3 if it has changed
         - Submitting either a build or update of the given stack to the
           `Provider`.
@@ -158,17 +160,21 @@ class Action(BaseAction):
         Returns:
             dict: The parameters for the given stack
         """
-        parameters = self._resolve_parameters(stack.parameters,
+        parameters = self._resolve_parameters(stack.cfn_parameters,
                                               stack.blueprint)
         required_params = [k for k, v in stack.blueprint.required_parameters]
         parameters = self._handle_missing_parameters(parameters,
                                                      required_params,
                                                      provider_stack)
-        return [{'ParameterKey': p[0], 'ParameterValue': str(p[1])} for p in parameters]
+        return [
+            {'ParameterKey': p[0],
+             'ParameterValue': str(p[1])} for p in parameters
+        ]
 
     def _build_stack_tags(self, stack):
         """Builds a common set of tags to attach to a stack"""
-        return [{'Key': t[0], 'Value': t[1]} for t in self.context.tags.items()]
+        return [
+            {'Key': t[0], 'Value': t[1]} for t in self.context.tags.items()]
 
     def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.
@@ -199,6 +205,9 @@ class Action(BaseAction):
                 logger.debug("Stack %s in progress.", stack.fqn)
                 return old_status
 
+        logger.debug("Resolving stack %s variables", stack.fqn)
+        stack.resolve_variables(self.context, self.provider)
+
         logger.debug("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack)
@@ -208,7 +217,7 @@ class Action(BaseAction):
 
         if not provider_stack:
             new_status = SubmittedStatus("creating new stack")
-            logger.info("Creating new stack: %s", stack.fqn)
+            logger.debug("Creating new stack: %s", stack.fqn)
             self.provider.create_stack(stack.fqn, template_url, parameters,
                                        tags)
         else:
@@ -218,7 +227,7 @@ class Action(BaseAction):
                 new_status = SubmittedStatus("updating existing stack")
                 self.provider.update_stack(stack.fqn, template_url, parameters,
                                            tags)
-                logger.info("Updating existing stack: %s", stack.fqn)
+                logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()
 
@@ -233,8 +242,8 @@ class Action(BaseAction):
         Args:
             params (dict): key/value dictionary of stack definition parameters
             required_params (list): A list of required parameter names.
-            existing_stack (dict): A dict representation of the stack. If provided, will be searched for any missing
-                parameters.
+            existing_stack (dict): A dict representation of the stack. If
+                provided, will be searched for any missing parameters.
 
         Returns:
             list of tuples: The final list of key/value pairs returned as a
@@ -247,7 +256,8 @@ class Action(BaseAction):
         """
         missing_params = list(set(required_params) - set(params.keys()))
         if existing_stack and 'Parameters' in existing_stack:
-            stack_params = {p['ParameterKey']: p['ParameterValue'] for p in existing_stack['Parameters']}
+            stack_params = {p['ParameterKey']: p['ParameterValue'] for p in
+                            existing_stack['Parameters']}
             for p in missing_params:
                 if p in stack_params:
                     value = stack_params[p]
@@ -297,7 +307,7 @@ class Action(BaseAction):
         plan = self._generate_plan(tail=tail)
         if not outline and not dump:
             plan.outline(logging.DEBUG)
-            logger.info("Launching stacks: %s", ", ".join(plan.keys()))
+            logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
             plan.execute()
         else:
             if outline:

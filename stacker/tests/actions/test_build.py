@@ -19,7 +19,10 @@ from stacker.status import (
 
 def mock_stack(parameters):
     return {
-        'Parameters': [{'ParameterKey': k, 'ParameterValue': v} for k, v in parameters.items()]
+        'Parameters': [
+            {'ParameterKey': k, 'ParameterValue': v} for k, v in
+            parameters.items()
+        ]
     }
 
 
@@ -257,8 +260,8 @@ class TestFunctions(unittest.TestCase):
                 "description": "A"},
             "b": {
                 "type": "String",
-                "description": "B"
-                }}
+                "description": "B"}
+        }
         params = {"a": "Apple", "c": "Carrot"}
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)
         self.assertNotIn("c", p)
@@ -271,8 +274,8 @@ class TestFunctions(unittest.TestCase):
                 "description": "A"},
             "b": {
                 "type": "String",
-                "description": "B"
-                }}
+                "description": "B"}
+        }
         params = {"a": None, "c": "Carrot"}
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)
         self.assertNotIn("a", p)
@@ -284,8 +287,8 @@ class TestFunctions(unittest.TestCase):
                 "description": "A"},
             "b": {
                 "type": "String",
-                "description": "B"
-                }}
+                "description": "B"}
+        }
         params = {"a": "other-stack::a", "b": "Banana"}
         self.prov.get_output.return_value = "Apple"
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)
@@ -307,8 +310,8 @@ class TestFunctions(unittest.TestCase):
                 "description": "A"},
             "b": {
                 "type": "String",
-                "description": "B"
-                }}
+                "description": "B"}
+        }
         params = {"a": "other-stack::a,other-stack::c", "b": "Banana"}
         self.prov.get_output.side_effect = get_output
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)

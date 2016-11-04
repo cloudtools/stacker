@@ -3,6 +3,9 @@ import logging
 import multiprocessing
 import os
 import time
+import uuid
+
+from colorama.ansi import Fore
 
 from .exceptions import (
     CancelExecution,
@@ -26,10 +29,10 @@ class Step(object):
     """State machine for executing generic actions related to stacks.
 
     Args:
-        stack (`stacker.stack.Stack`): the `Stack` object associated with this
-            step
+        stack (:class:`stacker.stack.Stack`): the stack associated
+            with this step
         run_func (func): the function to be run for the given stack
-        requires (Optional[list]): List of stacks this step depends on being
+        requires (list, optional): List of stacks this step depends on being
             completed before running. This step will not be executed unless the
             required stacks have either completed or skipped.
 
@@ -40,6 +43,7 @@ class Step(object):
         self.status = PENDING
         self.requires = requires or []
         self._run_func = run_func
+        self.last_updated = time.time()
 
     def __repr__(self):
         return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
@@ -78,6 +82,7 @@ class Step(object):
             logger.debug("Setting %s state to %s.", self.stack.name,
                          status.name)
             self.status = status
+            self.last_updated = time.time()
 
     def complete(self):
         """A shortcut for set_status(COMPLETE)"""
@@ -103,9 +108,9 @@ class Plan(OrderedDict):
 
     Args:
         description (str): description of the plan
-        sleep_time (Optional[int]): the amount of time that will be passed to
+        sleep_time (int, optional): the amount of time that will be passed to
             the `wait_func`. Default: 5 seconds.
-        wait_func (Optional[func]): the function to be called after each pass
+        wait_func (func, optional): the function to be called after each pass
             of running stacks. This defaults to :func:`time.sleep` and will
             sleep for the given `sleep_time` before starting the next pass.
             Default: :func:`time.sleep`
@@ -126,6 +131,7 @@ class Plan(OrderedDict):
 
         self._watchers = {}
         self._watch_func = watch_func
+        self.id = uuid.uuid4()
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, requires=None):
@@ -134,7 +140,7 @@ class Plan(OrderedDict):
         Args:
             stack (:class:`stacker.stack.Stack`): The stack to add to the plan.
             run_func (function): The function to call when the step is ran.
-            requires (Optional(list)): A list of other stacks that are required
+            requires (list, optional): A list of other stacks that are required
                 to be complete before this step is started.
         """
         self[stack.fqn] = Step(
@@ -238,13 +244,11 @@ class Plan(OrderedDict):
         attempts = 0
         try:
             while not self.completed:
-                attempts += 1
                 if not attempts % 10:
                     self._check_point()
 
+                attempts += 1
                 if not self._single_run():
-                    if attempts == 1:
-                        self._check_point()
                     self._wait_func(self.sleep_time)
         except CancelExecution:
             logger.info("Cancelling execution")
@@ -262,9 +266,9 @@ class Plan(OrderedDict):
         taken.
 
         Args:
-            level (Optional[int]): a valid log level that should be used to log
+            level (int, optional): a valid log level that should be used to log
                 the outline
-            message (Optional[str]): a message that will be logged to
+            message (str, optional): a message that will be logged to
                 the user after the outline has been logged.
         """
         steps = 1
@@ -315,9 +319,31 @@ class Plan(OrderedDict):
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""
-        logger.info("Plan Status:")
+        status_to_color = {
+            SUBMITTED.code: Fore.YELLOW,
+            COMPLETE.code: Fore.GREEN,
+        }
+        logger.info("Plan Status:", extra={"reset": True, "loop": self.id})
+
+        longest = 0
+        messages = []
         for step_name, step in self.iteritems():
-            msg = "  - step \"%s\": %s" % (step_name, step.status.name)
+            length = len(step_name)
+            if length > longest:
+                longest = length
+
+            msg = "%s: %s" % (step_name, step.status.name)
             if step.status.reason:
                 msg += " (%s)" % (step.status.reason)
-            logger.info(msg)
+
+            messages.append((msg, step))
+
+        for msg, step in messages:
+            parts = msg.split(' ', 1)
+            fmt = "\t{0: <%d}{1}" % (longest + 2,)
+            color = status_to_color.get(step.status.code, Fore.WHITE)
+            logger.info(fmt.format(*parts), extra={
+                'loop': self.id,
+                'color': color,
+                'last_updated': step.last_updated,
+            })

@@ -7,11 +7,13 @@ from . import utils
 
 logger = logging.getLogger(__name__)
 
+
 def find(lst, key, value):
     for i, dic in enumerate(lst):
         if dic[key] == value:
             return lst[i]
     return False
+
 
 def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
     client = boto3.client('ec2', region_name=region)

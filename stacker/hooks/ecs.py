@@ -3,22 +3,9 @@
 #   https://github.com/boto/boto/pull/3143
 import logging
 
+import boto3
+
 logger = logging.getLogger(__name__)
-
-from boto.regioninfo import get_regions
-from boto.ec2containerservice.layer1 import EC2ContainerServiceConnection
-
-
-def regions():
-    return get_regions("ec2containerservice",
-                       connection_cls=EC2ContainerServiceConnection)
-
-
-def connect_to_region(region_name, **kw_params):
-    for region in regions():
-        if region.name == region_name:
-            return region.connect(**kw_params)
-    return None
 
 
 def create_clusters(region, namespace, mappings, parameters, **kwargs):
@@ -28,7 +15,8 @@ def create_clusters(region, namespace, mappings, parameters, **kwargs):
     names to create.
 
     """
-    conn = connect_to_region(region)
+    conn = boto3.client("ecs", region_name=region)
+
     try:
         clusters = kwargs["clusters"]
     except KeyError:
@@ -40,5 +28,5 @@ def create_clusters(region, namespace, mappings, parameters, **kwargs):
 
     for cluster in clusters:
         logger.debug("Creating ECS cluster: %s", cluster)
-        conn.create_cluster(cluster)
+        conn.create_cluster(clusterName=cluster)
     return True

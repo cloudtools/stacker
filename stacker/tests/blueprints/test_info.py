@@ -30,6 +30,6 @@ class Test(unittest.TestCase):
 
     def test_format_var_type_cfn_type(self):
         formatted = format_var_type(CFNString)
-        self.assertEqual(formatted, "CFN String")
+        self.assertEqual(formatted, "CFN::String")
         formatted = format_var_type(EC2VPCIdList)
-        self.assertEqual(formatted, "CFN List<AWS::EC2::VPC::Id>")
+        self.assertEqual(formatted, "CFN::List<AWS::EC2::VPC::Id>")

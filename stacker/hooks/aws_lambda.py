@@ -131,7 +131,7 @@ def _head_object(s3_conn, bucket, key):
     """Retrieve information about an object in S3 if it exists.
 
     Args:
-        s3_conn (.S3.Client): S3 connection to use for operations.
+        s3_conn (botocore.client.S3): S3 connection to use for operations.
         bucket (str): name of the bucket containing the key.
         key (str): name of the key to lookup.
 
@@ -156,7 +156,7 @@ def _ensure_bucket(s3_conn, bucket):
     """Create an S3 bucket if it does not already exist.
 
     Args:
-        s3_conn (.S3.Client): S3 connection to use for operations.
+        s3_conn (botocore.client.S3): S3 connection to use for operations.
         bucket (str): name of the bucket to create.
 
     Returns:
@@ -189,7 +189,7 @@ def _upload_code(s3_conn, bucket, name, contents):
     expected contents.
 
     Args:
-        s3_conn (.S3.Client): S3 connection to use for operations.
+        s3_conn (botocore.client.S3): S3 connection to use for operations.
         bucket (str): name of the bucket to create.
         name (str): desired name of the Lambda function. Will be used to
             construct a key name for the uploaded file.
@@ -262,7 +262,7 @@ def _upload_function(s3_conn, bucket, name, options):
     """Builds a Lambda payload from user configuration and uploads it to S3.
 
     Args:
-        s3_conn (.S3.Client): S3 connection to use for operations.
+        s3_conn (botocore.client.S3): S3 connection to use for operations.
         bucket (str): name of the bucket to upload to.
         name (str): desired name of the Lambda function. Will be used to
             construct a key name for the uploaded file.
@@ -312,7 +312,7 @@ def _upload_function(s3_conn, bucket, name, options):
 
 def upload_lambda_functions(region, namespace, mappings, parameters,
                             context=None, **kwargs):
-    """Builds Lambda payloads from user configuration and uploads then to S3.
+    """Builds Lambda payloads from user configuration and uploads them to S3.
 
     Constructs ZIP archives containing files matching specified patterns for
     each function, uploads the result to Amazon S3, then stores objects (of

@@ -2,7 +2,7 @@
 import logging
 
 from ..base import BaseCommand
-from ....blueprints.info import explain_blueprint
+from ....blueprints.info import explain_path
 
 logger = logging.getLogger(__name__)
 
@@ -20,4 +20,4 @@ class Info(BaseCommand):
 
     def run(self, options, **kwargs):
         super(Info, self).run(options, **kwargs)
-        explain_blueprint(options.path)
+        explain_path(options.path)

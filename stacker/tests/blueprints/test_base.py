@@ -109,8 +109,8 @@ class TestVariables(unittest.TestCase):
         var_name = "testVar"
         var_type = int
         provided_value = "1"
-        value = validate_variable_type(var_name, var_type, provided_value)
-        self.assertEqual(value, int(provided_value))
+        with self.assertRaises(ValueError):
+            validate_variable_type(var_name, var_type, provided_value)
 
     def test_validate_variable_type_invalid_value(self):
         var_name = "testVar"
@@ -363,7 +363,7 @@ class TestVariables(unittest.TestCase):
             }
 
         blueprint = TestBlueprint(name="test", context=MagicMock())
-        variables = [Variable("Param1", "1")]
+        variables = [Variable("Param1", 1)]
         blueprint.resolve_variables(variables)
         variables = blueprint.get_variables()
         self.assertTrue(isinstance(variables["Param1"], int))
@@ -465,7 +465,7 @@ class TestVariables(unittest.TestCase):
             }
 
         blueprint = TestBlueprint(name="test", context=MagicMock())
-        variables = [Variable("Param1", "1"), Variable("Param2", "Value")]
+        variables = [Variable("Param1", 1), Variable("Param2", "Value")]
         blueprint.resolve_variables(variables)
         variables = blueprint.get_variables()
         self.assertEqual(len(variables), 2)

@@ -115,11 +115,8 @@ def validate_variable_type(var_name, var_type, value):
         value = CFNParameter(name=var_name, value=value)
     else:
         if not isinstance(value, var_type):
-            try:
-                value = var_type(value)
-            except ValueError:
-                raise ValueError("Variable %s must be %s.",
-                                 var_name, var_type)
+            raise ValueError("Variable %s must be of type %s.",
+                             var_name, var_type)
     return value
 
 
@@ -196,10 +193,9 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
         raise ValidatorError(var_name, validator.__name__, value, exc)
 
     # Ensure that the resulting value is the correct type
-    var_type = var_def.get("type")
     value = validate_variable_type(var_name, var_type, value)
 
-    allowed_values = var_def.get('allowed_values')
+    allowed_values = var_def.get("allowed_values")
     valid = validate_allowed_values(allowed_values, value)
     if not valid:
         message = (

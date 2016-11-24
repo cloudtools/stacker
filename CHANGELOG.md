@@ -10,6 +10,18 @@ Parameters logic in favor of Blueprint Variables and Lookups.
 - Support `allowed_values` within variable definitions [GH-245]
 - Fix filehandler lookups with pseudo parameters [GH-247]
 - keypair hook update to match route53 update [GH-248]
+- Allow = in lookup contents [GH-251]
+- change capabilities to CAPABILITY\_NAMED\_IAM [GH-262]
+
+## 0.8.4 (2016-11-01)
+
+- Fix an issue w/ boto3 version string not working with older setuptools
+
+## 0.8.3 (2016-10-31)
+
+- pass context to hooks as a kwarg [GH-234]
+- Fix file handler lookups w/ pseudo parameters [GH-239]
+- Allow use of later boto3 [GH-253]
 
 ## 0.8.1 (2016-09-22)
 

@@ -13,7 +13,7 @@ LOOKUP_REGEX = re.compile("""
                                        # "output" type
 ?\s*                                   # any number of spaces separating the
                                        # type from the input
-(?P<input>[@\+\/,\._\-a-zA-Z0-9\:\s]+) # the input value to the lookup
+(?P<input>[@\+\/,\._\-a-zA-Z0-9\:\s=]+) # the input value to the lookup
 )\}                                    # closing brace of the lookup
 """, re.VERBOSE)
 

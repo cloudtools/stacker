@@ -1,4 +1,5 @@
 import copy
+import collections
 import uuid
 import importlib
 import logging
@@ -302,6 +303,7 @@ def handle_hooks(stage, hooks, region, context):
 
     logger.info("Executing %s hooks: %s", stage, ", ".join(hook_paths))
     for hook in hooks:
+        data_key = hook.get("data_key")
         required = hook.get("required", True)
         kwargs = hook.get("args", {})
         try:
@@ -332,6 +334,15 @@ def handle_hooks(stage, hooks, region, context):
                 sys.exit(1)
             logger.warning("Non-required hook %s failed. Return value: %s",
                            hook["path"], result)
+        else:
+            if isinstance(result, collections.Mapping):
+                if data_key:
+                    logger.debug("Adding result for hook %s to context in "
+                                 "data_key %s.", hook["path"], data_key)
+                    context.set_hook_data(data_key, result)
+                else:
+                    logger.debug("Hook %s returned result data, but no data "
+                                 "key set, so ignoring.", hook["path"])
 
 
 def get_config_directory():

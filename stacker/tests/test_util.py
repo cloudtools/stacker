@@ -65,6 +65,10 @@ def context_hook(*args, **kwargs):
     return "context" in kwargs
 
 
+def result_hook(*args, **kwargs):
+    return {"foo": "bar"}
+
+
 class TestHooks(unittest.TestCase):
 
     def setUp(self):
@@ -122,6 +126,43 @@ class TestHooks(unittest.TestCase):
                   "required": False}]
         # Should pass
         handle_hooks("ignore_exception", hooks, "us-east-1", self.context)
+
+    def test_return_data_hook(self):
+        hooks = [
+            {
+                "path": "stacker.tests.test_util.result_hook",
+                "data_key": "my_hook_results"
+            },
+            # Shouldn't return data
+            {
+                "path": "stacker.tests.test_util.context_hook"
+            }
+        ]
+        handle_hooks("result", hooks, "us-east-1", self.context)
+
+        self.assertEqual(
+            self.context.hook_data["my_hook_results"]["foo"],
+            "bar"
+        )
+        # Verify only the first hook resulted in stored data
+        self.assertEqual(
+            self.context.hook_data.keys(), ["my_hook_results"]
+        )
+
+    def test_return_data_hook_duplicate_key(self):
+        hooks = [
+            {
+                "path": "stacker.tests.test_util.result_hook",
+                "data_key": "my_hook_results"
+            },
+            {
+                "path": "stacker.tests.test_util.result_hook",
+                "data_key": "my_hook_results"
+            }
+        ]
+
+        with self.assertRaises(KeyError):
+            handle_hooks("result", hooks, "us-east-1", self.context)
 
 
 class TestException1(Exception):

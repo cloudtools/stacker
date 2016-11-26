@@ -49,7 +49,8 @@ stacks:
       #InternalDomain: internal
   - name: bastion
     class_path: stacker.tests.fixtures.mock_blueprints.Bastion
-    variables:
+    ## !! This should break, parameters not allowed in 1.0
+    parameters:
       # Extends the parameters dict with the contents of the vpc_parameters
       # anchor. Basically we're including all VPC Outputs in the parameters
       # of the bastion stack. Note: Stacker figures out, automatically, which

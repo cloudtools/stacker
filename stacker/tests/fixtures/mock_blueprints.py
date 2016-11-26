@@ -97,3 +97,42 @@ class Bastion(Blueprint):
 
     def create_template(self):
         return
+
+
+class PreOneOhBastion(Blueprint):
+    """Used to ensure old blueprints won't be usable in 1.0"""
+    PARAMETERS = {
+        "VpcId": {"type": "AWS::EC2::VPC::Id", "description": "Vpc Id"},
+        "DefaultSG": {"type": "AWS::EC2::SecurityGroup::Id",
+                      "description": "Top level security group."},
+        "PublicSubnets": {"type": "List<AWS::EC2::Subnet::Id>",
+                          "description": "Subnets to deploy public "
+                                         "instances in."},
+        "PrivateSubnets": {"type": "List<AWS::EC2::Subnet::Id>",
+                           "description": "Subnets to deploy private "
+                                          "instances in."},
+        "AvailabilityZones": {"type": "CommaDelimitedList",
+                              "description": "Availability Zones to deploy "
+                                             "instances in."},
+        "InstanceType": {"type": "String",
+                         "description": "EC2 Instance Type",
+                         "default": "m3.medium"},
+        "MinSize": {"type": "Number",
+                    "description": "Minimum # of instances.",
+                    "default": "1"},
+        "MaxSize": {"type": "Number",
+                    "description": "Maximum # of instances.",
+                    "default": "5"},
+        "SshKeyName": {"type": "AWS::EC2::KeyPair::KeyName"},
+        "OfficeNetwork": {
+            "type": "String",
+            "description": "CIDR block allowed to connect to bastion hosts."},
+        "ImageName": {
+            "type": "String",
+            "description": "The image name to use from the AMIMap (usually "
+                           "found in the config file.)",
+            "default": "bastion"},
+    }
+
+    def create_template(self):
+        return

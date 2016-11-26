@@ -70,3 +70,15 @@ class TestStacker(unittest.TestCase):
         stacker.configure(args)
         stacks = args.context.get_stacks()
         self.assertEqual(len(stacks), 2)
+
+    def test_stacker_build_fail_when_parameters_in_stack_def(self):
+        stacker = Stacker()
+        args = stacker.parse_args(
+            ["build", "-var", "BaseDomain=mike.com", "-r", "us-west-2", "-var",
+             "AZCount=2", "-var", "CidrBlock=10.128.0.0/16",
+             "stacker/tests/fixtures/basic.env",
+             "stacker/tests/fixtures/vpc-bastion-db-web-pre-1.0.yaml"]
+        )
+        stacker.configure(args)
+        with self.assertRaises(AttributeError):
+            args.context.get_stacks_dict()

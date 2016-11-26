@@ -113,3 +113,10 @@ class TestStack(unittest.TestCase):
         variable_dict = dict((v.name, v.value) for v in result)
         self.assertEqual(variable_dict["Address"], "192.168.1.1")
         self.assertEqual(variable_dict["Foo"], "BAR")
+
+    def test_gather_variables_fails_on_parameters_in_stack_def(self):
+        sdef = self.sd
+        sdef["parameters"] = {"Address": "10.0.0.1", "Foo": "BAR"}
+        build_action_variables = {"Address": "192.168.1.1"}
+        with self.assertRaises(AttributeError):
+            _gather_variables(sdef, build_action_variables)

@@ -119,7 +119,7 @@ Below is an annotated example::
               # Specify that Buckets will be a list of s3.Bucket types.
               This means the config should take a list of dictionaries
               which will be converted into troposphere buckets.
-              "type": TroposphereType([s3.Bucket]),
+              "type": TroposphereType(s3.Bucket, many=True),
               "description": "S3 Buckets to create.",
           },
           "SingleBucket": {

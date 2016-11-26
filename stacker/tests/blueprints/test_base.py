@@ -165,7 +165,7 @@ class TestVariables(unittest.TestCase):
 
     def test_resolve_variable_troposphere_list_type(self):
         var_name = "testVar"
-        var_def = {"type": TroposphereType([s3.Bucket])}
+        var_def = {"type": TroposphereType(s3.Bucket, many=True)}
         bucket_defs = {
             "FirstBucket": {"BucketName": "some-bucket"},
             "SecondBucket": {"BucketName": "some-other-bucket"},

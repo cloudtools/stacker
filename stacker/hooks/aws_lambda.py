@@ -122,7 +122,7 @@ def _zip_from_file_patterns(root, includes, excludes):
     logger.info('lambda: adding %d files:', len(files))
 
     for fname in files:
-        logger.info('lambda: + %s', fname)
+        logger.debug('lambda: + %s', fname)
 
     return _zip_files(files, root)
 
@@ -299,7 +299,7 @@ def _upload_function(s3_conn, bucket, name, options):
     excludes = _check_pattern_list(options.get('exclude'), 'exclude',
                                    default=[])
 
-    logger.info('lambda: processing function %s', name)
+    logger.debug('lambda: processing function %s', name)
 
     # os.path.join will ignore other parameters if the right-most one is an
     # absolute path, which is exactly what we want.

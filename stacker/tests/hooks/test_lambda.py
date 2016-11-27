@@ -84,13 +84,6 @@ class TestLambdaHooks(unittest.TestCase):
         return upload_lambda_functions(**real_kwargs)
 
     @mock_s3
-    def test_context_missing(self):
-        msg = ('context not received in hook, check if recent version of '
-               'stacker is being used')
-        with ShouldRaise(RuntimeError(msg)):
-            self.run_hook(context=None)
-
-    @mock_s3
     def test_bucket_default(self):
         self.assertIsNotNone(
             self.run_hook(functions={}))
@@ -129,7 +122,7 @@ class TestLambdaHooks(unittest.TestCase):
 
         self.assertIsNotNone(results)
 
-        code = results.get('lambda:MyFunction')
+        code = results.get('MyFunction')
         self.assertIsInstance(code, Code)
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, ['test.py'])
 
@@ -151,7 +144,7 @@ class TestLambdaHooks(unittest.TestCase):
 
         self.assertIsNotNone(results)
 
-        code = results.get('lambda:MyFunction')
+        code = results.get('MyFunction')
         self.assertIsInstance(code, Code)
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, ['test.py'])
 
@@ -169,11 +162,11 @@ class TestLambdaHooks(unittest.TestCase):
 
         self.assertIsNotNone(results)
 
-        f1_code = results.get('lambda:MyFunction')
+        f1_code = results.get('MyFunction')
         self.assertIsInstance(f1_code, Code)
         self.assert_s3_zip_file_list(f1_code.S3Bucket, f1_code.S3Key, F1_FILES)
 
-        f2_code = results.get('lambda:OtherFunction')
+        f2_code = results.get('OtherFunction')
         self.assertIsInstance(f2_code, Code)
         self.assert_s3_zip_file_list(f2_code.S3Bucket, f2_code.S3Key, F2_FILES)
 
@@ -202,7 +195,7 @@ class TestLambdaHooks(unittest.TestCase):
 
         self.assertIsNotNone(results)
 
-        code = results.get('lambda:MyFunction')
+        code = results.get('MyFunction')
         self.assertIsInstance(code, Code)
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, [
             'f1.py',
@@ -224,7 +217,7 @@ class TestLambdaHooks(unittest.TestCase):
 
         self.assertIsNotNone(results)
 
-        code = results.get('lambda:MyFunction')
+        code = results.get('MyFunction')
         self.assertIsInstance(code, Code)
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, [
             'f1.py',
@@ -245,7 +238,7 @@ class TestLambdaHooks(unittest.TestCase):
 
         self.assertIsNotNone(results)
 
-        code = results.get('lambda:MyFunction')
+        code = results.get('MyFunction')
         self.assertIsInstance(code, Code)
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, [
             'f1.py',
@@ -295,7 +288,7 @@ class TestLambdaHooks(unittest.TestCase):
                                         functions=functions)
                 self.assertIsNotNone(results)
 
-                code = results.get('lambda:MyFunction')
+                code = results.get('MyFunction')
                 self.assertIsInstance(code, Code)
 
                 info = self.s3.head_object(Bucket=code.S3Bucket,

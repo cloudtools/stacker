@@ -310,8 +310,7 @@ def _upload_function(s3_conn, bucket, name, options):
     return _upload_code(s3_conn, bucket, name, zip_contents)
 
 
-def upload_lambda_functions(region, namespace, mappings, parameters,
-                            context=None, **kwargs):
+def upload_lambda_functions(region, namespace, mappings, parameters, **kwargs):
     """Builds Lambda payloads from user configuration and uploads them to S3.
 
     Constructs ZIP archives containing files matching specified patterns for
@@ -375,6 +374,7 @@ def upload_lambda_functions(region, namespace, mappings, parameters,
             pre_build:
               - path: stacker.hooks.aws_lambda.upload_lambda_functions
                 required: true
+                data_key: lambda
                 args:
                   bucket: custom-bucket
                   functions:
@@ -395,7 +395,7 @@ def upload_lambda_functions(region, namespace, mappings, parameters,
 
             class LambdaBlueprint(Blueprint):
                 def create_template(self):
-                    code = self.context.hook_data['lambda:MyFunction']
+                    code = self.context.hook_data['lambda']['MyFunction']
 
                     self.template.add_resource(
                         Function(
@@ -407,12 +407,9 @@ def upload_lambda_functions(region, namespace, mappings, parameters,
                         )
                     )
     """
-    if not context:
-        raise RuntimeError('context not received in hook, '
-                           'check if recent version of stacker is being used')
-
     bucket = kwargs.get('bucket')
     if not bucket:
+        context = kwargs['context']
         bucket = context.bucket_name
         logger.info('lambda: using default bucket from stacker: %s', bucket)
     else:
@@ -425,7 +422,6 @@ def upload_lambda_functions(region, namespace, mappings, parameters,
 
     results = {}
     for name, options in kwargs['functions'].items():
-        results['lambda:' + name] = _upload_function(s3_conn, bucket, name,
-                                                     options)
+        results[name] = _upload_function(s3_conn, bucket, name, options)
 
     return results

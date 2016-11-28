@@ -1,4 +1,4 @@
-## 1.0.0a4 (2016-11-24)
+## 1.0.0a5 (2016-11-28)
 
 This is a major release with the main change being the removal of the old
 Parameters logic in favor of Blueprint Variables and Lookups.
@@ -12,6 +12,13 @@ Parameters logic in favor of Blueprint Variables and Lookups.
 - keypair hook update to match route53 update [GH-248]
 - Allow = in lookup contents [GH-251]
 - change capabilities to CAPABILITY\_NAMED\_IAM [GH-262]
+
+## 0.8.5 (2016-11-28)
+
+- Allow `=` in lookup input [GH-251]
+- Add hook for uploading AWS Lambda functions [GH-252]
+- Upgrade hard coded capabilities to include named IAM [GH-262]
+- Allow hooks to return results that can be looked up later [GH-270]
 
 ## 0.8.4 (2016-11-01)
 

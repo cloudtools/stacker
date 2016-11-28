@@ -1,3 +1,10 @@
+## 0.8.5 (2016-11-28)
+
+- Allow `=` in lookup input [GH-251]
+- Add hook for uploading AWS Lambda functions [GH-252]
+- Upgrade hard coded capabilities to include named IAM [GH-262]
+- Allow hooks to return results that can be looked up later [GH-270]
+
 ## 0.8.4 (2016-11-01)
 
 - Fix an issue w/ boto3 version string not working with older setuptools

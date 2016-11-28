@@ -1,3 +1,5 @@
+import collections
+
 from .config import parse_config
 from .exceptions import MissingEnvironment
 from .stack import Stack
@@ -24,7 +26,7 @@ class Context(object):
     the command line and specified in the config to `Stack` objects.
 
     Args:
-        namespace (string): A unique namespace for the stacks being built.
+        namespace (str): A unique namespace for the stacks being built.
         environment (dict): A dictionary used to pass in information about
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,
@@ -64,6 +66,8 @@ class Context(object):
         self.tags = {
             'stacker_namespace': self.namespace
         }
+
+        self.hook_data = {}
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
@@ -124,3 +128,23 @@ class Context(object):
 
         """
         return get_fqn(self._base_fqn, self.namespace_delimiter, name)
+
+    def set_hook_data(self, key, data):
+        """Set hook data for the given key.
+
+        Args:
+            key(str): The key to store the hook data in.
+            data(:class:`collections.Mapping`): A dictionary of data to store,
+                as returned from a hook.
+        """
+
+        if not isinstance(data, collections.Mapping):
+            raise ValueError("Hook (key: %s) data must be an instance of "
+                             "collections.Mapping (a dictionary for "
+                             "example)." % key)
+
+        if key in self.hook_data:
+            raise KeyError("Hook data for key %s already exists, each hook "
+                           "must have a unique data_key.", key)
+
+        self.hook_data[key] = data

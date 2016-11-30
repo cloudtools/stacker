@@ -188,6 +188,7 @@ class Plan(OrderedDict):
 
     def _single_run(self):
         """Executes a single run through the plan, touching each step."""
+        logger.info("_single_run")
         for step_name, step in self.list_pending():
             waiting_on = []
             for required_stack in step.requires:

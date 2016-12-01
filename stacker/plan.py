@@ -101,6 +101,7 @@ class Plan():
 
         for stack in stacks:
             fqn = stack.fqn
+            logger.info("[GRAPH] adding stack \"%s\"", fqn)
             dag.add_node(fqn)
             self._steps[fqn] = Step(
                 stack=stack)
@@ -108,6 +109,7 @@ class Plan():
         for stack in stacks:
             for dep in stack.requires:
                 try:
+                    logger.info("[GRAPH] \"%s\" depends on \"%s\"", stack.fqn, dep)
                     dag.add_edge(stack.fqn, dep)
                 except DAGValidationError:
                     raise CyclicDependencyError(stack.fqn)

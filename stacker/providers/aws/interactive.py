@@ -106,6 +106,10 @@ def output_summary(fqn, action, changeset, replacements_only=False):
 class Provider(AWSProvider):
     """AWS Cloudformation Change Set Provider"""
 
+    @property
+    def supports_parallel(self):
+        return False
+
     def __init__(self, *args, **kwargs):
         self.replacements_only = kwargs.pop('replacements_only', False)
         super(Provider, self).__init__(*args, **kwargs)

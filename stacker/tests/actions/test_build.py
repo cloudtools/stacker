@@ -7,6 +7,7 @@ from stacker import exceptions
 from stacker.actions import build
 from stacker.actions.build import resolve_parameters
 from stacker.context import Context
+from stacker.plan import Step
 from stacker.exceptions import StackDidNotChange
 from stacker.providers.base import BaseProvider
 from stacker.status import (
@@ -104,37 +105,17 @@ class TestBuildAction(unittest.TestCase):
                                                               required, stack)
         self.assertEqual(result, def_params.items())
 
-    def test_get_dependencies(self):
-        context = self._get_context()
-        build_action = build.Action(context)
-        dependencies = build_action._get_dependencies()
-        self.assertEqual(
-            dependencies[context.get_fqn("bastion")],
-            set([context.get_fqn("vpc")]),
-        )
-        self.assertEqual(
-            dependencies[context.get_fqn("db")],
-            set([context.get_fqn(s) for s in ["vpc", "bastion"]]),
-        )
-        self.assertFalse(dependencies[context.get_fqn("other")])
-
-    def test_get_stack_execution_order(self):
-        context = self._get_context()
-        build_action = build.Action(context)
-        dependencies = build_action._get_dependencies()
-        execution_order = build_action.get_stack_execution_order(dependencies)
-        self.assertEqual(
-            execution_order,
-            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
-        )
-
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context)
         plan = build_action._generate_plan()
         self.assertEqual(
-            plan.keys(),
-            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
+            {
+                'namespace-db': set(['namespace-bastion', 'namespace-vpc']),
+                'namespace-bastion': set(['namespace-vpc']),
+                'namespace-other': set([]),
+                'namespace-vpc': set([])},
+            plan._dag.graph
         )
 
     def test_dont_execute_plan_when_outline_specified(self):
@@ -146,8 +127,9 @@ class TestBuildAction(unittest.TestCase):
             self.assertEqual(mock_generate_plan().execute.call_count, 0)
 
     def test_execute_plan_when_outline_not_specified(self):
+        mock_provider = mock.MagicMock()
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, provider=mock_provider)
         with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=False)
@@ -159,10 +141,9 @@ class TestBuildAction(unittest.TestCase):
 
         context = self._get_context()
         build_action = build.Action(context, provider=mock_provider)
-        plan = build_action._generate_plan()
-        _, step = plan.list_pending()[0]
-        step.stack = mock.MagicMock()
-        step.stack.locked = False
+        stack = mock.MagicMock()
+        stack.locked = False
+        step = Step(stack=mock.MagicMock())
 
         # mock provider shouldn't return a stack at first since it hasn't been
         # launched
@@ -171,7 +152,7 @@ class TestBuildAction(unittest.TestCase):
             # initial status should be PENDING
             self.assertEqual(step.status, PENDING)
             # initial run should return SUBMITTED since we've passed off to CF
-            status = step.run()
+            status = build_action._launch_stack(step.stack, status=step.status)
             step.set_status(status)
             self.assertEqual(status, SUBMITTED)
             self.assertEqual(status.reason, "creating new stack")
@@ -181,7 +162,7 @@ class TestBuildAction(unittest.TestCase):
             # simulate that we're still in progress
             mock_provider.is_stack_in_progress.return_value = True
             mock_provider.is_stack_completed.return_value = False
-            status = step.run()
+            status = build_action._launch_stack(step.stack, status=step.status)
             step.set_status(status)
             # status should still be SUBMITTED since we're waiting for it to
             # complete
@@ -190,7 +171,7 @@ class TestBuildAction(unittest.TestCase):
             # simulate completed stack
             mock_provider.is_stack_completed.return_value = True
             mock_provider.is_stack_in_progress.return_value = False
-            status = step.run()
+            status = build_action._launch_stack(step.stack, status=step.status)
             step.set_status(status)
             self.assertEqual(status, COMPLETE)
             self.assertEqual(status.reason, "creating new stack")
@@ -199,7 +180,7 @@ class TestBuildAction(unittest.TestCase):
             mock_provider.is_stack_completed.return_value = False
             mock_provider.is_stack_in_progress.return_value = False
             mock_provider.update_stack.side_effect = StackDidNotChange
-            status = step.run()
+            status = build_action._launch_stack(step.stack, status=step.status)
             step.set_status(status)
             self.assertEqual(status, SKIPPED)
             self.assertEqual(status.reason, "nochange")
@@ -208,7 +189,7 @@ class TestBuildAction(unittest.TestCase):
             mock_provider.reset_mock()
             mock_provider.update_stack.side_effect = None
             step.set_status(PENDING)
-            status = step.run()
+            status = build_action._launch_stack(step.stack, status=step.status)
             step.set_status(status)
             self.assertEqual(status, SUBMITTED)
             self.assertEqual(status.reason, "updating existing stack")

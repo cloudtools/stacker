@@ -10,7 +10,8 @@ from ..status import (
     DidNotChangeStatus,
     SubmittedStatus,
     CompleteStatus,
-    SUBMITTED
+    CancelledStatus,
+    SUBMITTED,
 )
 
 
@@ -183,6 +184,11 @@ class Action(BaseAction):
         it is already updating or creating.
 
         """
+
+        # Cancel execution if flag is set.
+        if self.cancel.wait(0):
+            return CancelledStatus(reason="terminated")
+
         if not should_submit(stack):
             return NotSubmittedStatus()
 
@@ -271,25 +277,9 @@ class Action(BaseAction):
         return params.items()
 
     def _generate_plan(self, tail=False):
-        plan_kwargs = {}
-        if tail:
-            plan_kwargs["watch_func"] = self.provider.tail_stack
-        plan = Plan(description="Create/Update stacks", **plan_kwargs)
-        stacks = self.context.get_stacks_dict()
-        dependencies = self._get_dependencies()
-        for stack_name in self.get_stack_execution_order(dependencies):
-            plan.add(
-                stacks[stack_name],
-                run_func=self._launch_stack,
-                requires=dependencies.get(stack_name),
-            )
+        plan = Plan(description="Create/Update stacks")
+        plan.build(self.context.get_stacks())
         return plan
-
-    def _get_dependencies(self):
-        dependencies = {}
-        for stack in self.context.get_stacks():
-            dependencies[stack.fqn] = stack.requires
-        return dependencies
 
     def pre_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
@@ -308,7 +298,9 @@ class Action(BaseAction):
         if not outline and not dump:
             plan.outline(logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
-            plan.execute()
+            plan.execute(
+                self._launch_stack,
+                parallel=self.provider.supports_parallel)
         else:
             if outline:
                 plan.outline()

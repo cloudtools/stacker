@@ -30,6 +30,11 @@ class SkippedStatus(Status):
         super(SkippedStatus, self).__init__("skipped", 3, reason)
 
 
+class CancelledStatus(Status):
+    def __init__(self, reason=None):
+        super(CancelledStatus, self).__init__("cancelled", 3, reason)
+
+
 class NotSubmittedStatus(SkippedStatus):
     reason = "disabled"
 

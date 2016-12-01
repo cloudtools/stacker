@@ -6,6 +6,7 @@ from .. import util
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
+    CancelledStatus,
     SUBMITTED,
 )
 from ..plan import Plan
@@ -31,35 +32,16 @@ class Action(BaseAction):
 
     """
 
-    def _get_dependencies(self, stacks_dict):
-        dependencies = {}
-        for stack_name, stack in stacks_dict.iteritems():
-            required_stacks = stack.requires
-            if not required_stacks:
-                if stack_name not in dependencies:
-                    dependencies[stack_name] = required_stacks
-                continue
-
-            for requirement in required_stacks:
-                dependencies.setdefault(requirement, set()).add(stack_name)
-        return dependencies
-
     def _generate_plan(self, tail=False):
-        plan_kwargs = {}
-        if tail:
-            plan_kwargs["watch_func"] = self.provider.tail_stack
-        plan = Plan(description="Destroy stacks", **plan_kwargs)
-        stacks_dict = self.context.get_stacks_dict()
-        dependencies = self._get_dependencies(stacks_dict)
-        for stack_name in self.get_stack_execution_order(dependencies):
-            plan.add(
-                stacks_dict[stack_name],
-                run_func=self._destroy_stack,
-                requires=dependencies.get(stack_name),
-            )
+        plan = Plan(description="Destroy stacks", reverse=True)
+        plan.build(self.context.get_stacks())
         return plan
 
     def _destroy_stack(self, stack, **kwargs):
+        # Cancel execution if flag is set.
+        if self.cancel.wait(0):
+            return CancelledStatus(reason="terminated")
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:
@@ -100,7 +82,9 @@ class Action(BaseAction):
             # steps to COMPLETE in order to log them
             debug_plan = self._generate_plan()
             debug_plan.outline(logging.DEBUG)
-            plan.execute()
+            plan.execute(
+                self._destroy_stack,
+                parallel=self.provider.supports_parallel)
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "
                                  "flag.")

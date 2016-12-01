@@ -155,6 +155,9 @@ class Plan():
     def keys(self):
         return self._steps.keys()
 
+    def to_dot(self):
+        return self._dag.to_dot()
+
     def outline(self, level=logging.INFO, message=""):
         """Print an outline of the actions the plan is going to take.
         The outline will represent the rough ordering of the steps that will be

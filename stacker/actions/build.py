@@ -282,14 +282,14 @@ class Action(BaseAction):
             util.handle_hooks("pre_build", pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
+    def run(self, outline=False, tail=False, dump=False, dot=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
         plan = self._generate_plan(tail=tail)
-        if not outline and not dump:
+        if not outline and not dump and not dot:
             plan.outline(logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
             plan.execute(self._launch_stack)
@@ -298,6 +298,8 @@ class Action(BaseAction):
                 plan.outline()
             if dump:
                 plan.dump(dump)
+            if dot:
+                print(plan.to_dot())
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

@@ -219,3 +219,15 @@ class DAG(object):
 
     def size(self):
         return len(self.graph)
+
+    def to_dot(self, name="dag", graph=None):
+        if graph is None:
+            graph = self.graph
+
+        m = "digraph %s {\n" % name
+        for node, deps in graph.items():
+            for dep in deps:
+                m += "    %s -> %s;\n" % (node, dep)
+        m += "}"
+
+        return m

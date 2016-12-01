@@ -223,3 +223,17 @@ def test_size():
     assert dag.size() == 4
     dag.delete_node('a')
     assert dag.size() == 3
+
+
+@with_setup(start_with_graph)
+def test_to_dot():
+    dot = dag.to_dot()
+    assert dot == """digraph dag {
+    a -> c;
+    a -> b;
+    c -> d;
+    b -> d;
+}"""
+
+
+

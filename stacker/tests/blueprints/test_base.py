@@ -37,6 +37,7 @@ def mock_lookup_handler(value, provider=None, context=None, fqn=False,
                         **kwargs):
     return value
 
+
 register_lookup_handler("mock", mock_lookup_handler)
 
 

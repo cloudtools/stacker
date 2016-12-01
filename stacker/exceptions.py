@@ -137,3 +137,12 @@ class ValidatorError(Exception):
 
     def __str__(self):
         return self.message
+
+
+class CyclicDependencyError(Exception):
+    """Raised when there are cyclic dependencies between stacks."""
+
+    def __init__(self, fqn, *args, **kwargs):
+        self.fqn = fqn
+        message = "Cyclic dependency detected in %s" % (fqn)
+        super(CyclicDependencyError, self).__init__(message, *args, **kwargs)

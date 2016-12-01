@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import uuid
+import threading
 
 from colorama.ansi import Fore
 
@@ -113,6 +114,8 @@ class Plan(object):
         self._reverse = reverse
         self._sleep_func = sleep_func
         self.id = uuid.uuid4()
+        # Manages synchronization around calling `check_point`.
+        self._check_point_lock = threading.Lock()
 
     def build(self, stacks):
         """ Builds an internal dag from the stacks and their dependencies.
@@ -165,7 +168,7 @@ class Plan(object):
                 if sleep_func:
                     sleep_func()
 
-        self._walk_steps(step_func)
+        self._walk_steps(step_func, parallel=True)
         return True
 
     def dump(self, directory):
@@ -213,7 +216,7 @@ class Plan(object):
         if message:
             logger.log(level, message)
 
-    def _walk_steps(self, step_func):
+    def _walk_steps(self, step_func, parallel=False):
         steps = self._steps
 
         def walk_func(fqn):
@@ -224,9 +227,15 @@ class Plan(object):
         if self._reverse:
             dag = dag.transpose()
 
-        return dag.walk(walk_func)
+        walk = dag.walk
+        if parallel:
+            walk = dag.walk_parallel
+
+        return walk(walk_func)
 
     def _check_point(self):
+        lock = self._check_point_lock
+        lock.acquire()
         """Outputs the current status of all steps in the plan."""
         status_to_color = {
             SUBMITTED.code: Fore.YELLOW,
@@ -260,3 +269,4 @@ class Plan(object):
                 'color': color,
                 'last_updated': step.last_updated,
             })
+        lock.release()

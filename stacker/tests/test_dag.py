@@ -3,6 +3,7 @@
 from nose import with_setup
 from nose.tools import nottest, raises
 from stacker.dag import DAG, DAGValidationError
+import threading
 
 dag = None
 
@@ -75,6 +76,36 @@ def test_walk():
 
     dag.walk(walk_func)
     assert nodes == ['d', 'b', 'c', 'a']
+
+
+@with_setup(blank_setup)
+def test_walk_parallel():
+    dag = DAG()
+
+    # b and c should be executed at the same time.
+    dag.from_dict({'a': ['b', 'c'],
+                   'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+
+    lock = threading.Lock()  # Protects nodes from concurrent access
+    nodes = []
+
+    c_submitted = threading.Event()
+
+    def walk_func(n):
+        # Wait for c to get submitted first
+        if n == 'b':
+            c_submitted.wait()
+
+        lock.acquire()
+        nodes.append(n)
+        if n == 'c':
+            c_submitted.set()
+        lock.release()
+
+    dag.walk_parallel(walk_func)
+    assert nodes == ['d', 'c', 'b', 'a']
 
 
 @with_setup(start_with_graph)

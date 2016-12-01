@@ -1,5 +1,9 @@
+import threading
+import logging
 from copy import copy, deepcopy
 from collections import deque
+
+logger = logging.getLogger(__name__)
 
 try:
     from collections import OrderedDict
@@ -101,6 +105,51 @@ class DAG(object):
         nodes.reverse()
         for n in nodes:
             walk_func(n)
+
+    def walk_parallel(self, walk_func, graph=None):
+        """ Walks each node of the graph, in parallel if it can.
+
+        The walk_func is only called when the nodes dependencies have been
+        satisfied
+        """
+        if not graph:
+            graph = self.graph
+        nodes = self.topological_sort(graph=graph)
+        # Reverse so we start with nodes that have no dependencies.
+        nodes.reverse()
+
+        # This allows consumers to block until a dependency has completed.
+        completed = {}
+        for node in nodes:
+            completed[node] = threading.Event()
+
+        threads = []
+        for node in nodes:
+            def fn(n, deps):
+                # Wait for each dependency to complete.
+                if deps:
+                    logger.debug(
+                        "%s waiting for %s to complete",
+                        n,
+                        ", ".join(deps))
+
+                for dep in deps:
+                    completed[dep].wait()
+
+                logger.debug("%s starting", n)
+
+                walk_func(n)
+                completed[n].set()
+
+                logger.debug("%s completed", n)
+
+            deps = self.all_downstreams(node, graph=graph)
+            thread = threading.Thread(target=fn, args=(node, deps))
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join()
 
     def rename_edges(self, old_task_name, new_task_name, graph=None):
         """ Change references to a task in existing edges. """

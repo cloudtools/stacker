@@ -54,8 +54,10 @@ class DAG(object):
         """ Add an edge (dependency) between the specified nodes. """
         if not graph:
             graph = self.graph
-        if ind_node not in graph or dep_node not in graph:
-            raise KeyError('one or more nodes do not exist in graph')
+        if ind_node not in graph:
+            raise KeyError('node %s does not exist' % ind_node)
+        if dep_node not in graph:
+            raise KeyError('node %s does not exist' % dep_node)
         test_graph = deepcopy(graph)
         test_graph[ind_node].add(dep_node)
         is_valid, message = self.validate(test_graph)

@@ -60,6 +60,23 @@ class TestPlan(unittest.TestCase):
             'namespace-bastion.1': set(['namespace-vpc.1']),
             'namespace-vpc.1': set([])})
 
+    def test_build_plan_missing_dependency(self):
+        bastion = Stack(
+            definition=generate_definition(
+                'bastion', 1, requires=['namespace-vpc.1']),
+            context=self.context)
+
+        plan = Plan(description="Test", sleep_func=None)
+
+        try:
+            plan.build([bastion])
+            self.assertFail()
+        except GraphError as e:
+            message = ("Error detected when adding 'namespace-vpc.1' "
+                       "as a dependency of 'namespace-bastion.1': node "
+                       "namespace-vpc.1 does not exist")
+            self.assertEqual(e.message, message)
+
     def test_build_plan_cyclic_dependencies(self):
         vpc = Stack(
             definition=generate_definition(

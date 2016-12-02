@@ -109,6 +109,8 @@ class Plan():
             for dep in stack.requires:
                 try:
                     dag.add_edge(stack.fqn, dep)
+                except KeyError as e:
+                    raise GraphError(e, stack.fqn, dep)
                 except DAGValidationError as e:
                     raise GraphError(e, stack.fqn, dep)
 

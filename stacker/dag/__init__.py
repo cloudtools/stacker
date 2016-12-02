@@ -122,34 +122,55 @@ class DAG(object):
         completed = {}
         for node in nodes:
             completed[node] = threading.Event()
+        cancel = threading.Event()
+
+        # Blocks until all dependencies have been satisfied, or another
+        # thread errored. Returns True if all deps have been satisfied.
+        def wait_for_deps(deps):
+            while len(deps) != 0:
+                for i, dep in enumerate(deps):
+                    # If there was an error in another thread, cancel this one.
+                    if cancel.wait(0.1):
+                        return False
+                    if completed[dep].wait(0.1):
+                        del deps[i]
+            return True
 
         threads = []
         for node in nodes:
             def fn(n, deps):
-                # Wait for each dependency to complete.
                 if deps:
                     logger.debug(
                         "%s waiting for %s to complete",
                         n,
                         ", ".join(deps))
 
-                for dep in deps:
-                    completed[dep].wait()
+                # Block until all dependencies have been satisfied, or another
+                # thread errored.
+                if not wait_for_deps(deps):
+                    return False
 
                 logger.debug("%s starting", n)
 
-                walk_func(n)
+                try:
+                    walk_func(n)
+                except:
+                    cancel.set()
+                    raise
+
                 completed[n].set()
 
                 logger.debug("%s completed", n)
 
             deps = self.all_downstreams(node, graph=graph)
-            thread = threading.Thread(target=fn, args=(node, deps))
+            thread = threading.Thread(target=fn, args=(node, deps), name=node)
             thread.start()
             threads.append(thread)
 
         for thread in threads:
             thread.join()
+
+        return not cancel.wait(0)
 
     def rename_edges(self, old_task_name, new_task_name, graph=None):
         """ Change references to a task in existing edges. """

@@ -3,7 +3,7 @@ import unittest
 import mock
 
 from stacker.context import Context
-from stacker.exceptions import CyclicDependencyError
+from stacker.exceptions import GraphError
 from stacker.plan import (
     Step,
     Plan,
@@ -63,17 +63,27 @@ class TestPlan(unittest.TestCase):
     def test_build_plan_cyclic_dependencies(self):
         vpc = Stack(
             definition=generate_definition(
-                'vpc', 1, requires=['namespace-bastion.1']),
+                'vpc', 1),
             context=self.context)
-        bastion = Stack(
+        db = Stack(
             definition=generate_definition(
-                'bastion', 1, requires=['namespace-vpc.1']),
+                'db', 1, requires=['namespace-app.1']),
+            context=self.context)
+        app = Stack(
+            definition=generate_definition(
+                'app', 1, requires=['namespace-db.1']),
             context=self.context)
 
         plan = Plan(description="Test", sleep_func=None)
 
-        with self.assertRaises(CyclicDependencyError):
-            plan.build([vpc, bastion])
+        try:
+            plan.build([vpc, db, app])
+            self.assertFail()
+        except GraphError as e:
+            message = ("Error detected when adding 'namespace-db.1' "
+                       "as a dependency of 'namespace-app.1': graph is "
+                       "not acyclic")
+            self.assertEqual(e.message, message)
 
     def test_execute_plan(self):
         vpc = Stack(

@@ -139,10 +139,15 @@ class ValidatorError(Exception):
         return self.message
 
 
-class CyclicDependencyError(Exception):
-    """Raised when there are cyclic dependencies between stacks."""
+class GraphError(Exception):
+    """Raised when the graph is invalid (e.g. acyclic dependencies)
+    """
 
-    def __init__(self, fqn, *args, **kwargs):
-        self.fqn = fqn
-        message = "Cyclic dependency detected in %s" % (fqn)
-        super(CyclicDependencyError, self).__init__(message, *args, **kwargs)
+    def __init__(self, exception, stack=None, dependency=None):
+        self.stack = stack
+        self.dependency = dependency
+        self.exception = exception
+        message = ("Error detected when adding '%s' "
+                   "as a dependency of '%s': %s") % (
+                           dependency, stack, exception.message)
+        super(GraphError, self).__init__(message)

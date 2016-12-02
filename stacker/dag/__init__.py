@@ -62,7 +62,7 @@ class DAG(object):
         if is_valid:
             graph[ind_node].add(dep_node)
         else:
-            raise DAGValidationError()
+            raise DAGValidationError(message)
 
     def delete_edge(self, ind_node, dep_node, graph=None):
         """ Delete an edge from the graph. """
@@ -178,8 +178,8 @@ class DAG(object):
             return (False, 'no independent nodes detected')
         try:
             self.topological_sort(graph)
-        except ValueError:
-            return (False, 'failed topological sort')
+        except ValueError as e:
+            return (False, e.message)
         return (True, 'valid')
 
     def topological_sort(self, graph=None):

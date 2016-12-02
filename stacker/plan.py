@@ -6,7 +6,7 @@ import uuid
 from colorama.ansi import Fore
 
 from .exceptions import (
-    CyclicDependencyError,
+    GraphError,
 )
 
 from .dag import DAG, DAGValidationError
@@ -109,8 +109,8 @@ class Plan():
             for dep in stack.requires:
                 try:
                     dag.add_edge(stack.fqn, dep)
-                except DAGValidationError:
-                    raise CyclicDependencyError(stack.fqn)
+                except DAGValidationError as e:
+                    raise GraphError(e, stack.fqn, dep)
 
         self._dag = dag
         return None

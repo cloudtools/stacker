@@ -270,9 +270,9 @@ class Action(BaseAction):
 
         return params.items()
 
-    def _generate_plan(self, tail=False):
+    def _generate_plan(self, tail=False, stack_names=None):
         plan = Plan(description="Create/Update stacks")
-        plan.build(self.context.get_stacks())
+        plan.build(self.context.get_stacks(), stack_names=stack_names)
         return plan
 
     def pre_run(self, outline=False, *args, **kwargs):
@@ -282,13 +282,14 @@ class Action(BaseAction):
             util.handle_hooks("pre_build", pre_build, self.provider.region,
                               self.context)
 
-    def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
+    def run(self, outline=False, tail=False,
+            dump=False, stack_names=None, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
-        plan = self._generate_plan(tail=tail)
+        plan = self._generate_plan(tail=tail, stack_names=stack_names)
         if not outline and not dump:
             plan.outline(logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))

@@ -123,6 +123,30 @@ class TestPlan(unittest.TestCase):
 
         self.assertEqual(steps, ['namespace-vpc.1', 'namespace-bastion.1'])
 
+    def test_execute_plan_named_stacks(self):
+        vpc = Stack(
+            definition=generate_definition('vpc', 1),
+            context=self.context)
+        bastion = Stack(
+            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            context=self.context)
+        db = Stack(
+            definition=generate_definition('db', 1, requires=[vpc.fqn]),
+            context=self.context)
+
+        plan = Plan(description="Test", sleep_func=None)
+        plan.build([vpc, bastion, db], stack_names=['db.1'])
+
+        steps = []
+
+        def fn(stack, status=None):
+            steps.append(stack.fqn)
+            return COMPLETE
+
+        plan.execute(fn)
+
+        self.assertEqual(steps, ['namespace-vpc.1', 'namespace-db.1'])
+
     def test_execute_plan_reverse(self):
         vpc = Stack(
             definition=generate_definition('vpc', 1),

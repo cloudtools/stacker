@@ -150,6 +150,28 @@ class DAG(object):
                 lambda node: node
                 in nodes_seen, self.topological_sort(graph=graph))
 
+    def filter(self, nodes, graph=None):
+        """ Returns a new DAG with only the given nodes and their
+        dependencies.
+        """
+
+        if graph is None:
+            graph = self.graph
+        dag = DAG()
+
+        # Add only the nodes we need.
+        for node in nodes:
+            dag.add_node_if_not_exists(node)
+            for edge in self.all_downstreams(node, graph=graph):
+                dag.add_node_if_not_exists(edge)
+
+        # Now, rebuild the graph for each node that's present.
+        for node, edges in graph.items():
+            if node in dag.graph:
+                dag.graph[node] = edges
+
+        return dag
+
     def all_leaves(self, graph=None):
         """ Return a list of all leaves (nodes with no downstreams) """
         if graph is None:

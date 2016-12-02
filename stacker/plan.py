@@ -220,11 +220,11 @@ class Plan(object):
             step = steps[fqn]
             step_func(step)
 
-        reverse = True
+        dag = self._dag
         if self._reverse:
-            reverse = False
+            dag = dag.transpose()
 
-        return self._dag.walk(walk_func, reverse=reverse)
+        return dag.walk(walk_func)
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""

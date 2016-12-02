@@ -29,6 +29,15 @@ def test_add_node():
     assert dag.graph == {'a': set()}
 
 
+@with_setup(start_with_graph)
+def test_transpose():
+    transposed = dag.transpose()
+    assert transposed.graph == {'d': set(['c', 'b']),
+                                'c': set(['a']),
+                                'b': set(['a']),
+                                'a': set([])}
+
+
 @with_setup(blank_setup)
 def test_add_edge():
     dag.add_node('a')
@@ -66,16 +75,6 @@ def test_walk():
 
     dag.walk(walk_func)
     assert nodes == ['d', 'b', 'c', 'a']
-
-
-def test_walk_noreverse():
-    nodes = []
-
-    def walk_func(n):
-        nodes.append(n)
-
-    dag.walk(walk_func, reverse=False)
-    assert nodes == ['a', 'c', 'b', 'd']
 
 
 @with_setup(start_with_graph)

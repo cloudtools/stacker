@@ -74,7 +74,20 @@ class DAG(object):
             raise KeyError('this edge does not exist in graph')
         graph[ind_node].remove(dep_node)
 
-    def walk(self, walk_func, graph=None, reverse=True):
+    def transpose(self, graph=None):
+        """ Builds a new graph with the edges reversed. """
+        if not graph:
+            graph = self.graph
+        transposed = DAG()
+        for node, edges in graph.items():
+            transposed.add_node(node)
+        for node, edges in graph.items():
+            # for each edge A -> B, transpose it so that B -> A
+            for edge in edges:
+                transposed.add_edge(edge, node)
+        return transposed
+
+    def walk(self, walk_func, graph=None):
         """ Walks each node of the graph in reverse topological order.
 
         This can be used to perform a set of operations, where the next
@@ -84,8 +97,8 @@ class DAG(object):
         if not graph:
             graph = self.graph
         nodes = self.topological_sort(graph=graph)
-        if reverse:
-            nodes.reverse()
+        # Reverse so we start with nodes that have no dependencies.
+        nodes.reverse()
         for n in nodes:
             walk_func(n)
 

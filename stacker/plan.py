@@ -86,7 +86,26 @@ class Step(object):
         self.set_status(SUBMITTED)
 
 
-class Plan():
+class Plan(object):
+    """A collection of :class:`Step` objects to execute.
+    The :class:`Plan` helps organize the steps needed to execute a particular
+    action for a set of :class:`stacker.stack.Stack` objects. Once a plan is
+    initialized, :func:`Plan.build` should be called with a list of stacks
+    to build the dependency graph. After the plan has been built, it can be
+    executed via :func:`Plan.execute`.
+
+    Args:
+        description (str): description of the plan
+        reverse (bool, optional): by default, the plan will be run in
+            topological order based on each stacks dependencies. Put
+            more simply, the stacks with no dependencies will be ran
+            first. When this flag is set, the plan will be executed
+            in reverse order. This can be useful for destroy actions.
+        sleep_func (func, optional): when executing the plan, the
+            provided function may be called multiple times. This
+            controls the wait time between successive calls.
+    """
+
     def __init__(self, description, reverse=False, sleep_func=sleep):
         self.description = description
         self._dag = None
@@ -96,7 +115,12 @@ class Plan():
         self.id = uuid.uuid4()
 
     def build(self, stacks):
-        """ Builds an internal dag from the stacks and their dependencies """
+        """ Builds an internal dag from the stacks and their dependencies.
+
+        Args:
+            stacks (list): a list of :class:`stacker.stack.Stack` objects
+                to build the plan with.
+        """
         dag = DAG()
 
         for stack in stacks:
@@ -120,6 +144,12 @@ class Plan():
     def execute(self, fn):
         """ Executes the plan by walking the graph and executing dependencies
         first.
+
+        Args:
+            fn (func): a function that will be executed for each step. The
+                function will be called multiple times until the step is
+                `done`. The function should return a
+                :class:`stacker.status.Status` each time it is called.
         """
         check_point = self._check_point
         sleep_func = self._sleep_func

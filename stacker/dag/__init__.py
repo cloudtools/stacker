@@ -94,7 +94,6 @@ class DAG(object):
         if not graph:
             graph = self.graph
         for node, edges in graph.items():
-
             if node == old_task_name:
                 graph[new_task_name] = copy(edges)
                 del graph[old_task_name]
@@ -175,7 +174,9 @@ class DAG(object):
 
     def validate(self, graph=None):
         """ Returns (Boolean, message) of whether DAG is valid. """
-        graph = graph if graph is not None else self.graph
+        if graph is None:
+            graph = self.graph
+
         if len(self.ind_nodes(graph)) == 0:
             return (False, 'no independent nodes detected')
         try:

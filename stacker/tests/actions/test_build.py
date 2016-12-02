@@ -127,8 +127,9 @@ class TestBuildAction(unittest.TestCase):
             self.assertEqual(mock_generate_plan().execute.call_count, 0)
 
     def test_execute_plan_when_outline_not_specified(self):
+        mock_provider = mock.MagicMock()
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, provider=mock_provider)
         with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=False)

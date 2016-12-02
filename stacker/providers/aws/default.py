@@ -95,6 +95,10 @@ class Provider(BaseProvider):
         self._pid = os.getpid()
 
     @property
+    def supports_parallel(self):
+        return True
+
+    @property
     def cloudformation(self):
         # deals w/ multiprocessing issues w/ sharing ssl conns
         # see https://github.com/remind101/stacker/issues/196

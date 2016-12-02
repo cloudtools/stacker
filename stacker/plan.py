@@ -144,7 +144,7 @@ class Plan(object):
         self._dag = dag
         return None
 
-    def execute(self, fn):
+    def execute(self, fn, parallel=True):
         """ Executes the plan by walking the graph and executing dependencies
         first.
 
@@ -157,18 +157,21 @@ class Plan(object):
         check_point = self._check_point
         sleep_func = self._sleep_func
 
+        check_point()
+
         # This function is called for each step in the graph, it's responsible
         # for managing the lifecycle of the step until completion.
         def step_func(step):
             while not step.done:
-                check_point()
+                current_status = step.status
                 status = fn(step.stack, status=step.status)
                 step.set_status(status)
-                check_point()
-                if sleep_func:
+                if status != current_status:
+                    check_point()
+                if sleep_func and not step.done:
                     sleep_func()
 
-        self._walk_steps(step_func, parallel=True)
+        self._walk_steps(step_func, parallel=parallel)
         return True
 
     def dump(self, directory):

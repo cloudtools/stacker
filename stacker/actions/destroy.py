@@ -77,7 +77,9 @@ class Action(BaseAction):
             # steps to COMPLETE in order to log them
             debug_plan = self._generate_plan()
             debug_plan.outline(logging.DEBUG)
-            plan.execute(self._destroy_stack)
+            plan.execute(
+                self._destroy_stack,
+                parallel=self.provider.supports_parallel)
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "
                                  "flag.")

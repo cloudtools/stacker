@@ -114,8 +114,8 @@ class Plan(object):
         self._reverse = reverse
         self._sleep_func = sleep_func
         self.id = uuid.uuid4()
-        # Manages synchronization around calling `check_point`.
-        self._check_point_lock = threading.Lock()
+        # Manages synchronization around calling `fn` within `execute`.
+        self._lock = threading.Lock()
 
     def build(self, stacks):
         """ Builds an internal dag from the stacks and their dependencies.
@@ -156,6 +156,7 @@ class Plan(object):
         """
         check_point = self._check_point
         sleep_func = self._sleep_func
+        lock = self._lock
 
         check_point()
 
@@ -163,11 +164,14 @@ class Plan(object):
         # for managing the lifecycle of the step until completion.
         def step_func(step):
             while not step.done:
+                lock.acquire()
                 current_status = step.status
                 status = fn(step.stack, status=step.status)
                 step.set_status(status)
                 if status != current_status:
                     check_point()
+                lock.release()
+
                 if sleep_func and not step.done:
                     sleep_func()
 
@@ -237,8 +241,6 @@ class Plan(object):
         return walk(walk_func, cancel=cancel)
 
     def _check_point(self):
-        lock = self._check_point_lock
-        lock.acquire()
         """Outputs the current status of all steps in the plan."""
         status_to_color = {
             SUBMITTED.code: Fore.YELLOW,
@@ -272,4 +274,3 @@ class Plan(object):
                 'color': color,
                 'last_updated': step.last_updated,
             })
-        lock.release()

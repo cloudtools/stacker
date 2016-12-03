@@ -144,7 +144,7 @@ class Plan(object):
         self._dag = dag
         return None
 
-    def execute(self, fn, parallel=True):
+    def execute(self, fn, parallel=True, cancel=None):
         """ Executes the plan by walking the graph and executing dependencies
         first.
 
@@ -171,7 +171,7 @@ class Plan(object):
                 if sleep_func and not step.done:
                     sleep_func()
 
-        self._walk_steps(step_func, parallel=parallel)
+        self._walk_steps(step_func, parallel=parallel, cancel=cancel)
         return True
 
     def dump(self, directory):
@@ -219,7 +219,7 @@ class Plan(object):
         if message:
             logger.log(level, message)
 
-    def _walk_steps(self, step_func, parallel=False):
+    def _walk_steps(self, step_func, parallel=False, cancel=None):
         steps = self._steps
 
         def walk_func(fqn):
@@ -234,7 +234,7 @@ class Plan(object):
         if parallel:
             walk = dag.walk_parallel
 
-        return walk(walk_func)
+        return walk(walk_func, cancel=cancel)
 
     def _check_point(self):
         lock = self._check_point_lock

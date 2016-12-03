@@ -91,7 +91,7 @@ class DAG(object):
                 transposed.add_edge(edge, node)
         return transposed
 
-    def walk(self, walk_func, graph=None):
+    def walk(self, walk_func, graph=None, cancel=None):
         """ Walks each node of the graph in reverse topological order.
 
         This can be used to perform a set of operations, where the next
@@ -106,7 +106,7 @@ class DAG(object):
         for n in nodes:
             walk_func(n)
 
-    def walk_parallel(self, walk_func, graph=None):
+    def walk_parallel(self, walk_func, graph=None, cancel=None):
         """ Walks each node of the graph, in parallel if it can.
 
         The walk_func is only called when the nodes dependencies have been
@@ -122,7 +122,8 @@ class DAG(object):
         completed = {}
         for node in nodes:
             completed[node] = threading.Event()
-        cancel = threading.Event()
+        if not cancel:
+            cancel = threading.Event()
 
         # Blocks until all dependencies have been satisfied, or another
         # thread errored. Returns True if all deps have been satisfied.

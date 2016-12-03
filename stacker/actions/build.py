@@ -1,6 +1,6 @@
 import logging
 
-from .base import BaseAction
+from .base import BaseAction, cancel
 from .. import exceptions, util
 from ..exceptions import StackDidNotChange
 from ..plan import Plan
@@ -294,7 +294,8 @@ class Action(BaseAction):
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
             plan.execute(
                 self._launch_stack,
-                parallel=self.provider.supports_parallel)
+                parallel=self.provider.supports_parallel,
+                cancel=cancel())
         else:
             if outline:
                 plan.outline()

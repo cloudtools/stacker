@@ -1,6 +1,6 @@
 import logging
 
-from .base import BaseAction
+from .base import BaseAction, cancel
 from ..exceptions import StackDoesNotExist
 from .. import util
 from ..status import (
@@ -77,7 +77,10 @@ class Action(BaseAction):
             # steps to COMPLETE in order to log them
             debug_plan = self._generate_plan()
             debug_plan.outline(logging.DEBUG)
-            plan.execute(self._destroy_stack)
+            plan.execute(
+                self._destroy_stack,
+                parallel=self.provider.supports_parallel,
+                cancel=cancel())
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "
                                  "flag.")

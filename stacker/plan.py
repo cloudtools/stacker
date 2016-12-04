@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import uuid
+import threading
 
 from colorama.ansi import Fore
 
@@ -113,6 +114,8 @@ class Plan(object):
         self._reverse = reverse
         self._sleep_func = sleep_func
         self.id = uuid.uuid4()
+        # Manages synchronization around calling `fn` within `execute`.
+        self._lock = threading.Lock()
 
     def build(self, stacks):
         """ Builds an internal dag from the stacks and their dependencies.
@@ -141,7 +144,7 @@ class Plan(object):
         self._dag = dag
         return None
 
-    def execute(self, fn):
+    def execute(self, fn, parallel=True, cancel=None):
         """ Executes the plan by walking the graph and executing dependencies
         first.
 
@@ -153,19 +156,26 @@ class Plan(object):
         """
         check_point = self._check_point
         sleep_func = self._sleep_func
+        lock = self._lock
+
+        check_point()
 
         # This function is called for each step in the graph, it's responsible
         # for managing the lifecycle of the step until completion.
         def step_func(step):
             while not step.done:
-                check_point()
+                lock.acquire()
+                current_status = step.status
                 status = fn(step.stack, status=step.status)
                 step.set_status(status)
-                check_point()
-                if sleep_func:
+                if status != current_status:
+                    check_point()
+                lock.release()
+
+                if sleep_func and not step.done:
                     sleep_func()
 
-        self._walk_steps(step_func)
+        self._walk_steps(step_func, parallel=parallel, cancel=cancel)
         return True
 
     def dump(self, directory):
@@ -213,7 +223,7 @@ class Plan(object):
         if message:
             logger.log(level, message)
 
-    def _walk_steps(self, step_func):
+    def _walk_steps(self, step_func, parallel=False, cancel=None):
         steps = self._steps
 
         def walk_func(fqn):
@@ -224,7 +234,11 @@ class Plan(object):
         if self._reverse:
             dag = dag.transpose()
 
-        return dag.walk(walk_func)
+        walk = dag.walk
+        if parallel:
+            walk = dag.walk_parallel
+
+        return walk(walk_func, cancel=cancel)
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""

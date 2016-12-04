@@ -118,11 +118,13 @@ def ensure_server_cert_exists(region, namespace, mappings, parameters,
                               **kwargs):
     client = boto3.client("iam", region_name=region)
     cert_name = kwargs["cert_name"]
+    result = "unknown"
     try:
         response = client.get_server_certificate(
             ServerCertificateName=cert_name
         )
         cert_arn = _get_cert_arn_from_response(response)
+        result = "exists"
         logger.info("certificate exists: %s (%s)", cert_name, cert_arn)
     except ClientError:
         if kwargs.get("prompt", True):
@@ -139,10 +141,15 @@ def ensure_server_cert_exists(region, namespace, mappings, parameters,
             return False
         response = client.upload_server_certificate(**parameters)
         cert_arn = _get_cert_arn_from_response(response)
+        result = "uploaded"
         logger.info(
             "uploaded certificate: %s (%s)",
             cert_name,
             cert_arn,
         )
 
-    return True
+    return {
+        "result": result,
+        "cert_name": cert_name,
+        "cert_arn": cert_arn,
+    }

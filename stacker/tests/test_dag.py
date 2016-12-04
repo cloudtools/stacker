@@ -228,6 +228,14 @@ def test_predecessors():
 
 
 @with_setup(start_with_graph)
+def test_filter():
+    dag2 = dag.filter(['b', 'c'])
+    assert dag2.graph == {'b': set('d'),
+                          'c': set('d'),
+                          'd': set()}
+
+
+@with_setup(start_with_graph)
 def test_all_leaves():
     assert dag.all_leaves() == ['d']
 

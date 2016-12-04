@@ -117,12 +117,13 @@ class Plan(object):
         # Manages synchronization around calling `fn` within `execute`.
         self._lock = threading.Lock()
 
-    def build(self, stacks):
+    def build(self, stacks, stack_names=None):
         """ Builds an internal dag from the stacks and their dependencies.
 
         Args:
             stacks (list): a list of :class:`stacker.stack.Stack` objects
                 to build the plan with.
+            stack_names (list): a list of stack names to filter on.
         """
         dag = DAG()
 
@@ -140,6 +141,14 @@ class Plan(object):
                     raise GraphError(e, stack.fqn, dep)
                 except DAGValidationError as e:
                     raise GraphError(e, stack.fqn, dep)
+
+        if stack_names:
+            nodes = []
+            for stack_name in stack_names:
+                for stack in stacks:
+                    if stack.name == stack_name:
+                        nodes.append(stack.fqn)
+            dag = dag.filter(nodes)
 
         self._dag = dag
         return None

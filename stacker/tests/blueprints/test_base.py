@@ -4,6 +4,7 @@ from mock import MagicMock
 from troposphere import (
     Base64,
     Ref,
+    s3,
 )
 
 from stacker.blueprints.base import (
@@ -12,12 +13,13 @@ from stacker.blueprints.base import (
     build_parameter,
     validate_allowed_values,
     validate_variable_type,
-    resolve_variable
+    resolve_variable,
 )
 from stacker.blueprints.variables.types import (
     CFNNumber,
     CFNString,
     EC2AvailabilityZoneNameList,
+    TroposphereType,
 )
 from stacker.exceptions import (
     InvalidLookupCombination,
@@ -160,6 +162,35 @@ class TestVariables(unittest.TestCase):
         with self.assertRaises(UnresolvedVariable):
             resolve_variable(var_name, var_def, provided_variable,
                              blueprint_name)
+
+    def test_resolve_variable_troposphere_list_type(self):
+        var_name = "testVar"
+        var_def = {"type": TroposphereType(s3.Bucket, many=True)}
+        bucket_defs = {
+            "FirstBucket": {"BucketName": "some-bucket"},
+            "SecondBucket": {"BucketName": "some-other-bucket"},
+        }
+        provided_variable = Variable(var_name, bucket_defs)
+        blueprint_name = "testBlueprint"
+
+        value = resolve_variable(var_name, var_def, provided_variable,
+                                 blueprint_name)
+        for bucket in value:
+            self.assertTrue(isinstance(bucket, s3.Bucket))
+            self.assertEqual(bucket.properties, bucket_defs[bucket.title])
+
+    def test_resolve_variable_troposphere_type(self):
+        var_name = "testVar"
+        var_def = {"type": TroposphereType(s3.Bucket)}
+        provided_variable = Variable(var_name, {"MyBucket": {"BucketName":
+                                                             "some-bucket"}})
+        blueprint_name = "testBlueprint"
+
+        value = resolve_variable(var_name, var_def, provided_variable,
+                                 blueprint_name)
+        self.assertTrue(isinstance(value, s3.Bucket))
+        self.assertEqual(value.properties["BucketName"], "some-bucket")
+        self.assertEqual(value.title, "MyBucket")
 
     def test_resolve_variable_provided_resolved(self):
         var_name = "testVar"

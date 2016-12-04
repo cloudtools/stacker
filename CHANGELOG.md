@@ -10,6 +10,7 @@ Parameters logic in favor of Blueprint Variables and Lookups.
 - Support `allowed_values` within variable definitions [GH-245]
 - Fix filehandler lookups with pseudo parameters [GH-247]
 - keypair hook update to match route53 update [GH-248]
+- Add support for `TroposphereType` [GH-249]
 - Allow = in lookup contents [GH-251]
 - change capabilities to CAPABILITY\_NAMED\_IAM [GH-262]
 

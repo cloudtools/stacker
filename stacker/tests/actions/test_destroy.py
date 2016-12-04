@@ -4,6 +4,7 @@ import mock
 
 from stacker.actions import destroy
 from stacker.context import Context
+from stacker.plan import Step
 from stacker.exceptions import StackDoesNotExist
 from stacker.status import (
     COMPLETE,
@@ -39,10 +40,25 @@ class TestDestroyAction(unittest.TestCase):
 
     def test_generate_plan(self):
         plan = self.action._generate_plan()
-        stacks = ["other", "db", "instance", "bastion", "vpc"]
         self.assertEqual(
-            [self.context.get_fqn(s) for s in stacks],
-            plan.keys(),
+            {
+                'namespace-db': set(
+                    [
+                        'namespace-instance',
+                        'namespace-bastion',
+                        'namespace-vpc']),
+                'namespace-instance': set(
+                    [
+                        'namespace-bastion',
+                        'namespace-vpc']),
+                'namespace-bastion': set(
+                    [
+                        'namespace-vpc']),
+                'namespace-other': set(
+                    [
+                        'namespace-db']),
+                'namespace-vpc': set([])},
+            plan._dag.graph,
         )
 
     def test_only_execute_plan_when_forced(self):
@@ -71,63 +87,6 @@ class TestDestroyAction(unittest.TestCase):
         # we successfully deleted it
         self.assertEqual(status, COMPLETE)
 
-    def test_destroy_stack_in_parallel(self):
-        count = {"_count": 0}
-        mock_provider = mock.MagicMock()
-        self.context.config = {
-            "stacks": [
-                {"name": "vpc"},
-                {"name": "bastion", "requires": ["vpc"]},
-                {"name": "instance", "requires": ["vpc"]},
-                {"name": "db", "requies": ["vpc"]},
-            ],
-        }
-        stacks_dict = self.context.get_stacks_dict()
-
-        def get_stack(stack_name):
-            return stacks_dict.get(stack_name)
-
-        def get_stack_staggered(stack_name):
-            count["_count"] += 1
-            if not count["_count"] % 2:
-                raise StackDoesNotExist(stack_name)
-            return stacks_dict.get(stack_name)
-
-        def wait_func(*args):
-            # we want "get_stack" above to return staggered results for the
-            # stack being "deleted" to simulate waiting on stacks to complete
-            mock_provider.get_stack.side_effect = get_stack_staggered
-
-        plan = self.action._generate_plan()
-        plan._wait_func = wait_func
-
-        # swap for mock provider
-        plan.provider = mock_provider
-        self.action.provider = mock_provider
-
-        # we want "get_stack" to return the mock stacks above on the first
-        # pass. "wait_func" will simulate the stack being deleted every second
-        # pass
-        mock_provider.get_stack.side_effect = get_stack
-        mock_provider.is_stack_destroyed.return_value = False
-        mock_provider.is_stack_in_progress.return_value = True
-
-        independent_stacks = filter(lambda x: x.name != "vpc",
-                                    self.context.get_stacks())
-        while not plan._single_run():
-            # vpc should be the last stack that is deleted
-            if plan["namespace-vpc"].completed:
-                self.assertFalse(plan.list_pending())
-
-            # all of the independent stacks should be submitted at the same
-            # time
-            submitted_stacks = [
-                plan[stack.fqn].submitted for stack in independent_stacks
-            ]
-            if any(submitted_stacks):
-                self.assertTrue(all(submitted_stacks))
-            wait_func()
-
     def test_destroy_stack_step_statuses(self):
         mock_provider = mock.MagicMock()
         stacks_dict = self.context.get_stacks_dict()
@@ -135,8 +94,9 @@ class TestDestroyAction(unittest.TestCase):
         def get_stack(stack_name):
             return stacks_dict.get(stack_name)
 
-        plan = self.action._generate_plan()
-        _, step = plan.list_pending()[0]
+        stack = mock.MagicMock()
+        stack.locked = False
+        step = Step(stack=mock.MagicMock())
         # we need the AWS provider to generate the plan, but swap it for
         # the mock one to make the test easier
         self.action.provider = mock_provider
@@ -144,20 +104,20 @@ class TestDestroyAction(unittest.TestCase):
         # simulate stack doesn't exist and we haven't submitted anything for
         # deletion
         mock_provider.get_stack.side_effect = StackDoesNotExist("mock")
-        status = step.run()
+        status = self.action._destroy_stack(step.stack, status=step.status)
         self.assertEqual(status, SKIPPED)
 
         # simulate stack getting successfully deleted
         mock_provider.get_stack.side_effect = get_stack
         mock_provider.is_stack_destroyed.return_value = False
         mock_provider.is_stack_in_progress.return_value = False
-        status = step.run()
+        status = self.action._destroy_stack(step.stack, status=step.status)
         self.assertEqual(status, SUBMITTED)
         mock_provider.is_stack_destroyed.return_value = False
         mock_provider.is_stack_in_progress.return_value = True
-        status = step.run()
+        status = self.action._destroy_stack(step.stack, status=step.status)
         self.assertEqual(status, SUBMITTED)
         mock_provider.is_stack_destroyed.return_value = True
         mock_provider.is_stack_in_progress.return_value = False
-        status = step.run()
+        status = self.action._destroy_stack(step.stack, status=step.status)
         self.assertEqual(status, COMPLETE)

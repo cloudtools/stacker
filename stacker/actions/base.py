@@ -1,6 +1,5 @@
 import copy
 import logging
-import sys
 
 import boto3
 import botocore.exceptions
@@ -119,8 +118,6 @@ class BaseAction(object):
         return template_url
 
     def execute(self, *args, **kwargs):
-        if "sys_path" in self.context.config:
-            sys.path.append(self.context.config["sys_path"])
         self.pre_run(*args, **kwargs)
         self.run(*args, **kwargs)
         self.post_run(*args, **kwargs)

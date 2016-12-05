@@ -1,28 +1,32 @@
-import base64
-from mock import patch
 import unittest
+
+from moto import mock_kms
+
+import boto3
 
 from stacker.lookups.handlers.kms import handler
 
 
 class TestKMSHandler(unittest.TestCase):
-
     def setUp(self):
-        patcher = patch("botocore.session")
-        self.addCleanup(patcher.stop)
-        self.session = patcher.start()
-        self.kms = self.session.get_session().create_client()
-        self.input = base64.b64encode("encrypted test value")
-        self.value = {"Plaintext": "test value"}
+        self.plain = "my secret"
+        with mock_kms():
+            kms = boto3.client("kms", region_name="us-east-1")
+            self.secret = kms.encrypt(
+                KeyId="alias/stacker",
+                Plaintext=self.plain.encode("base64")
+            )["CiphertextBlob"]
 
     def test_kms_handler(self):
-        self.kms.decrypt.return_value = self.value
-        decrypted = handler(self.input)
-        self.assertEqual(decrypted, self.value["Plaintext"])
+        with mock_kms():
+            decrypted = handler(self.secret)
+            print "DECRYPTED: %s" % decrypted
+            self.assertEqual(decrypted, self.plain)
 
     def test_kms_handler_with_region(self):
-        handler("us-west-2@{}".format(self.input))
-        self.assertEqual(self.kms.decrypt.call_args[1]["CiphertextBlob"],
-                         "encrypted test value")
-        kwargs = self.session.get_session().create_client.call_args[1]
-        self.assertEqual(kwargs["region_name"], "us-west-2")
+        region = "us-east-1"
+        value = "%s@%s" % (region, self.secret)
+        print value
+        with mock_kms():
+            decrypted = handler(value)
+            self.assertEqual(decrypted, self.plain)

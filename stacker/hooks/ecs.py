@@ -30,5 +30,5 @@ def create_clusters(region, namespace, mappings, parameters, **kwargs):
     for cluster in clusters:
         logger.debug("Creating ECS cluster: %s", cluster)
         r = conn.create_cluster(clusterName=cluster)
-        cluster_info[r['clusterName']] = r
+        cluster_info[r["cluster"]["clusterName"]] = r
     return {"clusters": cluster_info}

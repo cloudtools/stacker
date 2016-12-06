@@ -26,7 +26,11 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
                     keypair["KeyName"],
                     keypair["KeyFingerprint"],
                     "exists")
-        return True
+        return {
+            "status": "exists",
+            "key_name": keypair["KeyName"],
+            "fingerprint": keypair["KeyFingerprint"],
+        }
 
     logger.info("keypair: \"%s\" not found", keypair_name)
     create_or_upload = raw_input(
@@ -50,7 +54,12 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
                     keypair["KeyName"],
                     keypair["KeyFingerprint"],
                     "imported")
-        return True
+        return {
+            "status": "imported",
+            "key_name": keypair["KeyName"],
+            "fingerprint": keypair["KeyFingerprint"],
+            "file_path": full_path,
+        }
     elif create_or_upload == "create":
         path = raw_input("directory to save keyfile: ")
         full_path = utils.full_path(path)
@@ -71,10 +80,15 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
                     keypair["KeyName"],
                     keypair["KeyFingerprint"],
                     "created")
-        f = open(os.path.join(full_path, file_name), "w")
-        f.write(keypair["KeyMaterial"])
-        f.close()
-        return True
+        with open(os.path.join(full_path, file_name), "w") as f:
+            f.write(keypair["KeyMaterial"])
+
+        return {
+            "status": "created",
+            "key_name": keypair["KeyName"],
+            "fingerprint": keypair["KeyFingerprint"],
+            "file_path": os.path.join(full_path, file_name)
+        }
     else:
         logger.warning("no action to find keypair, failing")
         return False

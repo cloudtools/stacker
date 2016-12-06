@@ -27,7 +27,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
                     keypair["KeyFingerprint"],
                     "exists")
         return {
-            "result": "exists",
+            "status": "exists",
             "key_name": keypair["KeyName"],
             "fingerprint": keypair["KeyFingerprint"],
         }
@@ -55,7 +55,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
                     keypair["KeyFingerprint"],
                     "imported")
         return {
-            "result": "imported",
+            "status": "imported",
             "key_name": keypair["KeyName"],
             "fingerprint": keypair["KeyFingerprint"],
             "file_path": full_path,
@@ -84,7 +84,7 @@ def ensure_keypair_exists(region, namespace, mappings, parameters, **kwargs):
             f.write(keypair["KeyMaterial"])
 
         return {
-            "result": "created",
+            "status": "created",
             "key_name": keypair["KeyName"],
             "fingerprint": keypair["KeyFingerprint"],
             "file_path": os.path.join(full_path, file_name)

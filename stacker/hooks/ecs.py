@@ -26,7 +26,9 @@ def create_clusters(region, namespace, mappings, parameters, **kwargs):
     if isinstance(clusters, basestring):
         clusters = [clusters]
 
+    cluster_info = {}
     for cluster in clusters:
         logger.debug("Creating ECS cluster: %s", cluster)
-        conn.create_cluster(clusterName=cluster)
-    return {"clusters": clusters}
+        r = conn.create_cluster(clusterName=cluster)
+        cluster_info[r['clusterName']] = r
+    return {"clusters": cluster_info}

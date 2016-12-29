@@ -15,8 +15,8 @@ class TroposphereType(object):
 
         """
         self._validate_type(defined_type)
-        self._type = defined_type
         self._many = many
+        self.type = defined_type
 
     def _validate_type(self, defined_type):
         if not hasattr(defined_type, "from_dict"):
@@ -42,7 +42,7 @@ class TroposphereType(object):
             )
             raise ValueError(message)
 
-        output = [self._type.from_dict(title, values) for title, values in
+        output = [self.type.from_dict(title, values) for title, values in
                   value.items()]
 
         return output if self._many else output[0]

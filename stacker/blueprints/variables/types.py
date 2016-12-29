@@ -15,7 +15,7 @@ class TroposphereType(object):
 
         """
         self._validate_type(defined_type)
-        self._many = many
+        self.many = many
         self.type = defined_type
 
     def _validate_type(self, defined_type):
@@ -35,7 +35,7 @@ class TroposphereType(object):
                 type
 
         """
-        if not self._many and len(value) > 1:
+        if not self.many and len(value) > 1:
             message = (
                 "Only one resource can be provided for single "
                 "TroposphereType"
@@ -45,7 +45,7 @@ class TroposphereType(object):
         output = [self.type.from_dict(title, values) for title, values in
                   value.items()]
 
-        return output if self._many else output[0]
+        return output if self.many else output[0]
 
 
 class CFNType(object):

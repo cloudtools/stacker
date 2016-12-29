@@ -18,7 +18,7 @@ class Test(unittest.TestCase):
         self.assertEqual(formatted, "troposphere.s3.Bucket")
 
     def test_format_var_type_troposphere_list_type(self):
-        var_type = TroposphereType([s3.Bucket])
+        var_type = TroposphereType(s3.Bucket, many=True)
         formatted = format_var_type(var_type)
         self.assertEqual(formatted, "[troposphere.s3.Bucket]")
 

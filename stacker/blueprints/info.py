@@ -17,6 +17,9 @@ def format_var_type(var_type):
     """
     is_list = False
     if isinstance(var_type, TroposphereType):
+        if var_type.many:
+            is_list = True
+
         var_type = var_type.type
 
     if isinstance(var_type, list) and len(var_type):

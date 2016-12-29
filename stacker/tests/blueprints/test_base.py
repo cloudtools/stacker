@@ -165,7 +165,7 @@ class TestVariables(unittest.TestCase):
 
     def test_resolve_variable_troposphere_list_type(self):
         var_name = "testVar"
-        var_def = {"type": TroposphereType([s3.Bucket])}
+        var_def = {"type": TroposphereType(s3.Bucket, many=True)}
         bucket_defs = {
             "FirstBucket": {"BucketName": "some-bucket"},
             "SecondBucket": {"BucketName": "some-other-bucket"},
@@ -510,3 +510,20 @@ class TestVariables(unittest.TestCase):
         self.assertFalse(valid)
         valid = validate_allowed_values(allowed_values, "allowed")
         self.assertTrue(valid)
+
+    def test_blueprint_with_parameters_fails(self):
+        class TestBlueprint(Blueprint):
+            PARAMETERS = {
+                "Param2": {"default": 0, "type": "Integer"},
+            }
+
+        with self.assertRaises(AttributeError):
+            TestBlueprint(name="test", context=MagicMock())
+
+        class TestBlueprint(Blueprint):
+            LOCAL_PARAMETERS = {
+                "Param2": {"default": 0, "type": "Integer"},
+            }
+
+        with self.assertRaises(AttributeError):
+            TestBlueprint(name="test", context=MagicMock())

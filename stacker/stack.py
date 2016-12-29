@@ -33,7 +33,16 @@ def _gather_variables(stack_def, context_variables):
     Returns:
         dict: Contains key/value pairs of the collected variables.
 
+    Raises:
+        AttributeError: Raised when the stack definitition contains an invalid
+            attribute. Currently only when using old parameters, rather than
+            variables.
     """
+    stack_name = stack_def["name"]
+    if "parameters" in stack_def:
+        raise AttributeError("Stack definition %s contains deprecated "
+                             "'parameters', rather than 'variables'. Please "
+                             "update your config." % stack_name)
     variable_values = copy.deepcopy(stack_def.get('variables', {}))
     stack_specific_variables = {}
     for key, value in context_variables.iteritems():
@@ -45,7 +54,7 @@ def _gather_variables(stack_def, context_variables):
             variable_values[key] = value
             continue
         # Gather stack specific params for later
-        if stack == stack_def["name"]:
+        if stack == stack_name:
             stack_specific_variables[key] = value
 
     # Now update stack definition variables with the stack specific variables

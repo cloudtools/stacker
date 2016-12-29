@@ -168,20 +168,12 @@ class TestVariables(unittest.TestCase):
         self.assertTrue(var.resolved)
         self.assertEqual(var.value, "looked up: looked up: resolved")
 
-    def test_troposphere_type_missing_type_with_list(self):
-        with self.assertRaises(ValueError):
-            TroposphereType([])
-
-    def test_troposphere_type_multiple_types_in_list(self):
-        with self.assertRaises(ValueError):
-            TroposphereType([s3.Bucket, s3.BucketPolicy])
-
     def test_troposphere_type_no_from_dict(self):
         with self.assertRaises(ValueError):
             TroposphereType(object)
 
         with self.assertRaises(ValueError):
-            TroposphereType([object])
+            TroposphereType(object, many=True)
 
     def test_troposphere_type_create(self):
         troposphere_type = TroposphereType(s3.Bucket)
@@ -191,7 +183,7 @@ class TestVariables(unittest.TestCase):
         self.assertTrue(created.properties["BucketName"], "test-bucket")
 
     def test_troposphere_type_create_multiple(self):
-        troposphere_type = TroposphereType([s3.Bucket])
+        troposphere_type = TroposphereType(s3.Bucket, many=True)
         created = troposphere_type.create({
             "FirstBucket": {"BucketName": "test-bucket"},
             "SecondBucket": {"BucketName": "other-test-bucket"},

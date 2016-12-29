@@ -2,28 +2,21 @@
 
 class TroposphereType(object):
 
-    def __init__(self, defined_type):
+    def __init__(self, defined_type, many=False):
         """Represents a Troposphere type.
 
         :class:`Troposphere` will convert the value provided to the variable to
         the specified Troposphere type.
 
         Args:
-            defined_type (Union[list, type]): List of or single Troposphere
-                type. If a list is provided, it indicates that more than one
-                type will be created.
+            defined_type (type): Troposphere type
+            many (Optional[bool]): Boolean indicating whether or not the type
+                accepts a single object or a list of objects.
 
         """
-        self.type = defined_type
-        if isinstance(self.type, list):
-            if len(self.type) > 1:
-                raise ValueError(
-                    "TroposphereType only supports lists of one type")
-            elif not len(self.type):
-                raise ValueError("Misisng required type for list")
-            self._validate_type(self.type[0])
-        else:
-            self._validate_type(self.type)
+        self._validate_type(defined_type)
+        self._type = defined_type
+        self._many = many
 
     def _validate_type(self, defined_type):
         if not hasattr(defined_type, "from_dict"):
@@ -42,22 +35,17 @@ class TroposphereType(object):
                 type
 
         """
-        new_type = self.type
-        is_list = isinstance(self.type, list)
-        if is_list:
-            new_type = self.type[0]
-        else:
-            if len(value) > 1:
-                message = (
-                    "Only one resource can be provided for single "
-                    "TroposphereType"
-                )
-                raise ValueError(message)
+        if not self._many and len(value) > 1:
+            message = (
+                "Only one resource can be provided for single "
+                "TroposphereType"
+            )
+            raise ValueError(message)
 
-        output = [new_type.from_dict(title, values) for title, values in
+        output = [self._type.from_dict(title, values) for title, values in
                   value.items()]
 
-        return output if is_list else output[0]
+        return output if self._many else output[0]
 
 
 class CFNType(object):

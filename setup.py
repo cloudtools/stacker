@@ -2,17 +2,17 @@ import os
 from setuptools import setup, find_packages
 import glob
 
-VERSION = "1.0.0a3"
+VERSION = "1.0.0a5"
 
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "troposphere~=1.8.1",
-    "boto3>=1.3.1<1.5.0",
-    "botocore~=1.4.38",
+    "troposphere~=1.9.0",
+    "boto3>=1.3.1,<1.5.0",
     "PyYAML~=3.11",
     "awacs~=0.6.0",
     "colorama~=0.3.7",
+    "formic~=0.9b"
 ]
 
 tests_require = [

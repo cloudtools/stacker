@@ -240,6 +240,11 @@ class Blueprint(object):
         self.reset_template()
         self.resolved_variables = None
 
+        if hasattr(self, "PARAMETERS") or hasattr(self, "LOCAL_PARAMETERS"):
+            raise AttributeError("Blueprint %s uses deprecated PARAMETERS or "
+                                 "LOCAL_PARAMETERS, rather than VARIABLES. "
+                                 "Please update your blueprints." % name)
+
     def get_required_parameter_definitions(self):
         """Returns all template parameters that do not have a default value.
 

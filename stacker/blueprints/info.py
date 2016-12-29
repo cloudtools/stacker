@@ -22,7 +22,7 @@ def format_var_type(var_type):
 
         var_type = var_type.type
 
-    if isinstance(var_type, list) and len(var_type):
+    if isinstance(var_type, (list, tuple)) and len(var_type):
         is_list = True
         var_type = var_type[0]
 

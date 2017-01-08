@@ -93,17 +93,13 @@ class TestVariables(unittest.TestCase):
         var_name = "testVar"
         var_type = CFNString
         provided_value = "abc"
-        value = validate_variable_type(var_name, var_type, provided_value)
-        self.assertIsInstance(value, CFNParameter)
-        self.assertEqual(value.value, provided_value)
-        self.assertEqual(value.name, var_name)
+        validate_variable_type(var_name, var_type, provided_value)
 
     def test_validate_variable_type_matching_type(self):
         var_name = "testVar"
         var_type = str
         provided_value = "abc"
-        value = validate_variable_type(var_name, var_type, provided_value)
-        self.assertEqual(value, provided_value)
+        validate_variable_type(var_name, var_type, provided_value)
 
     def test_validate_variable_type_transformed_type(self):
         var_name = "testVar"

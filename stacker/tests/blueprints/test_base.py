@@ -93,15 +93,20 @@ class TestVariables(unittest.TestCase):
         var_name = "testVar"
         var_type = CFNString
         provided_value = "abc"
-        validate_variable_type(var_name, var_type, provided_value)
+        value = validate_variable_type(var_name, var_type, provided_value)
+        self.assertIsInstance(value, CFNParameter)
 
     def test_validate_variable_type_matching_type(self):
         var_name = "testVar"
         var_type = str
         provided_value = "abc"
-        validate_variable_type(var_name, var_type, provided_value)
+        value = validate_variable_type(var_name, var_type, provided_value)
+        self.assertEqual(value, provided_value)
 
-    def test_validate_variable_type_transformed_type(self):
+    # This tests that validate_variable_type doesn't change the original value
+    # even if it could.  IE: A string "1" shouldn't be valid for an int.
+    # See: https://github.com/remind101/stacker/pull/266
+    def test_strict_validate_variable_type(self):
         var_name = "testVar"
         var_type = int
         provided_value = "1"

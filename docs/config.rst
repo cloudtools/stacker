@@ -66,6 +66,9 @@ The keyword is a list of dictionaries with the following keys:
 
 **path:**
   the python import path to the hook
+**data_key:**
+  If set, and the hook returns data (a dictionary), the results will be stored
+  in the context.hook_data with the data_key as it's key.
 **required:**
   whether to stop execution if the hook fails
 **args:**

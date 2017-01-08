@@ -214,7 +214,7 @@ class Provider(BaseProvider):
                         TemplateURL=template_url,
                         Parameters=parameters,
                         Tags=tags,
-                        Capabilities=["CAPABILITY_IAM"]),
+                        Capabilities=["CAPABILITY_NAMED_IAM"]),
         )
         return True
 
@@ -227,7 +227,7 @@ class Provider(BaseProvider):
                             TemplateURL=template_url,
                             Parameters=parameters,
                             Tags=tags,
-                            Capabilities=["CAPABILITY_IAM"]),
+                            Capabilities=["CAPABILITY_NAMED_IAM"]),
             )
         except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in e.message:

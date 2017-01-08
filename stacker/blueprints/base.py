@@ -15,7 +15,10 @@ from ..exceptions import (
     ValidatorError,
     VariableTypeRequired,
 )
-from .variables.types import CFNType
+from .variables.types import (
+    CFNType,
+    TroposphereType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +116,12 @@ def validate_variable_type(var_name, var_type, value):
 
     if isinstance(var_type, CFNType):
         value = CFNParameter(name=var_name, value=value)
+    elif isinstance(var_type, TroposphereType):
+        try:
+            value = var_type.create(value)
+        except Exception as exc:
+            name = "{}.create".format(var_type.resource_name)
+            raise ValidatorError(var_name, name, value, exc)
     else:
         if not isinstance(value, var_type):
             raise ValueError("Variable %s must be of type %s.",

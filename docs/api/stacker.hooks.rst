@@ -28,6 +28,14 @@ stacker.hooks.route53 module
     :undoc-members:
     :show-inheritance:
 
+stacker.hooks.aws_lambda module
+-------------------------------
+
+.. automodule:: stacker.hooks.aws_lambda
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

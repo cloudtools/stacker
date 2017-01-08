@@ -16,6 +16,7 @@ class CFNType(object):
         """
         self.parameter_type = parameter_type
 
+
 CFNString = CFNType("String")
 CFNNumber = CFNType("Number")
 CFNNumberList = CFNType("List<Number>")

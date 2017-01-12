@@ -6,6 +6,6 @@
 set -e
 
 cd /stacks
-python setup.py install
+# python setup.py install
 
 exec stacker $@

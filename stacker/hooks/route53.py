@@ -23,5 +23,5 @@ def create_domain(provider, context, **kwargs):
     if not domain:
         logger.error("domain argument or BaseDomain variable not provided.")
         return False
-    create_route53_zone(client, domain)
-    return True
+    zone_id = create_route53_zone(client, domain)
+    return {"domain": domain, "zone_id": zone_id}

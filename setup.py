@@ -18,7 +18,7 @@ install_requires = [
 tests_require = [
     "nose~=1.0",
     "mock~=2.0.0",
-    "moto~=0.4.25",
+    "moto~=0.4.30",
     "testfixtures~=4.10.0",
 ]
 

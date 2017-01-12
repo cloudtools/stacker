@@ -323,7 +323,7 @@ class Blueprint(object):
             dict: variables defined by the blueprint
 
         """
-        return getattr(self, "VARIABLES", {})
+        return copy.deepcopy(getattr(self, "VARIABLES", {}))
 
     def get_variables(self):
         """Return a dictionary of variables available to the template.

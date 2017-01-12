@@ -1,6 +1,4 @@
-import base64
-
-import botocore.session
+import boto3
 
 from ...util import read_value_from_path
 
@@ -48,8 +46,6 @@ def handler(value, **kwargs):
     if "@" in value:
         region, value = value.split("@", 1)
 
-    s = botocore.session.get_session()
-    kms = s.create_client("kms", region_name=region)
-    decoded = base64.b64decode(value)
-    response = kms.decrypt(CiphertextBlob=decoded)
-    return response["Plaintext"]
+    kms = boto3.client("kms", region_name=region)
+    decoded = value.decode("base64")
+    return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]

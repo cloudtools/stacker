@@ -1,8 +1,11 @@
+import sys
+import textwrap
 import unittest
 
 from ..context import Context, get_fqn
 from ..exceptions import MissingEnvironment
 from ..lookups.registry import LOOKUP_HANDLERS
+from ..util import handle_hooks
 
 
 class TestContext(unittest.TestCase):
@@ -126,6 +129,38 @@ class TestContext(unittest.TestCase):
     def test_context_no_tags_specified(self):
         context = Context({"namespace": "test"})
         self.assertEqual(context.tags, {"stacker_namespace": "test"})
+
+    def test_load_config_adds_sys_path(self):
+        context = Context({"namespace": "test"})
+        p = "/foo/bar"
+        context.load_config("sys_path: %s" % p)
+        self.assertIn(p, sys.path)
+
+    def test_lookup_with_sys_path(self):
+        context = Context({"namespace": "test"})
+        config = textwrap.dedent("""\
+            sys_path: stacker/tests
+            lookups:
+              custom: fixtures.mock_lookups.handler
+        """)
+        context.load_config(config)
+        self.assertTrue(callable(LOOKUP_HANDLERS["custom"]))
+
+    def test_hook_with_sys_path(self):
+        config = textwrap.dedent("""\
+            sys_path: stacker/tests
+            pre_build:
+              - data_key: myHook
+                path: fixtures.mock_hooks.mock_hook
+                required: True
+                args:
+                  value: mockResult
+        """)
+        context = Context({"namespace": "test"})
+        context.load_config(config)
+        stage = "pre_build"
+        handle_hooks(stage, context.config[stage], "mock-region-1", context)
+        self.assertEqual("mockResult", context.hook_data["myHook"]["result"])
 
 
 class TestFunctions(unittest.TestCase):

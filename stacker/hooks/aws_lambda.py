@@ -310,7 +310,7 @@ def _upload_function(s3_conn, bucket, name, options):
     return _upload_code(s3_conn, bucket, name, zip_contents)
 
 
-def upload_lambda_functions(region, namespace, mappings, parameters, **kwargs):
+def upload_lambda_functions(context, provider, **kwargs):
     """Builds Lambda payloads from user configuration and uploads them to S3.
 
     Constructs ZIP archives containing files matching specified patterns for
@@ -409,13 +409,12 @@ def upload_lambda_functions(region, namespace, mappings, parameters, **kwargs):
     """
     bucket = kwargs.get('bucket')
     if not bucket:
-        context = kwargs['context']
         bucket = context.bucket_name
         logger.info('lambda: using default bucket from stacker: %s', bucket)
     else:
         logger.info('lambda: using custom bucket: %s', bucket)
 
-    session = boto3.Session(region_name=region)
+    session = boto3.Session(region_name=provider.region)
     s3_conn = session.client('s3')
 
     _ensure_bucket(s3_conn, bucket)

@@ -151,7 +151,7 @@ class Action(BaseAction):
 
     """
 
-    def build_parameters(self, stack, provider_stack):
+    def build_parameters(self, stack, provider_stack = None):
         """Builds the CloudFormation Parameters for our stack.
 
         Args:

@@ -103,7 +103,7 @@ types by directly passing in the value from the config to the specified
 Troposphere type.
 
 Example
-=======
+^^^^^^^
 
 Below is an annotated example::
 
@@ -171,7 +171,7 @@ specific Parameter types like ``List<AWS::EC2::Image::Id>``. See
 ``CFNType``.
 
 Example
-=======
+^^^^^^^
 
 Below is an annotated example::
 

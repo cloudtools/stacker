@@ -1,3 +1,19 @@
+## 1.0.0a5 (2016-11-28)
+
+This is a major release with the main change being the removal of the old
+Parameters logic in favor of Blueprint Variables and Lookups.
+
+- Add support for resolving variables when calling `dump`[GH-231]
+- Remove old Parameters code [GH-232]
+- Pass Context & Provider to hooks [GH-233]
+- Fix Issue w/ Dump [GH-241]
+- Support `allowed_values` within variable definitions [GH-245]
+- Fix filehandler lookups with pseudo parameters [GH-247]
+- keypair hook update to match route53 update [GH-248]
+- Add support for `TroposphereType` [GH-249]
+- Allow = in lookup contents [GH-251]
+- change capabilities to CAPABILITY\_NAMED\_IAM [GH-262]
+
 ## 0.8.5 (2016-11-28)
 
 - Allow `=` in lookup input [GH-251]

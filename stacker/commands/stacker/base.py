@@ -3,7 +3,10 @@ from collections import Mapping
 import logging
 
 from ...environment import parse_environment
-from ...logger import setup_logging
+from ...logger import (
+    BASIC_LOGGER_TYPE,
+    setup_logging,
+)
 
 
 class KeyValueAction(argparse.Action):
@@ -58,6 +61,7 @@ class BaseCommand(object):
     description = None
     subcommands = tuple()
     subcommands_help = None
+    logger_type = BASIC_LOGGER_TYPE
 
     def __init__(self, *args, **kwargs):
         if not self.name:
@@ -95,7 +99,7 @@ class BaseCommand(object):
         pass
 
     def configure(self, options, **kwargs):
-        setup_logging(options.verbose, options.interactive)
+        self.logger_type = setup_logging(options.verbose, options.interactive)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.
@@ -116,10 +120,11 @@ class BaseCommand(object):
 
     def add_arguments(self, parser):
         # global arguments that should be available on all stacker subcommands
-        parser.add_argument("-p", "--parameter", dest="parameters",
-                            metavar="PARAMETER=VALUE", type=key_value_arg,
-                            action=KeyValueAction, default={},
-                            help="Adds parameters from the command line "
+        parser.add_argument("-var", "--variable", dest="variables",
+                            metavar="BLUEPRINT_VARIABLE=VALUE",
+                            type=key_value_arg, action=KeyValueAction,
+                            default={},
+                            help="Adds variables from the command line "
                                  "that can be used inside any of the stacks "
                                  "being built. Can be specified more than "
                                  "once.")

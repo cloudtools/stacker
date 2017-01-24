@@ -4,6 +4,14 @@ import mock
 
 from stacker.context import Context
 from stacker.exceptions import ImproperlyConfigured
+from stacker.lookups.registry import (
+    register_lookup_handler,
+    unregister_lookup_handler,
+)
+from stacker.logger import (
+    BASIC_LOGGER_TYPE,
+    LOOP_LOGGER_TYPE,
+)
 from stacker.plan import (
     Step,
     Plan,
@@ -50,6 +58,10 @@ class TestPlan(unittest.TestCase):
         self.count = 0
         self.environment = {"namespace": "namespace"}
         self.context = Context(self.environment)
+        register_lookup_handler("noop", lambda **kwargs: "test")
+
+    def tearDown(self):
+        unregister_lookup_handler("noop")
 
     def _run_func(self, stack, **kwargs):
         self.count += 1
@@ -77,7 +89,9 @@ class TestPlan(unittest.TestCase):
                 requires=stack.requires,
             )
 
+        pre_md5 = plan.md5
         plan.execute()
+        self.assertNotEqual(pre_md5, plan.md5)
         self.assertEqual(self.count, 9)
         self.assertEqual(len(plan.list_skipped()), 1)
 
@@ -257,7 +271,14 @@ class TestPlan(unittest.TestCase):
         plan = Plan(description="Test", sleep_time=0)
         previous_stack = None
         for i in range(5):
-            overrides = {}
+            overrides = {
+                "variables": {
+                    "PublicSubnets": "1",
+                    "SshKeyName": "1",
+                    "PrivateSubnets": "1",
+                    "Random": "${noop something}",
+                },
+            }
             if previous_stack:
                 overrides["requires"] = [previous_stack.fqn]
             stack = Stack(
@@ -271,5 +292,39 @@ class TestPlan(unittest.TestCase):
                 requires=stack.requires,
             )
 
-        plan.dump("test")
+        plan.dump("test", context=self.context)
         self.assertEqual(len(plan.list_pending()), len(plan))
+
+    @mock.patch("stacker.plan.os")
+    @mock.patch("stacker.plan.open", mock.mock_open(), create=True)
+    def test_dump_no_provider_lookups(self, *args):
+        plan = Plan(description="Test", sleep_time=0)
+        previous_stack = None
+        for i in range(5):
+            overrides = {
+                "variables": {
+                    "Var1": "${fakeStack::FakeOutput}",
+                    "Var2": "${xref fakeStack::FakeOutput2}",
+                },
+            }
+            if previous_stack:
+                overrides["requires"] = [previous_stack.fqn]
+            stack = Stack(
+                definition=generate_definition("vpc", i, **overrides),
+                context=self.context,
+            )
+            previous_stack = stack
+            plan.add(
+                stack=stack,
+                run_func=self._run_func,
+                requires=stack.requires,
+            )
+
+        with self.assertRaises(ValueError):
+            plan.dump("test", context=self.context)
+
+    def test_plan_checkpoint_interval(self):
+        plan = Plan(description="Test", logger_type=BASIC_LOGGER_TYPE)
+        self.assertEqual(plan.check_point_interval, 10)
+        plan = Plan(description="Test", logger_type=LOOP_LOGGER_TYPE)
+        self.assertEqual(plan.check_point_interval, 1)

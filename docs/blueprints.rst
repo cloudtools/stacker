@@ -95,6 +95,71 @@ Variable Types
 Any native python type can be specified as the ``type`` for a variable.
 You can also use the following custom types:
 
+TroposphereType
+---------------
+
+The ``TroposphereType`` can be used to create one or more Troposphere
+types by directly passing in the value from the config to the specified
+Troposphere type.
+
+Example
+^^^^^^^
+
+Below is an annotated example::
+
+  from stacker.blueprints.base import Blueprint
+  from stacker.blueprints.variables.types import TroposphereType
+  from troposphere import s3
+
+
+  class Buckets(Blueprint):
+
+      VARIABLES = {
+          "Buckets": {
+              # Specify that Buckets will be a list of s3.Bucket types.
+              This means the config should take a list of dictionaries
+              which will be converted into troposphere buckets.
+              "type": TroposphereType(s3.Bucket, many=True),
+              "description": "S3 Buckets to create.",
+          },
+          "SingleBucket": {
+              # Specify that only a single bucket can be passed.
+              "type": TroposphereType(s3.Bucket),
+              "description": "A single S3 bucket",
+          },
+      }
+
+      def create_template(self):
+          t = self.template
+          variables = self.get_variables()
+
+          # The Troposphere s3 buckets have already been created when we
+          access variables["Buckets"], we just need to add them as
+          resources to the template.
+          [t.add_resource(bucket) for bucket in variables["Buckets"]]
+
+          # Add the single bucket to the template. You can use
+          `Ref(single_bucket)` to pass CloudFormation references to the
+          bucket just as you would with any other Troposphere type.
+          single_bucket = variables["SingleBucket"]
+          t.add_resource(single_bucket)
+
+A sample config for the above::
+
+  stacks:
+    - name: buckets
+      class_path: path.to.above.Buckets
+      variables:
+        Buckets:
+          # resource name that will be added to CloudFormation
+          FirstBucket:
+            # name of the s3 bucket
+            BucketName: my-first-bucket
+          SecondBucket:
+            BucketName: my-second-bucket
+        SingleBucket:
+          BucketName: my-single-bucket
+
 CFNType
 -------
 
@@ -106,7 +171,7 @@ specific Parameter types like ``List<AWS::EC2::Image::Id>``. See
 ``CFNType``.
 
 Example
-=======
+^^^^^^^
 
 Below is an annotated example::
 

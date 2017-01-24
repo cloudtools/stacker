@@ -1,2 +1,2 @@
-def mock_hook(region, namespace, mappings, parameters, **kwargs):
+def mock_hook(provider, context, **kwargs):
     return {"result": kwargs["value"]}

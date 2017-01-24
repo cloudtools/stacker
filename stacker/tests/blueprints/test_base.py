@@ -1,4 +1,5 @@
 import unittest
+import base64
 
 from mock import MagicMock
 from troposphere import (
@@ -44,6 +45,7 @@ register_lookup_handler("mock", mock_lookup_handler)
 
 
 class TestBuildParameter(unittest.TestCase):
+
     def test_base_parameter(self):
         p = build_parameter("BasicParam", {"type": "String"})
         p.validate()
@@ -72,6 +74,7 @@ class TestVariables(unittest.TestCase):
             }
 
         class TestBlueprintSublcass(TestBlueprint):
+
             def defined_variables(self):
                 variables = super(TestBlueprintSublcass,
                                   self).defined_variables()
@@ -528,3 +531,32 @@ class TestVariables(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             TestBlueprint(name="test", context=MagicMock())
+
+    def test_parse_user_data(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": str},
+                "Param2": {"type": str},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "test1"), Variable("Param2", "test2")]
+        blueprint.resolve_variables(variables)
+        userdata_raw = "My name is {{Param1}} and {{Param2}}."
+        userdata = blueprint.parse_user_data(userdata_raw)
+        self.assertEqual(
+            userdata, base64.b64encode("My name is test1 and test2."))
+
+    def test_parse_user_data_fails(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"type": str},
+                "Param2": {"type": str},
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "test1"), Variable("Param2", "test2")]
+        blueprint.resolve_variables(variables)
+        userdata_raw = "My name is {{Param1}} and {{Param3}}."
+        with self.assertRaises(MissingVariable):
+            blueprint.parse_user_data(userdata_raw)

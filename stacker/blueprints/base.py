@@ -1,6 +1,8 @@
 import copy
 import hashlib
 import logging
+import re
+import base64
 
 from troposphere import (
     Parameter,
@@ -221,6 +223,7 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
 
 
 class Blueprint(object):
+
     """Base implementation for rendering a troposphere template.
 
     Args:
@@ -401,6 +404,36 @@ class Blueprint(object):
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
+
+    def parse_user_data(self, raw_userdata):
+        """Translate a userdata file to into the file contents.
+
+        It supports referencing template variables to create userdata
+        that's supplemented with information from the data, as commonly
+        required when creating EC2 userdata files. Automatically, encodes
+        the data file to base64 after it is processed.
+
+        """
+        pattern = re.compile(r'{{([::|\w]+)}}')
+        userdata = ""
+        s_index = 0
+        variables = self.get_variables()
+
+        for match in pattern.finditer(raw_userdata):
+            userdata += raw_userdata[s_index:match.start()]
+
+            key = match.group(1)
+
+            if key in variables:
+                userdata += variables[key]
+            else:
+                raise MissingVariable(self.name, key)
+
+            s_index = match.end()
+
+        userdata += raw_userdata[s_index:]
+
+        return base64.b64encode(userdata)
 
     @property
     def rendered(self):

@@ -413,6 +413,10 @@ class Blueprint(object):
         required when creating EC2 userdata files. Automatically, encodes
         the data file to base64 after it is processed.
 
+         Args:
+            raw_userdata (str of userdata):
+                str of the given userdata to be parsed
+
         """
         pattern = re.compile(r'{{([::|\w]+)}}')
         userdata = ""

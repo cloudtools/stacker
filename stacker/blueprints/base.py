@@ -8,6 +8,8 @@ from troposphere import (
     Parameter,
     Ref,
     Template,
+    Join,
+    Base64
 )
 
 from ..exceptions import (
@@ -405,7 +407,7 @@ class Blueprint(object):
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
 
-    def parse_user_data(self, raw_userdata):
+    def parse_user_data(self, raw_user_data):
         """Translate a userdata file to into the file contents.
 
         It supports referencing template variables to create userdata
@@ -419,25 +421,29 @@ class Blueprint(object):
 
         """
         pattern = re.compile(r'{{([::|\w]+)}}')
-        userdata = ""
-        s_index = 0
+        user_data = []
+        start_index = 0
         variables = self.get_variables()
+        parameters = self.get_cfn_parameters()
 
-        for match in pattern.finditer(raw_userdata):
-            userdata += raw_userdata[s_index:match.start()]
+        for match in pattern.finditer(raw_user_data):
+            user_data.append(raw_user_data[start_index:match.start()])
 
             key = match.group(1)
 
-            if key in variables:
-                userdata += variables[key]
+            if key in parameters:
+                user_data.append(parameters[key])
+            elif key in variables:
+                user_data.append(variables[key])
             else:
                 raise MissingVariable(self.name, key)
 
-            s_index = match.end()
+            start_index = match.end()
 
-        userdata += raw_userdata[s_index:]
+        user_data.append(raw_user_data[start_index:])
+        res = Join("", user_data)
 
-        return base64.b64encode(userdata)
+        return Base64(res)
 
     @property
     def rendered(self):

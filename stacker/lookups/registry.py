@@ -5,6 +5,7 @@ from .handlers import output
 from .handlers import kms
 from .handlers import xref
 from .handlers import file as file_handler
+from .handlers import split
 
 LOOKUP_HANDLERS = {}
 DEFAULT_LOOKUP = output.TYPE_NAME
@@ -69,3 +70,4 @@ register_lookup_handler(output.TYPE_NAME, output.handler)
 register_lookup_handler(kms.TYPE_NAME, kms.handler)
 register_lookup_handler(xref.TYPE_NAME, xref.handler)
 register_lookup_handler(file_handler.TYPE_NAME, file_handler.handler)
+register_lookup_handler(split.TYPE_NAME, split.handler)

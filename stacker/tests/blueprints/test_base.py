@@ -1,11 +1,12 @@
 import unittest
-import base64
+import json
 
 from mock import MagicMock
 from troposphere import (
     Base64,
     Ref,
     s3,
+    awsencode
 )
 
 from stacker.blueprints.base import (
@@ -535,17 +536,34 @@ class TestVariables(unittest.TestCase):
     def test_parse_user_data(self):
         class TestBlueprint(Blueprint):
             VARIABLES = {
-                "Param1": {"type": str},
-                "Param2": {"type": str},
+                "Param1": {"type": str}
+            }
+
+        blueprint = TestBlueprint(name="test", context=MagicMock())
+        variables = [Variable("Param1", "test1")]
+        blueprint.resolve_variables(variables)
+        userdata_raw = ".{{Param1}}."
+        userdata = json.dumps(
+            blueprint.parse_user_data(userdata_raw), cls=awsencode)
+        print(userdata)
+        self.assertEqual(
+            userdata,
+            '{"Fn::Base64": {"Fn::Join": ["", [".", "test1", "."]]}}')
+
+    def test_parse_user_data_cfn_parameters(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param2": {"type": CFNString},
             }
 
         blueprint = TestBlueprint(name="test", context=MagicMock())
         variables = [Variable("Param1", "test1"), Variable("Param2", "test2")]
         blueprint.resolve_variables(variables)
-        userdata_raw = "My name is {{Param1}} and {{Param2}}."
-        userdata = blueprint.parse_user_data(userdata_raw)
+        userdata_raw = "{{Param2}}."
+        userdata = json.dumps(
+            blueprint.parse_user_data(userdata_raw), cls=awsencode)
         self.assertEqual(
-            userdata, base64.b64encode("My name is test1 and test2."))
+            userdata, '{"Fn::Base64": {"Fn::Join": ["", ["", "test2", "."]]}}')
 
     def test_parse_user_data_fails(self):
         class TestBlueprint(Blueprint):

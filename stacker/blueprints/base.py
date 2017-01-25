@@ -2,7 +2,6 @@ import copy
 import hashlib
 import logging
 import re
-import base64
 
 from troposphere import (
     Parameter,

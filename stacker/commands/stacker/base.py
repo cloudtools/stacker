@@ -119,15 +119,6 @@ class BaseCommand(object):
         return {}
 
     def add_arguments(self, parser):
-        # global arguments that should be available on all stacker subcommands
-        parser.add_argument("-var", "--variable", dest="variables",
-                            metavar="BLUEPRINT_VARIABLE=VALUE",
-                            type=key_value_arg, action=KeyValueAction,
-                            default={},
-                            help="Adds variables from the command line "
-                                 "that can be used inside any of the stacks "
-                                 "being built. Can be specified more than "
-                                 "once.")
         parser.add_argument("-e", "--env", dest="cli_envs",
                             metavar="ENV=VALUE", type=key_value_arg,
                             action=KeyValueAction, default={},

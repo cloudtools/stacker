@@ -2,13 +2,12 @@ import copy
 import hashlib
 import logging
 import re
+import base64
 
 from troposphere import (
     Parameter,
     Ref,
-    Template,
-    Join,
-    Base64
+    Template
 )
 
 from ..exceptions import (
@@ -414,35 +413,37 @@ class Blueprint(object):
         required when creating EC2 userdata files. Automatically, encodes
         the data file to base64 after it is processed.
 
-         Args:
-            raw_userdata (str of userdata):
-                str of the given userdata to be parsed
+        Args:
+            raw_user_data (str): the user data with the cloud-init info
+
+        Returns:
+            str: The parsed user data, with all the variables values and
+                 refs replaced with their resolved values.
 
         """
         pattern = re.compile(r'{{([::|\w]+)}}')
-        user_data = []
+        res = ""
         start_index = 0
         variables = self.get_variables()
-        parameters = self.get_cfn_parameters()
 
         for match in pattern.finditer(raw_user_data):
-            user_data.append(raw_user_data[start_index:match.start()])
+            res += raw_user_data[start_index:match.start()]
 
             key = match.group(1)
 
-            if key in parameters:
-                user_data.append(parameters[key])
-            elif key in variables:
-                user_data.append(variables[key])
+            if key in variables:
+                if type(variables[key]) is CFNParameter:
+                    res += variables[key].to_parameter_value()
+                else:
+                    res += variables[key]
             else:
                 raise MissingVariable(self.name, key)
 
             start_index = match.end()
 
-        user_data.append(raw_user_data[start_index:])
-        res = Join("", user_data)
+        res += raw_user_data[start_index:]
 
-        return Base64(res)
+        return base64.b64encode(res)
 
     @property
     def rendered(self):

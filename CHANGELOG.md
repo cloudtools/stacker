@@ -1,3 +1,11 @@
+## 0.8.6 (2017-01-26)
+
+- Support destroying subset of stacks [GH-278]
+- Update all hooks to use advanced results [GH-285]
+- Use sys\_path for hooks and lookups [GH-286]
+- Remove last of botocore conns [GH-287]
+- Avoid dictionary sharing pollution [GH-293]
+
 ## 0.8.5 (2016-11-28)
 
 - Allow `=` in lookup input [GH-251]

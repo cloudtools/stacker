@@ -106,8 +106,8 @@ def validate_variable_type(var_name, var_type, value):
             variable
 
     Returns:
-        object: A python object of type `var_type` based on the provided
-            `value`.
+        object: Returns the appropriate value object. If the original value
+            was of CFNType, the returned value will be wrapped in CFNParameter.
 
     Raises:
         ValueError: If the `value` isn't of `var_type` and can't be cast as
@@ -124,11 +124,9 @@ def validate_variable_type(var_name, var_type, value):
             raise ValidatorError(var_name, name, value, exc)
     else:
         if not isinstance(value, var_type):
-            try:
-                value = var_type(value)
-            except ValueError:
-                raise ValueError("Variable %s must be %s.",
-                                 var_name, var_type)
+            raise ValueError("Variable %s must be of type %s.",
+                             var_name, var_type)
+
     return value
 
 
@@ -205,12 +203,10 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
         raise ValidatorError(var_name, validator.__name__, value, exc)
 
     # Ensure that the resulting value is the correct type
-    var_type = var_def.get("type")
     value = validate_variable_type(var_name, var_type, value)
 
-    allowed_values = var_def.get('allowed_values')
-    valid = validate_allowed_values(allowed_values, value)
-    if not valid:
+    allowed_values = var_def.get("allowed_values")
+    if not validate_allowed_values(allowed_values, value):
         message = (
             "Invalid value passed to '%s' in blueprint: %s. Got: '%s', "
             "expected one of %s"

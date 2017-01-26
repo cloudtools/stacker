@@ -34,10 +34,6 @@ supports the following optional keys:
   The type for the variable value. This can either be a native python
   type or one of the `Variable Types`_.
 
-  If the ``type`` is a native python type, any value given to the
-  variable, will be cast to that type. An exception will be raised if the
-  value can't be cast to it's specified type.
-
 **default:**
   The default value that should be used for the variable if none is
   provided in the config.

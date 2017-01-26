@@ -9,6 +9,7 @@ import botocore.exceptions
 from ..base import BaseProvider
 from ... import exceptions
 from ...util import retry_with_backoff
+from ..session_cache import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
 
 
 class Provider(BaseProvider):
+
     """AWS CloudFormation Provider"""
 
     DELETED_STATUS = "DELETE_COMPLETE"
@@ -100,8 +102,11 @@ class Provider(BaseProvider):
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
         if pid != self._pid or not self._cloudformation:
-            session = boto3.Session(region_name=self.region)
-            self._cloudformation = session.client('cloudformation')
+            # session = boto3.Session(region_name=self.region)
+            # self._cloudformation = session.client('cloudformation')
+            session = get_session(self.region)
+            self._cloudformation = session.create_client('cloudformation')
+
         return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):

@@ -10,6 +10,7 @@ import boto3
 import botocore
 import formic
 from troposphere.awslambda import Code
+from stacker.providers.session_cache import get_session
 
 from stacker.util import get_config_directory
 
@@ -415,8 +416,10 @@ def upload_lambda_functions(region, namespace, mappings, parameters, **kwargs):
     else:
         logger.info('lambda: using custom bucket: %s', bucket)
 
-    session = boto3.Session(region_name=region)
-    s3_conn = session.client('s3')
+    # session = boto3.Session(region_name=region)
+    # s3_conn = session.client('s3')
+    session = get_session(region)
+    s3_conn = session.create_client('s3')
 
     _ensure_bucket(s3_conn, bucket)
 

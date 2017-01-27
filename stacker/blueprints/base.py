@@ -1,8 +1,8 @@
 import copy
 import hashlib
 import logging
-import re
-import base64
+from string import Template as StringTemplate
+from stacker.util import read_value_from_path
 
 from troposphere import (
     Parameter,
@@ -222,6 +222,46 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     return value
 
 
+def parse_user_data(variables, raw_user_data, blueprint_name):
+    """Translate a userdata file to into the file contents.
+
+        It supports referencing template variables to create userdata
+        that's supplemented with information from the data, as commonly
+        required when creating EC2 userdata files. Automatically, encodes
+        the data file to base64 after it is processed.
+
+        Args:
+            raw_user_data (str): the user data with the cloud-init info
+
+        Returns:
+            str: The parsed user data, with all the variables values and
+                 refs replaced with their resolved values.
+
+        Raises:
+            MissingVariable: Raised when a variable is in the user_data that
+                             is not given in the blueprint
+
+        """
+    variable_values = {}
+
+    for key in variables.keys():
+        if type(variables[key]) is CFNParameter:
+            variable_values[key] = variables[key].to_parameter_value()
+        else:
+            variable_values[key] = variables[key]
+
+    template = StringTemplate(raw_user_data)
+
+    res = ""
+
+    try:
+        res = template.substitute(variable_values)
+    except Exception as e:
+        raise MissingVariable(blueprint_name, e)
+
+    return res
+
+
 class Blueprint(object):
 
     """Base implementation for rendering a troposphere template.
@@ -405,45 +445,22 @@ class Blueprint(object):
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
 
-    def parse_user_data(self, raw_user_data):
-        """Translate a userdata file to into the file contents.
-
-        It supports referencing template variables to create userdata
-        that's supplemented with information from the data, as commonly
-        required when creating EC2 userdata files. Automatically, encodes
-        the data file to base64 after it is processed.
+    def read_user_data(self, user_data_path):
+        """Reads and parses a user_data file.
 
         Args:
-            raw_user_data (str): the user data with the cloud-init info
+            user_data_path (str):
+                path to the userdata file
 
         Returns:
-            str: The parsed user data, with all the variables values and
-                 refs replaced with their resolved values.
+            str: the parsed user data file
 
         """
-        pattern = re.compile(r'{{([::|\w]+)}}')
-        res = ""
-        start_index = 0
+        raw_user_data = read_value_from_path(user_data_path)
+
         variables = self.get_variables()
 
-        for match in pattern.finditer(raw_user_data):
-            res += raw_user_data[start_index:match.start()]
-
-            key = match.group(1)
-
-            if key in variables:
-                if type(variables[key]) is CFNParameter:
-                    res += variables[key].to_parameter_value()
-                else:
-                    res += variables[key]
-            else:
-                raise MissingVariable(self.name, key)
-
-            start_index = match.end()
-
-        res += raw_user_data[start_index:]
-
-        return base64.b64encode(res)
+        return parse_user_data(variables, raw_user_data, self.name)
 
     @property
     def rendered(self):

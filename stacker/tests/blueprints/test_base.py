@@ -1,5 +1,5 @@
 import unittest
-import base64
+from mock import patch
 
 from mock import MagicMock
 from troposphere import (
@@ -15,6 +15,7 @@ from stacker.blueprints.base import (
     validate_allowed_values,
     validate_variable_type,
     resolve_variable,
+    parse_user_data
 )
 from stacker.blueprints.variables.types import (
     CFNNumber,
@@ -533,42 +534,36 @@ class TestVariables(unittest.TestCase):
             TestBlueprint(name="test", context=MagicMock())
 
     def test_parse_user_data(self):
-        class TestBlueprint(Blueprint):
-            VARIABLES = {
-                "Param1": {"type": str}
-            }
+        expected = 'name: tom, last: taubkin and $'
+        variables = {
+            'name': 'tom',
+            'last': 'taubkin'
+        }
 
-        blueprint = TestBlueprint(name="test", context=MagicMock())
-        variables = [Variable("Param1", "test1")]
-        blueprint.resolve_variables(variables)
-        userdata_raw = "Param1: {{Param1}}"
-        userdata = blueprint.parse_user_data(userdata_raw)
-        print(userdata)
-        self.assertEqual(userdata, base64.b64encode("Param1: test1"))
-
-    def test_parse_user_data_cfn_parameters(self):
-        class TestBlueprint(Blueprint):
-            VARIABLES = {
-                "Param2": {"type": CFNString},
-            }
-
-        blueprint = TestBlueprint(name="test", context=MagicMock())
-        variables = [Variable("Param1", "test1"), Variable("Param2", "test2")]
-        blueprint.resolve_variables(variables)
-        userdata_raw = "Param2: {{Param2}}!"
-        userdata = blueprint.parse_user_data(userdata_raw)
-        self.assertEqual(userdata, base64.b64encode("Param2: test2!"))
+        raw_user_data = 'name: ${name}, last: $last and $$'
+        blueprint_name = 'test'
+        res = parse_user_data(variables, raw_user_data, blueprint_name)
+        self.assertEqual(res, expected)
 
     def test_parse_user_data_fails(self):
-        class TestBlueprint(Blueprint):
-            VARIABLES = {
-                "Param1": {"type": str},
-                "Param2": {"type": str},
-            }
+        variables = {
+            'name': 'tom',
+        }
 
-        blueprint = TestBlueprint(name="test", context=MagicMock())
-        variables = [Variable("Param1", "test1"), Variable("Param2", "test2")]
-        blueprint.resolve_variables(variables)
-        userdata_raw = "My name is {{Param1}} and {{Param3}}."
+        raw_user_data = 'name: ${name}, last: $last and $$'
+        blueprint_name = 'test'
         with self.assertRaises(MissingVariable):
-            blueprint.parse_user_data(userdata_raw)
+            parse_user_data(variables, raw_user_data, blueprint_name)
+
+    @patch('stacker.blueprints.base.read_value_from_path',
+           return_value='contents')
+    @patch('stacker.blueprints.base.parse_user_data')
+    def test_read_user_data(self, parse_mock, file_mock):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {}
+
+        blueprint = TestBlueprint(name="blueprint_name", context=MagicMock())
+        blueprint.resolve_variables({})
+        blueprint.read_user_data('file://test.txt')
+        file_mock.assert_called_with('file://test.txt')
+        parse_mock.assert_called_with({}, 'contents', 'blueprint_name')

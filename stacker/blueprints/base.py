@@ -43,25 +43,33 @@ class CFNParameter(object):
 
         Args:
             name (str): the name of the CloudFormation Parameter
-            value (str or list): the value we're going to submit as a
-                CloudFormation Parameter.
+            value (str, list, int or bool): the value we're going to submit as
+                a CloudFormation Parameter.
 
         """
-        acceptable_types = [basestring, list, int]
+        acceptable_types = [basestring, bool, list, int]
         acceptable = False
         for acceptable_type in acceptable_types:
             if isinstance(value, acceptable_type):
-                # Convert integers to strings
-                if acceptable_type == int:
-                    value = str(value)
-
                 acceptable = True
+                if acceptable_type == bool:
+                    logger.debug("Converting parameter %s boolean '%s' "
+                                 "to string.", name, value)
+                    value = str(value).lower()
+                    break
+
+                if acceptable_type == int:
+                    logger.debug("Converting parameter %s integer '%s' "
+                                 "to string.", name, value)
+                    value = str(value)
+                    break
 
         if not acceptable:
             raise ValueError(
                 "CFNParameter (%s) value must be one of %s got: %s" % (
-                    name, "str, int, or list", value))
+                    name, "str, int, bool, or list", value))
 
+        print value
         self.name = name
         self.value = value
 

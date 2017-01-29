@@ -529,3 +529,11 @@ class TestVariables(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             TestBlueprint(name="test", context=MagicMock())
+
+
+class TestCFNParameter(unittest.TestCase):
+    def test_cfnparameter_convert_boolean(self):
+        p = CFNParameter("myParameter", True)
+        self.assertEqual(p.value, "true")
+        p = CFNParameter("myParameter", False)
+        self.assertEqual(p.value, "false")

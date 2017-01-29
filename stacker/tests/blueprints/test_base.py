@@ -264,11 +264,11 @@ class TestVariables(unittest.TestCase):
         blueprint = TestBlueprint(name="test", context=MagicMock())
         variables = [
             Variable("Param1", 1),
-            Variable("Param2", "${other-stack::Output}"),
+            Variable("Param2", "${output other-stack::Output}"),
             Variable("Param3", 3),
         ]
         resolved_lookups = {
-            mock_lookup("other-stack::Output"): "Test Output",
+            mock_lookup("other-stack::Output", "output"): "Test Output",
         }
         for var in variables:
             var.replace(resolved_lookups)
@@ -326,7 +326,7 @@ class TestVariables(unittest.TestCase):
         variables = [
             Variable(
                 "Param1",
-                "${custom non-string-return-val},${some-stack::Output}",
+                "${custom non-string-return-val},${output some-stack::Output}",
             )
         ]
         lookup = mock_lookup("non-string-return-val", "custom",

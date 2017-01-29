@@ -303,7 +303,7 @@ class TestPlan(unittest.TestCase):
         for i in range(5):
             overrides = {
                 "variables": {
-                    "Var1": "${fakeStack::FakeOutput}",
+                    "Var1": "${output fakeStack::FakeOutput}",
                     "Var2": "${xref fakeStack::FakeOutput2}",
                 },
             }

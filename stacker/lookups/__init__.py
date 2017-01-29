@@ -1,16 +1,18 @@
 from collections import namedtuple
 import re
 
-from .registry import DEFAULT_LOOKUP
 # export resolve_lookups at this level
 from .registry import resolve_lookups  # NOQA
 from .registry import register_lookup_handler  # NOQA
 
+# TODO: we can remove the optionality of of the type in a later release, it
+#       is only included to allow for an error to be thrown while people are
+#       converting their configuration files to 1.0
+
 LOOKUP_REGEX = re.compile("""
 \$\{                                   # opening brace for the lookup
 ((?P<type>[._\-a-zA-Z0-9]*(?=\s))      # type of lookup, must be followed by a
-                                       # space to allow for defaulting to
-                                       # "output" type
+                                       # space
 ?\s*                                   # any number of spaces separating the
                                        # type from the input
 (?P<input>[@\+\/,\._\-a-zA-Z0-9\:\s=]+) # the input value to the lookup
@@ -34,8 +36,13 @@ def extract_lookups_from_string(value):
     for match in LOOKUP_REGEX.finditer(value):
         groupdict = match.groupdict()
         raw = match.groups()[0]
-        lookup_type = groupdict.get("type") or DEFAULT_LOOKUP
-        lookup_input = groupdict.get("input")
+        lookup_type = groupdict["type"]
+        if not lookup_type:
+            raise ValueError("stacker only allows explicit lookup types "
+                             "now, and no longer uses `output` as the "
+                             "default if not specified. Please update your "
+                             "output lookups.")
+        lookup_input = groupdict["input"]
         lookups.add(Lookup(lookup_type, lookup_input, raw))
     return lookups
 

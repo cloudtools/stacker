@@ -1,4 +1,4 @@
-## 1.0.0a5 (2016-11-28)
+## 1.0.0a6 (2016-11-28)
 
 This is a major release with the main change being the removal of the old
 Parameters logic in favor of Blueprint Variables and Lookups.
@@ -12,7 +12,17 @@ Parameters logic in favor of Blueprint Variables and Lookups.
 - keypair hook update to match route53 update [GH-248]
 - Add support for `TroposphereType` [GH-249]
 - Allow = in lookup contents [GH-251]
+- Add troposphere types [GH-257]
 - change capabilities to CAPABILITY\_NAMED\_IAM [GH-262]
+- Disable transformation of variables [GH-266]
+- Support destroying a subset of stacks [GH-278]
+- Update all hooks to use advanced results [GH-285]
+- Use sys\_path for hooks and lookups [GH-286]
+- Remove last of botocore connections [GH-287]
+- Avoid dictionary sharing pollution [GH-293]
+- Change aws\_lambda hook handler to use proper parameters [GH-297]
+- New `split` lookup handler [GH-302]
+- Remove --var flag [GH-289]
 
 ## 0.8.6 (2017-01-26)
 

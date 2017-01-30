@@ -1,11 +1,13 @@
 import copy
 import hashlib
 import logging
+import string
+from stacker.util import read_value_from_path
 
 from troposphere import (
     Parameter,
     Ref,
-    Template,
+    Template
 )
 
 from ..exceptions import (
@@ -14,6 +16,7 @@ from ..exceptions import (
     UnresolvedVariables,
     ValidatorError,
     VariableTypeRequired,
+    InvalidUserdataPlaceholder
 )
 from .variables.types import (
     CFNType,
@@ -216,7 +219,59 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     return value
 
 
+def parse_user_data(variables, raw_user_data, blueprint_name):
+    """Parse the given user data and renders it as a template
+
+    It supports referencing template variables to create userdata
+    that's supplemented with information from the stack, as commonly
+    required when creating EC2 userdata files.
+
+    For example:
+        Given a raw_user_data string: 'open file'
+        And a variables dictionary with: {'file': 'test.txt'}
+        parse_user_data would output: open file test.txt
+
+    Args:
+        variables (dict): variables available to the template
+        raw_user_data (str): the user_data to be parsed
+        blueprint_name (str): the name of the blueprint
+
+    Returns:
+        str: The parsed user data, with all the variables values and
+             refs replaced with their resolved values.
+
+    Raises:
+        InvalidUserdataPlaceholder: Raised when a placeholder name in
+                                    raw_user_data is not valid.
+                                    E.g ${100} would raise this.
+        MissingVariable: Raised when a variable is in the raw_user_data that
+                         is not given in the blueprint
+
+    """
+    variable_values = {}
+
+    for key in variables.keys():
+        if type(variables[key]) is CFNParameter:
+            variable_values[key] = variables[key].to_parameter_value()
+        else:
+            variable_values[key] = variables[key]
+
+    template = string.Template(raw_user_data)
+
+    res = ""
+
+    try:
+        res = template.substitute(variable_values)
+    except ValueError as exp:
+        raise InvalidUserdataPlaceholder(blueprint_name, exp.args[0])
+    except KeyError as key:
+        raise MissingVariable(blueprint_name, key)
+
+    return res
+
+
 class Blueprint(object):
+
     """Base implementation for rendering a troposphere template.
 
     Args:
@@ -397,6 +452,23 @@ class Blueprint(object):
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
+
+    def read_user_data(self, user_data_path):
+        """Reads and parses a user_data file.
+
+        Args:
+            user_data_path (str):
+                path to the userdata file
+
+        Returns:
+            str: the parsed user data file
+
+        """
+        raw_user_data = read_value_from_path(user_data_path)
+
+        variables = self.get_variables()
+
+        return parse_user_data(variables, raw_user_data, self.name)
 
     @property
     def rendered(self):

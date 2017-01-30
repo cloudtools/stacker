@@ -30,6 +30,7 @@ from stacker.exceptions import (
     UnresolvedVariables,
     ValidatorError,
     VariableTypeRequired,
+    InvalidUserdataPlaceholder
 )
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
@@ -546,7 +547,7 @@ class TestVariables(unittest.TestCase):
         res = parse_user_data(variables, raw_user_data, blueprint_name)
         self.assertEqual(res, expected)
 
-    def test_parse_user_data_fails(self):
+    def test_parse_user_data_missing_variable(self):
         variables = {
             'name': 'tom',
         }
@@ -555,6 +556,12 @@ class TestVariables(unittest.TestCase):
         blueprint_name = 'test'
         with self.assertRaises(MissingVariable):
             parse_user_data(variables, raw_user_data, blueprint_name)
+
+    def test_parse_user_data_invaled_placeholder(self):
+        raw_user_data = '$100'
+        blueprint_name = 'test'
+        with self.assertRaises(InvalidUserdataPlaceholder):
+            parse_user_data({}, raw_user_data, blueprint_name)
 
     @patch('stacker.blueprints.base.read_value_from_path',
            return_value='contents')

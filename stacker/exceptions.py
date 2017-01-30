@@ -23,7 +23,7 @@ class InvalidUserdataPlaceholder(Exception):
         message = "Could not parse userdata in blueprint \"%s\". " % (
             blueprint_name)
         message += "Make sure to escape all $ symbols with a $$."
-        super(BadUserdataParameter, self).__init__(
+        super(InvalidUserdataPlaceholder, self).__init__(
             message, *args, **kwargs)
 
 

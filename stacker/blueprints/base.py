@@ -228,7 +228,7 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
 
     Args:
         variables (dict): dictionary of resolved variables
-        raw_user_data (str): a str of the user_data 
+        raw_user_data (str): a str of the user_data
         blueprint_name (str): the name of the blueprint
 
     Returns:
@@ -240,7 +240,7 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
                          is not given in the blueprint
 
         InvalidUserdataPlaceholder: Raised when a placeholder in user_data
-                                    is not stricly alphanumeric. 
+                                    is not stricly alphanumeric.
 
 
         """

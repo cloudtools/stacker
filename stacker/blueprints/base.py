@@ -227,7 +227,7 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
     required when creating EC2 userdata files.
 
     For example:
-        Given a raw_user_data string: 'open file'
+        Given a raw_user_data string: 'open file ${file}'
         And a variables dictionary with: {'file': 'test.txt'}
         parse_user_data would output: open file test.txt
 

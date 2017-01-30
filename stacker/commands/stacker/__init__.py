@@ -1,4 +1,3 @@
-import copy
 import logging
 
 from .build import Build
@@ -34,7 +33,6 @@ class Stacker(BaseCommand):
             options.provider = default.Provider(region=options.region)
         options.context = Context(
             environment=options.environment,
-            variables=copy.deepcopy(options.variables),
             logger_type=self.logger_type,
             # Allow subcommands to provide any specific kwargs to the Context
             # that it wants.

@@ -1,7 +1,7 @@
 import copy
 import hashlib
 import logging
-from string import Template as StringTemplate
+import string
 from stacker.util import read_value_from_path
 
 from troposphere import (
@@ -16,6 +16,7 @@ from ..exceptions import (
     UnresolvedVariables,
     ValidatorError,
     VariableTypeRequired,
+    InvalidUserdataPlaceholder
 )
 from .variables.types import (
     CFNType,
@@ -219,23 +220,28 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
 
 
 def parse_user_data(variables, raw_user_data, blueprint_name):
-    """Translate a userdata file to into the file contents.
+    """Parses the user data file
 
-        It supports referencing template variables to create userdata
-        that's supplemented with information from the data, as commonly
-        required when creating EC2 userdata files. Automatically, encodes
-        the data file to base64 after it is processed.
+    It supports referencing template variables to create userdata
+    that's supplemented with information from the stack, as commonly
+    required when creating EC2 userdata files.
 
-        Args:
-            raw_user_data (str): the user data with the cloud-init info
+    Args:
+        variables (dict): dictionary of resolved variables
+        raw_user_data (str): a str of the user_data 
+        blueprint_name (str): the name of the blueprint
 
-        Returns:
-            str: The parsed user data, with all the variables values and
-                 refs replaced with their resolved values.
+    Returns:
+        str: The parsed user data, with all the variables values and
+             refs replaced with their resolved values.
 
-        Raises:
-            MissingVariable: Raised when a variable is in the user_data that
-                             is not given in the blueprint
+    Raises:
+        MissingVariable: Raised when a variable is in the user_data that
+                         is not given in the blueprint
+
+        InvalidUserdataPlaceholder: Raised when a placeholder in user_data
+                                    is not stricly alphanumeric. 
+
 
         """
     variable_values = {}
@@ -246,14 +252,16 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
         else:
             variable_values[key] = variables[key]
 
-    template = StringTemplate(raw_user_data)
+    template = string.Template(raw_user_data)
 
     res = ""
 
     try:
         res = template.substitute(variable_values)
-    except Exception as e:
-        raise MissingVariable(blueprint_name, e)
+    except ValueError:
+        raise InvalidUserdataPlaceholder(blueprint_name)
+    except KeyError as key:
+        raise MissingVariable(blueprint_name, key)
 
     return res
 

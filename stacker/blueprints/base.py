@@ -220,7 +220,7 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
 
 
 def parse_user_data(variables, raw_user_data, blueprint_name):
-    """Parses the user data file
+    """Parse the given user data and renders it as a template
 
     It supports referencing template variables to create userdata
     that's supplemented with information from the stack, as commonly
@@ -239,8 +239,8 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
         MissingVariable: Raised when a variable is in the user_data that
                          is not given in the blueprint
 
-        InvalidUserdataPlaceholder: Raised when a placeholder in user_data
-                                    is not stricly alphanumeric.
+        InvalidUserdataPlaceholder: Raised when a placeholder name in user_data
+                                    is not valid. E.g ${100} would raise this.
 
 
         """

@@ -19,8 +19,9 @@ class UnknownLookupType(Exception):
 
 class InvalidUserdataPlaceholder(Exception):
 
-    def __init__(self, blueprint_name, *args, **kwargs):
-        message = "Could not parse userdata in blueprint \"%s\". " % (
+    def __init__(self, blueprint_name, exception_message, *args, **kwargs):
+        message = exception_message + ". "
+        message += "Could not parse userdata in blueprint \"%s\". " % (
             blueprint_name)
         message += "Make sure to escape all $ symbols with a $$."
         super(InvalidUserdataPlaceholder, self).__init__(

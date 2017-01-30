@@ -226,6 +226,11 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
     that's supplemented with information from the stack, as commonly
     required when creating EC2 userdata files.
 
+    For example:
+        Given a raw_user_data string: 'open file'
+        And a variables dictionary with: {'file': 'test.txt'}
+        parse_user_data would output: open file test.txt
+
     Args:
         variables (dict): variables available to the template
         raw_user_data (str): the user_data to be parsed
@@ -236,14 +241,12 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
              refs replaced with their resolved values.
 
     Raises:
-        MissingVariable: Raised when a variable is in the user_data that
+        InvalidUserdataPlaceholder: Raised when a placeholder name in raw_user_data
+                                    is not valid. E.g  would raise this.
+        MissingVariable: Raised when a variable is in the raw_user_data that
                          is not given in the blueprint
 
-        InvalidUserdataPlaceholder: Raised when a placeholder name in user_data
-                                    is not valid. E.g ${100} would raise this.
-
-
-        """
+    """
     variable_values = {}
 
     for key in variables.keys():
@@ -258,8 +261,8 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
 
     try:
         res = template.substitute(variable_values)
-    except ValueError:
-        raise InvalidUserdataPlaceholder(blueprint_name)
+    except ValueError as exp:
+        raise InvalidUserdataPlaceholder(blueprint_name, exp.args[0])
     except KeyError as key:
         raise MissingVariable(blueprint_name, key)
 

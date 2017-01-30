@@ -241,8 +241,9 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
              refs replaced with their resolved values.
 
     Raises:
-        InvalidUserdataPlaceholder: Raised when a placeholder name in raw_user_data
-                                    is not valid. E.g  would raise this.
+        InvalidUserdataPlaceholder: Raised when a placeholder name in
+                                    raw_user_data is not valid.
+                                    E.g ${100} would raise this.
         MissingVariable: Raised when a variable is in the raw_user_data that
                          is not given in the blueprint
 

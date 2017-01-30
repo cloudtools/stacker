@@ -19,7 +19,7 @@ def create_domain(provider, context, **kwargs):
 
     """
     client = boto3.client("route53", region_name=provider.region)
-    domain = kwargs.get("domain", context.variables.get("BaseDomain"))
+    domain = kwargs.get("domain")
     if not domain:
         logger.error("domain argument or BaseDomain variable not provided.")
         return False

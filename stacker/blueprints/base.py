@@ -227,8 +227,8 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
     required when creating EC2 userdata files.
 
     Args:
-        variables (dict): dictionary of resolved variables
-        raw_user_data (str): a str of the user_data
+        variables (dict): variables available to the template
+        raw_user_data (str): the user_data to be parsed
         blueprint_name (str): the name of the blueprint
 
     Returns:

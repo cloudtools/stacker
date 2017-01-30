@@ -32,8 +32,6 @@ class Context(object):
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,
             usually all stacks defined in the config will be operated on.
-        variables (dict): Variables from the command line passed down to each
-            blueprint to parameterize the templates.
         mappings (dict): Used as Cloudformation mappings for the blueprint.
         config (dict): The configuration being operated on, containing the
             stack definitions.
@@ -44,7 +42,6 @@ class Context(object):
 
     def __init__(self, environment,  # pylint: disable-msg=too-many-arguments
                  stack_names=None,
-                 variables=None,
                  mappings=None,
                  config=None,
                  logger_type=None,
@@ -56,7 +53,6 @@ class Context(object):
 
         self.environment = environment
         self.stack_names = stack_names or []
-        self.variables = variables or {}
         self.mappings = mappings or {}
         self.logger_type = logger_type
         self.namespace_delimiter = "-"
@@ -111,7 +107,6 @@ class Context(object):
             stack = Stack(
                 definition=stack_def,
                 context=self,
-                variables=self.variables,
                 mappings=self.mappings,
                 force=stack_def["name"] in self.force_stacks,
                 locked=stack_def.get("locked", False),

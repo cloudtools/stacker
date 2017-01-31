@@ -3,7 +3,6 @@ import logging
 import os
 import time
 
-import boto3
 import botocore.exceptions
 
 from ..base import BaseProvider
@@ -102,10 +101,8 @@ class Provider(BaseProvider):
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
         if pid != self._pid or not self._cloudformation:
-            # session = boto3.Session(region_name=self.region)
-            # self._cloudformation = session.client('cloudformation')
             session = get_session(self.region)
-            self._cloudformation = session.create_client('cloudformation')
+            self._cloudformation = session.client('cloudformation')
 
         return self._cloudformation
 

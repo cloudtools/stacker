@@ -6,8 +6,6 @@ import hashlib
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 
-import boto3
-import botocore
 import formic
 from troposphere.awslambda import Code
 from stacker.providers.session_cache import get_session
@@ -416,7 +414,7 @@ def upload_lambda_functions(context, provider, **kwargs):
         logger.info('lambda: using custom bucket: %s', bucket)
 
     session = get_session(region)
-    s3_conn = session.create_client('s3')
+    s3_conn = session.client('s3')
 
     _ensure_bucket(s3_conn, bucket)
 

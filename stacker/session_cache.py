@@ -2,15 +2,25 @@ import json
 import os
 import logging
 import botocore
+import boto3
 
 
 def get_session(region):
+    """Creates a boto3 session
+
+    Args:
+        region (str): The region for the session
+
+    Returns:
+        Object: A  boto3 session with credential 
+                caching
+    """
     session = botocore.session.get_session()
     session.set_config_variable('region',  region)
     c = session.get_component('credential_provider')
     provider = c.get_provider('assume-role')
     provider.cache = CredentialCache()
-    return session
+    return boto3.session.Session(botocore_session=session)
 
 
 class CredentialCache(object):
@@ -23,18 +33,16 @@ class CredentialCache(object):
     """
 
     CACHE_DIR = os.path.expanduser(
-        os.path.join('~', '.stacker', 'cache'))
+        os.path.join('~', '.aws', 'cli', 'cache'))
 
     def __init__(self, working_dir=CACHE_DIR):
         self._working_dir = working_dir
 
     def __contains__(self, cache_key):
-        print("Called Contains")
         actual_key = self._convert_cache_key(cache_key)
         return os.path.isfile(actual_key)
 
     def __getitem__(self, cache_key):
-        print("Called Get Item")
         """Retrieve value from a cache key."""
         actual_key = self._convert_cache_key(cache_key)
         try:
@@ -44,7 +52,6 @@ class CredentialCache(object):
             raise KeyError(cache_key)
 
     def __setitem__(self, cache_key, value):
-        print("Called Set Item")
         full_key = self._convert_cache_key(cache_key)
         try:
             file_content = json.dumps(value, default=str)
@@ -59,6 +66,5 @@ class CredentialCache(object):
             f.write(file_content)
 
     def _convert_cache_key(self, cache_key):
-        print("Convert cache key")
         full_path = os.path.join(self._working_dir, cache_key + '.json')
         return full_path

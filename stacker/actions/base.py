@@ -1,8 +1,6 @@
 import copy
 import logging
 
-import botocore
-import boto3
 import botocore.exceptions
 from ..providers.session_cache import get_session
 
@@ -64,10 +62,8 @@ class BaseAction(object):
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
-            # session = boto3.Session(region_name=self.provider.region)
-            # self._s3_conn = session.client('s3')
             session = get_session(self.provider.region)
-            self._s3_conn = session.create_client('s3')
+            self._s3_conn = session.client('s3')
 
         return self._s3_conn
 

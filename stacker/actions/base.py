@@ -2,7 +2,7 @@ import copy
 import logging
 
 import botocore.exceptions
-from ..providers.session_cache import get_session
+from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
 

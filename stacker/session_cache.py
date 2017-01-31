@@ -6,7 +6,7 @@ import boto3
 
 
 def get_session(region):
-    """Creates a boto3 session
+    """Creates a boto3 session with a cache
 
     Args:
         region (str): The region for the session

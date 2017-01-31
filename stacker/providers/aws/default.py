@@ -8,7 +8,7 @@ import botocore.exceptions
 from ..base import BaseProvider
 from ... import exceptions
 from ...util import retry_with_backoff
-from ..session_cache import get_session
+from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
 

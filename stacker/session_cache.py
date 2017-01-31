@@ -1,6 +1,5 @@
 import json
 import os
-import logging
 import botocore
 import boto3
 
@@ -12,7 +11,7 @@ def get_session(region):
         region (str): The region for the session
 
     Returns:
-        Object: A  boto3 session with credential 
+        Object: A  boto3 session with credential
                 caching
     """
     session = botocore.session.get_session()

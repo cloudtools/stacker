@@ -46,6 +46,6 @@ def handler(value, **kwargs):
     if "@" in value:
         region, value = value.split("@", 1)
 
-    kms = get_session(provider.region).client('iam')
+    kms = get_session(region).client('kms')
     decoded = value.decode("base64")
     return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]

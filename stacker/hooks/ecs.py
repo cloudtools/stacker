@@ -22,7 +22,7 @@ def create_clusters(provider, context, **kwargs):
     Returns: boolean for whether or not the hook succeeded.
 
     """
-    conn = get_session(provider.region)
+    conn = get_session(provider.region).client('ecs')
 
     try:
         clusters = kwargs["clusters"]

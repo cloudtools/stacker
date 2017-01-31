@@ -1,6 +1,5 @@
 import logging
 import os
-import json
 
 from stacker.session_cache import get_session
 

@@ -19,7 +19,7 @@ def create_domain(provider, context, **kwargs):
 
     """
     session = get_session(provider.region)
-    client = session.client("route53", region_name=provider.region)
+    client = session.client("route53")
     domain = kwargs.get("domain")
     if not domain:
         logger.error("domain argument or BaseDomain variable not provided.")

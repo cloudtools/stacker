@@ -2,6 +2,7 @@ import json
 import os
 import botocore
 import boto3
+import logging
 
 
 def get_session(region):
@@ -11,8 +12,8 @@ def get_session(region):
         region (str): The region for the session
 
     Returns:
-        Object: A  boto3 session with credential
-                caching
+        :class:`boto3.session.Session`: A boto3 session with
+            credential caching
     """
     session = botocore.session.get_session()
     session.set_config_variable('region',  region)
@@ -20,6 +21,9 @@ def get_session(region):
     provider = c.get_provider('assume-role')
     provider.cache = CredentialCache()
     return boto3.session.Session(botocore_session=session)
+
+
+logger = logging.getLogger(__name__)
 
 
 class CredentialCache(object):
@@ -43,6 +47,7 @@ class CredentialCache(object):
 
     def __getitem__(self, cache_key):
         """Retrieve value from a cache key."""
+        logger.debug("Getting cached credentials from: %s", self.CACHE_DIR)
         actual_key = self._convert_cache_key(cache_key)
         try:
             with open(actual_key) as f:

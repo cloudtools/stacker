@@ -1,4 +1,4 @@
-import boto3
+from stacker.session_cache import get_session
 
 from ...util import read_value_from_path
 
@@ -46,6 +46,6 @@ def handler(value, **kwargs):
     if "@" in value:
         region, value = value.split("@", 1)
 
-    kms = boto3.client("kms", region_name=region)
+    kms = get_session(region).client('kms')
     decoded = value.decode("base64")
     return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]

@@ -1,7 +1,7 @@
 import logging
 import os
 
-import boto3
+from stacker.session_cache import get_session
 
 from . import utils
 
@@ -28,7 +28,8 @@ def ensure_keypair_exists(provider, context, **kwargs):
     Returns: boolean for whether or not the hook succeeded.
 
     """
-    client = boto3.client("ec2", region_name=provider.region)
+    session = get_session(provider.region)
+    client = session.client("ec2")
     keypair_name = kwargs.get("keypair")
     resp = client.describe_key_pairs()
     keypair = find(resp["KeyPairs"], "KeyName", keypair_name)

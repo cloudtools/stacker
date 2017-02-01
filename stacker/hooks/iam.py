@@ -1,7 +1,7 @@
 import copy
 import logging
 
-import boto3
+from stacker.session_cache import get_session
 from botocore.exceptions import ClientError
 
 from awacs.aws import Statement, Allow, Policy
@@ -28,7 +28,7 @@ def create_ecs_service_role(provider, context, **kwargs):
 
     """
     role_name = kwargs.get("role_name", "ecsServiceRole")
-    client = boto3.client("iam", region_name=provider.region)
+    client = get_session(provider.region).client('iam')
 
     try:
         client.create_role(
@@ -121,7 +121,7 @@ def get_cert_contents(kwargs):
 
 
 def ensure_server_cert_exists(provider, context, **kwargs):
-    client = boto3.client("iam", region_name=provider.region)
+    client = get_session(provider.region).client('iam')
     cert_name = kwargs["cert_name"]
     status = "unknown"
     try:

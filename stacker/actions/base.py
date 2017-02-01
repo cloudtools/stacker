@@ -1,8 +1,8 @@
 import copy
 import logging
 
-import boto3
 import botocore.exceptions
+from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ def stack_template_url(bucket_name, blueprint):
 
 
 class BaseAction(object):
+
     """Actions perform the actual work of each Command.
 
     Each action is tied to a :class:`stacker.commands.base.BaseCommand`, and
@@ -61,8 +62,9 @@ class BaseAction(object):
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
-            session = boto3.Session(region_name=self.provider.region)
+            session = get_session(self.provider.region)
             self._s3_conn = session.client('s3')
+
         return self._s3_conn
 
     def ensure_cfn_bucket(self):

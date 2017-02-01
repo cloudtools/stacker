@@ -3,7 +3,7 @@
 #   https://github.com/boto/boto/pull/3143
 import logging
 
-import boto3
+from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def create_clusters(provider, context, **kwargs):
     Returns: boolean for whether or not the hook succeeded.
 
     """
-    conn = boto3.client("ecs", region_name=provider.region)
+    conn = get_session(provider.region).client('ecs')
 
     try:
         clusters = kwargs["clusters"]

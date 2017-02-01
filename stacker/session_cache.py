@@ -68,6 +68,9 @@ class CredentialCache(object):
                                os.O_WRONLY | os.O_CREAT, 0o600), 'w') as f:
             f.truncate()
             f.write(file_content)
+            logger.debug(
+                "Updating cache with new obtained credentials: %s",
+                self.CACHE_DIR)
 
     def _convert_cache_key(self, cache_key):
         full_path = os.path.join(self._working_dir, cache_key + '.json')

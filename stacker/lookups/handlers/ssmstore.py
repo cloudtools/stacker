@@ -6,7 +6,8 @@ TYPE_NAME = "ssmstore"
 
 
 def handler(value, **kwargs):
-    """Retrieve (and decrypt if applicable) a parameter from AWS SSM Parameter Store.
+    """Retrieve (and decrypt if applicable) a parameter from
+    AWS SSM Parameter Store.
 
     ssmstore field types should be in the following format:
 
@@ -46,5 +47,8 @@ def handler(value, **kwargs):
         ],
         WithDecryption=True
     )
+    if 'Parameters' in response:
+        return response['Parameters'][0]['Value']
 
-    return response['Parameters'][0]['Value']
+    raise ValueError('SSMKey "{}" does not exist in region {}'.format(value,
+                                                                      region))

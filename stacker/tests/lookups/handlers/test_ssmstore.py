@@ -1,6 +1,6 @@
 import unittest
 import boto3
-from mock import patch
+import mock
 from botocore.stub import Stubber
 from stacker.lookups.handlers.ssmstore import handler
 
@@ -10,7 +10,7 @@ class TestSSMStoreHandler(unittest.TestCase):
 
     def setUp(self):
         self.stubber = Stubber(self.client)
-        get_parameters_response = {
+        self.get_parameters_response = {
             'Parameters': [
                 {
                     'Name': 'ssmkey',
@@ -19,33 +19,51 @@ class TestSSMStoreHandler(unittest.TestCase):
                 }
             ],
             'InvalidParameters': [
-                'invalidparam'
+                'invalidssmparam'
             ]
         }
-        expected_params = {
+        self.invalid_get_parameters_response = {
+            'InvalidParameters': [
+                'ssmkey'
+            ]
+        }
+        self.expected_params = {
             'Names': ['ssmkey'],
             'WithDecryption': True
         }
-        self.stubber.add_response('get_parameters',
-                                  get_parameters_response, expected_params)
-
         self.ssmkey = "ssmkey"
-        self.ssmvalue = 'ssmvalue'
+        self.ssmvalue = "ssmvalue"
 
-    @patch('stacker.lookups.handlers.ssmstore.boto3.client',
-           return_value=client)
+    @mock.patch('stacker.lookups.handlers.ssmstore.boto3.client',
+                return_value=client)
     def test_ssmstore_handler(self, mock_client):
+        self.stubber.add_response('get_parameters',
+                                  self.get_parameters_response,
+                                  self.expected_params)
         with self.stubber:
             value = handler(self.ssmkey)
-            print "Value: %s" % value
             self.assertEqual(value, self.ssmvalue)
 
-    @patch('stacker.lookups.handlers.ssmstore.boto3.client',
-           return_value=client)
+    @mock.patch('stacker.lookups.handlers.ssmstore.boto3.client',
+                return_value=client)
+    def test_ssmstore_invalid_value_handler(self, mock_client):
+        self.stubber.add_response('get_parameters',
+                                  self.invalid_get_parameters_response,
+                                  self.expected_params)
+        with self.stubber:
+            try:
+                handler(self.ssmkey)
+            except ValueError:
+                assert True
+
+    @mock.patch('stacker.lookups.handlers.ssmstore.boto3.client',
+                return_value=client)
     def test_ssmstore_handler_with_region(self, mock_client):
+        self.stubber.add_response('get_parameters',
+                                  self.get_parameters_response,
+                                  self.expected_params)
         region = "us-east-1"
         temp_value = "%s@%s" % (region, self.ssmkey)
-        print temp_value
         with self.stubber:
             value = handler(temp_value)
             self.assertEqual(value, self.ssmvalue)

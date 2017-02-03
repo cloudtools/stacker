@@ -3,15 +3,7 @@ import mock
 from botocore.stub import Stubber
 from stacker.lookups.handlers.ssmstore import handler
 import boto3
-
-
-class SessionStub:
-
-    def __init__(self, clientStub):
-        self.client_stub = clientStub
-
-    def client(self, region):
-        return self.client_stub
+from stacker.tests.factories import SessionStub
 
 
 class TestSSMStoreHandler(unittest.TestCase):
@@ -44,7 +36,7 @@ class TestSSMStoreHandler(unittest.TestCase):
         self.ssmvalue = "ssmvalue"
 
     @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
-                return_value=sessionStub(client))
+                return_value=SessionStub(client))
     def test_ssmstore_handler(self, mock_client):
         self.stubber.add_response('get_parameters',
                                   self.get_parameters_response,
@@ -54,7 +46,7 @@ class TestSSMStoreHandler(unittest.TestCase):
             self.assertEqual(value, self.ssmvalue)
 
     @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
-                return_value=sessionStub(client))
+                return_value=SessionStub(client))
     def test_ssmstore_invalid_value_handler(self, mock_client):
         self.stubber.add_response('get_parameters',
                                   self.invalid_get_parameters_response,
@@ -66,7 +58,7 @@ class TestSSMStoreHandler(unittest.TestCase):
                 assert True
 
     @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
-                return_value=sessionStub(client))
+                return_value=SessionStub(client))
     def test_ssmstore_handler_with_region(self, mock_client):
         self.stubber.add_response('get_parameters',
                                   self.get_parameters_response,

@@ -6,7 +6,7 @@ from stacker.lookups.handlers.ssmstore import handler
 
 
 class TestSSMStoreHandler(unittest.TestCase):
-    client = boto3.client('ssm')
+    client = boto3.client('ssm', region_name='us-east-1')
 
     def setUp(self):
         self.stubber = Stubber(self.client)

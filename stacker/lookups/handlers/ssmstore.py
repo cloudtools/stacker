@@ -1,4 +1,4 @@
-import boto3
+from stacker.session_cache import get_session
 
 from ...util import read_value_from_path
 
@@ -40,7 +40,7 @@ def handler(value, **kwargs):
     if "@" in value:
         region, value = value.split("@", 1)
 
-    client = boto3.client("ssm", region_name=region)
+    client = get_session(region).client("ssm")
     response = client.get_parameters(
         Names=[
             value,

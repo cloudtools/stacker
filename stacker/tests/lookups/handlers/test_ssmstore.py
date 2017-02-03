@@ -1,12 +1,13 @@
 import unittest
-import boto3
 import mock
 from botocore.stub import Stubber
 from stacker.lookups.handlers.ssmstore import handler
+import boto3
+from stacker.tests.factories import SessionStub
 
 
 class TestSSMStoreHandler(unittest.TestCase):
-    client = boto3.client('ssm')
+    client = boto3.client('ssm', region_name='us-east-1')
 
     def setUp(self):
         self.stubber = Stubber(self.client)
@@ -34,8 +35,8 @@ class TestSSMStoreHandler(unittest.TestCase):
         self.ssmkey = "ssmkey"
         self.ssmvalue = "ssmvalue"
 
-    @mock.patch('stacker.lookups.handlers.ssmstore.boto3.client',
-                return_value=client)
+    @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
+                return_value=SessionStub(client))
     def test_ssmstore_handler(self, mock_client):
         self.stubber.add_response('get_parameters',
                                   self.get_parameters_response,
@@ -44,8 +45,8 @@ class TestSSMStoreHandler(unittest.TestCase):
             value = handler(self.ssmkey)
             self.assertEqual(value, self.ssmvalue)
 
-    @mock.patch('stacker.lookups.handlers.ssmstore.boto3.client',
-                return_value=client)
+    @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
+                return_value=SessionStub(client))
     def test_ssmstore_invalid_value_handler(self, mock_client):
         self.stubber.add_response('get_parameters',
                                   self.invalid_get_parameters_response,
@@ -56,8 +57,8 @@ class TestSSMStoreHandler(unittest.TestCase):
             except ValueError:
                 assert True
 
-    @mock.patch('stacker.lookups.handlers.ssmstore.boto3.client',
-                return_value=client)
+    @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
+                return_value=SessionStub(client))
     def test_ssmstore_handler_with_region(self, mock_client):
         self.stubber.add_response('get_parameters',
                                   self.get_parameters_response,

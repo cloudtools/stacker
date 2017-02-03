@@ -7,7 +7,7 @@ VERSION = "0.8.6"
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "troposphere~=1.9.0",
+    "troposphere>=1.8.0",
     "boto3>=1.3.1,<1.5.0",
     "PyYAML~=3.11",
     "awacs~=0.6.0",

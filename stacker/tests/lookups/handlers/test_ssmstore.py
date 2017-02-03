@@ -5,13 +5,13 @@ from stacker.lookups.handlers.ssmstore import handler
 import boto3
 
 
-class sessionStub:
+class SessionStub:
 
     def __init__(self, clientStub):
-        self.clientStub = clientStub
+        self.client_stub = clientStub
 
     def client(self, region):
-        return self.clientStub
+        return self.client_stub
 
 
 class TestSSMStoreHandler(unittest.TestCase):

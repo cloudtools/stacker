@@ -16,7 +16,8 @@ def get_session(region):
             credential caching
     """
     session = botocore.session.get_session()
-    session.set_config_variable('region',  region)
+    if region is not None:
+        session.set_config_variable('region',  region)
     c = session.get_component('credential_provider')
     provider = c.get_provider('assume-role')
     provider.cache = CredentialCache()

@@ -126,9 +126,8 @@ class BaseCommand(object):
                                  "the command line. Overrides your "
                                  "environment file settings. Can be specified "
                                  "more than once.")
-        parser.add_argument("-r", "--region", default="us-east-1",
-                            help="The AWS region to launch in. Default: "
-                                 "%(default)s")
+        parser.add_argument("-r", "--region",
+                            help="The AWS region to launch in.")
         parser.add_argument("-v", "--verbose", action="count", default=0,
                             help="Increase output verbosity. May be specified "
                                  "up to twice.")

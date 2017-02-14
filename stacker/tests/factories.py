@@ -28,9 +28,9 @@ def generate_definition(base_name, stack_id, **overrides):
     return definition
 
 
-def mock_lookup(lookup_input, lookup_type='output', raw=None):
+def mock_lookup(lookup_input, lookup_type, raw=None):
     if raw is None:
-        raw = lookup_input
+        raw = "%s %s" % (lookup_type, lookup_input)
     return Lookup(type=lookup_type, input=lookup_input, raw=raw)
 
 

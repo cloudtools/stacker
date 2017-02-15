@@ -542,6 +542,11 @@ class TestCFNParameter(unittest.TestCase):
         self.assertEqual(p.value, "true")
         p = CFNParameter("myParameter", False)
         self.assertEqual(p.value, "false")
+        # Test to make sure other types aren't affected
+        p = CFNParameter("myParameter", 0)
+        self.assertEqual(p.value, "0")
+        p = CFNParameter("myParameter", "myString")
+        self.assertEqual(p.value, "myString")
 
     def test_parse_user_data(self):
         expected = 'name: tom, last: taubkin and $'

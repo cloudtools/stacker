@@ -6,4 +6,4 @@ build:
 test:
 	flake8 --exclude stacker/tests/ stacker
 	flake8 --ignore N802 stacker/tests # ignore setUp naming
-	python setup.py test
+	export AWS_DEFAULT_REGION=us-east-1 && python setup.py test

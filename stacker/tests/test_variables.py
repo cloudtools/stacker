@@ -19,7 +19,7 @@ class TestVariables(unittest.TestCase):
         var = Variable("Param1", "2")
         self.assertEqual(len(var.lookups), 0)
         resolved_lookups = {
-            mock_lookup("fakeStack::FakeOutput"): "resolved",
+            mock_lookup("fakeStack::FakeOutput", "output"): "resolved",
         }
         var.replace(resolved_lookups)
         self.assertEqual(var.value, "2")
@@ -32,16 +32,16 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(var.value, "2")
 
     def test_variable_replace_simple_lookup(self):
-        var = Variable("Param1", "${fakeStack::FakeOutput}")
+        var = Variable("Param1", "${output fakeStack::FakeOutput}")
         self.assertEqual(len(var.lookups), 1)
         resolved_lookups = {
-            mock_lookup("fakeStack::FakeOutput"): "resolved",
+            mock_lookup("fakeStack::FakeOutput", "output"): "resolved",
         }
         var.replace(resolved_lookups)
         self.assertEqual(var.value, "resolved")
 
     def test_variable_resolve_simple_lookup(self):
-        var = Variable("Param1", "${fakeStack::FakeOutput}")
+        var = Variable("Param1", "${output fakeStack::FakeOutput}")
         self.assertEqual(len(var.lookups), 1)
         self.provider.get_output.return_value = "resolved"
         var.resolve(self.context, self.provider)
@@ -51,12 +51,13 @@ class TestVariables(unittest.TestCase):
     def test_variable_replace_multiple_lookups_string(self):
         var = Variable(
             "Param1",
-            "url://${fakeStack::FakeOutput}@${fakeStack::FakeOutput2}",
+            "url://${output fakeStack::FakeOutput}@"
+            "${output fakeStack::FakeOutput2}",
         )
         self.assertEqual(len(var.lookups), 2)
         resolved_lookups = {
-            mock_lookup("fakeStack::FakeOutput"): "resolved",
-            mock_lookup("fakeStack::FakeOutput2"): "resolved2",
+            mock_lookup("fakeStack::FakeOutput", "output"): "resolved",
+            mock_lookup("fakeStack::FakeOutput2", "output"): "resolved2",
         }
         var.replace(resolved_lookups)
         self.assertEqual(var.value, "url://resolved@resolved2")
@@ -64,7 +65,8 @@ class TestVariables(unittest.TestCase):
     def test_variable_resolve_multiple_lookups_string(self):
         var = Variable(
             "Param1",
-            "url://${fakeStack::FakeOutput}@${fakeStack::FakeOutput2}",
+            "url://${output fakeStack::FakeOutput}@"
+            "${output fakeStack::FakeOutput2}",
         )
         self.assertEqual(len(var.lookups), 2)
 
@@ -84,33 +86,33 @@ class TestVariables(unittest.TestCase):
         var = Variable("Param1", ["something", "here"])
         self.assertEqual(len(var.lookups), 0)
         resolved_lookups = {
-            mock_lookup("fakeStack::FakeOutput"): "resolved",
+            mock_lookup("fakeStack::FakeOutput", "output"): "resolved",
         }
         var.replace(resolved_lookups)
         self.assertEqual(var.value, ["something", "here"])
 
     def test_variable_replace_lookups_list(self):
-        value = ["something", "${fakeStack::FakeOutput}",
-                 "${fakeStack::FakeOutput2}"]
+        value = ["something", "${output fakeStack::FakeOutput}",
+                 "${output fakeStack::FakeOutput2}"]
         var = Variable("Param1", value)
         self.assertEqual(len(var.lookups), 2)
         resolved_lookups = {
-            mock_lookup("fakeStack::FakeOutput"): "resolved",
-            mock_lookup("fakeStack::FakeOutput2"): "resolved2",
+            mock_lookup("fakeStack::FakeOutput", "output"): "resolved",
+            mock_lookup("fakeStack::FakeOutput2", "output"): "resolved2",
         }
         var.replace(resolved_lookups)
         self.assertEqual(var.value, ["something", "resolved", "resolved2"])
 
     def test_variable_replace_lookups_dict(self):
         value = {
-            "something": "${fakeStack::FakeOutput}",
-            "other": "${fakeStack::FakeOutput2}",
+            "something": "${output fakeStack::FakeOutput}",
+            "other": "${output fakeStack::FakeOutput2}",
         }
         var = Variable("Param1", value)
         self.assertEqual(len(var.lookups), 2)
         resolved_lookups = {
-            mock_lookup("fakeStack::FakeOutput"): "resolved",
-            mock_lookup("fakeStack::FakeOutput2"): "resolved2",
+            mock_lookup("fakeStack::FakeOutput", "output"): "resolved",
+            mock_lookup("fakeStack::FakeOutput2", "output"): "resolved2",
         }
         var.replace(resolved_lookups)
         self.assertEqual(var.value, {"something": "resolved", "other":
@@ -119,21 +121,21 @@ class TestVariables(unittest.TestCase):
     def test_variable_replace_lookups_mixed(self):
         value = {
             "something": [
-                "${fakeStack::FakeOutput}",
+                "${output fakeStack::FakeOutput}",
                 "other",
             ],
             "here": {
-                "other": "${fakeStack::FakeOutput2}",
-                "same": "${fakeStack::FakeOutput}",
-                "mixed": "something:${fakeStack::FakeOutput3}",
+                "other": "${output fakeStack::FakeOutput2}",
+                "same": "${output fakeStack::FakeOutput}",
+                "mixed": "something:${output fakeStack::FakeOutput3}",
             },
         }
         var = Variable("Param1", value)
         self.assertEqual(len(var.lookups), 3)
         resolved_lookups = {
-            mock_lookup("fakeStack::FakeOutput"): "resolved",
-            mock_lookup("fakeStack::FakeOutput2"): "resolved2",
-            mock_lookup("fakeStack::FakeOutput3"): "resolved3",
+            mock_lookup("fakeStack::FakeOutput", "output"): "resolved",
+            mock_lookup("fakeStack::FakeOutput2", "output"): "resolved2",
+            mock_lookup("fakeStack::FakeOutput3", "output"): "resolved3",
         }
         var.replace(resolved_lookups)
         self.assertEqual(var.value, {

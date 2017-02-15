@@ -19,6 +19,16 @@ class TestStacker(unittest.TestCase):
         # verify namespace was modified
         self.assertEqual(args.environment["namespace"], "test.override")
 
+    def test_stacker_build_parse_args_region_from_env(self):
+        stacker = Stacker()
+        args = stacker.parse_args(
+            ["build",
+             "-e", "namespace=test.override",
+             "stacker/tests/fixtures/basic.env",
+             "stacker/tests/fixtures/vpc-bastion-db-web.yaml"]
+        )
+        self.assertEqual(args.region, None)
+
     def test_stacker_build_context_passed_to_blueprint(self):
         stacker = Stacker()
         args = stacker.parse_args(

@@ -1,10 +1,11 @@
 import unittest
+from mock import patch
 
 from mock import MagicMock
 from troposphere import (
     Base64,
     Ref,
-    s3,
+    s3
 )
 
 from stacker.blueprints.base import (
@@ -14,6 +15,7 @@ from stacker.blueprints.base import (
     validate_allowed_values,
     validate_variable_type,
     resolve_variable,
+    parse_user_data
 )
 from stacker.blueprints.variables.types import (
     CFNNumber,
@@ -28,6 +30,7 @@ from stacker.exceptions import (
     UnresolvedVariables,
     ValidatorError,
     VariableTypeRequired,
+    InvalidUserdataPlaceholder
 )
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
@@ -44,6 +47,7 @@ register_lookup_handler("mock", mock_lookup_handler)
 
 
 class TestBuildParameter(unittest.TestCase):
+
     def test_base_parameter(self):
         p = build_parameter("BasicParam", {"type": "String"})
         p.validate()
@@ -72,6 +76,7 @@ class TestVariables(unittest.TestCase):
             }
 
         class TestBlueprintSublcass(TestBlueprint):
+
             def defined_variables(self):
                 variables = super(TestBlueprintSublcass,
                                   self).defined_variables()
@@ -264,11 +269,11 @@ class TestVariables(unittest.TestCase):
         blueprint = TestBlueprint(name="test", context=MagicMock())
         variables = [
             Variable("Param1", 1),
-            Variable("Param2", "${other-stack::Output}"),
+            Variable("Param2", "${output other-stack::Output}"),
             Variable("Param3", 3),
         ]
         resolved_lookups = {
-            mock_lookup("other-stack::Output"): "Test Output",
+            mock_lookup("other-stack::Output", "output"): "Test Output",
         }
         for var in variables:
             var.replace(resolved_lookups)
@@ -326,7 +331,7 @@ class TestVariables(unittest.TestCase):
         variables = [
             Variable(
                 "Param1",
-                "${custom non-string-return-val},${some-stack::Output}",
+                "${custom non-string-return-val},${output some-stack::Output}",
             )
         ]
         lookup = mock_lookup("non-string-return-val", "custom",
@@ -537,3 +542,44 @@ class TestCFNParameter(unittest.TestCase):
         self.assertEqual(p.value, "true")
         p = CFNParameter("myParameter", False)
         self.assertEqual(p.value, "false")
+
+    def test_parse_user_data(self):
+        expected = 'name: tom, last: taubkin and $'
+        variables = {
+            'name': 'tom',
+            'last': 'taubkin'
+        }
+
+        raw_user_data = 'name: ${name}, last: $last and $$'
+        blueprint_name = 'test'
+        res = parse_user_data(variables, raw_user_data, blueprint_name)
+        self.assertEqual(res, expected)
+
+    def test_parse_user_data_missing_variable(self):
+        variables = {
+            'name': 'tom',
+        }
+
+        raw_user_data = 'name: ${name}, last: $last and $$'
+        blueprint_name = 'test'
+        with self.assertRaises(MissingVariable):
+            parse_user_data(variables, raw_user_data, blueprint_name)
+
+    def test_parse_user_data_invaled_placeholder(self):
+        raw_user_data = '$100'
+        blueprint_name = 'test'
+        with self.assertRaises(InvalidUserdataPlaceholder):
+            parse_user_data({}, raw_user_data, blueprint_name)
+
+    @patch('stacker.blueprints.base.read_value_from_path',
+           return_value='contents')
+    @patch('stacker.blueprints.base.parse_user_data')
+    def test_read_user_data(self, parse_mock, file_mock):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {}
+
+        blueprint = TestBlueprint(name="blueprint_name", context=MagicMock())
+        blueprint.resolve_variables({})
+        blueprint.read_user_data('file://test.txt')
+        file_mock.assert_called_with('file://test.txt')
+        parse_mock.assert_called_with({}, 'contents', 'blueprint_name')

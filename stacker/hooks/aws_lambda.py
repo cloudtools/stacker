@@ -5,11 +5,11 @@ import logging
 import hashlib
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
-
-import boto3
 import botocore
+
 import formic
 from troposphere.awslambda import Code
+from stacker.session_cache import get_session
 
 from stacker.util import get_config_directory
 
@@ -414,7 +414,7 @@ def upload_lambda_functions(context, provider, **kwargs):
     else:
         logger.info('lambda: using custom bucket: %s', bucket)
 
-    session = boto3.Session(region_name=provider.region)
+    session = get_session(provider.region)
     s3_conn = session.client('s3')
 
     _ensure_bucket(s3_conn, bucket)

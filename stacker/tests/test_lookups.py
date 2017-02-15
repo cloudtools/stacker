@@ -1,6 +1,6 @@
 import unittest
 
-from stacker.lookups import extract_lookups
+from stacker.lookups import extract_lookups, extract_lookups_from_string
 
 
 class TestLookupExtraction(unittest.TestCase):
@@ -15,29 +15,33 @@ class TestLookupExtraction(unittest.TestCase):
 
     def test_multiple_lookups_string(self):
         lookups = extract_lookups(
-            "url://${fakeStack::FakeOutput}@${fakeStack::FakeOutput2}"
+            "url://${output fakeStack::FakeOutput}@"
+            "${output fakeStack::FakeOutput2}"
         )
         self.assertEqual(len(lookups), 2)
         self.assertEqual(list(lookups)[0].type, "output")
 
     def test_lookups_list(self):
-        lookups = extract_lookups(["something", "${fakeStack::FakeOutput}"])
+        lookups = extract_lookups([
+            "something",
+            "${output fakeStack::FakeOutput}"
+        ])
         self.assertEqual(len(lookups), 1)
 
     def test_lookups_dict(self):
         lookups = extract_lookups({
-            "something": "${fakeStack::FakeOutput}",
+            "something": "${output fakeStack::FakeOutput}",
             "other": "value",
         })
         self.assertEqual(len(lookups), 1)
 
     def test_lookups_mixed(self):
         lookups = extract_lookups({
-            "something": "${fakeStack::FakeOutput}",
-            "list": ["value", "${fakeStack::FakeOutput2}"],
+            "something": "${output fakeStack::FakeOutput}",
+            "list": ["value", "${output fakeStack::FakeOutput2}"],
             "dict": {
                 "other": "value",
-                "another": "${fakeStack::FakeOutput3}",
+                "another": "${output fakeStack::FakeOutput3}",
             },
         })
         self.assertEqual(len(lookups), 3)
@@ -79,3 +83,19 @@ class TestLookupExtraction(unittest.TestCase):
         lookup = list(lookups)[0]
         self.assertEqual(lookup.type, "kms")
         self.assertEqual(lookup.input, "file://path/to/some/file.txt")
+
+    def test_valid_extract_lookups_from_string(self):
+        _type = "output"
+        _input = "vpc::PublicSubnets"
+        value = "${%s %s}" % (_type, _input)
+        lookups = extract_lookups_from_string(value)
+        l = lookups.pop()
+        assert l.type == _type
+        assert l.input == _input
+        assert l.raw == "%s %s" % (_type, _input)
+
+    def test_invalid_extract_lookups_from_string(self):
+        _input = "vpc::PublicSubnets"
+        value = "${%s}" % (_input)
+        with self.assertRaises(ValueError):
+            extract_lookups_from_string(value)

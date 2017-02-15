@@ -23,10 +23,10 @@ class TestStack(unittest.TestCase):
             variables={
                 "Var1": "${noop fakeStack3::FakeOutput}",
                 "Var2": (
-                    "some.template.value:${fakeStack2::FakeOutput}:"
-                    "${fakeStack::FakeOutput}"
+                    "some.template.value:${output fakeStack2::FakeOutput}:"
+                    "${output fakeStack::FakeOutput}"
                 ),
-                "Var3": "${fakeStack::FakeOutput},"
+                "Var3": "${output fakeStack::FakeOutput},"
                         "${output fakeStack2::FakeOutput}",
             },
             requires=[self.context.get_fqn("fakeStack")],
@@ -47,7 +47,7 @@ class TestStack(unittest.TestCase):
             base_name="vpc",
             stack_id=1,
             variables={
-                "Var1": "${vpc.1::FakeOutput}",
+                "Var1": "${output vpc.1::FakeOutput}",
             },
         )
         stack = Stack(definition=definition, context=self.context)
@@ -59,7 +59,7 @@ class TestStack(unittest.TestCase):
             base_name="vpc",
             stack_id=1,
             variables={
-                "Param1": "${fakeStack::FakeOutput}",
+                "Param1": "${output fakeStack::FakeOutput}",
             },
         )
         stack = Stack(definition=definition, context=self.context)

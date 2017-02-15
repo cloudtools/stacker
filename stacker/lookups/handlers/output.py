@@ -37,11 +37,5 @@ def handler(value, provider=None, context=None, fqn=False, **kwargs):
 
 
 def deconstruct(value):
-
-    # Probably an undefined environment variable
-    # Provides a clearer statement for debugging
-    if "::" not in value:
-        raise ValueError("Unknown variable in config file: %s" % value)
-
     stack_name, output_name = value.split("::")
     return Output(stack_name, output_name)

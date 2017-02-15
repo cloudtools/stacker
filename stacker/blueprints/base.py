@@ -72,7 +72,6 @@ class CFNParameter(object):
                 "CFNParameter (%s) value must be one of %s got: %s" % (
                     name, "str, int, bool, or list", value))
 
-        print value
         self.name = name
         self.value = value
 

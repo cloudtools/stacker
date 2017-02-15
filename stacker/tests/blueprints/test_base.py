@@ -535,6 +535,19 @@ class TestVariables(unittest.TestCase):
         with self.assertRaises(AttributeError):
             TestBlueprint(name="test", context=MagicMock())
 
+
+class TestCFNParameter(unittest.TestCase):
+    def test_cfnparameter_convert_boolean(self):
+        p = CFNParameter("myParameter", True)
+        self.assertEqual(p.value, "true")
+        p = CFNParameter("myParameter", False)
+        self.assertEqual(p.value, "false")
+        # Test to make sure other types aren't affected
+        p = CFNParameter("myParameter", 0)
+        self.assertEqual(p.value, "0")
+        p = CFNParameter("myParameter", "myString")
+        self.assertEqual(p.value, "myString")
+
     def test_parse_user_data(self):
         expected = 'name: tom, last: taubkin and $'
         variables = {

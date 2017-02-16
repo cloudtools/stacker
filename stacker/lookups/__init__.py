@@ -38,10 +38,11 @@ def extract_lookups_from_string(value):
         raw = match.groups()[0]
         lookup_type = groupdict["type"]
         if not lookup_type:
-            raise ValueError("stacker only allows explicit lookup types "
+            raise ValueError("on value `%s`\n"
+                             "stacker only allows explicit lookup types "
                              "now, and no longer uses `output` as the "
                              "default if not specified. Please update your "
-                             "output lookups.")
+                             "output lookups." % groupdict["input"])
         lookup_input = groupdict["input"]
         lookups.add(Lookup(lookup_type, lookup_input, raw))
     return lookups

@@ -17,6 +17,14 @@ class UnknownLookupType(Exception):
         super(UnknownLookupType, self).__init__(message, *args, **kwargs)
 
 
+class FailedVariableLookup(Exception):
+
+    def __init__(self, variable_name, error, *args, **kwargs):
+        message = "Couldn't resolve lookups in variable `%s`. " % variable_name
+        message += "%s" % error
+        super(FailedVariableLookup, self).__init__(message, *args, **kwargs)
+
+
 class InvalidUserdataPlaceholder(Exception):
 
     def __init__(self, blueprint_name, exception_message, *args, **kwargs):

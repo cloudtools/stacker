@@ -28,6 +28,7 @@ def handler(value, provider=None, context=None, fqn=False, **kwargs):
         raise ValueError('Context is required')
 
     d = deconstruct(value)
+
     stack_fqn = d.stack_name
     if not fqn:
         stack_fqn = context.get_fqn(d.stack_name)
@@ -37,5 +38,11 @@ def handler(value, provider=None, context=None, fqn=False, **kwargs):
 
 
 def deconstruct(value):
-    stack_name, output_name = value.split("::")
+
+    try:
+        stack_name, output_name = value.split("::")
+    except:
+        raise ValueError(
+            'Could not parse value in output lookup `%s`.' % value)
+
     return Output(stack_name, output_name)

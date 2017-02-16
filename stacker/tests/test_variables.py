@@ -1,12 +1,18 @@
-from mock import MagicMock
+from mock import MagicMock, patch
 import unittest
 
 from troposphere import s3
 from stacker.blueprints.variables.types import TroposphereType
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
+from stacker.exceptions import FailedVariableLookup
+
 
 from .factories import mock_lookup
+
+
+def lookup_error(a, b):
+    return ValueError('Not Valid')
 
 
 class TestVariables(unittest.TestCase):
@@ -149,6 +155,13 @@ class TestVariables(unittest.TestCase):
                 "mixed": "something:resolved3",
             },
         })
+
+    @patch('stacker.variables.resolve_lookups', ValueError('bob'))
+    def test_resolve_catch_exception(self):
+        var = Variable("Param1", "${output fakeStack::FakeOutput}")
+
+        with self.assertRaises(FailedVariableLookup):
+            var.resolve(self.context, self.provider)
 
     def test_variable_resolve_nested_lookup(self):
 

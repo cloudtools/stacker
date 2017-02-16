@@ -42,7 +42,7 @@ def deconstruct(value):
     try:
         stack_name, output_name = value.split("::")
     except:
-        raise ValueError(
-            'Could not parse value in output lookup `%s`.' % value)
+        raise ValueError("output handler requires syntax "
+                         "of <stack>::<output>.  Got: %s" % value)
 
     return Output(stack_name, output_name)

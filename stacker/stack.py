@@ -10,6 +10,8 @@ from .lookups.handlers.output import (
     deconstruct,
 )
 
+from .exceptions import FailedVariableLookup
+
 
 def _gather_variables(stack_def):
     """Merges context provided & stack defined variables.
@@ -46,6 +48,7 @@ def _gather_variables(stack_def):
 
 
 class Stack(object):
+
     """Represents gathered information about a stack to be built/updated.
 
     Args:
@@ -84,7 +87,12 @@ class Stack(object):
         for variable in self.variables:
             for lookup in variable.lookups:
                 if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
-                    d = deconstruct(lookup.input)
+
+                    try:
+                        d = deconstruct(lookup.input)
+                    except ValueError as e:
+                        raise FailedVariableLookup(self.name, e)
+
                     if d.stack_name == self.name:
                         message = (
                             "Variable %s in stack %s has a ciruclar reference "

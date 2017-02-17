@@ -7,7 +7,8 @@ outside of the current config file. `rxref` supports this by not using the
 
 Example:
 
-    conf_value: ${rxref some-relative-fully-qualified-stack-name::SomeOutputName}
+    conf_value: ${rxref
+        some-relative-fully-qualified-stack-name::SomeOutputName}
 
 """
 from functools import partial
@@ -16,8 +17,7 @@ from .output import handler as output_handler
 
 TYPE_NAME = "rxref"
 
-import sys
-
 # rxref is the same as the `output` handler, except the value already contains
-# the relative fully qualified name for the stack we're fetching the output from.
+# the relative fully qualified name for the stack we're fetching the output
+# from.
 handler = partial(output_handler, rfqn=True)

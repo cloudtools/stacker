@@ -4,7 +4,9 @@ TYPE_NAME = "output"
 
 Output = namedtuple("Output", ("stack_name", "output_name"))
 
-def handler(value, provider=None, context=None, fqn=False, rfqn=False, **kwargs):
+
+def handler(value, provider=None, context=None, fqn=False, rfqn=False,
+            **kwargs):
     """Fetch an output from the designated stack.
 
     Args:
@@ -26,7 +28,11 @@ def handler(value, provider=None, context=None, fqn=False, rfqn=False, **kwargs)
     """
 
     if rfqn and context.environment.get('namespace'):
-        value = "%s%s%s" % (context.environment['namespace'], context.environment.get('namespace_delimiter') or '-', value)
+            value = "%s%s%s" % (
+                    context.environment['namespace'],
+                    context.environment.get('namespace_delimiter')
+                    or '-', value
+            )
 
     if provider is None:
         raise ValueError('Provider is required')

@@ -3,7 +3,6 @@ import logging
 import os
 import time
 
-import boto3
 import botocore.exceptions
 
 from ..base import BaseProvider
@@ -175,7 +174,7 @@ class Provider(BaseProvider):
     def _tail_print(message):
         print("%s - %s - %s" % (message.ResourceStatus,
                                 message.ResourceType,
-                                mesage.EventId))
+                                message.EventId))
         return False
 
     def get_events(self, stackname):

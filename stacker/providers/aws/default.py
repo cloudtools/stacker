@@ -9,6 +9,7 @@ from ..base import BaseProvider
 from ... import exceptions
 from ...util import retry_with_backoff
 from stacker.session_cache import get_session
+from cloudsns.cloudlistener import CloudListener
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,7 @@ class Provider(BaseProvider):
         self.region = region
         self._outputs = {}
         self._cloudformation = None
+        self._listener = None
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
@@ -105,6 +107,19 @@ class Provider(BaseProvider):
             self._cloudformation = session.client('cloudformation')
 
         return self._cloudformation
+
+    @property
+    def listener(self):
+        # deals w/ multiprocessing issues w/ sharing ssl conns
+        # see https://github.com/remind101/stacker/issues/196
+        pid = os.getpid()
+        if pid != self._pid or not self._listener:
+            session = get_session(self.region)
+            self._listener = CloudListener(
+                "StackerSNSListener", session=session)
+            self._listener.start()
+
+        return self._listener
 
     def get_stack(self, stack_name, **kwargs):
         try:
@@ -129,13 +144,16 @@ class Provider(BaseProvider):
         return self.get_stack_status(stack) == self.DELETED_STATUS
 
     def tail_stack(self, stack, retries=0, **kwargs):
-        def log_func(e):
-            event_args = [e['ResourceStatus'], e['ResourceType'],
-                          e.get('ResourceStatusReason', None)]
+        def log_func(message):
+            event_args = [message.ResourceStatus, message.ResourceType]
+
+            if hasattr(message, 'ResourceStatusReason'):
+                event_args.append(message.ResourceStatusReason)
             # filter out any values that are empty
             event_args = [arg for arg in event_args if arg]
             template = " ".join(["[%s]"] + ["%s" for _ in event_args])
             logger.info(template, *([stack.fqn] + event_args))
+            return False
 
         if not retries:
             logger.info("Tailing stack: %s", stack.fqn)
@@ -154,10 +172,11 @@ class Provider(BaseProvider):
                 raise
 
     @staticmethod
-    def _tail_print(e):
-        print("%s %s %s" % (e['ResourceStatus'],
-                            e['ResourceType'],
-                            e['EventId']))
+    def _tail_print(message):
+        print("%s - %s - %s" % (message.ResourceStatus,
+                                message.ResourceType,
+                                message.EventId))
+        return False
 
     def get_events(self, stackname):
         """Get the events in batches and return in chronological order"""
@@ -181,24 +200,8 @@ class Provider(BaseProvider):
 
     def tail(self, stack_name, log_func=_tail_print, sleep_time=5,
              include_initial=True):
-        """Show and then tail the event log"""
-        # First dump the full list of events in chronological order and keep
-        # track of the events we've seen already
-        seen = set()
-        initial_events = self.get_events(stack_name)
-        for e in initial_events:
-            if include_initial:
-                log_func(e)
-            seen.add(e['EventId'])
 
-        # Now keep looping through and dump the new events
-        while 1:
-            events = self.get_events(stack_name)
-            for e in events:
-                if e['EventId'] not in seen:
-                    log_func(e)
-                    seen.add(e['EventId'])
-            time.sleep(sleep_time)
+        self.listener.poll(log_func)
 
     def destroy_stack(self, stack, **kwargs):
         logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))
@@ -216,7 +219,8 @@ class Provider(BaseProvider):
                         TemplateURL=template_url,
                         Parameters=parameters,
                         Tags=tags,
-                        Capabilities=["CAPABILITY_NAMED_IAM"]),
+                        Capabilities=["CAPABILITY_NAMED_IAM"],
+                        NotificationARNs=[self.listener.TopicArn]),
         )
         return True
 

@@ -233,7 +233,8 @@ class Provider(BaseProvider):
                             TemplateURL=template_url,
                             Parameters=parameters,
                             Tags=tags,
-                            Capabilities=["CAPABILITY_NAMED_IAM"]),
+                            Capabilities=["CAPABILITY_NAMED_IAM"],
+                            NotificationARNs=[self.listener.TopicArn]),
             )
         except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in e.message:

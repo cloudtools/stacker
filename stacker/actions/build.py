@@ -137,6 +137,7 @@ def _handle_missing_parameters(params, required_params, existing_stack=None):
 
 
 class Action(BaseAction):
+
     """Responsible for building & coordinating CloudFormation stacks.
 
     Generates the build plan based on stack dependencies (these dependencies
@@ -224,8 +225,8 @@ class Action(BaseAction):
                 return NotUpdatedStatus()
             try:
                 new_status = SubmittedStatus("updating existing stack")
-                self.provider.update_stack(stack.fqn, template_url, parameters,
-                                           tags)
+                self.provider.update_stack(stack.fqn, template_url,
+                                           parameters, tags)
                 logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()
@@ -269,6 +270,9 @@ class Action(BaseAction):
                 hooks=pre_build,
                 provider=self.provider,
                 context=self.context)
+
+        # Clear old sns events
+        self.provider.pre_run()
 
     def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.

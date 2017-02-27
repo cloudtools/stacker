@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 MAX_TAIL_RETRIES = 5
 
+LISTENER_NAME = "StackerSNSListener"
+
 
 def get_output_dict(stack):
     """Returns a dict of key/values for the outputs for a given CF stack.
@@ -96,6 +98,7 @@ class Provider(BaseProvider):
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
+        self._stacks = {}
 
     @property
     def cloudformation(self):
@@ -116,23 +119,35 @@ class Provider(BaseProvider):
         if pid != self._pid or not self._listener:
             session = get_session(self.region)
             self._listener = CloudListener(
-                "StackerSNSListener", session=session)
+                LISTENER_NAME, session=session)
             self._listener.start()
 
         return self._listener
 
+    def pre_run(self):
+        logger.debug("Clearing old sqs queue")
+        messages = self.listener.get_messages()
+        for message in messages:
+            message.delete()
+        logger.info("Done clearing queue")
+
+    def parse_stack_events(self):
+        messages = self.listener.get_messages()
+        for message in messages:
+            message_dict = message.__dict__
+            message_dict['fqn'] = message_dict['StackName']
+            self._stacks[message.StackName] = message_dict
+            message.delete()
+
     def get_stack(self, stack_name, **kwargs):
-        try:
-            return retry_on_throttling(
-                self.cloudformation.describe_stacks,
-                kwargs=dict(StackName=stack_name))['Stacks'][0]
-        except botocore.exceptions.ClientError as e:
-            if "does not exist" not in e.message:
-                raise
+        self.parse_stack_events()
+        if stack_name in self._stacks:
+            return self._stacks[stack_name]
+        else:
             raise exceptions.StackDoesNotExist(stack_name)
 
     def get_stack_status(self, stack, **kwargs):
-        return stack['StackStatus']
+        return stack['ResourceStatus']
 
     def is_stack_completed(self, stack, **kwargs):
         return self.get_stack_status(stack) in self.COMPLETE_STATUSES
@@ -145,14 +160,19 @@ class Provider(BaseProvider):
 
     def tail_stack(self, stack, retries=0, **kwargs):
         def log_func(message):
-            event_args = [message.ResourceStatus, message.ResourceType]
+            # Check that the message is for the correct stack
+            if message.StackName == stack.fqn:
+                event_args = [message.ResourceStatus, message.ResourceType]
 
-            if hasattr(message, 'ResourceStatusReason'):
-                event_args.append(message.ResourceStatusReason)
-            # filter out any values that are empty
-            event_args = [arg for arg in event_args if arg]
-            template = " ".join(["[%s]"] + ["%s" for _ in event_args])
-            logger.info(template, *([stack.fqn] + event_args))
+                if hasattr(message, 'ResourceStatusReason'):
+                    event_args.append(message.ResourceStatusReason)
+                # filter out any values that are empty
+                event_args = [arg for arg in event_args if arg]
+                template = " ".join(["[%s]"] + ["%s" for _ in event_args])
+                logger.info(template, *([stack.fqn] + event_args))
+
+            # Needed for listener.poll to continue
+            # TODO: change this behaviour
             return False
 
         if not retries:
@@ -177,26 +197,6 @@ class Provider(BaseProvider):
                                 message.ResourceType,
                                 message.EventId))
         return False
-
-    def get_events(self, stackname):
-        """Get the events in batches and return in chronological order"""
-        next_token = None
-        event_list = []
-        while 1:
-            if next_token is not None:
-                events = self.cloudformation.describe_stack_events(
-                    StackName=stackname, NextToken=next_token
-                )
-            else:
-                events = self.cloudformation.describe_stack_events(
-                    StackName=stackname
-                )
-            event_list.append(events['StackEvents'])
-            next_token = events.get('NextToken', None)
-            if next_token is None:
-                break
-            time.sleep(1)
-        return reversed(sum(event_list, []))
 
     def tail(self, stack_name, log_func=_tail_print, sleep_time=5,
              include_initial=True):

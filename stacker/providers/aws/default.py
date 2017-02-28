@@ -124,7 +124,7 @@ class Provider(BaseProvider):
 
         return self._listener
 
-    def pre_run(self):
+    def flush_events(self):
         logger.info("Purging old queue")
         while 1:
             messages = self.listener.get_messages()
@@ -134,6 +134,9 @@ class Provider(BaseProvider):
             for message in messages:
                 message.delete()
         logger.info("Done purging queue")
+
+    def pre_run(self):
+        self.flush_events()
 
     def parse_stack_events(self, tail):
         messages = self.listener.get_messages()
@@ -145,7 +148,7 @@ class Provider(BaseProvider):
             if tail:
                 Provider._tail_print(message)
 
-            message.delete()
+        self.listener.delete_messages(messages)
 
     def get_stack(self, stack_name, tail=False, **kwargs):
         self.parse_stack_events(tail)

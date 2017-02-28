@@ -296,7 +296,7 @@ class Plan(OrderedDict):
         for _, step in self.iteritems():
             step.status = PENDING
 
-    def dump(self, directory):
+    def dump(self, directory, context, provider):
         steps = 1
         logger.info("Dumping \"%s\"...", self.description)
         directory = os.path.expanduser(directory)
@@ -305,6 +305,8 @@ class Plan(OrderedDict):
 
         while not self.completed:
             step_name, step = self.list_pending()[0]
+            stack = step.stack
+            stack.resolve_variables(context, provider)
             blueprint = step.stack.blueprint
             filename = stack_template_key_name(blueprint)
             path = os.path.join(directory, filename)

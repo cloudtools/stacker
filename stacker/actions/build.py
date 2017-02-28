@@ -177,7 +177,7 @@ class Action(BaseAction):
         return [
             {'Key': t[0], 'Value': t[1]} for t in self.context.tags.items()]
 
-    def _launch_stack(self, stack, **kwargs):
+    def _launch_stack(self, stack, tail=False, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.
 
         Also makes sure that we don't try to create or update a stack while
@@ -188,7 +188,7 @@ class Action(BaseAction):
             return NotSubmittedStatus()
 
         try:
-            provider_stack = self.provider.get_stack(stack.fqn)
+            provider_stack = self.provider.get_stack(stack.fqn, tail=tail)
         except StackDoesNotExist:
             provider_stack = None
 
@@ -234,12 +234,10 @@ class Action(BaseAction):
         return new_status
 
     def _generate_plan(self, tail=False):
-        plan_kwargs = {}
-        if tail:
-            plan_kwargs["watch_func"] = self.provider.tail_stack
 
         plan = Plan(description="Create/Update stacks",
-                    logger_type=self.context.logger_type, **plan_kwargs)
+                    logger_type=self.context.logger_type,
+                    tail=tail)
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):

@@ -1,0 +1,12 @@
+stacks:
+  - name: bucket
+    class_path: stacker_blueprints.s3.Buckets
+    variables:
+      Buckets:
+        myLilBucket: {}
+  - name: bucket-two
+    class_path: stacker_blueprints.s3.Buckets
+    variables:
+      Buckets:
+        myBigBucket: {}
+

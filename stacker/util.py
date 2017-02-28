@@ -5,8 +5,12 @@ import importlib
 import logging
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
+from git import Repo
 
 import botocore.exceptions
 
@@ -448,3 +452,168 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
             logger.exception("Error creating bucket %s. Error %s",
                              bucket_name, e.response)
             raise
+
+
+class SourceProcessor():
+    """Makes remote python package sources available in the running python
+       environment."""
+
+    def __init__(self, stacker_cache_dir=None):
+        """
+        Processes a config's list of package sources
+
+        Args:
+            stacker_cache_dir (string): Directory of stacker local cache.
+                                        Default to $HOME/.stacker
+        """
+        stacker_cache_dir = (stacker_cache_dir or
+                             os.path.join(os.environ['HOME'], '.stacker'))
+        package_cache_dir = os.path.join(stacker_cache_dir, 'packages')
+        self.stacker_cache_dir = stacker_cache_dir
+        self.package_cache_dir = package_cache_dir
+        self.create_cache_directories()
+
+    def create_cache_directories(self):
+        """Ensures that SourceProcessor cache directories exist.
+
+           Returns True to indicate the cache directories are present."""
+        if not os.path.isdir(self.package_cache_dir):
+            if not os.path.isdir(self.stacker_cache_dir):
+                os.mkdir(self.stacker_cache_dir)
+            os.mkdir(self.package_cache_dir)
+        return True
+
+    def get_package_sources(self, sources):
+        """Makes remote python packages available for local use
+
+        Args:
+            sources (dict): Dictionary of remote sources from config.
+                            Currently supports git repositories
+            Example:
+              {'git': [
+                  {'uri': 'git@github.com:remind101/stacker_blueprints.git',
+                   'tag': '1.0.0',
+                   'paths': ['stacker_blueprints']},
+                  {'uri': 'git@github.com:acmecorp/stacker_blueprints.git'},
+                  {'uri': 'git@github.com:contoso/webapp.git',
+                   'branch': 'staging'},
+                  {'uri': 'git@github.com:contoso/foo.git',
+                   'commit': '12345678'}
+              ]}
+
+        """
+        # Checkout git repositories specified in config
+        if 'git' in sources:
+            for config in sources['git']:
+                self.fetch_git_package(config=config)
+
+    def fetch_git_package(self, config):
+        """Makes a remote git repository available for local use
+
+        Args:
+            config (dict): Dictionary of git repo configuration
+
+        """
+        # If a specific commit or tag is defined, first check to see if it is
+        # already cached.
+        if config.get('commit'):
+            ref = config['commit']
+            dir_name = self.sanitize_git_path(uri=config['uri'],
+                                              ref=ref)
+        elif config.get('tag'):
+            ref = config['tag']
+            dir_name = self.sanitize_git_path(uri=config['uri'],
+                                              ref=ref)
+        else:
+            ref = self.git_ls_remote(
+                config['uri'],
+                self.determine_git_ls_remote_ref(config)
+            )
+            dir_name = self.sanitize_git_path(uri=config['uri'],
+                                              ref=ref)
+
+        cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
+
+        # Clone the repo if it doesn't already exist
+        if not os.path.isdir(cached_dir_path):
+            tmp_dir = tempfile.mkdtemp(prefix='stacker')
+            try:
+                tmp_repo_path = os.path.join(tmp_dir, dir_name)
+                with Repo.clone_from(config['uri'], tmp_repo_path) as repo:
+                    repo.head.reference = ref
+                    repo.head.reset(index=True, working_tree=True)
+                shutil.move(tmp_repo_path, self.package_cache_dir)
+            finally:
+                shutil.rmtree(tmp_dir)
+
+        # Cloning (if necessary) is complete. Now add the appropriate
+        # directory (or directories) to sys.path
+        if 'paths' in config:
+            for path in config['paths']:
+                path_to_append = os.path.join(self.package_cache_dir,
+                                              dir_name,
+                                              path)
+                logger.debug("Appending \"%s\" to python sys.path",
+                             path_to_append)
+                sys.path.append(os.path.join(self.package_cache_dir,
+                                             dir_name,
+                                             path))
+        else:
+            sys.path.append(cached_dir_path)
+
+    def git_ls_remote(self, uri, ref):
+        """Determines the latest commit id for a given ref.
+
+        Args:
+            uri (string): git URI
+            ref (string): git ref
+
+        Returns: string (commit id)
+        """
+        logger.debug("Invoking git to retrieve commit id for repo %s...", uri)
+        lsremote_output = subprocess.check_output(['git',
+                                                   'ls-remote',
+                                                   uri,
+                                                   ref])
+        if "\t" in lsremote_output:
+            commit_id = lsremote_output.split("\t")[0]
+            logger.debug("Matching commit id found: %s", commit_id)
+            return commit_id
+        else:
+            raise ValueError("Ref \"%s\" not found for repo %d." % (ref, uri))
+
+    def determine_git_ls_remote_ref(self, config):
+        """Takes a dict describing a git repo and determines the ref to be used
+           with the "git ls-remote" command
+
+        Args:
+            config (dict): git config dictionary; 'branch' key is optional
+
+        Returns: string (a branch reference or "HEAD")
+        """
+        if 'branch' in config:
+            ref = "refs/heads/%s" % config.get('branch')
+        else:
+            ref = "HEAD"
+
+        return ref
+
+    def sanitize_git_path(self, uri, ref=None):
+        """Takes a git URI and ref and converts it to a directory safe path
+
+        Args:
+            uri (string): git URI
+                          (e.g. git@github.com:foo/bar.git)
+            ref (string): optional git ref to be appended to the path
+
+        Returns: string (directory name for the supplied uri)
+        """
+        if uri.endswith('.git'):
+            dir_name = uri[:-4]  # drop .git
+        else:
+            dir_name = uri
+        for i in ['@', '/', ':']:
+            dir_name = dir_name.replace(i, '_')
+        if ref is not None:
+            dir_name += "-%s" % ref
+        return dir_name

@@ -12,7 +12,8 @@ install_requires = [
     "PyYAML~=3.11",
     "awacs~=0.6.0",
     "colorama~=0.3.7",
-    "formic~=0.9b"
+    "formic~=0.9b",
+    "gitpython~=2.0"
 ]
 
 tests_require = [

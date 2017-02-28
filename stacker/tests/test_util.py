@@ -2,7 +2,12 @@ import unittest
 
 import string
 import os
+import shutil
+import sys
+import tempfile
 import Queue
+
+import mock
 
 import boto3
 
@@ -15,6 +20,7 @@ from stacker.util import (
     get_client_region,
     get_s3_endpoint,
     s3_bucket_location_constraint,
+    SourceProcessor
 )
 
 from .factories import (
@@ -25,6 +31,11 @@ from .factories import (
 regions = ["us-east-1", "cn-north-1", "ap-northeast-1", "eu-west-1",
            "ap-southeast-1", "ap-southeast-2", "us-west-2", "us-gov-west-1",
            "us-west-1", "eu-central-1", "sa-east-1"]
+
+
+def mock_create_cache_directories(self, **kwargs):
+    # Don't actually need the directories created in testing
+    return 1
 
 
 class TestUtil(unittest.TestCase):
@@ -85,6 +96,58 @@ class TestUtil(unittest.TestCase):
                 s3_bucket_location_constraint(region),
                 result
             )
+
+    def test_SourceProcessor_helpers(self):
+        with mock.patch.object(SourceProcessor,
+                               'create_cache_directories',
+                               new=mock_create_cache_directories):
+            sp = SourceProcessor()
+
+            self.assertEqual(
+                sp.sanitize_git_path('git@github.com:foo/bar.git'),
+                'git_github.com_foo_bar'
+            )
+            self.assertEqual(
+                sp.sanitize_git_path('git@github.com:foo/bar.git', 'v1'),
+                'git_github.com_foo_bar-v1'
+            )
+
+            self.assertEqual(
+                sp.determine_git_ls_remote_ref({'branch': 'foo'}),
+                'refs/heads/foo'
+            )
+            for i in [{'uri': 'git@foo'}, {'tag': 'foo'}, {'commit': '1234'}]:
+                self.assertEqual(
+                    sp.determine_git_ls_remote_ref(i),
+                    'HEAD'
+                )
+
+            self.assertEqual(
+                sp.git_ls_remote('https://github.com/remind101/stacker.git',
+                                 'refs/heads/release-1.0'),
+                '857b4834980e582874d70feef77bb064b60762d1'
+            )
+
+    def test_SourceProcessor_operation(self):
+        tmp_dir = tempfile.mkdtemp(prefix='stackerunittest')
+        try:
+            sp = SourceProcessor(stacker_cache_dir=tmp_dir)
+            sp.get_package_sources(
+                {'git': [{
+                    'uri': 'https://github.com/remind101/'
+                           'stacker_blueprints.git',
+                    'tag': '1.0.0',
+                    'paths': ['stacker_blueprints']}]}
+            )
+            self.assertEqual(
+                sys.path[-1],
+                os.path.join(
+                    sp.package_cache_dir,
+                    'https___github.com_remind101_stacker_blueprints-1.0.0',
+                    'stacker_blueprints')
+            )
+        finally:
+            shutil.rmtree(tmp_dir)
 
 
 hook_queue = Queue.Queue()

@@ -53,6 +53,36 @@ inside the same repo as config files).
 Adding a path (e.g. ``./``) to the **sys_path** top level key word will allow
 modules from that path location to be used.
 
+Remote Packages
+----------------
+The **package_sources** top level keyword can be used to define remote git
+sources for blueprints (e.g., retrieving ``stacker_blueprints`` on github at
+tag ``v1.0.2``).
+
+The only required key for a git repository config is ``uri``, but ``branch``,
+``tag``, & ``commit`` can also be specified::
+  package_sources:
+    git:
+      - uri: git@github.com:acmecorp/stacker_blueprints.git
+      - uri: git@github.com:remind101/stacker_blueprints.git
+        tag: 1.0.0
+        paths:
+          - stacker_blueprints
+      - uri: git@github.com:contoso/webapp.git
+        branch: staging
+      - uri: git@github.com:contoso/foo.git
+        commit: 12345678
+
+Use the ``paths`` option when subdirectories of the repo should be added to
+Stacker's ``sys.path``.
+
+If no specific commit or tag is specified for a repo, the remote repository
+will be checked for newer commits on every execution of Stacker.
+
+Cloned repositories will be cached between builds; the cache location defaults
+to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
+level keyword.
+
 Pre & Post Hooks
 ----------------
 

@@ -1,7 +1,6 @@
 from collections import OrderedDict
 import hashlib
 import logging
-import multiprocessing
 import os
 import time
 import uuid

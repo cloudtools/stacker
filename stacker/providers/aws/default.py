@@ -125,22 +125,30 @@ class Provider(BaseProvider):
         return self._listener
 
     def pre_run(self):
-        logger.debug("Clearing old sqs queue")
-        messages = self.listener.get_messages()
-        for message in messages:
-            message.delete()
-        logger.info("Done clearing queue")
+        logger.info("Purging old queue")
+        while 1:
+            messages = self.listener.get_messages()
+            if len(messages) == 0:
+                break
 
-    def parse_stack_events(self):
+            for message in messages:
+                message.delete()
+        logger.info("Done purging queue")
+
+    def parse_stack_events(self, tail):
         messages = self.listener.get_messages()
         for message in messages:
             message_dict = message.__dict__
             message_dict['fqn'] = message_dict['StackName']
             self._stacks[message.StackName] = message_dict
+
+            if tail:
+                Provider._tail_print(message)
+
             message.delete()
 
-    def get_stack(self, stack_name, **kwargs):
-        self.parse_stack_events()
+    def get_stack(self, stack_name, tail=False, **kwargs):
+        self.parse_stack_events(tail)
         if stack_name in self._stacks:
             return self._stacks[stack_name]
         else:

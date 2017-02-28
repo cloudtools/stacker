@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class Step(object):
+
     """State machine for executing generic actions related to stacks.
 
     Args:
@@ -40,11 +41,12 @@ class Step(object):
 
     """
 
-    def __init__(self, stack, run_func, requires=None):
+    def __init__(self, stack, run_func, tail, requires=None):
         self.stack = stack
         self.status = PENDING
         self.requires = requires or []
         self._run_func = run_func
+        self.tail = tail
         self.last_updated = time.time()
 
     def __repr__(self):
@@ -71,7 +73,7 @@ class Step(object):
         return self.status >= SUBMITTED
 
     def run(self):
-        return self._run_func(self.stack, status=self.status)
+        return self._run_func(self.stack, status=self.status, tail=self.tail)
 
     def set_status(self, status):
         """Sets the current step's status.
@@ -100,6 +102,7 @@ class Step(object):
 
 
 class Plan(OrderedDict):
+
     """A collection of :class:`Step` objects to execute.
 
     The :class:`Plan` helps organize the steps needed to execute a particular
@@ -120,7 +123,7 @@ class Plan(OrderedDict):
     """
 
     def __init__(self, description, sleep_time=5, wait_func=None,
-                 watch_func=None, logger_type=None, *args, **kwargs):
+                 tail=False, logger_type=None, *args, **kwargs):
         self.description = description
         self.sleep_time = sleep_time
         self.logger_type = logger_type
@@ -133,7 +136,7 @@ class Plan(OrderedDict):
             self._wait_func = time.sleep
 
         self._watchers = {}
-        self._watch_func = watch_func
+        self.tail = tail
         self.id = uuid.uuid4()
         super(Plan, self).__init__(*args, **kwargs)
 
@@ -150,6 +153,7 @@ class Plan(OrderedDict):
             stack=stack,
             run_func=run_func,
             requires=requires,
+            tail=self.tail
         )
 
     def list_status(self, status):
@@ -210,19 +214,6 @@ class Plan(OrderedDict):
                 )
                 continue
 
-            # Kick off watchers - used for tailing the stack
-            if (
-                not step.done and
-                self._watch_func and
-                step_name not in self._watchers
-            ):
-                process = multiprocessing.Process(
-                    target=self._watch_func,
-                    args=(step.stack,)
-                )
-                self._watchers[step_name] = process
-                process.start()
-
             try:
                 status = step.run()
             except CancelExecution:
@@ -234,16 +225,7 @@ class Plan(OrderedDict):
                     "(Returned type: %s)" % (type(status)))
             step.set_status(status)
 
-            # Terminate any watchers when step completes
-            if step.done and step_name in self._watchers:
-                self._terminate_watcher(self._watchers[step_name])
-
         return self.completed
-
-    def _terminate_watcher(self, watcher):
-        if watcher.is_alive():
-            watcher.terminate()
-            watcher.join()
 
     def execute(self):
         """Execute the plan.
@@ -251,24 +233,18 @@ class Plan(OrderedDict):
         This will run through all of the steps registered with the plan and
         submit them in parallel based on their dependencies.
         """
-
         attempts = 0
         last_md5 = self.md5
-        try:
-            while not self.completed:
-                if (
-                    not attempts % self.check_point_interval or
-                    self.md5 != last_md5
-                ):
-                    last_md5 = self.md5
-                    self._check_point()
 
-                attempts += 1
-                if not self._single_run():
-                    self._wait_func(self.sleep_time)
-        finally:
-            for watcher in self._watchers.values():
-                self._terminate_watcher(watcher)
+        while not self.completed:
+            if (not attempts % self.check_point_interval or
+                    self.md5 != last_md5):
+                last_md5 = self.md5
+                self._check_point()
+
+            attempts += 1
+            if not self._single_run():
+                self._wait_func(self.sleep_time)
 
         self._check_point()
 

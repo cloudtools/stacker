@@ -280,6 +280,15 @@ class TestFunctions(unittest.TestCase):
         p = resolve_parameters(params, self.bp, self.ctx, self.prov)
         self.assertNotIn("a", p)
 
+    def test_resolve_parameters_list_processing(self):
+        self.bp.parameters = {
+            "a": {
+                "type": "List",
+                "description": "A"}}
+        params = {"a": "Apple,Anchor"}
+        p = resolve_parameters(params, self.bp, self.ctx, self.prov)
+        self.assertEqual(p["a"], "Apple,Anchor")
+
     def test_resolve_parameters_resolve_outputs(self):
         self.bp.parameters = {
             "a": {

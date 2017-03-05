@@ -20,7 +20,7 @@ data structure and within another lookup itself.
 
   ie. if `custom` returns a list, this would raise an exception::
 
-    Variable: ${custom something}, ${otherStack::Output}
+    Variable: ${custom something}, ${output otherStack::Output}
 
   This is valid::
 
@@ -34,11 +34,11 @@ For example, given the following::
       class_path: some.stack.blueprint.Blueprint
       variables:
         Roles:
-          - ${otherStack::IAMRole}
+          - ${output otherStack::IAMRole}
         Values:
           Env:
-            Custom: ${custom ${otherStack::Output}}
-            DBUrl: postgres://${dbStack::User}@${dbStack::HostName}
+            Custom: ${custom ${output otherStack::Output}}
+            DBUrl: postgres://${output dbStack::User}@${output dbStack::HostName}
 
 The Blueprint would have access to the following resolved variables
 dictionary::
@@ -65,17 +65,16 @@ stacker includes the following lookup types:
 Output Lookup
 -------------
 
-The ``output`` lookup type is the default lookup type. It takes a value of
-the format: ``<stack name>::<output name>`` and retrieves the output from
-the given stack name within the current namespace.
+The ``output`` lookup takes a value of the format:
+``<stack name>::<output name>`` and retrieves the output from the given stack
+name within the current namespace.
 
 stacker treats output lookups differently than other lookups by auto
 adding the referenced stack in the lookup as a requirement to the stack
 whose variable the output value is being passed to.
 
-You can specify an output lookup with the following equivalent syntax::
+You can specify an output lookup with the following syntax::
 
-  ConfVariable: ${someStack::SomeOutput}
   ConfVariable: ${output someStack::SomeOutput}
 
 .. _kms:

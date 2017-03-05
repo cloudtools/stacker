@@ -135,8 +135,6 @@ class Variable(object):
 
         """
 
-        print self.lookups
-
         while self.lookups:
             try:
                 resolved_lookups = resolve_lookups(

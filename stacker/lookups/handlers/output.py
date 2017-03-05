@@ -41,7 +41,7 @@ def deconstruct(value):
 
     try:
         stack_name, output_name = value.split("::")
-    except:
+    except ValueError:
         raise ValueError("output handler requires syntax "
                          "of <stack>::<output>.  Got: %s" % value)
 

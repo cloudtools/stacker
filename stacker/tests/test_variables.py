@@ -10,6 +10,7 @@ from stacker.exceptions import FailedVariableLookup
 
 from .factories import mock_lookup
 
+
 class TestVariables(unittest.TestCase):
 
     def setUp(self):

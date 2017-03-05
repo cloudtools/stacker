@@ -28,6 +28,22 @@ stacker.actions.destroy module
     :undoc-members:
     :show-inheritance:
 
+stacker.actions.diff module
+---------------------------
+
+.. automodule:: stacker.actions.diff
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.actions.info module
+---------------------------
+
+.. automodule:: stacker.actions.info
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

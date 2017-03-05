@@ -28,6 +28,22 @@ stacker.commands.stacker.destroy module
     :undoc-members:
     :show-inheritance:
 
+stacker.commands.stacker.diff module
+------------------------------------
+
+.. automodule:: stacker.commands.stacker.diff
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.commands.stacker.info module
+------------------------------------
+
+.. automodule:: stacker.commands.stacker.info
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

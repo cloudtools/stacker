@@ -1,20 +1,20 @@
-stacker.providers package
-=========================
+stacker.lookups package
+=======================
 
 Subpackages
 -----------
 
 .. toctree::
 
-    stacker.providers.aws
+    stacker.lookups.handlers
 
 Submodules
 ----------
 
-stacker.providers.base module
------------------------------
+stacker.lookups.registry module
+-------------------------------
 
-.. automodule:: stacker.providers.base
+.. automodule:: stacker.lookups.registry
     :members:
     :undoc-members:
     :show-inheritance:
@@ -23,7 +23,7 @@ stacker.providers.base module
 Module contents
 ---------------
 
-.. automodule:: stacker.providers
+.. automodule:: stacker.lookups
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,24 +1,42 @@
 import copy
 import hashlib
 import logging
+import string
+from stacker.util import read_value_from_path
 
 from troposphere import (
     Parameter,
     Ref,
-    Template,
+    Template
 )
 
 from ..exceptions import (
-    MissingLocalParameterException,
     MissingVariable,
     UnresolvedVariable,
     UnresolvedVariables,
     ValidatorError,
     VariableTypeRequired,
+    InvalidUserdataPlaceholder
 )
-from .variables.types import CFNType
+from .variables.types import (
+    CFNType,
+    TroposphereType,
+)
 
 logger = logging.getLogger(__name__)
+
+PARAMETER_PROPERTIES = {
+    "default": "Default",
+    "description": "Description",
+    "no_echo": "NoEcho",
+    "allowed_values": "AllowedValues",
+    "allowed_pattern": "AllowedPattern",
+    "max_length": "MaxLength",
+    "min_length": "MinLength",
+    "max_value": "MaxValue",
+    "min_value": "MinValue",
+    "constraint_description": "ConstraintDescription"
+}
 
 
 class CFNParameter(object):
@@ -26,17 +44,33 @@ class CFNParameter(object):
     def __init__(self, name, value):
         """Wrapper around a value to indicate a CloudFormation Parameter.
 
-        This allows us to filter out non-CloudFormation Parameters from
-        Blueprint variables when we submit the CloudFormation parameters.
-
         Args:
             name (str): the name of the CloudFormation Parameter
-            value (str or list): the value we're going to submit as a
-                CloudFormation Parameter.
+            value (str, list, int or bool): the value we're going to submit as
+                a CloudFormation Parameter.
 
         """
-        if not (isinstance(value, basestring) or isinstance(value, list)):
-            raise ValueError("CFNParameter value must be a str or a list")
+        acceptable_types = [basestring, bool, list, int]
+        acceptable = False
+        for acceptable_type in acceptable_types:
+            if isinstance(value, acceptable_type):
+                acceptable = True
+                if acceptable_type == bool:
+                    logger.debug("Converting parameter %s boolean '%s' "
+                                 "to string.", name, value)
+                    value = str(value).lower()
+                    break
+
+                if acceptable_type == int:
+                    logger.debug("Converting parameter %s integer '%s' "
+                                 "to string.", name, value)
+                    value = str(value)
+                    break
+
+        if not acceptable:
+            raise ValueError(
+                "CFNParameter (%s) value must be one of %s got: %s" % (
+                    name, "str, int, bool, or list", value))
 
         self.name = name
         self.value = value
@@ -51,66 +85,6 @@ class CFNParameter(object):
     @property
     def ref(self):
         return Ref(self.name)
-
-
-def get_local_parameters(parameter_def, parameters):
-    """Gets local parameters from parameter list.
-
-    Given a local parameter definition, and a list of parameters, extract the
-    local parameters, or use a default if provided. If the parameter isn't
-    present, and there is no default, then throw an exception.
-
-    Args:
-        parameter_def (dict): A dictionary of expected/allowed parameters
-            and their defaults. If a parameter is in the list, but does not
-            have a default, it is considered required.
-        parameters (dict): A dictionary of parameters to pull local parameters
-            from.
-
-    Returns:
-        dict: A dictionary of local parameters.
-
-    Raises:
-        MissingLocalParameterException: If a parameter is defined in
-            parameter_def, does not have a default, and does not exist in
-            parameters.
-
-    """
-    local = {}
-
-    for param, attrs in parameter_def.items():
-        try:
-            value = parameters[param]
-        except KeyError:
-            try:
-                value = attrs["default"]
-            except KeyError:
-                raise MissingLocalParameterException(param)
-
-        _type = attrs.get("type")
-        if _type:
-            try:
-                value = _type(value)
-            except ValueError:
-                raise ValueError("Local parameter %s must be %s.", param,
-                                 _type)
-        local[param] = value
-
-    return local
-
-
-PARAMETER_PROPERTIES = {
-    "default": "Default",
-    "description": "Description",
-    "no_echo": "NoEcho",
-    "allowed_values": "AllowedValues",
-    "allowed_pattern": "AllowedPattern",
-    "max_length": "MaxLength",
-    "min_length": "MinLength",
-    "max_value": "MaxValue",
-    "min_value": "MinValue",
-    "constraint_description": "ConstraintDescription"
-}
 
 
 def build_parameter(name, properties):
@@ -142,8 +116,8 @@ def validate_variable_type(var_name, var_type, value):
             variable
 
     Returns:
-        object: A python object of type `var_type` based on the provided
-            `value`.
+        object: Returns the appropriate value object. If the original value
+            was of CFNType, the returned value will be wrapped in CFNParameter.
 
     Raises:
         ValueError: If the `value` isn't of `var_type` and can't be cast as
@@ -152,14 +126,38 @@ def validate_variable_type(var_name, var_type, value):
 
     if isinstance(var_type, CFNType):
         value = CFNParameter(name=var_name, value=value)
+    elif isinstance(var_type, TroposphereType):
+        try:
+            value = var_type.create(value)
+        except Exception as exc:
+            name = "{}.create".format(var_type.resource_name)
+            raise ValidatorError(var_name, name, value, exc)
     else:
         if not isinstance(value, var_type):
-            try:
-                value = var_type(value)
-            except ValueError:
-                raise ValueError("Variable %s must be %s.",
-                                 var_name, var_type)
+            raise ValueError("Variable %s must be of type %s.",
+                             var_name, var_type)
+
     return value
+
+
+def validate_allowed_values(allowed_values, value):
+    """Support a variable defining which values it allows.
+
+    Args:
+        allowed_values (Optional[list]): A list of allowed values from the
+            variable definition
+        value (obj): The object representing the value provided for the
+            variable
+
+    Returns:
+        bool: Boolean for whether or not the value is valid.
+
+    """
+    # ignore CFNParameter, troposphere handles these for us
+    if not allowed_values or isinstance(value, CFNParameter):
+        return True
+
+    return value in allowed_values
 
 
 def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
@@ -215,18 +213,76 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
         raise ValidatorError(var_name, validator.__name__, value, exc)
 
     # Ensure that the resulting value is the correct type
-    var_type = var_def.get("type")
     value = validate_variable_type(var_name, var_type, value)
+
+    allowed_values = var_def.get("allowed_values")
+    if not validate_allowed_values(allowed_values, value):
+        message = (
+            "Invalid value passed to '%s' in blueprint: %s. Got: '%s', "
+            "expected one of %s"
+        ) % (var_name, blueprint_name, value, allowed_values)
+        raise ValueError(message)
 
     return value
 
 
-class Blueprint(object):
-    """Base implementation for dealing with a troposphere template.
+def parse_user_data(variables, raw_user_data, blueprint_name):
+    """Parse the given user data and renders it as a template
+
+    It supports referencing template variables to create userdata
+    that's supplemented with information from the stack, as commonly
+    required when creating EC2 userdata files.
+
+    For example:
+        Given a raw_user_data string: 'open file ${file}'
+        And a variables dictionary with: {'file': 'test.txt'}
+        parse_user_data would output: open file test.txt
 
     Args:
-        name (str): A name for the blueprint. If not provided, one will be
-            created from the class name automatically.
+        variables (dict): variables available to the template
+        raw_user_data (str): the user_data to be parsed
+        blueprint_name (str): the name of the blueprint
+
+    Returns:
+        str: The parsed user data, with all the variables values and
+             refs replaced with their resolved values.
+
+    Raises:
+        InvalidUserdataPlaceholder: Raised when a placeholder name in
+                                    raw_user_data is not valid.
+                                    E.g ${100} would raise this.
+        MissingVariable: Raised when a variable is in the raw_user_data that
+                         is not given in the blueprint
+
+    """
+    variable_values = {}
+
+    for key in variables.keys():
+        if type(variables[key]) is CFNParameter:
+            variable_values[key] = variables[key].to_parameter_value()
+        else:
+            variable_values[key] = variables[key]
+
+    template = string.Template(raw_user_data)
+
+    res = ""
+
+    try:
+        res = template.substitute(variable_values)
+    except ValueError as exp:
+        raise InvalidUserdataPlaceholder(blueprint_name, exp.args[0])
+    except KeyError as key:
+        raise MissingVariable(blueprint_name, key)
+
+    return res
+
+
+class Blueprint(object):
+
+    """Base implementation for rendering a troposphere template.
+
+    Args:
+        name (str): A name for the blueprint.
         context (:class:`stacker.context.Context`): the context the blueprint
             is being executed under.
         mappings (dict, optional): Cloudformation Mappings to be used in the
@@ -239,63 +295,80 @@ class Blueprint(object):
         self.context = context
         self.mappings = mappings
         self.outputs = {}
-        self.local_parameters = self.get_local_parameters()
         self.reset_template()
         self.resolved_variables = None
 
-    @property
-    def parameters(self):
-        return self.template.parameters
+        if hasattr(self, "PARAMETERS") or hasattr(self, "LOCAL_PARAMETERS"):
+            raise AttributeError("Blueprint %s uses deprecated PARAMETERS or "
+                                 "LOCAL_PARAMETERS, rather than VARIABLES. "
+                                 "Please update your blueprints." % name)
 
-    @property
-    def required_parameters(self):
-        """Returns all template parameters that do not have a default value."""
-        required = []
-        for k, v in self.parameters.items():
-            if not hasattr(v, "Default"):
-                required.append((k, v))
+    def get_required_parameter_definitions(self):
+        """Returns all template parameters that do not have a default value.
+
+        Returns:
+            dict: dict of required CloudFormation Parameters for the blueprint.
+                Will be a dictionary of <parameter name>: <parameter
+                attributes>.
+
+        """
+        required = {}
+        for name, attrs in self.template.parameters.iteritems():
+            if not hasattr(attrs, "Default"):
+                required[name] = attrs
         return required
 
-    def get_local_parameters(self):
-        local_parameters = getattr(self, "LOCAL_PARAMETERS", {})
-        return get_local_parameters(local_parameters, self.context.parameters)
+    def get_parameter_definitions(self):
+        """Get the parameter definitions to submit to CloudFormation.
 
-    def _get_parameters(self):
-        """Get the parameter definitions.
-
-        First looks at CF_PARAMETERS, then falls back to PARAMETERS for
-        backwards compatibility. This will also return any variables whose
-        `type` is an instance of `CFNType`.
-
-        Makes this easy to override going forward for more backwards
-        compatibility.
+        Any variable definition whose `type` is an instance of `CFNType` will
+        be returned as a CloudFormation Parameter.
 
         Returns:
             dict: parameter definitions. Keys are parameter names, the values
                 are dicts containing key/values for various parameter
                 properties.
-        """
-        parameters = getattr(self, "CF_PARAMETERS",
-                             getattr(self, "PARAMETERS", {}))
 
+        """
+        output = {}
         for var_name, attrs in self.defined_variables().iteritems():
             var_type = attrs.get("type")
             if isinstance(var_type, CFNType):
                 cfn_attrs = copy.deepcopy(attrs)
                 cfn_attrs["type"] = var_type.parameter_type
-                parameters[var_name] = cfn_attrs
-        return parameters
+                output[var_name] = cfn_attrs
+        return output
+
+    def get_parameter_values(self):
+        """Return a dictionary of variables with `type` :class:`CFNType`.
+
+        Returns:
+            dict: variables that need to be submitted as CloudFormation
+                Parameters. Will be a dictionary of <parameter name>:
+                <parameter value>.
+
+        """
+        variables = self.get_variables()
+        output = {}
+        for key, value in variables.iteritems():
+            try:
+                output[key] = value.to_parameter_value()
+            except AttributeError:
+                continue
+
+        return output
 
     def setup_parameters(self):
+        """Add any CloudFormation parameters to the template"""
         t = self.template
-        parameters = self._get_parameters()
+        parameters = self.get_parameter_definitions()
 
         if not parameters:
             logger.debug("No parameters defined.")
             return
 
-        for param, attrs in parameters.items():
-            p = build_parameter(param, attrs)
+        for name, attrs in parameters.items():
+            p = build_parameter(name, attrs)
             t.add_parameter(p)
 
     def defined_variables(self):
@@ -369,22 +442,40 @@ class Blueprint(object):
         if not self.mappings:
             return
 
-        for name, mapping in self.mappings.items():
+        for name, mapping in self.mappings.iteritems():
             logger.debug("Adding mapping %s.", name)
             self.template.add_mapping(name, mapping)
 
     def reset_template(self):
         self.template = Template()
-        self.import_mappings()
         self._rendered = None
         self._version = None
 
     def render_template(self):
+        """Render the Blueprint to a CloudFormation template"""
+        self.import_mappings()
         self.create_template()
         self.setup_parameters()
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
+
+    def read_user_data(self, user_data_path):
+        """Reads and parses a user_data file.
+
+        Args:
+            user_data_path (str):
+                path to the userdata file
+
+        Returns:
+            str: the parsed user data file
+
+        """
+        raw_user_data = read_value_from_path(user_data_path)
+
+        variables = self.get_variables()
+
+        return parse_user_data(variables, raw_user_data, self.name)
 
     @property
     def rendered(self):

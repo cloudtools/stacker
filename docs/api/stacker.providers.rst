@@ -1,16 +1,15 @@
 stacker.providers package
 =========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    stacker.providers.aws
+
 Submodules
 ----------
-
-stacker.providers.aws module
-----------------------------
-
-.. automodule:: stacker.providers.aws
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 stacker.providers.base module
 -----------------------------

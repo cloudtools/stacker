@@ -26,7 +26,6 @@ class TestKMSHandler(unittest.TestCase):
     def test_kms_handler_with_region(self):
         region = "us-east-1"
         value = "%s@%s" % (region, self.secret)
-        print value
         with mock_kms():
             decrypted = handler(value)
             self.assertEqual(decrypted, self.plain)

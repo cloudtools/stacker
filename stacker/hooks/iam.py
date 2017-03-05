@@ -1,7 +1,7 @@
 import copy
 import logging
 
-import boto3
+from stacker.session_cache import get_session
 from botocore.exceptions import ClientError
 
 from awacs.aws import Statement, Allow, Policy
@@ -13,16 +13,22 @@ from . import utils
 logger = logging.getLogger(__name__)
 
 
-def create_ecs_service_role(region, namespace, mappings, parameters,
-                            **kwargs):
+def create_ecs_service_role(provider, context, **kwargs):
     """Used to create the ecsServieRole, which has to be named exactly that
     currently, so cannot be created via CloudFormation. See:
 
     http://docs.aws.amazon.com/AmazonECS/latest/developerguide/IAM_policies.html#service_IAM_role
 
+    Args:
+        provider (:class:`stacker.providers.base.BaseProvider`): provider
+            instance
+        context (:class:`stacker.context.Context`): context instance
+
+    Returns: boolean for whether or not the hook succeeded.
+
     """
     role_name = kwargs.get("role_name", "ecsServiceRole")
-    client = boto3.client("iam", region_name=region)
+    client = get_session(provider.region).client('iam')
 
     try:
         client.create_role(
@@ -114,9 +120,8 @@ def get_cert_contents(kwargs):
     return parameters
 
 
-def ensure_server_cert_exists(region, namespace, mappings, parameters,
-                              **kwargs):
-    client = boto3.client("iam", region_name=region)
+def ensure_server_cert_exists(provider, context, **kwargs):
+    client = get_session(provider.region).client('iam')
     cert_name = kwargs["cert_name"]
     status = "unknown"
     try:

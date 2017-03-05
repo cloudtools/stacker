@@ -6,6 +6,8 @@ from .handlers import kms
 from .handlers import xref
 from .handlers import ssmstore
 from .handlers import file as file_handler
+from .handlers import split
+from .handlers import default
 
 LOOKUP_HANDLERS = {}
 DEFAULT_LOOKUP = output.TYPE_NAME
@@ -23,6 +25,19 @@ def register_lookup_handler(lookup_type, handler_or_path):
     if isinstance(handler_or_path, basestring):
         handler = load_object_from_string(handler_or_path)
     LOOKUP_HANDLERS[lookup_type] = handler
+
+
+def unregister_lookup_handler(lookup_type):
+    """Unregister the specified lookup type.
+
+    This is useful when testing various lookup types if you want to unregister
+    the lookup type after the test runs.
+
+    Args:
+        lookup_type (str): Name of the lookup type to unregister
+
+    """
+    LOOKUP_HANDLERS.pop(lookup_type, None)
 
 
 def resolve_lookups(lookups, context, provider):
@@ -58,3 +73,5 @@ register_lookup_handler(kms.TYPE_NAME, kms.handler)
 register_lookup_handler(ssmstore.TYPE_NAME, ssmstore.handler)
 register_lookup_handler(xref.TYPE_NAME, xref.handler)
 register_lookup_handler(file_handler.TYPE_NAME, file_handler.handler)
+register_lookup_handler(split.TYPE_NAME, split.handler)
+register_lookup_handler(default.TYPE_NAME, default.handler)

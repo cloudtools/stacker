@@ -2,7 +2,7 @@ from mock import MagicMock
 import unittest
 
 from stacker.context import Context
-from stacker.stack import _gather_parameters, Stack
+from stacker.stack import _gather_variables, Stack
 from .factories import generate_definition
 
 
@@ -20,16 +20,13 @@ class TestStack(unittest.TestCase):
         definition = generate_definition(
             base_name="vpc",
             stack_id=1,
-            parameters={
-                "ExternalParameter": "fakeStack2::FakeParameter",
-            },
             variables={
                 "Var1": "${noop fakeStack3::FakeOutput}",
                 "Var2": (
-                    "some.template.value:${fakeStack2::FakeOutput}:"
-                    "${fakeStack::FakeOutput}"
+                    "some.template.value:${output fakeStack2::FakeOutput}:"
+                    "${output fakeStack::FakeOutput}"
                 ),
-                "Var3": "${fakeStack::FakeOutput},"
+                "Var3": "${output fakeStack::FakeOutput},"
                         "${output fakeStack2::FakeOutput}",
             },
             requires=[self.context.get_fqn("fakeStack")],
@@ -50,7 +47,7 @@ class TestStack(unittest.TestCase):
             base_name="vpc",
             stack_id=1,
             variables={
-                "Var1": "${vpc.1::FakeOutput}",
+                "Var1": "${output vpc.1::FakeOutput}",
             },
         )
         stack = Stack(definition=definition, context=self.context)
@@ -61,54 +58,21 @@ class TestStack(unittest.TestCase):
         definition = generate_definition(
             base_name="vpc",
             stack_id=1,
-            parameters={
-                "Param1": "fakeStack::FakeOutput",
+            variables={
+                "Param1": "${output fakeStack::FakeOutput}",
             },
         )
         stack = Stack(definition=definition, context=self.context)
         stack._blueprint = MagicMock()
-        stack._blueprint.get_cfn_parameters.return_value = {
+        stack._blueprint.get_parameter_values.return_value = {
             "Param2": "Some Resolved Value",
         }
-        self.assertEqual(len(stack.cfn_parameters.keys()), 2)
-        param = stack.cfn_parameters["Param2"]
+        self.assertEqual(len(stack.parameter_values.keys()), 1)
+        param = stack.parameter_values["Param2"]
         self.assertEqual(param, "Some Resolved Value")
 
-    def test_empty_parameters(self):
-        build_action_parameters = {}
-        self.assertEqual({}, _gather_parameters(self.sd,
-                                                build_action_parameters))
-
-    def test_generic_build_action_override(self):
+    def test_gather_variables_fails_on_parameters_in_stack_def(self):
         sdef = self.sd
         sdef["parameters"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_parameters = {"Address": "192.168.1.1"}
-        result = _gather_parameters(sdef, build_action_parameters)
-        self.assertEqual(result["Address"], "192.168.1.1")
-        self.assertEqual(result["Foo"], "BAR")
-
-    def test_stack_specific_override(self):
-        sdef = self.sd
-        sdef["parameters"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_parameters = {"test::Address": "192.168.1.1"}
-        result = _gather_parameters(sdef, build_action_parameters)
-        self.assertEqual(result["Address"], "192.168.1.1")
-        self.assertEqual(result["Foo"], "BAR")
-
-    def test_invalid_stack_specific_override(self):
-        sdef = self.sd
-        sdef["parameters"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_parameters = {"FAKE::Address": "192.168.1.1"}
-        result = _gather_parameters(sdef, build_action_parameters)
-        self.assertEqual(result["Address"], "10.0.0.1")
-        self.assertEqual(result["Foo"], "BAR")
-
-    def test_specific_vs_generic_build_action_override(self):
-        sdef = self.sd
-        sdef["parameters"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_parameters = {
-            "test::Address": "192.168.1.1",
-            "Address": "10.0.0.1"}
-        result = _gather_parameters(sdef, build_action_parameters)
-        self.assertEqual(result["Address"], "192.168.1.1")
-        self.assertEqual(result["Foo"], "BAR")
+        with self.assertRaises(AttributeError):
+            _gather_variables(sdef)

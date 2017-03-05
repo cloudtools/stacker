@@ -5,11 +5,20 @@ from moto import mock_ecs
 from testfixtures import LogCapture
 
 from stacker.hooks.ecs import create_clusters
+from ..factories import (
+    mock_context,
+    mock_provider,
+)
 
 REGION = "us-east-1"
 
 
 class TestECSHooks(unittest.TestCase):
+
+    def setUp(self):
+        self.provider = mock_provider(region=REGION)
+        self.context = mock_context(namespace="fake")
+
     def test_create_single_cluster(self):
         with mock_ecs():
             cluster = "test-cluster"
@@ -21,11 +30,9 @@ class TestECSHooks(unittest.TestCase):
             with LogCapture(logger) as logs:
                 self.assertTrue(
                     create_clusters(
-                        region=REGION,
-                        namespace="fake",
-                        mappings={},
-                        parameters={},
-                        clusters=cluster
+                        provider=self.provider,
+                        context=self.context,
+                        clusters=cluster,
                     )
                 )
 
@@ -52,11 +59,9 @@ class TestECSHooks(unittest.TestCase):
                 with LogCapture(logger) as logs:
                     self.assertTrue(
                         create_clusters(
-                            region=REGION,
-                            namespace="fake",
-                            mappings={},
-                            parameters={},
-                            clusters=cluster
+                            provider=self.provider,
+                            context=self.context,
+                            clusters=cluster,
                         )
                     )
 

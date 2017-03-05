@@ -1,4 +1,3 @@
-import copy
 import logging
 
 from .build import Build
@@ -34,12 +33,9 @@ class Stacker(BaseCommand):
             options.provider = default.Provider(region=options.region)
         options.context = Context(
             environment=options.environment,
-            parameters=copy.deepcopy(options.parameters),
-            # We use
-            # set_default(get_context_kwargs=subcommand.get_context_kwargs) so
-            # the subcommand can provide any specific kwargs to the Context
-            # that it wants. We need to pass down the options so it can
-            # reference any arguments it defined.
+            logger_type=self.logger_type,
+            # Allow subcommands to provide any specific kwargs to the Context
+            # that it wants.
             **options.get_context_kwargs(options)
         )
         options.context.load_config(options.config.read())

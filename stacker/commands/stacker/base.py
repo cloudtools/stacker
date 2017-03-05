@@ -3,7 +3,10 @@ from collections import Mapping
 import logging
 
 from ...environment import parse_environment
-from ...logger import setup_logging
+from ...logger import (
+    BASIC_LOGGER_TYPE,
+    setup_logging,
+)
 
 
 class KeyValueAction(argparse.Action):
@@ -58,6 +61,7 @@ class BaseCommand(object):
     description = None
     subcommands = tuple()
     subcommands_help = None
+    logger_type = BASIC_LOGGER_TYPE
 
     def __init__(self, *args, **kwargs):
         if not self.name:
@@ -95,7 +99,7 @@ class BaseCommand(object):
         pass
 
     def configure(self, options, **kwargs):
-        setup_logging(options.verbose, options.interactive)
+        self.logger_type = setup_logging(options.verbose, options.interactive)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.
@@ -115,14 +119,6 @@ class BaseCommand(object):
         return {}
 
     def add_arguments(self, parser):
-        # global arguments that should be available on all stacker subcommands
-        parser.add_argument("-p", "--parameter", dest="parameters",
-                            metavar="PARAMETER=VALUE", type=key_value_arg,
-                            action=KeyValueAction, default={},
-                            help="Adds parameters from the command line "
-                                 "that can be used inside any of the stacks "
-                                 "being built. Can be specified more than "
-                                 "once.")
         parser.add_argument("-e", "--env", dest="cli_envs",
                             metavar="ENV=VALUE", type=key_value_arg,
                             action=KeyValueAction, default={},
@@ -130,9 +126,8 @@ class BaseCommand(object):
                                  "the command line. Overrides your "
                                  "environment file settings. Can be specified "
                                  "more than once.")
-        parser.add_argument("-r", "--region", default="us-east-1",
-                            help="The AWS region to launch in. Default: "
-                                 "%(default)s")
+        parser.add_argument("-r", "--region",
+                            help="The AWS region to launch in.")
         parser.add_argument("-v", "--verbose", action="count", default=0,
                             help="Increase output verbosity. May be specified "
                                  "up to twice.")

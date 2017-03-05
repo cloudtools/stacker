@@ -10,82 +10,70 @@ from .lookups.handlers.output import (
     deconstruct,
 )
 
+from .exceptions import FailedVariableLookup
 
-def _gather_parameters(stack_def, context_parameters):
-    """Merges builder provided & stack defined parameters.
 
-    Ensures that more specifically defined parameters (ie: parameters defined
-    specifically for the given stack: stack_name::parameter) override less
-    specific parameters provided by the builder.
+def _gather_variables(stack_def):
+    """Merges context provided & stack defined variables.
+
+    If multiple stacks have a variable with the same name, we can specify the
+    value for a specific stack by passing in the variable name as: `<stack
+    name>::<variable name>`. This variable value will only be used for that
+    specific stack.
 
     Order of precedence:
-        - builder defined stack specific (stack_name::parameter)
-        - builder defined non-specific (parameter)
-        - stack_def defined
+        - context defined stack specific variables (ie.
+            SomeStack::SomeVariable)
+        - context defined non-specific variables
+        - variable defined within the stack definition
 
     Args:
         stack_def (dict): The stack definition being worked on.
-        context_parameters (dict): A dictionary of parameters passed in
-            through the Context, usually from the CLI.
 
     Returns:
-        dict: Contains key/value pairs of the collected parameters.
+        dict: Contains key/value pairs of the collected variables.
+
+    Raises:
+        AttributeError: Raised when the stack definitition contains an invalid
+            attribute. Currently only when using old parameters, rather than
+            variables.
     """
-    parameters = copy.deepcopy(stack_def.get("parameters", {}))
-    stack_specific_params = {}
-    for key, value in context_parameters.iteritems():
-        stack = None
-        if "::" in key:
-            stack, key = key.split("::", 1)
-        if not stack:
-            # Non-stack specific, go ahead and add it
-            parameters[key] = value
-            continue
-        # Gather stack specific params for later
-        if stack == stack_def["name"]:
-            stack_specific_params[key] = value
-    # Now update stack parameters with the stack specific parameters
-    # ensuring they override generic parameters
-    parameters.update(stack_specific_params)
-    return parameters
-
-
-def _gather_variables(definition):
-    variables = copy.deepcopy(definition.get('variables', {}))
-    return [Variable(key, value) for key, value in variables.iteritems()]
+    stack_name = stack_def["name"]
+    if "parameters" in stack_def:
+        raise AttributeError("Stack definition %s contains deprecated "
+                             "'parameters', rather than 'variables'. Please "
+                             "update your config." % stack_name)
+    variable_values = copy.deepcopy(stack_def.get('variables', {}))
+    return [Variable(k, v) for k, v in variable_values.iteritems()]
 
 
 class Stack(object):
+
     """Represents gathered information about a stack to be built/updated.
 
     Args:
         definition (dict): A stack definition.
         context (:class:`stacker.context.Context`): Current context for
             building the stack.
-        parameters (dict, optional): Context parameters.
         mappings (dict, optional): Cloudformation mappings passed to the
             blueprint.
         locked (bool, optional): Whether or not the stack is locked.
         force (bool, optional): Whether to force updates on this stack.
         enabled (bool, optional): Whether this stack is enabled
+
     """
 
-    def __init__(self, definition, context, parameters=None, mappings=None,
+    def __init__(self, definition, context, variables=None, mappings=None,
                  locked=False, force=False, enabled=True):
         self.name = definition["name"]
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
-        self.parameters = _gather_parameters(definition, parameters or {})
         self.variables = _gather_variables(definition)
         self.mappings = mappings
         self.locked = locked
         self.force = force
         self.enabled = enabled
-        # XXX this is temporary until we remove passing context down to the
-        # blueprint
         self.context = copy.deepcopy(context)
-        if isinstance(self.context.parameters, dict):
-            self.context.parameters.update(self.parameters)
 
     def __repr__(self):
         return self.fqn
@@ -94,36 +82,22 @@ class Stack(object):
     def requires(self):
         requires = set([self.context.get_fqn(r) for r in
                         self.definition.get("requires", [])])
-        # Auto add dependencies when parameters reference the Outputs of
-        # another stack.
-        for value in self.parameters.values():
-            stack_names = []
-            if isinstance(value, basestring) and "::" in value:
-                # support for list of Outputs
-                values = value.split(",")
-                for x in values:
-                    stack_name, _ = x.split("::")
-                    stack_names.append(stack_name)
-            else:
-                continue
-            for stack_name in stack_names:
-                stack_fqn = self.context.get_fqn(stack_name)
-                requires.add(stack_fqn)
 
         # Add any dependencies based on output lookups
         for variable in self.variables:
             for lookup in variable.lookups:
                 if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
-                    d = deconstruct(lookup.input)
+
+                    try:
+                        d = deconstruct(lookup.input)
+                    except ValueError as e:
+                        raise FailedVariableLookup(self.name, e)
+
                     if d.stack_name == self.name:
                         message = (
                             "Variable %s in stack %s has a ciruclar reference "
                             "within lookup: %s"
-                        ) % (
-                            variable.name,
-                            self.name,
-                            lookup.raw,
-                        )
+                        ) % (variable.name, self.name, lookup.raw)
                         raise ValueError(message)
                     stack_fqn = self.context.get_fqn(d.stack_name)
                     requires.add(stack_fqn)
@@ -147,25 +121,24 @@ class Stack(object):
         return self._blueprint
 
     @property
-    def cfn_parameters(self):
+    def parameter_values(self):
         """Return all CloudFormation Parameters for the stack.
 
-        The Stack can have CloudFormation Parameters passed in as `parameters`
-        within the stack definition. This is deprecated and will be removed in
-        a future release.
+        CloudFormation Parameters can be specified via Blueprint Variables with
+        a :class:`stacker.blueprints.variables.types.CFNType` `type`.
 
-        The new way to specify CloudFormation Parameters is via Blueprint
-        Variables with a :class:`stacker.blueprints.types.CFNType` `type`.
-
-        This is a backwards compatible way of returning both ways of defining
-        CloudFormation Parameters.
+        Returns:
+            dict: dictionary of <parameter name>: <parameter value>.
 
         """
-        parameters = copy.deepcopy(self.parameters)
-        parameters.update(self.blueprint.get_cfn_parameters())
-        return parameters
+        return self.blueprint.get_parameter_values()
 
-    def resolve_variables(self, context, provider):
+    @property
+    def required_parameter_definitions(self):
+        """Return all the required CloudFormation Parameters for the stack."""
+        return self.blueprint.get_required_parameter_definitions()
+
+    def resolve(self, context, provider):
         """Resolve the Stack variables.
 
         This resolves the Stack variables and then prepares the Blueprint for

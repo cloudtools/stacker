@@ -90,8 +90,11 @@ class Action(BaseAction):
         """Any steps that need to be taken prior to running the action."""
         pre_destroy = self.context.config.get("pre_destroy")
         if not outline and pre_destroy:
-            util.handle_hooks("pre_destroy", pre_destroy, self.provider.region,
-                              self.context)
+            util.handle_hooks(
+                stage="pre_destroy",
+                hooks=pre_destroy,
+                provider=self.provider,
+                context=self.context)
 
     def run(self, force, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)
@@ -109,5 +112,8 @@ class Action(BaseAction):
         """Any steps that need to be taken after running the action."""
         post_destroy = self.context.config.get("post_destroy")
         if not outline and post_destroy:
-            util.handle_hooks("post_destroy", post_destroy,
-                              self.provider.region, self.context)
+            util.handle_hooks(
+                stage="post_destroy",
+                hooks=post_destroy,
+                provider=self.provider,
+                context=self.context)

@@ -31,7 +31,7 @@ vpc_parameters: &vpc_parameters
 stacks:
   - name: vpc
     class_path: stacker.tests.fixtures.mock_blueprints.VPC
-    parameters:
+    variables:
       InstanceType: m3.medium
       SshKeyName: default
       ImageName: NAT
@@ -49,7 +49,7 @@ stacks:
       #InternalDomain: internal
   - name: bastion
     class_path: stacker.tests.fixtures.mock_blueprints.Bastion
-    parameters:
+    variables:
       # Extends the parameters dict with the contents of the vpc_parameters
       # anchor. Basically we're including all VPC Outputs in the parameters
       # of the bastion stack. Note: Stacker figures out, automatically, which

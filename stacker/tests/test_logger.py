@@ -7,10 +7,19 @@ from colorama.ansi import (
     Fore,
     clear_line,
 )
-from mock import MagicMock
+from mock import (
+    MagicMock,
+    patch,
+)
 
-from ...logger.handler import LogLoopStreamHandler
-from ...logger.formatter import ColorFormatter
+from stacker.logger import (
+    setup_logging,
+    BASIC_LOGGER_TYPE,
+    LOOP_LOGGER_TYPE,
+)
+
+from stacker.logger.handler import LogLoopStreamHandler
+from stacker.logger.formatter import ColorFormatter
 
 
 class TestLogStreamLoopHandler(unittest.TestCase):
@@ -18,6 +27,20 @@ class TestLogStreamLoopHandler(unittest.TestCase):
     def setUp(self):
         self.stream = MagicMock()
         self.handler = LogLoopStreamHandler(self.stream)
+
+    @patch('stacker.logger.sys')
+    @patch('stacker.logger.logging')
+    def test_setup_logging(self, patched_logging, patched_sys):
+        patched_sys.stdout.isatty.return_value = True
+        logger = setup_logging(verbosity=0, interactive=False)
+        self.assertEqual(logger, LOOP_LOGGER_TYPE)
+        logger = setup_logging(verbosity=1, interactive=False)
+        self.assertEqual(logger, BASIC_LOGGER_TYPE)
+        logger = setup_logging(verbosity=0, interactive=True)
+        self.assertEqual(logger, BASIC_LOGGER_TYPE)
+        patched_sys.stdout.isatty.return_value = False
+        logger = setup_logging(verbosity=0, interactive=False)
+        self.assertEqual(logger, BASIC_LOGGER_TYPE)
 
     def test_emit_normal_record(self):
         record = makeLogRecord({'msg': 'test'})

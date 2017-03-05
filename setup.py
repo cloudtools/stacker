@@ -45,6 +45,6 @@ if __name__ == "__main__":
         test_suite="nose.collector",
         entry_points='''
             [console_scripts]
-            stacker=stacker.cli.commands:cli
+            stacker=stacker.cli.stacker.base:cli
         ''',
     )

@@ -28,6 +28,7 @@ def handler(value, provider=None, context=None, fqn=False, **kwargs):
         raise ValueError('Context is required')
 
     d = deconstruct(value)
+
     stack_fqn = d.stack_name
     if not fqn:
         stack_fqn = context.get_fqn(d.stack_name)
@@ -38,10 +39,10 @@ def handler(value, provider=None, context=None, fqn=False, **kwargs):
 
 def deconstruct(value):
 
-    # Probably an undefined environment variable
-    # Provides a clearer statement for debugging
-    if "::" not in value:
-        raise ValueError("Unknown variable in config file: %s" % value)
+    try:
+        stack_name, output_name = value.split("::")
+    except ValueError:
+        raise ValueError("output handler requires syntax "
+                         "of <stack>::<output>.  Got: %s" % value)
 
-    stack_name, output_name = value.split("::")
     return Output(stack_name, output_name)

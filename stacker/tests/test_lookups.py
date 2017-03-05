@@ -93,9 +93,3 @@ class TestLookupExtraction(unittest.TestCase):
         assert l.type == _type
         assert l.input == _input
         assert l.raw == "%s %s" % (_type, _input)
-
-    def test_invalid_extract_lookups_from_string(self):
-        _input = "vpc::PublicSubnets"
-        value = "${%s}" % (_input)
-        with self.assertRaises(ValueError):
-            extract_lookups_from_string(value)

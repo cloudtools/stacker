@@ -1,6 +1,5 @@
 import click
 
-
 from ...actions.build import Action
 from ..common import common_parameters
 

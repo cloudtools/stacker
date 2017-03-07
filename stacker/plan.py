@@ -122,7 +122,7 @@ class Plan(OrderedDict):
     """
 
     def __init__(self, description, sleep_time=5, wait_func=None,
-                 tail=False, logger_type=None, *args, **kwargs):
+                 tail=False, logger_type=None, poll_func=None, *args, **kwargs):
         self.description = description
         self.sleep_time = sleep_time
         self.logger_type = logger_type
@@ -133,10 +133,9 @@ class Plan(OrderedDict):
             self._wait_func = wait_func
         else:
             self._wait_func = time.sleep
-
-        self._watchers = {}
         self.tail = tail
         self.id = uuid.uuid4()
+        self._poll_func = poll_func
         super(Plan, self).__init__(*args, **kwargs)
 
     def add(self, stack, run_func, requires=None):
@@ -154,6 +153,13 @@ class Plan(OrderedDict):
             requires=requires,
             tail=self.tail
         )
+
+    def poll(self):
+        stack_dict = self._poll_func(self.tail)
+        for step_name, step in self.list_pending():
+            if step_name in stack_dict:
+                status = stack_dict[step_name]
+                step.set_status(status)
 
     def list_status(self, status):
         """Returns a list of steps in the given status.
@@ -213,16 +219,19 @@ class Plan(OrderedDict):
                 )
                 continue
 
-            try:
-                status = step.run()
-            except CancelExecution:
-                status = SkippedStatus(reason="canceled execution")
+            if not step.submitted:
+                try:
+                    status = step.run()
+                except CancelExecution:
+                    status = SkippedStatus(reason="canceled execution")
 
-            if not isinstance(status, Status):
-                raise ValueError(
-                    "Step run_func must return a valid Status object. "
-                    "(Returned type: %s)" % (type(status)))
-            step.set_status(status)
+                if not isinstance(status, Status):
+                    raise ValueError(
+                        "Step run_func must return a valid Status object. "
+                        "(Returned type: %s)" % (type(status)))
+                step.set_status(status)
+            else:
+               self.poll() 
 
         return self.completed
 

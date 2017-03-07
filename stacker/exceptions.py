@@ -126,7 +126,6 @@ class StackDidNotChange(Exception):
     provider.
     """
 
-
 class CancelExecution(Exception):
 
     """Exception raised when we want to cancel executing the plan."""

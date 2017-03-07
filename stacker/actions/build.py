@@ -8,8 +8,10 @@ from ..exceptions import (
     StackDoesNotExist,
 )
 
+
+
 from ..plan import Plan
-from ..status import (
+from stacker.status import (
     NotSubmittedStatus,
     NotUpdatedStatus,
     DidNotChangeStatus,
@@ -98,44 +100,6 @@ def _resolve_parameters(parameters, blueprint):
         params[key] = value
     return params
 
-
-def _handle_missing_parameters(params, required_params, existing_stack=None):
-    """Handles any missing parameters.
-
-    If an existing_stack is provided, look up missing parameters there.
-
-    Args:
-        params (dict): key/value dictionary of stack definition parameters
-        required_params (list): A list of required parameter names.
-        existing_stack (dict): A dict representation of the stack. If
-            provided, will be searched for any missing parameters.
-
-    Returns:
-        list of tuples: The final list of key/value pairs returned as a
-            list of tuples.
-
-    Raises:
-        MissingParameterException: Raised if a required parameter is
-            still missing.
-
-    """
-    missing_params = list(set(required_params) - set(params.keys()))
-    if existing_stack and 'Parameters' in existing_stack:
-        stack_params = {p['ParameterKey']: p['ParameterValue'] for p in
-                        existing_stack['Parameters']}
-        for p in missing_params:
-            if p in stack_params:
-                value = stack_params[p]
-                logger.debug("Using parameter %s from existing stack: %s",
-                             p, value)
-                params[p] = value
-    final_missing = list(set(required_params) - set(params.keys()))
-    if final_missing:
-        raise MissingParameterException(final_missing)
-
-    return params.items()
-
-
 class Action(BaseAction):
 
     """Responsible for building & coordinating CloudFormation stacks.
@@ -152,12 +116,11 @@ class Action(BaseAction):
 
     """
 
-    def build_parameters(self, stack, provider_stack):
+    def build_parameters(self, stack):
         """Builds the CloudFormation Parameters for our stack.
 
         Args:
             stack (:class:`stacker.stack.Stack`): A stacker stack
-            provider_stack (dict): An optional Stacker provider object
 
         Returns:
             dict: The parameters for the given stack
@@ -165,8 +128,7 @@ class Action(BaseAction):
         """
         resolved = _resolve_parameters(stack.parameter_values, stack.blueprint)
         required_parameters = stack.required_parameter_definitions.keys()
-        parameters = _handle_missing_parameters(resolved, required_parameters,
-                                                provider_stack)
+        parameters = self._handle_missing_parameters(resolved, required_parameters, stack.fqn)
         return [
             {'ParameterKey': p[0],
              'ParameterValue': str(p[1])} for p in parameters
@@ -187,57 +149,40 @@ class Action(BaseAction):
         if not should_submit(stack):
             return NotSubmittedStatus()
 
-        try:
-            provider_stack = self.provider.get_stack(stack.fqn, tail=tail)
-        except StackDoesNotExist:
-            provider_stack = None
-
-        old_status = kwargs.get("status")
-        if provider_stack and old_status == SUBMITTED:
-            logger.debug(
-                "Stack %s provider status: %s",
-                stack.fqn,
-                self.provider.get_stack_status(provider_stack),
-            )
-            if self.provider.is_stack_completed(provider_stack):
-                submit_reason = getattr(old_status, "reason", None)
-                return CompleteStatus(submit_reason)
-            elif self.provider.is_stack_in_progress(provider_stack):
-                logger.debug("Stack %s in progress.", stack.fqn)
-                return old_status
-
         logger.debug("Resolving stack %s", stack.fqn)
         stack.resolve(self.context, self.provider)
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack)
-        parameters = self.build_parameters(stack, provider_stack)
+        parameters = self.build_parameters(stack)
+        
+        # Try to update, if the update fails try to create a new stack
+        # This is a speed improvement because the update case happens
+        # much more often than the create case.
 
-        new_status = None
-        if not provider_stack:
-            new_status = SubmittedStatus("creating new stack")
-            logger.debug("Creating new stack: %s", stack.fqn)
-            self.provider.create_stack(stack.fqn, template_url, parameters,
-                                       tags)
-        else:
-            if not should_update(stack):
-                return NotUpdatedStatus()
+        if should_update(stack):
             try:
-                new_status = SubmittedStatus("updating existing stack")
                 self.provider.update_stack(stack.fqn, template_url,
-                                           parameters, tags)
+                                               parameters, tags)
                 logger.debug("Updating existing stack: %s", stack.fqn)
+                return SubmittedStatus("UPDATING_STACK")
             except StackDidNotChange:
                 return DidNotChangeStatus()
-
-        return new_status
+            except StackDoesNotExist:
+                pass
+        
+        logger.debug("Creating new stack: %s", stack.fqn)
+        self.provider.create_stack(stack.fqn, template_url, parameters,
+                                   tags)
+        return SubmittedStatus("CREATE_STACK")
 
     def _generate_plan(self, tail=False):
 
         plan = Plan(description="Create/Update stacks",
                     logger_type=self.context.logger_type,
-                    tail=tail)
+                    tail=tail,
+                    poll_func=self.provider.poll_events)
         stacks = self.context.get_stacks_dict()
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
@@ -269,9 +214,6 @@ class Action(BaseAction):
                 provider=self.provider,
                 context=self.context)
 
-        # Clear old sns events
-        self.provider.pre_run()
-
     def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
@@ -298,3 +240,50 @@ class Action(BaseAction):
                 hooks=post_build,
                 provider=self.provider,
                 context=self.context)
+
+    def _handle_missing_parameters(self, params, required_params, stack_name):
+        """Handles any missing parameters.
+
+        If an existing_stack is provided, look up missing parameters there.
+
+        Args:
+            params (dict): key/value dictionary of stack definition parameters
+            required_params (list): A list of required parameter names.
+            stack_name (string): The name of the current stack
+
+        Returns:
+            list of tuples: The final list of key/value pairs returned as a
+                list of tuples.
+
+        Raises:
+            MissingParameterException: Raised if a required parameter is
+                still missing.
+
+        """
+        missing_params = list(set(required_params) - set(params.keys()))
+        if missing_params:
+
+            exiting_stack = None
+
+            logger.info("Handling missing params for %S.", stack_name)
+
+            try:
+                existing_stack = self.provider.get_stack(stack_name)
+            except StackDoesNotExist:
+                pass
+
+            if existing_stack and 'Parameters' in existing_stack:
+                stack_params = {p['ParameterKey']: p['ParameterValue'] for p in
+                                existing_stack['Parameters']}
+                for p in missing_params:
+                    if p in stack_params:
+
+                        value = stack_params[p]
+                        logger.debug("Using parameter %s from existing stack: %s",
+                                     p, value)
+                        params[p] = value
+            final_missing = list(set(required_params) - set(params.keys()))
+            if final_missing:
+                raise MissingParameterException(final_missing)
+
+        return params.items()

@@ -4,9 +4,9 @@ stacks:
     variables:
       Buckets:
         myLilBucket: {}
-  - name: bucket-two
+  - name: bucket2
     class_path: stacker_blueprints.s3.Buckets
     variables:
       Buckets:
-        myBigBucket: {}
+        myLilBucket: {}
 

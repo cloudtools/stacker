@@ -3,13 +3,20 @@ import logging
 import os
 import time
 
-import botocore.exceptions
-
+import botocore
 from ..base import BaseProvider
 from ... import exceptions
 from ...util import retry_with_backoff
 from stacker.session_cache import get_session
 from cloudsns.cloudlistener import CloudListener
+from stacker.status import (
+    NotSubmittedStatus,
+    NotUpdatedStatus,
+    DidNotChangeStatus,
+    SubmittedStatus,
+    CompleteStatus,
+    SUBMITTED
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +85,6 @@ class Provider(BaseProvider):
 
     """AWS CloudFormation Provider"""
 
-    DELETED_STATUS = "DELETE_COMPLETE"
     IN_PROGRESS_STATUSES = (
         "CREATE_IN_PROGRESS",
         "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS",
@@ -88,6 +94,7 @@ class Provider(BaseProvider):
     COMPLETE_STATUSES = (
         "CREATE_COMPLETE",
         "UPDATE_COMPLETE",
+        "DELETE_COMPLETE"
     )
 
     def __init__(self, region, **kwargs):
@@ -98,7 +105,6 @@ class Provider(BaseProvider):
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
-        self._stacks = {}
 
     @property
     def cloudformation(self):
@@ -124,95 +130,28 @@ class Provider(BaseProvider):
 
         return self._listener
 
-    def flush_events(self):
-        logger.info("Purging old queue")
-        while 1:
-            messages = self.listener.get_messages()
-            if len(messages) == 0:
-                break
-
-            for message in messages:
-                message.delete()
-        logger.info("Done purging queue")
-
-    def pre_run(self):
-        self.flush_events()
-
-    def parse_stack_events(self, tail):
+    def poll_events(self, tail):
         messages = self.listener.get_messages()
-        for message in messages:
-            message_dict = message.__dict__
-            message_dict['fqn'] = message_dict['StackName']
-            self._stacks[message.StackName] = message_dict
+        status_dict = {}
 
+        for message in messages:
+            status_dict[message.StackName] = self.get_status(message)
+
+            print message.__dict__
             if tail:
                 Provider._tail_print(message)
 
-        self.listener.delete_messages(messages)
+        if messages:        
+            self.listener.delete_messages(messages)
 
-    def get_stack(self, stack_name, tail=False, **kwargs):
-        self.parse_stack_events(tail)
-        if stack_name in self._stacks:
-            return self._stacks[stack_name]
-        else:
-            raise exceptions.StackDoesNotExist(stack_name)
+        return status_dict
 
-    def get_stack_status(self, stack, **kwargs):
-        return stack['ResourceStatus']
-
-    def is_stack_completed(self, stack, **kwargs):
-        return self.get_stack_status(stack) in self.COMPLETE_STATUSES
-
-    def is_stack_in_progress(self, stack, **kwargs):
-        return self.get_stack_status(stack) in self.IN_PROGRESS_STATUSES
-
-    def is_stack_destroyed(self, stack, **kwargs):
-        return self.get_stack_status(stack) == self.DELETED_STATUS
-
-    def tail_stack(self, stack, retries=0, **kwargs):
-        def log_func(message):
-            # Check that the message is for the correct stack
-            if message.StackName == stack.fqn:
-                event_args = [message.ResourceStatus, message.ResourceType]
-
-                if hasattr(message, 'ResourceStatusReason'):
-                    event_args.append(message.ResourceStatusReason)
-                # filter out any values that are empty
-                event_args = [arg for arg in event_args if arg]
-                template = " ".join(["[%s]"] + ["%s" for _ in event_args])
-                logger.info(template, *([stack.fqn] + event_args))
-
-            # Needed for listener.poll to continue
-            # TODO: change this behaviour
-            return False
-
-        if not retries:
-            logger.info("Tailing stack: %s", stack.fqn)
-
-        try:
-            self.tail(stack.fqn,
-                      log_func=log_func,
-                      include_initial=False)
-        except botocore.exceptions.ClientError as e:
-            if "does not exist" in e.message and retries < MAX_TAIL_RETRIES:
-                # stack might be in the process of launching, wait for a second
-                # and try again
-                time.sleep(1)
-                self.tail_stack(stack, retries=retries + 1, **kwargs)
-            else:
-                raise
-
-    @staticmethod
-    def _tail_print(message):
-        print("%s - %s - %s" % (message.ResourceStatus,
-                                message.ResourceType,
-                                message.EventId))
-        return False
-
-    def tail(self, stack_name, log_func=_tail_print, sleep_time=5,
-             include_initial=True):
-
-        self.listener.poll(log_func)
+    def get_status(self, message):
+        status_name = message.ResourceStatus
+        if status_name in self.COMPLETE_STATUSES:
+            return CompleteStatus(status_name)
+        elif status_name in self.IN_PROGRESS_STATUSES:
+            return SubmittedStatus(status_name);
 
     def destroy_stack(self, stack, **kwargs):
         logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))
@@ -235,6 +174,16 @@ class Provider(BaseProvider):
         )
         return True
 
+    def get_stack(stack_name):
+        try:
+            return retry_on_throttling(
+                self.cloudformation.describe_stacks,
+                kwargs=dict(StackName=stack_name))['Stacks'][0]
+        except botocore.exceptions.ClientError as e:
+            if "does not exist" not in e.message:
+                raise
+            raise exceptions.StackDoesNotExist(stack_name)
+
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
         try:
             logger.debug("Attempting to update stack %s.", fqn)
@@ -254,6 +203,8 @@ class Provider(BaseProvider):
                     fqn,
                 )
                 raise exceptions.StackDidNotChange
+            if "does not exist" in e.message:
+                raise exceptions.StackDoesNotExist(fqn)
             raise
         return True
 

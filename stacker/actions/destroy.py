@@ -65,8 +65,10 @@ class Action(BaseAction):
     def _destroy_stack(self, stack, **kwargs):
         provider_stack = self.provider.get_stack(stack.fqn)
         logger.debug("Destroying stack: %s", stack.fqn)
-        if not provider_stack.NotificationArns:
-            print "Does not have a notification arn"
+        print provider_stack
+        if 'NotificationARNs' not in provider_stack:
+             self.provider.update_stack(stack.fqn, template_url,
+                                               parameters, tags)
         self.provider.destroy_stack(stack.fqn)
         return DestroyingStatus
 

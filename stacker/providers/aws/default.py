@@ -118,17 +118,23 @@ class Provider(BaseProvider):
         return self._cloudformation
 
     @property
-    def listener(self):
+    def listener(self, existing_topic_arn=None):
         # deals w/ multiprocessing issues w/ sharing ssl conns
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
         if pid != self._pid or not self._listener:
             session = get_session(self.region)
             self._listener = CloudListener(
-                LISTENER_NAME, session=session)
+                LISTENER_NAME, 
+                session=session,
+                existing_topic_arn=existing_topic_arn
+            )
             self._listener.start()
 
         return self._listener
+
+    def set_listener_topic_arn(existing_topic_arn):
+        self.listener(existing_topic_arn)
 
     def poll_events(self, tail):
         messages = self.listener.get_messages()
@@ -136,8 +142,6 @@ class Provider(BaseProvider):
 
         for message in messages:
             status_dict[message.StackName] = self.get_status(message)
-
-            print message.__dict__
             if tail:
                 Provider._tail_print(message)
 
@@ -148,16 +152,23 @@ class Provider(BaseProvider):
 
     def get_status(self, message):
         status_name = message.ResourceStatus
+        print status_name
         if status_name in self.COMPLETE_STATUSES:
             return CompleteStatus(status_name)
         elif status_name in self.IN_PROGRESS_STATUSES:
             return SubmittedStatus(status_name);
 
-    def destroy_stack(self, stack, **kwargs):
-        logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))
-        retry_on_throttling(self.cloudformation.delete_stack,
-                            kwargs=dict(StackName=self.get_stack_name(stack)))
-        return True
+        raise ValueError
+
+    def destroy_stack(self, stack_name, **kwargs):
+        logger.debug("Destroying stack: %s" % (stack_name))
+        try:
+            return retry_on_throttling(self.cloudformation.delete_stack,
+                            kwargs=dict(StackName=stack_name))
+
+        except botocore.exceptions.ClientError as e:
+            if "does not exist" in e.message:
+                raise exceptions.StackDoesNotExist(stack_name)
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
         logger.debug("Stack %s not found, creating.", fqn)
@@ -174,7 +185,7 @@ class Provider(BaseProvider):
         )
         return True
 
-    def get_stack(stack_name):
+    def get_stack(self, stack_name):
         try:
             return retry_on_throttling(
                 self.cloudformation.describe_stacks,

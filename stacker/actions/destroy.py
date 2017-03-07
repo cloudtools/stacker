@@ -48,42 +48,24 @@ class Action(BaseAction):
         plan_kwargs = {}
         if tail:
             plan_kwargs["watch_func"] = self.provider.tail_stack
-        plan = Plan(description="Destroy stacks", **plan_kwargs)
+        plan = Plan(description="Destroy stacks",
+                    poll_func=self.provider.poll_events,
+                    **plan_kwargs)
+
         stacks_dict = self.context.get_stacks_dict()
         dependencies = self._get_dependencies(stacks_dict)
         for stack_name in self.get_stack_execution_order(dependencies):
             plan.add(
                 stacks_dict[stack_name],
                 run_func=self._destroy_stack,
-                requires=dependencies.get(stack_name),
+                requires=dependencies.get(stack_name)
             )
         return plan
 
     def _destroy_stack(self, stack, **kwargs):
-        try:
-            provider_stack = self.provider.get_stack(stack.fqn)
-        except StackDoesNotExist:
-            logger.debug("Stack %s does not exist.", stack.fqn)
-            # Once the stack has been destroyed, it doesn't exist. If the
-            # status of the step was SUBMITTED, we know we just deleted it,
-            # otherwise it should be skipped
-            if kwargs.get("status", None) == SUBMITTED:
-                return DestroyedStatus
-            else:
-                return StackDoesNotExistStatus()
-
-        logger.debug(
-            "Stack %s provider status: %s",
-            self.provider.get_stack_name(provider_stack),
-            self.provider.get_stack_status(provider_stack),
-        )
-        if self.provider.is_stack_destroyed(provider_stack):
-            return DestroyedStatus
-        elif self.provider.is_stack_in_progress(provider_stack):
-            return DestroyingStatus
-        else:
-            logger.debug("Destroying stack: %s", stack.fqn)
-            self.provider.destroy_stack(provider_stack)
+        provider_stack = self.provider.get_stack(stack.fqn)
+        logger.debug("Destroying stack: %s", stack.fqn)
+        self.provider.destroy_stack(stack.fqn)
         return DestroyingStatus
 
     def pre_run(self, outline=False, *args, **kwargs):

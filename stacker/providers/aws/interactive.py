@@ -9,6 +9,8 @@ from .default import (
     retry_on_throttling,
 )
 
+import botocore.exceptions
+
 logger = logging.getLogger(__name__)
 
 
@@ -127,17 +129,23 @@ class Provider(AWSProvider):
 
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
         logger.debug("Attempting to create change set for stack: %s.", fqn)
-        response = retry_on_throttling(
-            self.cloudformation.create_change_set,
-            kwargs={
-                'StackName': fqn,
-                'TemplateURL': template_url,
-                'Parameters': parameters,
-                'Tags': tags,
-                'Capabilities': ["CAPABILITY_NAMED_IAM"],
-                'ChangeSetName': get_change_set_name(),
-            },
-        )
+        
+        try:
+            response = retry_on_throttling(
+                self.cloudformation.create_change_set,
+                kwargs={
+                    'StackName': fqn,
+                    'TemplateURL': template_url,
+                    'Parameters': parameters,
+                    'Tags': tags,
+                    'Capabilities': ["CAPABILITY_NAMED_IAM"],
+                    'ChangeSetName': get_change_set_name(),
+                },
+            )
+        except botocore.exceptions.ClientError as e:
+            if "does not exist" in e.message:
+                raise exceptions.StackDoesNotExist(stack_name)
+
         change_set_id = response["Id"]
         response = self._wait_till_change_set_complete(change_set_id)
         if response["Status"] == "FAILED":

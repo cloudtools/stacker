@@ -140,6 +140,7 @@ class Provider(AWSProvider):
                     'Tags': tags,
                     'Capabilities': ["CAPABILITY_NAMED_IAM"],
                     'ChangeSetName': get_change_set_name(),
+                    'NotificationARNs': [self.listener.TopicArn]
                 },
             )
         except botocore.exceptions.ClientError as e:

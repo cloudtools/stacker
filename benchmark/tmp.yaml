@@ -4,6 +4,7 @@ stacks:
     variables:
       Buckets:
         myLilBucket: {}
+        myOtherLilBucket: {}
   - name: bucket2
     class_path: stacker_blueprints.s3.Buckets
     variables:

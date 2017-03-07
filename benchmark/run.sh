@@ -9,4 +9,4 @@ get_abs_filename() {
 env_file_path=$(get_abs_filename "tmp.env")
 config_file_path=$(get_abs_filename "tmp.yaml")
 
-time stacker build $env_file_path $config_file_path
+time stacker build $* $env_file_path $config_file_path

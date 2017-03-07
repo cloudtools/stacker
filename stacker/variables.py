@@ -6,8 +6,11 @@ from .lookups import (
     resolve_lookups,
 )
 
+from exceptions import FailedVariableLookup
+
 
 class LookupTemplate(Template):
+
     """A custom string template we use to replace lookup values"""
     idpattern = r'[_a-z][^\$\{\}]*'
 
@@ -75,6 +78,7 @@ def resolve_variables(variables, context, provider):
 
 
 class Variable(object):
+
     """Represents a variable passed to a stack.
 
     Args:
@@ -130,8 +134,14 @@ class Variable(object):
                 the base provider
 
         """
+
         while self.lookups:
-            resolved_lookups = resolve_lookups(self.lookups, context, provider)
+            try:
+                resolved_lookups = resolve_lookups(
+                    self.lookups, context, provider)
+            except Exception as e:
+                raise FailedVariableLookup(self.name, e)
+
             self.replace(resolved_lookups)
 
     def replace(self, resolved_lookups):

@@ -55,9 +55,11 @@ class TestBuildAction(unittest.TestCase):
     def _get_context(self, **kwargs):
         config = {"stacks": [
             {"name": "vpc"},
-            {"name": "bastion", "variables": {"test": "${vpc::something}"}},
-            {"name": "db", "variables": {"test": "${vpc::something}",
-                                         "else": "${bastion::something}"}},
+            {"name": "bastion",
+             "variables": {"test": "${output vpc::something}"}},
+            {"name": "db",
+             "variables": {"test": "${output vpc::something}",
+                           "else": "${output bastion::something}"}},
             {"name": "other", "variables": {}}
         ]}
         return Context({"namespace": "namespace"}, config=config, **kwargs)

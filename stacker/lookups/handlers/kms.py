@@ -1,4 +1,4 @@
-import boto3
+from stacker.session_cache import get_session
 
 from ...util import read_value_from_path
 
@@ -12,7 +12,8 @@ def handler(value, **kwargs):
 
         [<region>@]<base64 encrypted value>
 
-    Note: The region is optional, and defaults to us-east-1 if not given.
+    Note: The region is optional, and defaults to the environment's
+    `AWS_DEFAULT_REGION` if not specified.
 
     For example:
 
@@ -42,10 +43,10 @@ def handler(value, **kwargs):
     """
     value = read_value_from_path(value)
 
-    region = "us-east-1"
+    region = None
     if "@" in value:
         region, value = value.split("@", 1)
 
-    kms = boto3.client("kms", region_name=region)
+    kms = get_session(region).client('kms')
     decoded = value.decode("base64")
     return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]

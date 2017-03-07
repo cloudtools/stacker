@@ -187,7 +187,7 @@ A stack has the following keys:
 **requires:**
   (optional) a list of other stacks this stack requires. This is for explicit
   dependencies - you do not need to set this if you refer to another stack in
-  a Parameter, so this is rarely necessary. See `Using Outputs as Parameters`_
+  a Parameter, so this is rarely necessary.
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 
@@ -263,48 +263,6 @@ could use them, you can just do this instead::
         << : *common_variables
         InstanceType: c4.xlarge # override the InstanceType in this stack
 
-Using Outputs as Parameters
----------------------------
-
-Since stacker encourages the breaking up of your CloudFormation stacks into
-entirely separate stacks, sometimes you'll need to pass values from one stack
-to another. The way this is handled in stacker (and in most of CloudFormation)
-is by having one stack provide Outputs_ for all the values that another
-stack may need, and then using those as the inputs for another stacks
-Parameters_. stacker makes this easier for you by providing a syntax for
-Parameters_ that will cause stacker to automatically look up the values of
-Outputs_ from another stack in its config. To do so, use the following format
-for the Parameter on the target stack::
-
-  MyParameter: OtherStack::OutputName
-
-This example is taken from stacker_blueprints_ example config - when building
-things inside a VPC, you will need to pass the *VpcId* of the VPC that you
-want the resources to be located in.  If the *vpc* stack provides an Output
-called *VpcId*, you can reference it easily::
-
-  domain_name: my_domain &domain
-
-  stacks:
-    - name: vpc
-      class_path: stacker_blueprints.vpc.VPC
-      parameters:
-        DomainName: *domain
-    - name: webservers
-      class_path: stacker_blueprints.asg.AutoscalingGroup
-      parameters:
-        DomainName: *domain
-        VpcId: vpc::VpcId # gets the VpcId Output from the vpc stack
-
-Note: Doing this creates an implicit dependency from the *webservers* stack
-to the *vpc* stack, which will cause stacker to submit the *vpc* stack, and
-then wait until it is complete until it submits the *webservers* stack.
-
-You can also pull multiple Outputs into a single, CommaDelimeted Parameter
-by separating them with commas like::
-
-  SomeParameter: stack1::Output1,stack2::Output2
-
 Variables
 ==========
 
@@ -374,11 +332,7 @@ stacker to automatically look up the values of Outputs_ from another stack
 in its config. To do so, use the following format for the Variable on the
 target stack::
 
-  MyParameter: ${OtherStack::OutputName}
-
-The above syntax is equivalent to the more explicit::
-
-  MyParameter ${output OtherStack::OutputName}
+  MyParameter: ${output OtherStack::OutputName}
 
 Since referencing Outputs_ from stacks is the most common use case,
 `output` is the default lookup type. For more information see Lookups_.
@@ -399,7 +353,7 @@ called *VpcId*, you can reference it easily::
       class_path: stacker_blueprints.asg.AutoscalingGroup
       variables:
         DomainName: *domain
-        VpcId: ${vpc::VpcId} # gets the VpcId Output from the vpc stack
+        VpcId: ${output vpc::VpcId} # gets the VpcId Output from the vpc stack
 
 Note: Doing this creates an implicit dependency from the *webservers* stack
 to the *vpc* stack, which will cause stacker to submit the *vpc* stack, and

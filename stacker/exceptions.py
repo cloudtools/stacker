@@ -17,6 +17,25 @@ class UnknownLookupType(Exception):
         super(UnknownLookupType, self).__init__(message, *args, **kwargs)
 
 
+class FailedVariableLookup(Exception):
+
+    def __init__(self, variable_name, error, *args, **kwargs):
+        message = "Couldn't resolve lookups in variable `%s`. " % variable_name
+        message += "%s" % error
+        super(FailedVariableLookup, self).__init__(message, *args, **kwargs)
+
+
+class InvalidUserdataPlaceholder(Exception):
+
+    def __init__(self, blueprint_name, exception_message, *args, **kwargs):
+        message = exception_message + ". "
+        message += "Could not parse userdata in blueprint \"%s\". " % (
+            blueprint_name)
+        message += "Make sure to escape all $ symbols with a $$."
+        super(InvalidUserdataPlaceholder, self).__init__(
+            message, *args, **kwargs)
+
+
 class UnresolvedVariables(Exception):
 
     def __init__(self, blueprint_name, *args, **kwargs):
@@ -102,18 +121,22 @@ class ImproperlyConfigured(Exception):
 
 
 class StackDidNotChange(Exception):
+
     """Exception raised when there are no changes to be made by the
     provider.
     """
 
 
 class CancelExecution(Exception):
+
     """Exception raised when we want to cancel executing the plan."""
 
 
 class ValidatorError(Exception):
+
     """Used for errors raised by custom validators of blueprint variables.
     """
+
     def __init__(self, variable, validator, value, exception=None):
         self.variable = variable
         self.validator = validator

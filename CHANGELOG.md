@@ -1,4 +1,4 @@
-## 1.0.0a5 (2016-11-28)
+## 1.0.0 (2016-03-04)
 
 This is a major release with the main change being the removal of the old
 Parameters logic in favor of Blueprint Variables and Lookups.
@@ -12,7 +12,34 @@ Parameters logic in favor of Blueprint Variables and Lookups.
 - keypair hook update to match route53 update [GH-248]
 - Add support for `TroposphereType` [GH-249]
 - Allow = in lookup contents [GH-251]
+- Add troposphere types [GH-257]
 - change capabilities to CAPABILITY\_NAMED\_IAM [GH-262]
+- Disable transformation of variables [GH-266]
+- Support destroying a subset of stacks [GH-278]
+- Update all hooks to use advanced results [GH-285]
+- Use sys\_path for hooks and lookups [GH-286]
+- Remove last of botocore connections [GH-287]
+- Remove --var flag [GH-289]
+- Avoid dictionary sharing pollution [GH-293]
+- Change aws\_lambda hook handler to use proper parameters [GH-297]
+- New `split` lookup handler [GH-302]
+- add parse\_user\_data [GH-306]
+- Add credential caching [GH-307]
+- Require explicit call to `output` lookup [GH-310]
+- Convert booleans to strings for CFNTypes [GH-311]
+- Add ssmstore as a lookup type [GH-314]
+- Added region to the ssm store test client [GH-316]
+- Add default lookup [GH-317]
+- Clean up errors from variables [GH-319]
+
+
+## 0.8.6 (2017-01-26)
+
+- Support destroying subset of stacks [GH-278]
+- Update all hooks to use advanced results [GH-285]
+- Use sys\_path for hooks and lookups [GH-286]
+- Remove last of botocore conns [GH-287]
+- Avoid dictionary sharing pollution [GH-293]
 
 ## 0.8.5 (2016-11-28)
 

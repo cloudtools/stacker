@@ -1,11 +1,13 @@
 import copy
 import hashlib
 import logging
+import string
+from stacker.util import read_value_from_path
 
 from troposphere import (
     Parameter,
     Ref,
-    Template,
+    Template
 )
 
 from ..exceptions import (
@@ -14,6 +16,7 @@ from ..exceptions import (
     UnresolvedVariables,
     ValidatorError,
     VariableTypeRequired,
+    InvalidUserdataPlaceholder
 )
 from .variables.types import (
     CFNType,
@@ -43,24 +46,31 @@ class CFNParameter(object):
 
         Args:
             name (str): the name of the CloudFormation Parameter
-            value (str or list): the value we're going to submit as a
-                CloudFormation Parameter.
+            value (str, list, int or bool): the value we're going to submit as
+                a CloudFormation Parameter.
 
         """
-        acceptable_types = [basestring, list, int]
+        acceptable_types = [basestring, bool, list, int]
         acceptable = False
         for acceptable_type in acceptable_types:
             if isinstance(value, acceptable_type):
-                # Convert integers to strings
-                if acceptable_type == int:
-                    value = str(value)
-
                 acceptable = True
+                if acceptable_type == bool:
+                    logger.debug("Converting parameter %s boolean '%s' "
+                                 "to string.", name, value)
+                    value = str(value).lower()
+                    break
+
+                if acceptable_type == int:
+                    logger.debug("Converting parameter %s integer '%s' "
+                                 "to string.", name, value)
+                    value = str(value)
+                    break
 
         if not acceptable:
             raise ValueError(
                 "CFNParameter (%s) value must be one of %s got: %s" % (
-                    name, "str, int, or list", value))
+                    name, "str, int, bool, or list", value))
 
         self.name = name
         self.value = value
@@ -106,8 +116,8 @@ def validate_variable_type(var_name, var_type, value):
             variable
 
     Returns:
-        object: A python object of type `var_type` based on the provided
-            `value`.
+        object: Returns the appropriate value object. If the original value
+            was of CFNType, the returned value will be wrapped in CFNParameter.
 
     Raises:
         ValueError: If the `value` isn't of `var_type` and can't be cast as
@@ -124,11 +134,9 @@ def validate_variable_type(var_name, var_type, value):
             raise ValidatorError(var_name, name, value, exc)
     else:
         if not isinstance(value, var_type):
-            try:
-                value = var_type(value)
-            except ValueError:
-                raise ValueError("Variable %s must be %s.",
-                                 var_name, var_type)
+            raise ValueError("Variable %s must be of type %s.",
+                             var_name, var_type)
+
     return value
 
 
@@ -205,12 +213,10 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
         raise ValidatorError(var_name, validator.__name__, value, exc)
 
     # Ensure that the resulting value is the correct type
-    var_type = var_def.get("type")
     value = validate_variable_type(var_name, var_type, value)
 
-    allowed_values = var_def.get('allowed_values')
-    valid = validate_allowed_values(allowed_values, value)
-    if not valid:
+    allowed_values = var_def.get("allowed_values")
+    if not validate_allowed_values(allowed_values, value):
         message = (
             "Invalid value passed to '%s' in blueprint: %s. Got: '%s', "
             "expected one of %s"
@@ -220,7 +226,59 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     return value
 
 
+def parse_user_data(variables, raw_user_data, blueprint_name):
+    """Parse the given user data and renders it as a template
+
+    It supports referencing template variables to create userdata
+    that's supplemented with information from the stack, as commonly
+    required when creating EC2 userdata files.
+
+    For example:
+        Given a raw_user_data string: 'open file ${file}'
+        And a variables dictionary with: {'file': 'test.txt'}
+        parse_user_data would output: open file test.txt
+
+    Args:
+        variables (dict): variables available to the template
+        raw_user_data (str): the user_data to be parsed
+        blueprint_name (str): the name of the blueprint
+
+    Returns:
+        str: The parsed user data, with all the variables values and
+             refs replaced with their resolved values.
+
+    Raises:
+        InvalidUserdataPlaceholder: Raised when a placeholder name in
+                                    raw_user_data is not valid.
+                                    E.g ${100} would raise this.
+        MissingVariable: Raised when a variable is in the raw_user_data that
+                         is not given in the blueprint
+
+    """
+    variable_values = {}
+
+    for key in variables.keys():
+        if type(variables[key]) is CFNParameter:
+            variable_values[key] = variables[key].to_parameter_value()
+        else:
+            variable_values[key] = variables[key]
+
+    template = string.Template(raw_user_data)
+
+    res = ""
+
+    try:
+        res = template.substitute(variable_values)
+    except ValueError as exp:
+        raise InvalidUserdataPlaceholder(blueprint_name, exp.args[0])
+    except KeyError as key:
+        raise MissingVariable(blueprint_name, key)
+
+    return res
+
+
 class Blueprint(object):
+
     """Base implementation for rendering a troposphere template.
 
     Args:
@@ -401,6 +459,23 @@ class Blueprint(object):
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
+
+    def read_user_data(self, user_data_path):
+        """Reads and parses a user_data file.
+
+        Args:
+            user_data_path (str):
+                path to the userdata file
+
+        Returns:
+            str: the parsed user data file
+
+        """
+        raw_user_data = read_value_from_path(user_data_path)
+
+        variables = self.get_variables()
+
+        return parse_user_data(variables, raw_user_data, self.name)
 
     @property
     def rendered(self):

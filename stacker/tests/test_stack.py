@@ -23,10 +23,10 @@ class TestStack(unittest.TestCase):
             variables={
                 "Var1": "${noop fakeStack3::FakeOutput}",
                 "Var2": (
-                    "some.template.value:${fakeStack2::FakeOutput}:"
-                    "${fakeStack::FakeOutput}"
+                    "some.template.value:${output fakeStack2::FakeOutput}:"
+                    "${output fakeStack::FakeOutput}"
                 ),
-                "Var3": "${fakeStack::FakeOutput},"
+                "Var3": "${output fakeStack::FakeOutput},"
                         "${output fakeStack2::FakeOutput}",
             },
             requires=[self.context.get_fqn("fakeStack")],
@@ -47,7 +47,7 @@ class TestStack(unittest.TestCase):
             base_name="vpc",
             stack_id=1,
             variables={
-                "Var1": "${vpc.1::FakeOutput}",
+                "Var1": "${output vpc.1::FakeOutput}",
             },
         )
         stack = Stack(definition=definition, context=self.context)
@@ -59,7 +59,7 @@ class TestStack(unittest.TestCase):
             base_name="vpc",
             stack_id=1,
             variables={
-                "Param1": "${fakeStack::FakeOutput}",
+                "Param1": "${output fakeStack::FakeOutput}",
             },
         )
         stack = Stack(definition=definition, context=self.context)
@@ -71,52 +71,8 @@ class TestStack(unittest.TestCase):
         param = stack.parameter_values["Param2"]
         self.assertEqual(param, "Some Resolved Value")
 
-    def test_empty_variables(self):
-        build_action_variables = {}
-        self.assertEqual([], _gather_variables(self.sd,
-                                               build_action_variables))
-
-    def test_generic_build_action_override(self):
-        sdef = self.sd
-        sdef["variables"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_variables = {"Address": "192.168.1.1"}
-        result = _gather_variables(sdef, build_action_variables)
-        variable_dict = dict((v.name, v.value) for v in result)
-        self.assertEqual(variable_dict["Address"], "192.168.1.1")
-        self.assertEqual(variable_dict["Foo"], "BAR")
-
-    def test_stack_specific_override(self):
-        sdef = self.sd
-        sdef["variables"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_variables = {"test::Address": "192.168.1.1"}
-        result = _gather_variables(sdef, build_action_variables)
-        variable_dict = dict((v.name, v.value) for v in result)
-        self.assertEqual(variable_dict["Address"], "192.168.1.1")
-        self.assertEqual(variable_dict["Foo"], "BAR")
-
-    def test_invalid_stack_specific_override(self):
-        sdef = self.sd
-        sdef["variables"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_variables = {"FAKE::Address": "192.168.1.1"}
-        result = _gather_variables(sdef, build_action_variables)
-        variable_dict = dict((v.name, v.value) for v in result)
-        self.assertEqual(variable_dict["Address"], "10.0.0.1")
-        self.assertEqual(variable_dict["Foo"], "BAR")
-
-    def test_specific_vs_generic_build_action_override(self):
-        sdef = self.sd
-        sdef["variables"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_variables = {
-            "test::Address": "192.168.1.1",
-            "Address": "10.0.0.1"}
-        result = _gather_variables(sdef, build_action_variables)
-        variable_dict = dict((v.name, v.value) for v in result)
-        self.assertEqual(variable_dict["Address"], "192.168.1.1")
-        self.assertEqual(variable_dict["Foo"], "BAR")
-
     def test_gather_variables_fails_on_parameters_in_stack_def(self):
         sdef = self.sd
         sdef["parameters"] = {"Address": "10.0.0.1", "Foo": "BAR"}
-        build_action_variables = {"Address": "192.168.1.1"}
         with self.assertRaises(AttributeError):
-            _gather_variables(sdef, build_action_variables)
+            _gather_variables(sdef)

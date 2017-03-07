@@ -10,8 +10,10 @@ from .lookups.handlers.output import (
     deconstruct,
 )
 
+from .exceptions import FailedVariableLookup
 
-def _gather_variables(stack_def, context_variables):
+
+def _gather_variables(stack_def):
     """Merges context provided & stack defined variables.
 
     If multiple stacks have a variable with the same name, we can specify the
@@ -27,8 +29,6 @@ def _gather_variables(stack_def, context_variables):
 
     Args:
         stack_def (dict): The stack definition being worked on.
-        context_variables (dict): A dictionary of variables passed in
-            through the Context, usually from the CLI.
 
     Returns:
         dict: Contains key/value pairs of the collected variables.
@@ -44,33 +44,17 @@ def _gather_variables(stack_def, context_variables):
                              "'parameters', rather than 'variables'. Please "
                              "update your config." % stack_name)
     variable_values = copy.deepcopy(stack_def.get('variables', {}))
-    stack_specific_variables = {}
-    for key, value in context_variables.iteritems():
-        stack = None
-        if "::" in key:
-            stack, key = key.split("::", 1)
-        if not stack:
-            # Non-stack specific, go ahead and add it
-            variable_values[key] = value
-            continue
-        # Gather stack specific params for later
-        if stack == stack_name:
-            stack_specific_variables[key] = value
-
-    # Now update stack definition variables with the stack specific variables
-    # ensuring they override generic variables
-    variable_values.update(stack_specific_variables)
     return [Variable(k, v) for k, v in variable_values.iteritems()]
 
 
 class Stack(object):
+
     """Represents gathered information about a stack to be built/updated.
 
     Args:
         definition (dict): A stack definition.
         context (:class:`stacker.context.Context`): Current context for
             building the stack.
-        variables (dict, optional): Context provided variables.
         mappings (dict, optional): Cloudformation mappings passed to the
             blueprint.
         locked (bool, optional): Whether or not the stack is locked.
@@ -84,7 +68,7 @@ class Stack(object):
         self.name = definition["name"]
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
-        self.variables = _gather_variables(definition, variables or {})
+        self.variables = _gather_variables(definition)
         self.mappings = mappings
         self.locked = locked
         self.force = force
@@ -103,7 +87,12 @@ class Stack(object):
         for variable in self.variables:
             for lookup in variable.lookups:
                 if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
-                    d = deconstruct(lookup.input)
+
+                    try:
+                        d = deconstruct(lookup.input)
+                    except ValueError as e:
+                        raise FailedVariableLookup(self.name, e)
+
                     if d.stack_name == self.name:
                         message = (
                             "Variable %s in stack %s has a ciruclar reference "

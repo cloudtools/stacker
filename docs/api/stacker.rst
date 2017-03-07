@@ -9,24 +9,28 @@ Subpackages
     stacker.actions
     stacker.blueprints
     stacker.commands
+    stacker.config
     stacker.hooks
+    stacker.logger
+    stacker.lookups
     stacker.providers
+    stacker.tests
 
 Submodules
 ----------
-
-stacker.config module
----------------------
-
-.. automodule:: stacker.config
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 stacker.context module
 ----------------------
 
 .. automodule:: stacker.context
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.environment module
+--------------------------
+
+.. automodule:: stacker.environment
     :members:
     :undoc-members:
     :show-inheritance:
@@ -47,10 +51,26 @@ stacker.plan module
     :undoc-members:
     :show-inheritance:
 
+stacker.session_cache module
+----------------------------
+
+.. automodule:: stacker.session_cache
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 stacker.stack module
 --------------------
 
 .. automodule:: stacker.stack
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.status module
+---------------------
+
+.. automodule:: stacker.status
     :members:
     :undoc-members:
     :show-inheritance:
@@ -67,6 +87,14 @@ stacker.util module
 -------------------
 
 .. automodule:: stacker.util
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.variables module
+------------------------
+
+.. automodule:: stacker.variables
     :members:
     :undoc-members:
     :show-inheritance:

@@ -3,7 +3,7 @@ import unittest
 import mock
 
 from stacker.context import Context
-from stacker.exceptions import ImproperlyConfigured
+from stacker.exceptions import ImproperlyConfigured, FailedVariableLookup
 from stacker.lookups.registry import (
     register_lookup_handler,
     unregister_lookup_handler,
@@ -303,7 +303,7 @@ class TestPlan(unittest.TestCase):
         for i in range(5):
             overrides = {
                 "variables": {
-                    "Var1": "${fakeStack::FakeOutput}",
+                    "Var1": "${output fakeStack::FakeOutput}",
                     "Var2": "${xref fakeStack::FakeOutput2}",
                 },
             }
@@ -320,7 +320,7 @@ class TestPlan(unittest.TestCase):
                 requires=stack.requires,
             )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(FailedVariableLookup):
             plan.dump("test", context=self.context)
 
     def test_plan_checkpoint_interval(self):

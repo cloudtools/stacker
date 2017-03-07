@@ -4,7 +4,10 @@ from ..util import load_object_from_string
 from .handlers import output
 from .handlers import kms
 from .handlers import xref
+from .handlers import ssmstore
 from .handlers import file as file_handler
+from .handlers import split
+from .handlers import default
 
 LOOKUP_HANDLERS = {}
 DEFAULT_LOOKUP = output.TYPE_NAME
@@ -67,5 +70,8 @@ def resolve_lookups(lookups, context, provider):
 
 register_lookup_handler(output.TYPE_NAME, output.handler)
 register_lookup_handler(kms.TYPE_NAME, kms.handler)
+register_lookup_handler(ssmstore.TYPE_NAME, ssmstore.handler)
 register_lookup_handler(xref.TYPE_NAME, xref.handler)
 register_lookup_handler(file_handler.TYPE_NAME, file_handler.handler)
+register_lookup_handler(split.TYPE_NAME, split.handler)
+register_lookup_handler(default.TYPE_NAME, default.handler)

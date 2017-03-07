@@ -2,12 +2,12 @@ import os
 from setuptools import setup, find_packages
 import glob
 
-VERSION = "1.0.0a5"
+VERSION = "1.0.0"
 
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "troposphere~=1.9.0",
+    "troposphere~=1.9.2",
     "boto3>=1.3.1,<1.5.0",
     "PyYAML~=3.11",
     "awacs~=0.6.0",

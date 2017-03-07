@@ -145,7 +145,7 @@ class Provider(AWSProvider):
             )
         except botocore.exceptions.ClientError as e:
             if "does not exist" in e.message:
-                raise exceptions.StackDoesNotExist(stack_name)
+                raise exceptions.StackDoesNotExist(fqn)
 
         change_set_id = response["Id"]
         response = self._wait_till_change_set_complete(change_set_id)

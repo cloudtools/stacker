@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import time
 
 import botocore
 from ..base import BaseProvider
@@ -10,12 +9,8 @@ from ...util import retry_with_backoff
 from stacker.session_cache import get_session
 from cloudsns.cloudlistener import CloudListener
 from stacker.status import (
-    NotSubmittedStatus,
-    NotUpdatedStatus,
-    DidNotChangeStatus,
     SubmittedStatus,
     CompleteStatus,
-    SUBMITTED
 )
 
 logger = logging.getLogger(__name__)
@@ -125,7 +120,7 @@ class Provider(BaseProvider):
         if pid != self._pid or not self._listener:
             session = get_session(self.region)
             self._listener = CloudListener(
-                LISTENER_NAME, 
+                LISTENER_NAME,
                 session=session,
                 existing_topic_arn=existing_topic_arn
             )
@@ -133,7 +128,7 @@ class Provider(BaseProvider):
 
         return self._listener
 
-    def set_listener_topic_arn(existing_topic_arn):
+    def set_listener_topic_arn(self, existing_topic_arn):
         self.listener(existing_topic_arn)
 
     def poll_events(self, tail):
@@ -145,7 +140,7 @@ class Provider(BaseProvider):
             if tail:
                 Provider._tail_print(message)
 
-        if messages:        
+        if messages:
             self.listener.delete_messages(messages)
 
         return status_dict
@@ -156,7 +151,7 @@ class Provider(BaseProvider):
         if status_name in self.COMPLETE_STATUSES:
             return CompleteStatus(status_name)
         elif status_name in self.IN_PROGRESS_STATUSES:
-            return SubmittedStatus(status_name);
+            return SubmittedStatus(status_name)
 
         raise ValueError
 
@@ -164,7 +159,7 @@ class Provider(BaseProvider):
         logger.debug("Destroying stack: %s" % (stack_name))
         try:
             return retry_on_throttling(self.cloudformation.delete_stack,
-                            kwargs=dict(StackName=stack_name))
+                                       kwargs=dict(StackName=stack_name))
 
         except botocore.exceptions.ClientError as e:
             if "does not exist" in e.message:

@@ -9,15 +9,12 @@ from ..exceptions import (
 )
 
 
-
 from ..plan import Plan
 from stacker.status import (
     NotSubmittedStatus,
     NotUpdatedStatus,
     DidNotChangeStatus,
     SubmittedStatus,
-    CompleteStatus,
-    SUBMITTED
 )
 
 
@@ -100,6 +97,7 @@ def _resolve_parameters(parameters, blueprint):
         params[key] = value
     return params
 
+
 class Action(BaseAction):
 
     """Responsible for building & coordinating CloudFormation stacks.
@@ -128,7 +126,8 @@ class Action(BaseAction):
         """
         resolved = _resolve_parameters(stack.parameter_values, stack.blueprint)
         required_parameters = stack.required_parameter_definitions.keys()
-        parameters = self._handle_missing_parameters(resolved, required_parameters, stack.fqn)
+        parameters = self._handle_missing_parameters(
+            resolved, required_parameters, stack.fqn)
         return [
             {'ParameterKey': p[0],
              'ParameterValue': str(p[1])} for p in parameters
@@ -156,22 +155,24 @@ class Action(BaseAction):
         template_url = self.s3_stack_push(stack.blueprint)
         tags = self._build_stack_tags(stack)
         parameters = self.build_parameters(stack)
-        
+
         # Try to update, if the update fails try to create a new stack
         # This is a speed improvement because the update case happens
         # much more often than the create case.
 
-        if should_update(stack):
-            try:
-                self.provider.update_stack(stack.fqn, template_url,
-                                               parameters, tags)
-                logger.debug("Updating existing stack: %s", stack.fqn)
-                return SubmittedStatus("UPDATING_STACK")
-            except StackDidNotChange:
-                return DidNotChangeStatus()
-            except StackDoesNotExist:
-                pass
-        
+        if not should_update(stack):
+            return NotUpdatedStatus()
+
+        try:
+            self.provider.update_stack(stack.fqn, template_url,
+                                       parameters, tags)
+            logger.debug("Updating existing stack: %s", stack.fqn)
+            return SubmittedStatus("UPDATING_STACK")
+        except StackDidNotChange:
+            return DidNotChangeStatus()
+        except StackDoesNotExist:
+            pass
+
         logger.debug("Creating new stack: %s", stack.fqn)
         self.provider.create_stack(stack.fqn, template_url, parameters,
                                    tags)
@@ -263,7 +264,7 @@ class Action(BaseAction):
         missing_params = list(set(required_params) - set(params.keys()))
         if missing_params:
 
-            exiting_stack = None
+            existing_stack = None
 
             logger.info("Handling missing params for %S.", stack_name)
 
@@ -279,7 +280,7 @@ class Action(BaseAction):
                     if p in stack_params:
 
                         value = stack_params[p]
-                        logger.debug("Using parameter %s from existing stack: %s",
+                        logger.debug("Parameter %s from existing stack: %s",
                                      p, value)
                         params[p] = value
             final_missing = list(set(required_params) - set(params.keys()))

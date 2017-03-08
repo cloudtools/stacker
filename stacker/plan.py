@@ -122,7 +122,8 @@ class Plan(OrderedDict):
     """
 
     def __init__(self, description, sleep_time=5, wait_func=None,
-                 tail=False, logger_type=None, poll_func=None, *args, **kwargs):
+                 tail=False, logger_type=None, poll_func=None,
+                 *args, **kwargs):
         self.description = description
         self.sleep_time = sleep_time
         self.logger_type = logger_type
@@ -231,7 +232,7 @@ class Plan(OrderedDict):
                         "(Returned type: %s)" % (type(status)))
                 step.set_status(status)
             else:
-               self.poll() 
+                self.poll()
 
         return self.completed
 

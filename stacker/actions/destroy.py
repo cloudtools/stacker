@@ -1,7 +1,7 @@
 import logging
 
 from .base import BaseAction
-from ..exceptions import ( 
+from ..exceptions import (
     StackDoesNotExist,
     DestoryWithoutNotificationQueue
 )
@@ -9,11 +9,9 @@ from .. import util
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
-    SUBMITTED,
+    SkippedStatus
 )
 from ..plan import Plan
-
-from ..status import StackDoesNotExist as StackDoesNotExistStatus
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +20,7 @@ DestroyingStatus = SubmittedStatus("submitted for destruction")
 
 
 class Action(BaseAction):
+
     """Responsible for destroying CloudFormation stacks.
 
     Generates a destruction plan based on stack dependencies. Stack
@@ -70,10 +69,15 @@ class Action(BaseAction):
         logger.debug("Destroying stack: %s", stack.fqn)
 
         if (('NotificationARNs' not in provider_stack) or
-            (not provider_stack['NotificationARNs'])):
+                (not provider_stack['NotificationARNs'])):
             raise DestoryWithoutNotificationQueue(stack.fqn)
 
-        self.provider.destroy_stack(stack.fqn)
+        try:
+            self.set_listener_topic_arn(provider_stack['NotificationARNs'][0])
+            self.provider.destroy_stack(stack.fqn)
+        except StackDoesNotExist:
+            return SkippedStatus()
+
         return DestroyingStatus
 
     def pre_run(self, outline=False, *args, **kwargs):

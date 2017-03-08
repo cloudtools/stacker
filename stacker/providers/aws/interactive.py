@@ -129,7 +129,6 @@ class Provider(AWSProvider):
 
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
         logger.debug("Attempting to create change set for stack: %s.", fqn)
-        
         try:
             response = retry_on_throttling(
                 self.cloudformation.create_change_set,

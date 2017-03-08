@@ -101,6 +101,21 @@ class OutputDoesNotExist(Exception):
                                                             stack_name)
         super(OutputDoesNotExist, self).__init__(message, *args, **kwargs)
 
+class DestoryWithoutNotificationQueue(Exception):
+    
+    def __init__(self, stack_name, *args, **kwargs):
+        self.stack_name = stack_name
+        message = "You are attempting to destory `%s` which was " 
+            % stack_name
+        message += "created using an older version of Stacker. "
+        message += "Please first updated all your stacks using "
+        message += "`Stacker build` so that they can be adjusted "
+        message += "for the new version. More information on "
+        message += "this issue here: "
+        message += "https://github.com/remind101/stacker/blob/master/docs/errors.rst";
+
+        super(DestoryWithoutNotificationQueue, self).__init__(message, *args, **kwargs)
+
 
 class MissingEnvironment(Exception):
 

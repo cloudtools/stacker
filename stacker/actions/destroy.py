@@ -1,7 +1,10 @@
 import logging
 
 from .base import BaseAction
-from ..exceptions import StackDoesNotExist
+from ..exceptions import ( 
+    StackDoesNotExist,
+    DestoryWithoutNotificationQueue
+)
 from .. import util
 from ..status import (
     CompleteStatus,
@@ -65,10 +68,10 @@ class Action(BaseAction):
     def _destroy_stack(self, stack, **kwargs):
         provider_stack = self.provider.get_stack(stack.fqn)
         logger.debug("Destroying stack: %s", stack.fqn)
-        print provider_stack
+
         if 'NotificationARNs' not in provider_stack:
-             self.provider.update_stack(stack.fqn, template_url,
-                                               parameters, tags)
+             raise DestoryWithoutNotificationQueue(stack.fqn)
+
         self.provider.destroy_stack(stack.fqn)
         return DestroyingStatus
 

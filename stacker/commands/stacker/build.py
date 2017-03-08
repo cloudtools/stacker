@@ -47,9 +47,12 @@ class Build(BaseCommand):
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
-        action.execute(outline=options.outline,
-                       tail=options.tail,
-                       dump=options.dump)
+        try:
+            action.execute(outline=options.outline,
+                           tail=options.tail,
+                           dump=options.dump)
+        finally:
+            action.cleanup();
 
     def get_context_kwargs(self, options, **kwargs):
         return {"stack_names": options.stacks, "force_stacks": options.force}

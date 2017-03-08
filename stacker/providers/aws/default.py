@@ -145,15 +145,22 @@ class Provider(BaseProvider):
 
         return status_dict
 
+    def cleanup(self):
+        self.listener.close()
+
     def get_status(self, message):
         status_name = message.ResourceStatus
-        print status_name
+        
         if status_name in self.COMPLETE_STATUSES:
             return CompleteStatus(status_name)
         elif status_name in self.IN_PROGRESS_STATUSES:
             return SubmittedStatus(status_name)
 
-        raise ValueError
+        raise exceptions.UnknownStatus(
+            message.StackName,
+            status_name,
+            message.ResourceStatusReason
+        )
 
     def destroy_stack(self, stack_name, **kwargs):
         logger.debug("Destroying stack: %s" % (stack_name))

@@ -93,8 +93,9 @@ class OutputDoesNotExist(Exception):
                                                             stack_name)
         super(OutputDoesNotExist, self).__init__(message, *args, **kwargs)
 
+
 class DestoryWithoutNotificationQueue(Exception):
-    
+
     def __init__(self, stack_name, *args, **kwargs):
         self.stack_name = stack_name
         message = "You are attempting to destroy `%s` " % stack_name
@@ -103,11 +104,11 @@ class DestoryWithoutNotificationQueue(Exception):
         message += "`Stacker build` so that they can be adjusted "
         message += "for the new version. More information on "
         message += "this issue here: "
-        message += "https://github.com/remind101/stacker/blob/";
-        message += "master/docs/destory_error.rst";
+        message += "https://github.com/remind101/stacker/blob/"
+        message += "master/docs/destory_error.rst"
 
-        super(DestoryWithoutNotificationQueue, self).__init__(message, 
-            *args, **kwargs)
+        super(DestoryWithoutNotificationQueue, self).__init__(message,
+                                                              *args, **kwargs)
 
 
 class MissingEnvironment(Exception):
@@ -133,6 +134,7 @@ class StackDidNotChange(Exception):
     """Exception raised when there are no changes to be made by the
     provider.
     """
+
 
 class CancelExecution(Exception):
 

@@ -18,6 +18,17 @@ Remind_
 
 .. _Remind: https://www.remind.com/
 
+`Sturdy Networks`_
+
+  At Sturdy we design, architect, deploy, support custom SaaS applications, and
+  offer custom solutions for the Internet of Things in AWS. We are an Amazon
+  Web Services Advanced Consulting Partner that migrates new AWS customers from
+  on-prem to the cloud as well as offers guidence and Managed DevOps services
+  to existing custmers already in AWS.
+  
+
+.. _`Sturdy Networks`: https://sturdy.cloud
+
 AltoStack_
 
   AltoStack is a technology and services consultancy specialising in Cloud

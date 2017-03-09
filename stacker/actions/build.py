@@ -233,8 +233,8 @@ class Action(BaseAction):
                 plan.dump(directory=dump, context=self.context)
 
     def cleanup(self):
-        logger.info('Cleaning up');
-        self.provider.cleanup();
+        logger.info('Cleaning up')
+        self.provider.cleanup()
 
     def post_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

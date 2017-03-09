@@ -52,7 +52,7 @@ class Build(BaseCommand):
                            tail=options.tail,
                            dump=options.dump)
         finally:
-            action.cleanup();
+            action.cleanup()
 
     def get_context_kwargs(self, options, **kwargs):
         return {"stack_names": options.stacks, "force_stacks": options.force}

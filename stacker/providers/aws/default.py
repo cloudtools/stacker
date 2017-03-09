@@ -150,7 +150,7 @@ class Provider(BaseProvider):
 
     def get_status(self, message):
         status_name = message.ResourceStatus
-        
+
         if status_name in self.COMPLETE_STATUSES:
             return CompleteStatus(status_name)
         elif status_name in self.IN_PROGRESS_STATUSES:

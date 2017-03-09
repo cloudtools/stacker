@@ -121,13 +121,14 @@ class DestoryWithoutNotificationQueue(Exception):
 
 class UnknownStatus(Exception):
 
-    def __init__(self, stack_name, stack_status, stack_reason, *args, **kwargs):
+    def __init__(self, stack_name, stack_status, stack_reason,
+                 *args, **kwargs):
 
         message = "Stack `%s` got status: `%s`. " % (stack_name, stack_status)
         message += "%s" % stack_reason
 
         super(UnknownStatus, self).__init__(message, *args, **kwargs)
-        
+
 
 class MissingEnvironment(Exception):
 

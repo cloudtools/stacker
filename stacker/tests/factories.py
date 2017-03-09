@@ -21,7 +21,7 @@ def generate_definition(base_name, stack_id, **overrides):
         "name": "%s.%d" % (base_name, stack_id),
         "class_path": "stacker.tests.fixtures.mock_blueprints.%s" % (
             base_name.upper()),
-        "namespace": "example-com",
+        "namespace": "namespace",
         "requires": []
     }
     definition.update(overrides)

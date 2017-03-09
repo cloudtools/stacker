@@ -28,3 +28,15 @@ Remind_
   
 
 .. _`Sturdy Networks`: https://sturdy.cloud
+
+AltoStack_
+
+  AltoStack is a technology and services consultancy specialising in Cloud
+  Consultancy, DevOps, Continuous Delivery and Configuration Management.
+
+  From strategy and operations to culture and technology, AltoStack helps
+  businesses identify and address opportunities for growth and profitability.
+
+  We are an Amazon Web Services - (AWS) APN Consulting Partner.
+
+.. _AltoStack: https://altostack.io/

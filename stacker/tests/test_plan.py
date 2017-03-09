@@ -148,7 +148,7 @@ class TestPlan(unittest.TestCase):
             plan.execute()
 
     def test_execute_plan_ensure_parallel_builds(self):
-         # key: stack_name, value: current iteration
+        # key: stack_name, value: current iteration
         work_states = {}
         submitted_state = 0
         # It takes 4 iterations for each task to finish
@@ -208,9 +208,9 @@ class TestPlan(unittest.TestCase):
                     self.assertFalse(web_step.submitted)
                     self.assertFalse(db_step.submitted)
                 else:
-                    # If the vpc step is complete, and we see both the web & db
-                    # steps submitted during the same run, then parallel running
-                    # works
+                    # If the vpc step is complete,
+                    # see both the web & db steps submitted
+                    # during the same run, then parallel running works
                     if web_step.status == SUBMITTED and \
                             db_step.status == SUBMITTED:
                         parallel_success = True
@@ -261,7 +261,6 @@ class TestPlan(unittest.TestCase):
                 definition=generate_definition("vpc", i, **{}),
                 context=self.context,
             )
-            previous_stack = stack
             plan.add(
                 stack=stack,
                 run_func=self._run_func,
@@ -335,8 +334,8 @@ class TestPlan(unittest.TestCase):
     @mock.patch("stacker.plan.open", mock.mock_open(), create=True)
     def test_dump_no_provider_lookups(self, *args):
         plan = Plan(
-            description="Test", 
-            sleep_time=0, 
+            description="Test",
+            sleep_time=0,
             poll_func=self._poll_func
         )
         previous_stack = None
@@ -365,13 +364,13 @@ class TestPlan(unittest.TestCase):
 
     def test_plan_checkpoint_interval(self):
         plan = Plan(
-            description="Test", 
+            description="Test",
             logger_type=BASIC_LOGGER_TYPE,
             poll_func=self._poll_func
         )
         self.assertEqual(plan.check_point_interval, 10)
         plan = Plan(
-            description="Test", 
+            description="Test",
             logger_type=LOOP_LOGGER_TYPE,
             poll_func=self._poll_func
         )

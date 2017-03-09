@@ -9,7 +9,7 @@ Remind_
 
   Remind helps educators send quick, simple messages to students and parents on
   any device. We believe that when communication improves, relationships get
-  stronger. Education gets better.
+  stronger. Education gets better. 
 
   Remind is the original author of stacker, and has been using it to manage the
   infrastructure in multiple environments (including production) since early

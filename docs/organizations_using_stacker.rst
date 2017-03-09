@@ -9,7 +9,7 @@ Remind_
 
   Remind helps educators send quick, simple messages to students and parents on
   any device. We believe that when communication improves, relationships get
-  stronger. Education gets better. 
+  stronger. Education gets better.
 
   Remind is the original author of stacker, and has been using it to manage the
   infrastructure in multiple environments (including production) since early
@@ -17,3 +17,15 @@ Remind_
 
 
 .. _Remind: https://www.remind.com/
+
+AltoStack_
+
+  AltoStack is a technology and services consultancy specialising in Cloud
+  Consultancy, DevOps, Continuous Delivery and Configuration Management.
+
+  From strategy and operations to culture and technology, AltoStack helps
+  businesses identify and address opportunities for growth and profitability.
+
+  We are an Amazon Web Services - (AWS) APN Consulting Partner.
+
+.. _AltoStack: https://altostack.io/

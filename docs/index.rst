@@ -48,6 +48,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   organizations_using_stacker
    terminology
    config
    environments

@@ -7,7 +7,7 @@ from stacker import exceptions
 from stacker.actions import build
 from stacker.actions.build import (
     _resolve_parameters,
-    _handle_missing_parameters,
+    # _handle_missing_parameters,
 )
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context
@@ -31,6 +31,7 @@ def mock_stack(parameters):
 
 
 class TestProvider(BaseProvider):
+
     def __init__(self, outputs=None, *args, **kwargs):
         self._outputs = outputs or {}
 
@@ -42,12 +43,16 @@ class TestProvider(BaseProvider):
             raise exceptions.StackDoesNotExist(stack_name)
         return {"name": stack_name, "outputs": self._outputs[stack_name]}
 
+    def poll_events(self, tail):
+        return {}
+
     def get_outputs(self, stack_name, *args, **kwargs):
         stack = self.get_stack(stack_name)
         return stack["outputs"]
 
 
 class TestBuildAction(unittest.TestCase):
+
     def setUp(self):
         self.context = Context({"namespace": "namespace"})
         self.build_action = build.Action(self.context, provider=TestProvider())
@@ -65,35 +70,58 @@ class TestBuildAction(unittest.TestCase):
         return Context({"namespace": "namespace"}, config=config, **kwargs)
 
     def test_handle_missing_params(self):
+        mock_provider = mock.MagicMock()
+        context = self._get_context()
+        build_action = build.Action(context, provider=mock_provider)
+
         stack = {'StackName': 'teststack'}
         def_params = {"Address": "192.168.0.1"}
         required = ["Address"]
-        result = _handle_missing_parameters(def_params, required, stack)
+        result = build_action._handle_missing_parameters(
+            def_params, required, stack)
         self.assertEqual(result, def_params.items())
 
     def test_gather_missing_from_stack(self):
+        mock_provider = mock.MagicMock()
+        context = self._get_context()
+        build_action = build.Action(context, provider=mock_provider)
+
         stack_params = {"Address": "10.0.0.1"}
-        stack = mock_stack(stack_params)
+        mock_provider.get_stack.return_value = mock_stack(stack_params)
+
         def_params = {}
         required = ["Address"]
         self.assertEqual(
-            _handle_missing_parameters(def_params, required, stack),
+            build_action._handle_missing_parameters(
+                def_params, required, 'sample_stack_name'),
             stack_params.items())
 
     def test_missing_params_no_stack(self):
+        mock_provider = mock.MagicMock()
+        context = self._get_context()
+        build_action = build.Action(context, provider=mock_provider)
+
         params = {}
         required = ["Address"]
         with self.assertRaises(exceptions.MissingParameterException) as cm:
-            _handle_missing_parameters(params, required)
+            build_action._handle_missing_parameters(params, required)
 
         self.assertEqual(cm.exception.parameters, required)
 
     def test_stack_params_dont_override_given_params(self):
+        mock_provider = mock.MagicMock()
+        context = self._get_context()
+        build_action = build.Action(context, provider=mock_provider)
+
         stack_params = {"Address": "10.0.0.1"}
-        stack = mock_stack(stack_params)
+        mock_provider.get_stack.return_value = mock_stack(stack_params)
         def_params = {"Address": "192.168.0.1"}
         required = ["Address"]
-        result = _handle_missing_parameters(def_params, required, stack)
+        result = build_action._handle_missing_parameters(
+            def_params,
+            required,
+            'sample_stack_name'
+        )
         self.assertEqual(result, def_params.items())
 
     def test_get_dependencies(self):
@@ -121,8 +149,13 @@ class TestBuildAction(unittest.TestCase):
         )
 
     def test_generate_plan(self):
+
+        class mock_provider():
+            def poll_events():
+                pass
+
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, provider=mock_provider)
         plan = build_action._generate_plan()
         self.assertEqual(
             plan.keys(),
@@ -153,7 +186,7 @@ class TestBuildAction(unittest.TestCase):
         build_action = build.Action(context, provider=mock_provider)
         plan = build_action._generate_plan()
         _, step = plan.list_pending()[0]
-        step.stack = mock.MagicMock()
+        step.stack = mock_stack
         step.stack.locked = False
 
         # mock provider shouldn't return a stack at first since it hasn't been
@@ -166,45 +199,34 @@ class TestBuildAction(unittest.TestCase):
             status = step.run()
             step.set_status(status)
             self.assertEqual(status, SUBMITTED)
-            self.assertEqual(status.reason, "creating new stack")
 
             # provider should now return the CF stack since it exists
-            mock_provider.get_stack.return_value = mock_stack
-            # simulate that we're still in progress
-            mock_provider.is_stack_in_progress.return_value = True
-            mock_provider.is_stack_completed.return_value = False
-            status = step.run()
-            step.set_status(status)
-            # status should still be SUBMITTED since we're waiting for it to
-            # complete
-            self.assertEqual(status, SUBMITTED)
-            self.assertEqual(status.reason, "creating new stack")
-            # simulate completed stack
-            mock_provider.is_stack_completed.return_value = True
-            mock_provider.is_stack_in_progress.return_value = False
-            status = step.run()
-            step.set_status(status)
-            self.assertEqual(status, COMPLETE)
-            self.assertEqual(status.reason, "creating new stack")
+            mock_provider.poll_events.return_value = {
+                'namespace-other': SUBMITTED,
+                'namespace-vpc': SUBMITTED,
+                'namespace-bastion': SUBMITTED,
+                'namespace-db': SUBMITTED
+            }
 
-            # simulate stack should be skipped
-            mock_provider.is_stack_completed.return_value = False
-            mock_provider.is_stack_in_progress.return_value = False
-            mock_provider.update_stack.side_effect = StackDidNotChange
-            status = step.run()
-            step.set_status(status)
-            self.assertEqual(status, SKIPPED)
-            self.assertEqual(status.reason, "nochange")
+            plan.poll()
+            # # simulate that we're still in progress
+            self.assertEqual(step.submitted, True)
+            self.assertEqual(step.completed, False)
 
-            # simulate an update is required
-            mock_provider.reset_mock()
-            mock_provider.update_stack.side_effect = None
-            step.set_status(PENDING)
-            status = step.run()
-            step.set_status(status)
-            self.assertEqual(status, SUBMITTED)
-            self.assertEqual(status.reason, "updating existing stack")
-            self.assertEqual(mock_provider.update_stack.call_count, 1)
+             # provider should now return the CF stack since it exists
+            mock_provider.poll_events.return_value = {
+                'namespace-other': COMPLETE,
+                'namespace-vpc': SKIPPED,
+                'namespace-bastion': COMPLETE,
+                'namespace-db': COMPLETE
+            }
+
+            plan.poll()
+            self.assertEqual(step.submitted, True)
+            self.assertEqual(step.completed, True)
+
+            self.assertEqual(len(plan.list_completed()), 3)
+            self.assertEqual(len(plan.list_skipped()), 1)
 
     def test_should_update(self):
         test_scenario = namedtuple("test_scenario",

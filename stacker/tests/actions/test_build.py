@@ -151,6 +151,7 @@ class TestBuildAction(unittest.TestCase):
     def test_generate_plan(self):
 
         class mock_provider():
+
             def poll_events():
                 pass
 
@@ -213,7 +214,7 @@ class TestBuildAction(unittest.TestCase):
             self.assertEqual(step.submitted, True)
             self.assertEqual(step.completed, False)
 
-             # provider should now return the CF stack since it exists
+            # provider should now return the CF stack since it exists
             mock_provider.poll_events.return_value = {
                 'namespace-other': COMPLETE,
                 'namespace-vpc': SKIPPED,
@@ -227,6 +228,11 @@ class TestBuildAction(unittest.TestCase):
 
             self.assertEqual(len(plan.list_completed()), 3)
             self.assertEqual(len(plan.list_skipped()), 1)
+
+
+            mock_provider.update_stack.side_effect = StackDidNotChange
+            status = step.run()
+            self.assertEqual(status, SKIPPED)
 
     def test_should_update(self):
         test_scenario = namedtuple("test_scenario",
@@ -260,6 +266,7 @@ class TestBuildAction(unittest.TestCase):
 
 
 class TestFunctions(unittest.TestCase):
+
     """ test module level functions """
 
     def setUp(self):

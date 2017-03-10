@@ -228,8 +228,6 @@ class TestBuildAction(unittest.TestCase):
 
             self.assertEqual(len(plan.list_completed()), 3)
             self.assertEqual(len(plan.list_skipped()), 1)
-
-
             mock_provider.update_stack.side_effect = StackDidNotChange
             status = step.run()
             self.assertEqual(status, SKIPPED)

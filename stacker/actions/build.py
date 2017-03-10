@@ -246,7 +246,8 @@ class Action(BaseAction):
                 provider=self.provider,
                 context=self.context)
 
-    def _handle_missing_parameters(self, params, required_params, stack_name=None):
+    def _handle_missing_parameters(self, params, required_params,
+                                   stack_name=None):
         """Handles any missing parameters.
 
         If an existing_stack is provided, look up missing parameters there.

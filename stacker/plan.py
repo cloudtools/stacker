@@ -158,9 +158,6 @@ class Plan(OrderedDict):
     def poll(self):
         stack_dict = self._poll_func(self.tail)
         for step_name, step in self.list_pending():
-            print "DOING STEP"
-            print step_name
-            print step
             if step_name in stack_dict:
                 status = stack_dict[step_name]
                 step.set_status(status)

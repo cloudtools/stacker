@@ -65,12 +65,12 @@ class Action(BaseAction):
         return plan
 
     def _destroy_stack(self, stack, **kwargs):
+        logger.debug("Destroying stack: %s", stack.fqn)
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:
             return SkippedStatus()
-
-        logger.debug("Destroying stack: %s", stack.fqn)
 
         if (('NotificationARNs' not in provider_stack) or
                 (not provider_stack['NotificationARNs'])):

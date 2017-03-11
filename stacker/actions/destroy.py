@@ -65,19 +65,21 @@ class Action(BaseAction):
         return plan
 
     def _destroy_stack(self, stack, **kwargs):
-        provider_stack = self.provider.get_stack(stack.fqn)
+        try:
+            provider_stack = self.provider.get_stack(stack.fqn)
+        except StackDoesNotExist:
+            return SkippedStatus()
+
         logger.debug("Destroying stack: %s", stack.fqn)
 
         if (('NotificationARNs' not in provider_stack) or
                 (not provider_stack['NotificationARNs'])):
             raise DestoryWithoutNotificationQueue(stack.fqn)
 
-        try:
-            self.set_listener_topic_arn(provider_stack['NotificationARNs'][0])
-            self.provider.destroy_stack(stack.fqn)
-        except StackDoesNotExist:
-            return SkippedStatus()
-
+        self.provider.set_listener_topic_arn(
+            provider_stack['NotificationARNs'][0]
+        )
+        self.provider.destroy_stack(stack.fqn)
         return DestroyingStatus
 
     def pre_run(self, outline=False, *args, **kwargs):
@@ -88,7 +90,8 @@ class Action(BaseAction):
                 stage="pre_destroy",
                 hooks=pre_destroy,
                 provider=self.provider,
-                context=self.context)
+                context=self.context
+            )
 
     def run(self, force, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)

@@ -1,23 +1,183 @@
 import json
 import logging
 import os
-
+from stacker.exceptions import NotInitialized
+import re
 import botocore
+import uuid
 from ..base import BaseProvider
 from ... import exceptions
 from ...util import retry_with_backoff
 from stacker.session_cache import get_session
-from cloudsns.cloudlistener import CloudListener
 from stacker.status import (
     SubmittedStatus,
     CompleteStatus,
 )
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 MAX_TAIL_RETRIES = 5
 
-LISTENER_NAME = "StackerSNSListener"
+
+class Message(object):
+
+    def __init__(self, metadata, parent_queue):
+
+        self._parent_queue = parent_queue
+
+        parsed_message = self.parse_message(metadata)
+
+        for key, value in parsed_message.iteritems():
+            setattr(self, key, value)
+
+        for key, value in metadata.iteritems():
+            setattr(self, key, value)
+
+    def parse_message(self, message):
+        msg_re = re.compile("(?P<key>[^=]+)='(?P<value>[^']*)'\n")
+        body = message["Body"]
+        data = dict(msg_re.findall(body))
+        return data
+
+
+class CloudListener(object):
+
+    def __init__(self, queue_name, topic_name, session):
+        self.session = session
+        self.queue_name = queue_name
+        self.topic_name = topic_name
+        self._topicArn = None
+        self._queueUrl = None
+        self._queueArn = None
+
+    def create_policy(self):
+        return """{
+              "Version":"2012-10-17",
+              "Statement":[
+                {
+                  "Sid":"SNSCloudPolicy",
+                  "Effect":"Allow",
+                  "Principal":"*",
+                  "Action":"sqs:SendMessage",
+                  "Resource":"%s",
+                  "Condition":{
+                    "ArnEquals":{
+                      "aws:SourceArn":"%s"
+                    }
+                  }
+                }
+              ]
+            }""" % (self.QueueArn, self.TopicArn)
+
+    def start(self):
+        logging.debug('Creating cloudsns resources')
+        self.sns = self.session.client("sns")
+        self.sqs = self.session.client("sqs")
+
+        self.sqs.set_queue_attributes(
+            QueueUrl=self.QueueUrl,
+            Attributes={
+                "Policy": self.create_policy()},
+        )
+
+        result = self.sns.subscribe(
+            TopicArn=self.TopicArn,
+            Protocol="sqs",
+            Endpoint=self.QueueArn
+        )
+
+        sub_arn = result["SubscriptionArn"]
+
+        self.sns.set_subscription_attributes(
+            SubscriptionArn=sub_arn,
+            AttributeName="RawMessageDelivery",
+            AttributeValue="true"
+        )
+        logging.debug('Done creating cloudsns resources')
+
+    @property
+    def TopicArn(self):
+        if not self.sqs or not self.sns:
+            raise NotInitialized('TopicArn')
+        if not self._topicArn:
+            topic = self.sns.create_topic(Name=self.topic_name)
+            self._topicArn = topic["TopicArn"]
+
+        return self._topicArn
+
+    @property
+    def QueueUrl(self):
+        if not self.sqs or not self.sns:
+            raise NotInitialized('QueueUrl')
+        if not self._queueUrl:
+            queue = self.sqs.create_queue(
+                QueueName=self.queue_name,
+                Attributes={"MessageRetentionPeriod": "60"}
+            )
+            self._queueUrl = queue["QueueUrl"]
+
+        return self._queueUrl
+
+    @property
+    def QueueArn(self):
+        if not self.sqs or not self.sns:
+            raise NotInitialized('QueueArn')
+        if not self._queueArn:
+            attr = self.sqs.get_queue_attributes(
+                QueueUrl=self.QueueUrl,
+                AttributeNames=["QueueArn"]
+            )
+            self._queueArn = attr["Attributes"]["QueueArn"]
+
+        return self._queueArn
+
+    def poll(self, user_fn):
+        completed = False
+        while not completed:
+            messages = self.get_messages()
+            for message in messages:
+                completed = user_fn(message)
+                message.delete()
+
+    def get_messages(self):
+        updates = self.sqs.receive_message(
+            QueueUrl=self.QueueUrl,
+            AttributeNames=["All"],
+            WaitTimeSeconds=20
+        )
+
+        if "Messages" in updates:
+            return [Message(m, self) for m in updates["Messages"]]
+
+        return []
+
+    def delete_messages(self, messages):
+        receipts = []
+        for m in messages:
+            unique_id = str(uuid.uuid4())
+            receipts.append({
+                'Id': unique_id,
+                'ReceiptHandle': m.ReceiptHandle
+            })
+
+        self.sqs.delete_message_batch(
+            QueueUrl=self.QueueUrl,
+            Entries=receipts
+        )
+
+    def cleanup(self, delete_topic=False):
+        logging.debug('Deleting cloudsns resources')
+
+        self.sqs.delete_queue(
+            QueueUrl=self.QueueUrl
+        )
+
+        if delete_topic:
+            self.sns.delete_topic(
+                TopicArn=self.TopicArn
+            )
+
+        logging.debug('Done deleting cloudsns resources')
 
 
 def get_output_dict(stack):
@@ -92,11 +252,12 @@ class Provider(BaseProvider):
         "DELETE_COMPLETE"
     )
 
-    def __init__(self, region, **kwargs):
+    def __init__(self, region, namespace, **kwargs):
         self.region = region
         self._outputs = {}
         self._cloudformation = None
         self._listener = None
+        self.namespace = namespace
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
@@ -113,17 +274,26 @@ class Provider(BaseProvider):
         return self._cloudformation
 
     @property
-    def listener(self, existing_topic_arn=None):
+    def listener(self):
         # deals w/ multiprocessing issues w/ sharing ssl conns
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
         if pid != self._pid or not self._listener:
             session = get_session(self.region)
+
+            # This stays the same for stacker call in this namespace
+            topic_name = self.namespace
+
+            # Unique every time stacker is ran
+            unique_sufix = str(uuid.uuid4())
+            queue_name = "%s-%s" % (self.namespace, unique_sufix)
+
             self._listener = CloudListener(
-                LISTENER_NAME,
-                session=session,
-                existing_topic_arn=existing_topic_arn
+                queue_name,
+                topic_name,
+                session
             )
+
             self._listener.start()
 
         return self._listener
@@ -143,7 +313,7 @@ class Provider(BaseProvider):
         return status_dict
 
     def cleanup(self):
-        self.listener.close()
+        self.listener.cleanup()
 
     def get_status(self, message):
         status_name = message.ResourceStatus

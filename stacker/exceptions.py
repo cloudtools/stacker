@@ -9,6 +9,14 @@ class InvalidLookupCombination(Exception):
                                                        *args,
                                                        **kwargs)
 
+class NotInitialized(Exception):
+
+    def __init__(self, name, *args, **kwargs):
+        message = "`%s` has not been initialized yet. " % name
+        message += "Call the start method to initialize everything"
+
+        super(NotInitialized).__init__(message, *args, **kwargs)
+
 
 class UnknownLookupType(Exception):
 

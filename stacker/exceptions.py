@@ -102,7 +102,7 @@ class OutputDoesNotExist(Exception):
         super(OutputDoesNotExist, self).__init__(message, *args, **kwargs)
 
 
-class DestoryWithoutNotificationQueue(Exception):
+class DestroyWithoutNotificationQueue(Exception):
 
     def __init__(self, stack_name, *args, **kwargs):
         self.stack_name = stack_name
@@ -115,7 +115,7 @@ class DestoryWithoutNotificationQueue(Exception):
         message += "https://github.com/remind101/stacker/blob/"
         message += "master/docs/destory_error.rst"
 
-        super(DestoryWithoutNotificationQueue, self).__init__(message,
+        super(DestroyWithoutNotificationQueue, self).__init__(message,
                                                               *args, **kwargs)
 
 

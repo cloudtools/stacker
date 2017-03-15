@@ -128,9 +128,6 @@ class Provider(BaseProvider):
 
         return self._listener
 
-    def set_listener_topic_arn(self, existing_topic_arn):
-        self.listener(existing_topic_arn)
-
     def poll_events(self, tail):
         messages = self.listener.get_messages()
         status_dict = {}

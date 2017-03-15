@@ -10,7 +10,7 @@ from ..exceptions import (
 
 
 from ..plan import Plan
-from stacker.status import (
+from ..status import (
     NotSubmittedStatus,
     NotUpdatedStatus,
     DidNotChangeStatus,
@@ -138,7 +138,7 @@ class Action(BaseAction):
         return [
             {'Key': t[0], 'Value': t[1]} for t in self.context.tags.items()]
 
-    def _launch_stack(self, stack, tail=False, **kwargs):
+    def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.
 
         Also makes sure that we don't try to create or update a stack while
@@ -171,12 +171,10 @@ class Action(BaseAction):
         except StackDidNotChange:
             return DidNotChangeStatus()
         except StackDoesNotExist:
-            pass
-
-        logger.debug("Creating new stack: %s", stack.fqn)
-        self.provider.create_stack(stack.fqn, template_url, parameters,
-                                   tags)
-        return SubmittedStatus("CREATE_STACK")
+            logger.debug("Creating new stack: %s", stack.fqn)
+            self.provider.create_stack(stack.fqn, template_url, parameters,
+                                       tags)
+            return SubmittedStatus("CREATE_STACK")
 
     def _generate_plan(self, tail=False):
 
@@ -233,7 +231,7 @@ class Action(BaseAction):
                 plan.dump(directory=dump, context=self.context)
 
     def cleanup(self):
-        logger.info('Cleaning up')
+        logger.debug('Cleaning up')
         self.provider.cleanup()
 
     def post_run(self, outline=False, dump=False, *args, **kwargs):
@@ -264,14 +262,13 @@ class Action(BaseAction):
         Raises:
             MissingParameterException: Raised if a required parameter is
                 still missing.
-
         """
         missing_params = list(set(required_params) - set(params.keys()))
         if missing_params:
 
             existing_stack = None
 
-            logger.info("Handling missing params for %s.", stack_name)
+            logger.debug("Handling missing params for %s.", stack_name)
 
             try:
                 existing_stack = self.provider.get_stack(stack_name)

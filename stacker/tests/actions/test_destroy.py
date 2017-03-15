@@ -6,7 +6,7 @@ from stacker.actions import destroy
 from stacker.context import Context
 from stacker.exceptions import (
     StackDoesNotExist,
-    DestoryWithoutNotificationQueue
+    DestroyWithoutNotificationQueue
 )
 from stacker.status import (
     SKIPPED,
@@ -78,7 +78,7 @@ class TestDestroyAction(unittest.TestCase):
         self.action.provider.set_listener_topic_arn.return_value = None
 
         # Succesfully fails without notification arn
-        with self.assertRaises(DestoryWithoutNotificationQueue):
+        with self.assertRaises(DestroyWithoutNotificationQueue):
             self.action._destroy_stack(MockStack("vpc"))
 
         fake_stack = {

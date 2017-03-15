@@ -3,7 +3,7 @@ import logging
 from .base import BaseAction
 from ..exceptions import (
     StackDoesNotExist,
-    DestoryWithoutNotificationQueue
+    DestroyWithoutNotificationQueue
 )
 from .. import util
 from ..status import (
@@ -14,9 +14,6 @@ from ..status import (
 from ..plan import Plan
 
 logger = logging.getLogger(__name__)
-
-DestroyedStatus = CompleteStatus("stack destroyed")
-DestroyingStatus = SubmittedStatus("submitted for destruction")
 
 
 class Action(BaseAction):
@@ -70,17 +67,13 @@ class Action(BaseAction):
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:
-            return SkippedStatus()
+            return SkippedStatus('stack does not exist')
 
-        if (('NotificationARNs' not in provider_stack) or
-                (not provider_stack['NotificationARNs'])):
-            raise DestoryWithoutNotificationQueue(stack.fqn)
+        if not provider_stack.get("NotificationARNs"):
+            raise DestroyWithoutNotificationQueue(stack.fqn)
 
-        self.provider.set_listener_topic_arn(
-            provider_stack['NotificationARNs'][0]
-        )
         self.provider.destroy_stack(stack.fqn)
-        return DestroyingStatus
+        return SubmittedStatus("submitted for destruction")
 
     def pre_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""

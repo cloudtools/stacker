@@ -81,6 +81,11 @@ class Step(object):
             status (:class:`Status <Status>` object): The status to set the
                 step to.
         """
+        if not isinstance(status, Status):
+            raise ValueError(
+                "Step run_func must return a valid Status object. "
+                "(Returned type: %s)" % (type(status)))
+
         if status is not self.status:
             logger.debug("Setting %s state to %s.", self.stack.name,
                          status.name)
@@ -112,28 +117,18 @@ class Plan(OrderedDict):
 
     Args:
         description (str): description of the plan
-        sleep_time (int, optional): the amount of time that will be passed to
-            the `wait_func`. Default: 5 seconds.
-        wait_func (func, optional): the function to be called after each pass
-            of running stacks. This defaults to :func:`time.sleep` and will
-            sleep for the given `sleep_time` before starting the next pass.
-            Default: :func:`time.sleep`
+        tail(bool): Enable this to true if you want the Plan to output 
+            every event that it recieves.
+        poll_func(function): The function for polling for new events about the
+            stacks. Returns a dict with the the keys of the dict representing
+            the name of the Stack and the value representing the status. 
 
     """
 
-    def __init__(self, description, sleep_time=5, wait_func=None,
-                 tail=False, logger_type=None, poll_func=None,
-                 *args, **kwargs):
+    def __init__(self, description, tail=False, logger_type=None,
+                 poll_func=None, *args, **kwargs):
         self.description = description
-        self.sleep_time = sleep_time
         self.logger_type = logger_type
-        if wait_func is not None:
-            if not callable(wait_func):
-                raise ImproperlyConfigured(self.__class__,
-                                           "\"wait_func\" must be a callable")
-            self._wait_func = wait_func
-        else:
-            self._wait_func = time.sleep
         self.tail = tail
         self.id = uuid.uuid4()
         self._poll_func = poll_func
@@ -225,16 +220,9 @@ class Plan(OrderedDict):
                     status = step.run()
                 except CancelExecution:
                     status = SkippedStatus(reason="canceled execution")
-
-                if not isinstance(status, Status):
-                    raise ValueError(
-                        "Step run_func must return a valid Status object. "
-                        "(Returned type: %s)" % (type(status)))
                 step.set_status(status)
             else:
                 self.poll()
-
-        return self.completed
 
     def execute(self):
         """Execute the plan.
@@ -250,10 +238,8 @@ class Plan(OrderedDict):
                     self.md5 != last_md5):
                 last_md5 = self.md5
                 self._check_point()
-
             attempts += 1
-            if not self._single_run():
-                self._wait_func(self.sleep_time)
+            self._single_run()
 
         self._check_point()
 

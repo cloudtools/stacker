@@ -7,7 +7,6 @@ from ..exceptions import (
 )
 from .. import util
 from ..status import (
-    CompleteStatus,
     SubmittedStatus,
     SkippedStatus
 )

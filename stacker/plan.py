@@ -10,8 +10,7 @@ from colorama.ansi import Fore
 
 from .actions.base import stack_template_key_name
 from .exceptions import (
-    CancelExecution,
-    ImproperlyConfigured,
+    CancelExecution
 )
 from .logger import LOOP_LOGGER_TYPE
 from .status import (
@@ -117,11 +116,11 @@ class Plan(OrderedDict):
 
     Args:
         description (str): description of the plan
-        tail(bool): Enable this to true if you want the Plan to output 
+        tail(bool): Enable this to true if you want the Plan to output
             every event that it recieves.
         poll_func(function): The function for polling for new events about the
             stacks. Returns a dict with the the keys of the dict representing
-            the name of the Stack and the value representing the status. 
+            the name of the Stack and the value representing the status.
 
     """
 

@@ -27,7 +27,7 @@ def handler(value, provider=None, context=None, fqn=False, rfqn=False,
 
     """
 
-    if rfqn and context.environment['namespace']:
+    if rfqn:
             value = "%s%s%s" % (
                     context.environment['namespace'],
                     context.environment.get('namespace_delimiter', '-'),

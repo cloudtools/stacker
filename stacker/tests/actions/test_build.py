@@ -202,9 +202,9 @@ class TestBuildAction(unittest.TestCase):
             step.set_status(PENDING)
             status = step.run()
             step.set_status(status)
-            self.assertEqual(status, SUBMITTED)
-            self.assertEqual(status.reason, "updating existing stack")
-            self.assertEqual(mock_provider.update_stack.call_count, 1)
+            self.assertEqual(status, COMPLETE)
+            self.assertEqual(status.reason, "Failed to create/update stack")
+            self.assertEqual(mock_provider.update_stack.call_count, 0)
 
     def test_should_update(self):
         test_scenario = namedtuple("test_scenario",

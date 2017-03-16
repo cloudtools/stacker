@@ -70,6 +70,7 @@ class BaseAction(object):
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
         try:
+            logger.debug("Head on bucket %s", self.bucket_name)
             self.s3_conn.head_bucket(Bucket=self.bucket_name)
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Message'] == "Not Found":
@@ -79,8 +80,13 @@ class BaseAction(object):
                 logger.exception("Access denied for bucket %s.",
                                  self.bucket_name)
                 raise
+            elif e.response['Error']['Message'] == "Bad Request":
+                logger.exception(
+                    "Bucket name in used by another AWS customer bucket=%s.",
+                    self.bucket_name)
+                raise
             else:
-                logger.exception("Error creating bucket %s. Error %s",
+                logger.exception("Error checking bucket %s. Error %s",
                                  self.bucket_name, e.response)
                 raise
 

@@ -76,6 +76,11 @@ class Provider(BaseProvider):
     """AWS CloudFormation Provider"""
 
     DELETED_STATUS = "DELETE_COMPLETE"
+    ROLLBACK_COMPLETE_STATUS = "ROLLBACK_COMPLETE"
+    IN_ROLLBACK_STATUSES = (
+        "ROLLBACK_IN_PROGRESS",
+        "UPDATE_ROLLBACK_IN_PROGRESS",
+    )
     IN_PROGRESS_STATUSES = (
         "CREATE_IN_PROGRESS",
         "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS",
@@ -85,7 +90,12 @@ class Provider(BaseProvider):
     COMPLETE_STATUSES = (
         "CREATE_COMPLETE",
         "UPDATE_COMPLETE",
+        "UPDATE_ROLLBACK_COMPLETE",
     )
+
+    # Unhandled status codes
+    #   CREATE_FAILED, ROLLBACK_FAILED, DELETE_FAILED,
+    #   UPDATE_ROLLBACK_FAILED, REVIEW_IN_PROGRESS,
 
     def __init__(self, region, **kwargs):
         self.region = region
@@ -127,6 +137,12 @@ class Provider(BaseProvider):
 
     def is_stack_destroyed(self, stack, **kwargs):
         return self.get_stack_status(stack) == self.DELETED_STATUS
+
+    def is_stack_rollback_complete(self, stack, **kwargs):
+        return self.get_stack_status(stack) == self.ROLLBACK_COMPLETE_STATUS
+
+    def is_stack_rollback(self, stack, **kwargs):
+        return self.get_stack_status(stack) in self.IN_ROLLBACK_STATUSES
 
     def tail_stack(self, stack, retries=0, **kwargs):
         def log_func(e):

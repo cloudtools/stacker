@@ -15,6 +15,7 @@ from ..status import (
     DidNotChangeStatus,
     SubmittedStatus,
     CompleteStatus,
+    PENDING,
     SUBMITTED
 )
 
@@ -192,18 +193,37 @@ class Action(BaseAction):
             provider_stack = None
 
         old_status = kwargs.get("status")
-        if provider_stack and old_status == SUBMITTED:
-            logger.debug(
-                "Stack %s provider status: %s",
-                stack.fqn,
-                self.provider.get_stack_status(provider_stack),
-            )
-            if self.provider.is_stack_completed(provider_stack):
-                submit_reason = getattr(old_status, "reason", None)
-                return CompleteStatus(submit_reason)
-            elif self.provider.is_stack_in_progress(provider_stack):
-                logger.debug("Stack %s in progress.", stack.fqn)
-                return old_status
+
+        logger.debug("Stack %s old_status=%r  provider=%r",
+                     stack.fqn, old_status, provider_stack)
+
+        if provider_stack:
+            if old_status == SUBMITTED:
+                logger.debug(
+                    "Stack %s provider status: %s",
+                    stack.fqn,
+                    self.provider.get_stack_status(provider_stack),
+                )
+                if self.provider.is_stack_completed(provider_stack):
+                    submit_reason = getattr(old_status, "reason", None)
+                    return CompleteStatus(submit_reason)
+                elif self.provider.is_stack_in_progress(provider_stack):
+                    logger.debug("Stack %s in progress.", stack.fqn)
+                    return old_status
+                elif self.provider.is_stack_rollback(provider_stack):
+                    logger.debug("Stack %s is rolling back", stack.fqn)
+                    return CompleteStatus("Failed to create/update stack")
+            elif old_status == PENDING:
+                if self.provider.is_stack_rollback(provider_stack):
+                    logger.info("Stack %s in rollback - can't start",
+                                stack.fqn)
+                    return CompleteStatus("Failed to create/update stack")
+                elif self.provider.is_stack_rollback_complete(provider_stack):
+                    logger.info("Stack %s failed to create, deleting",
+                                stack.fqn)
+                    self.provider.destroy_stack(provider_stack)
+                    return SubmittedStatus(
+                            "destroying stack that failed to build")
 
         logger.debug("Resolving stack %s", stack.fqn)
         stack.resolve(self.context, self.provider)

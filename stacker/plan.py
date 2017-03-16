@@ -39,12 +39,11 @@ class Step(object):
 
     """
 
-    def __init__(self, stack, run_func, tail, requires=None):
+    def __init__(self, stack, run_func, requires=None):
         self.stack = stack
         self.status = PENDING
         self.requires = requires or []
         self._run_func = run_func
-        self.tail = tail
         self.last_updated = time.time()
 
     def __repr__(self):

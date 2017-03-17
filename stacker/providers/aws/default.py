@@ -399,7 +399,7 @@ class Provider(BaseProvider):
 
             stack = self.get_stack(stack_name)
 
-            if not 'Outputs' in stack:
+            if 'Outputs' not in stack:
                 raise KeyError('No Outputs in Stack')
 
             self._outputs[stack_name] = get_output_dict(stack)
@@ -408,7 +408,7 @@ class Provider(BaseProvider):
 
     def get_outputs(self, stack_name):
         outputs = retry_with_backoff(
-            self.try_get_outputs, 
+            self.try_get_outputs,
             args=[stack_name],
             exc_list=(KeyError, ),
             min_delay=0.3

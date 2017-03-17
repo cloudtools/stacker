@@ -391,11 +391,30 @@ class Provider(BaseProvider):
     def get_stack_name(self, stack, **kwargs):
         return stack['StackName']
 
-    def get_outputs(self, stack_name, *args, **kwargs):
+    def try_get_outputs(self, stack_name):
+        print "TRY GET OUTPUTS"
+        print self
+        print stack_name
         if stack_name not in self._outputs:
+
             stack = self.get_stack(stack_name)
+
+            if not 'Outputs' in stack:
+                raise KeyError('No Outputs in Stack')
+
             self._outputs[stack_name] = get_output_dict(stack)
+
         return self._outputs[stack_name]
+
+    def get_outputs(self, stack_name):
+        outputs = retry_with_backoff(
+            self.try_get_outputs, 
+            args=[stack_name],
+            exc_list=(KeyError, ),
+            min_delay=0.3
+        )
+
+        return outputs
 
     def get_stack_info(self, stack_name):
         """ Get the template and parameters of the stack currently in AWS

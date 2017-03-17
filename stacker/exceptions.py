@@ -9,6 +9,7 @@ class InvalidLookupCombination(Exception):
                                                        *args,
                                                        **kwargs)
 
+
 class NotInitialized(Exception):
 
     def __init__(self, name, *args, **kwargs):

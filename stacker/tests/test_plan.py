@@ -3,7 +3,7 @@ import unittest
 import mock
 
 from stacker.context import Context
-from stacker.exceptions import ImproperlyConfigured, FailedVariableLookup
+from stacker.exceptions import FailedVariableLookup
 from stacker.lookups.registry import (
     register_lookup_handler,
     unregister_lookup_handler,
@@ -38,8 +38,7 @@ class TestStep(unittest.TestCase):
         )
         self.step = Step(
             stack=stack,
-            run_func=lambda x, y: (x, y),
-            tail=False
+            run_func=lambda x, y: (x, y)
         )
 
     def test_status(self):
@@ -96,8 +95,8 @@ class TestPlan(unittest.TestCase):
 
         plan = Plan(
             description="Test",
-            sleep_time=0,
-            poll_func=_poll_func)
+            poll_func=_poll_func
+        )
 
         definitions = [
             generate_definition("vpc", 1, **{}),
@@ -124,7 +123,7 @@ class TestPlan(unittest.TestCase):
             plan.add(
                 stack=stack,
                 run_func=_run_func,
-                requires=requires,
+                requires=requires
             )
 
             prev_stack = stack
@@ -137,7 +136,7 @@ class TestPlan(unittest.TestCase):
         self.assertEqual(len(plan.list_skipped()), 1)
 
     def test_step_must_return_status(self):
-        plan = Plan(description="Test", sleep_time=0)
+        plan = Plan(description="Test")
         stack = Stack(definition=generate_definition("vpc", 1),
                       context=mock.MagicMock())
         plan.add(
@@ -187,7 +186,6 @@ class TestPlan(unittest.TestCase):
 
             plan = Plan(
                 description="Test",
-                sleep_time=0,
                 poll_func=_poll_func
             )
 
@@ -217,42 +215,18 @@ class TestPlan(unittest.TestCase):
 
             self.assertTrue(parallel_success)
 
-    def test_plan_wait_func_must_be_function(self):
-        with self.assertRaises(ImproperlyConfigured):
-            Plan(description="Test", wait_func="invalid")
-
     def test_plan_steps_listed_with_fqn(self):
-        plan = Plan(description="Test", sleep_time=0)
+        plan = Plan(description="Test")
         stack = Stack(definition=generate_definition("vpc", 1),
                       context=self.context)
         plan.add(stack=stack, run_func=lambda x, y: (x, y))
         steps = plan.list_pending()
         self.assertEqual(steps[0][0], stack.fqn)
 
-    def test_execute_plan_wait_func_not_called_if_complete(self):
-        wait_func = mock.MagicMock()
-        plan = Plan(description="Test", wait_func=wait_func)
-
-        def run_func(*args, **kwargs):
-            return COMPLETE
-
-        for i in range(2):
-            stack = Stack(definition=generate_definition("vpc", i),
-                          context=self.context)
-            plan.add(
-                stack=stack,
-                run_func=run_func,
-                requires=stack.requires,
-            )
-
-        plan.execute()
-        self.assertEqual(wait_func.call_count, 0)
-
     def test_reset_plan(self):
 
         plan = Plan(
             description="Test",
-            sleep_time=0,
             poll_func=self._poll_func
         )
 
@@ -276,7 +250,6 @@ class TestPlan(unittest.TestCase):
 
         plan = Plan(
             description="Test",
-            sleep_time=0,
             poll_func=self._poll_func)
 
         previous_stack = None
@@ -303,7 +276,7 @@ class TestPlan(unittest.TestCase):
     @mock.patch("stacker.plan.open", mock.mock_open(), create=True)
     def test_reset_after_dump(self, *args):
 
-        plan = Plan(description="Test", sleep_time=0)
+        plan = Plan(description="Test")
         previous_stack = None
         for i in range(5):
             overrides = {
@@ -335,7 +308,6 @@ class TestPlan(unittest.TestCase):
     def test_dump_no_provider_lookups(self, *args):
         plan = Plan(
             description="Test",
-            sleep_time=0,
             poll_func=self._poll_func
         )
         previous_stack = None

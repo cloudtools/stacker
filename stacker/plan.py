@@ -70,7 +70,7 @@ class Step(object):
         return self.status >= SUBMITTED
 
     def run(self):
-        return self._run_func(self.stack, status=self.status, tail=self.tail)
+        return self._run_func(self.stack, status=self.status)
 
     def set_status(self, status):
         """Sets the current step's status.
@@ -144,8 +144,7 @@ class Plan(OrderedDict):
         self[stack.fqn] = Step(
             stack=stack,
             run_func=run_func,
-            requires=requires,
-            tail=self.tail
+            requires=requires
         )
 
     def poll(self):

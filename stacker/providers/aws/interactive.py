@@ -106,6 +106,7 @@ def output_summary(fqn, action, changeset, replacements_only=False):
 
 
 class Provider(AWSProvider):
+
     """AWS Cloudformation Change Set Provider"""
 
     def __init__(self, *args, **kwargs):

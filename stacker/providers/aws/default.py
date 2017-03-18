@@ -49,9 +49,9 @@ class CloudListener(object):
         self.session = session
         self.queue_name = queue_name
         self.topic_name = topic_name
-        self._topic_arn = None
-        self._queue_url = None
-        self._queue_arn = None
+        self.topic_arn = None
+        self.queue_url = None
+        self.queue_arn = None
 
     def create_policy(self):
         return """{
@@ -70,23 +70,41 @@ class CloudListener(object):
                   }
                 }
               ]
-            }""" % (self.QueueArn, self.TopicArn)
+            }""" % (self.queue_arn, self.topic_arn)
 
     def setup(self):
-        logger.debug('Creating cloudsns resources')
+        logger.debug('Creating cloudformation listener')
         self.sns = self.session.client("sns")
         self.sqs = self.session.client("sqs")
 
+        topic = self.sns.create_topic(Name=self.topic_name)
+        self.topic_arn = topic["TopicArn"]
+
+        queue = self.sqs.create_queue(
+            QueueName=self.queue_name,
+            Attributes={"MessageRetentionPeriod": "60"}
+        )
+
+        self.queue_url = queue["QueueUrl"]
+
+        attr = self.sqs.get_queue_attributes(
+            QueueUrl=self.queue_url,
+            AttributeNames=["QueueArn"]
+        )
+
+        self.queue_arn = attr["Attributes"]["QueueArn"]
+
         self.sqs.set_queue_attributes(
-            QueueUrl=self.QueueUrl,
+            QueueUrl=self.queue_url,
             Attributes={
-                "Policy": self.create_policy()},
+                "Policy": self.create_policy()
+            }
         )
 
         result = self.sns.subscribe(
-            TopicArn=self.TopicArn,
+            TopicArn=self.topic_arn,
             Protocol="sqs",
-            Endpoint=self.QueueArn
+            Endpoint=self.queue_arn
         )
 
         sub_arn = result["SubscriptionArn"]
@@ -97,34 +115,16 @@ class CloudListener(object):
             AttributeValue="true"
         )
 
-        topic = self.sns.create_topic(Name=self.topic_name)
-        self._topic_arn = topic["TopicArn"]
-
-        queue = self.sqs.create_queue(
-            QueueName=self.queue_name,
-            Attributes={"MessageRetentionPeriod": "60"}
-        )
-        self._queue_url = queue["QueueUrl"]
-
-        attr = self.sqs.get_queue_attributes(
-            QueueUrl=self.QueueUrl,
-            AttributeNames=["QueueArn"]
-        )
-        self._queue_arn = attr["Attributes"]["QueueArn"]
-
         logger.debug('Done creating cloudformation event listeners')
 
     def get_messages(self):
         updates = self.sqs.receive_message(
-            QueueUrl=self.QueueUrl,
+            QueueUrl=self.queue_url,
             AttributeNames=["All"],
             WaitTimeSeconds=20
         )
 
-        if "Messages" in updates:
-            return [Message(m, self) for m in updates["Messages"]]
-
-        return []
+        return [Message(m, self) for m in updates.get("Messages", [])]
 
     def delete_messages(self, messages):
         receipts = []
@@ -136,18 +136,20 @@ class CloudListener(object):
             })
 
         self.sqs.delete_message_batch(
-            QueueUrl=self.QueueUrl,
+            QueueUrl=self.queue_url,
             Entries=receipts
         )
 
     def cleanup(self):
         logger.debug('Deleting cloudsns resources')
 
-        self.sqs.delete_queue(
-            QueueUrl=self.QueueUrl
-        )
+        # print self.__dict__
 
-        logger.debug('Done deleting cloudsns resources')
+        # self.sqs.delete_queue(
+        #     QueueUrl=self.queue_url
+        # )
+
+        # logger.debug('Done deleting cloudsns resources')
 
 
 def get_output_dict(stack):
@@ -231,7 +233,7 @@ class Provider(BaseProvider):
 
     @property
     def cloudformation(self):
-        if self._cloudformation:
+        if not self._cloudformation:
             session = get_session(self.region)
             self._cloudformation = session.client('cloudformation')
 
@@ -239,7 +241,7 @@ class Provider(BaseProvider):
 
     @property
     def listener(self):
-        if self._listener:
+        if not self._listener:
             session = get_session(self.region)
 
             # This stays the same for stacker call in this namespace
@@ -311,7 +313,7 @@ class Provider(BaseProvider):
                         Parameters=parameters,
                         Tags=tags,
                         Capabilities=["CAPABILITY_NAMED_IAM"],
-                        NotificationARNs=[self.listener.TopicArn]),
+                        NotificationARNs=[self.listener.topic_arn]),
         )
         return True
 
@@ -335,7 +337,7 @@ class Provider(BaseProvider):
                             Parameters=parameters,
                             Tags=tags,
                             Capabilities=["CAPABILITY_NAMED_IAM"],
-                            NotificationARNs=[self.listener.TopicArn]),
+                            NotificationARNs=[self.listener.topic_arn]),
             )
         except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in e.message:
@@ -372,7 +374,8 @@ class Provider(BaseProvider):
             self.try_get_outputs,
             args=[stack_name],
             exc_list=(KeyError, ),
-            min_delay=0  # Delay can be instant as long as it tries again
+            min_delay=0.2,
+            max_delay=1
         )
 
         return outputs

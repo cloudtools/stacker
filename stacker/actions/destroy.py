@@ -8,7 +8,7 @@ from ..exceptions import (
 from .. import util
 from ..status import (
     SubmittedStatus,
-    SkippedStatus
+    StackDoesNotExistStatus
 )
 from ..plan import Plan
 
@@ -44,8 +44,6 @@ class Action(BaseAction):
 
     def _generate_plan(self, tail=False):
         plan_kwargs = {}
-        if tail:
-            plan_kwargs["watch_func"] = self.provider.tail_stack
         plan = Plan(description="Destroy stacks",
                     poll_func=self.provider.poll_events,
                     **plan_kwargs)
@@ -66,7 +64,7 @@ class Action(BaseAction):
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:
-            return SkippedStatus('stack does not exist')
+            return StackDoesNotExistStatus('stack does not exist')
 
         if not provider_stack.get("NotificationARNs"):
             raise DestroyWithoutNotificationQueue(stack.fqn)

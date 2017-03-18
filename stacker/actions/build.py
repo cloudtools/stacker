@@ -231,7 +231,14 @@ class Action(BaseAction):
                 plan.dump(directory=dump, context=self.context)
 
     def cleanup(self):
-        logger.debug('Cleaning up')
+        """Cleans up any resources that do not need to exist after stacker
+        has finished building all the stacks.
+
+        This is specifically used when deleting the sqs queues used for 
+        polling events. 
+
+        """
+        logger.debug('Cleaning up sqs queues')
         self.provider.cleanup()
 
     def post_run(self, outline=False, dump=False, *args, **kwargs):
@@ -245,7 +252,7 @@ class Action(BaseAction):
                 context=self.context)
 
     def _handle_missing_parameters(self, params, required_params,
-                                   stack_name=None):
+                                   existing_stack_name=None):
         """Handles any missing parameters.
 
         If an existing_stack is provided, look up missing parameters there.
@@ -253,7 +260,7 @@ class Action(BaseAction):
         Args:
             params (dict): key/value dictionary of stack definition parameters
             required_params (list): A list of required parameter names.
-            stack_name (string): The name of the current stack
+            existing_stack_name (string): The name of the current stack
 
         Returns:
             list of tuples: The final list of key/value pairs returned as a
@@ -268,10 +275,11 @@ class Action(BaseAction):
 
             existing_stack = None
 
-            logger.debug("Handling missing params for %s.", stack_name)
+            logger.debug(
+                "Handling missing params for %s.", existing_stack_name)
 
             try:
-                existing_stack = self.provider.get_stack(stack_name)
+                existing_stack = self.provider.get_stack(existing_stack_name)
             except StackDoesNotExist:
                 pass
 

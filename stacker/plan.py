@@ -81,7 +81,7 @@ class Step(object):
         """
         if not isinstance(status, Status):
             raise ValueError(
-                "Step run_func must return a valid Status object. "
+                "Step status must return a valid Status object. "
                 "(Returned type: %s)" % (type(status)))
 
         if status is not self.status:

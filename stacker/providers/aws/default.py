@@ -18,14 +18,21 @@ from stacker.status import (
 logger = logging.getLogger(__name__)
 MAX_TAIL_RETRIES = 5
 
+def parse_message(message):
+        msg_re = re.compile("(?P<key>[^=]+)='(?P<value>[^']*)'\n")
+        body = message["Body"]
+        data = dict(msg_re.findall(body))
+        return data
+
 
 class Message(object):
+    """Message wrapper for cloudformation"""
 
     def __init__(self, metadata, parent_queue):
 
         self._parent_queue = parent_queue
 
-        parsed_message = self.parse_message(metadata)
+        parsed_message = parse_message(metadata)
 
         for key, value in parsed_message.iteritems():
             setattr(self, key, value)
@@ -33,22 +40,17 @@ class Message(object):
         for key, value in metadata.iteritems():
             setattr(self, key, value)
 
-    def parse_message(self, message):
-        msg_re = re.compile("(?P<key>[^=]+)='(?P<value>[^']*)'\n")
-        body = message["Body"]
-        data = dict(msg_re.findall(body))
-        return data
-
 
 class CloudListener(object):
+    """SNS/SQS listener for cloudformation build events"""
 
     def __init__(self, queue_name, topic_name, session):
         self.session = session
         self.queue_name = queue_name
         self.topic_name = topic_name
-        self._topicArn = None
-        self._queueUrl = None
-        self._queueArn = None
+        self._topic_arn = None
+        self._queue_url = None
+        self._queue_arn = None
 
     def create_policy(self):
         return """{
@@ -69,8 +71,8 @@ class CloudListener(object):
               ]
             }""" % (self.QueueArn, self.TopicArn)
 
-    def start(self):
-        logging.debug('Creating cloudsns resources')
+    def setup(self):
+        logger.debug('Creating cloudsns resources')
         self.sns = self.session.client("sns")
         self.sqs = self.session.client("sqs")
 
@@ -93,51 +95,23 @@ class CloudListener(object):
             AttributeName="RawMessageDelivery",
             AttributeValue="true"
         )
-        logging.debug('Done creating cloudsns resources')
 
-    @property
-    def TopicArn(self):
-        if not self.sqs or not self.sns:
-            raise NotInitialized('TopicArn')
-        if not self._topicArn:
-            topic = self.sns.create_topic(Name=self.topic_name)
-            self._topicArn = topic["TopicArn"]
+        topic = self.sns.create_topic(Name=self.topic_name)
+        self._topic_arn = topic["TopicArn"]
 
-        return self._topicArn
-
-    @property
-    def QueueUrl(self):
-        if not self.sqs or not self.sns:
-            raise NotInitialized('QueueUrl')
-        if not self._queueUrl:
-            queue = self.sqs.create_queue(
+        queue = self.sqs.create_queue(
                 QueueName=self.queue_name,
                 Attributes={"MessageRetentionPeriod": "60"}
             )
-            self._queueUrl = queue["QueueUrl"]
+        self._queue_url = queue["QueueUrl"]
 
-        return self._queueUrl
-
-    @property
-    def QueueArn(self):
-        if not self.sqs or not self.sns:
-            raise NotInitialized('QueueArn')
-        if not self._queueArn:
-            attr = self.sqs.get_queue_attributes(
+        attr = self.sqs.get_queue_attributes(
                 QueueUrl=self.QueueUrl,
                 AttributeNames=["QueueArn"]
             )
-            self._queueArn = attr["Attributes"]["QueueArn"]
+        self._queue_arn = attr["Attributes"]["QueueArn"]
 
-        return self._queueArn
-
-    def poll(self, user_fn):
-        completed = False
-        while not completed:
-            messages = self.get_messages()
-            for message in messages:
-                completed = user_fn(message)
-                message.delete()
+        logger.debug('Done creating cloudformation event listeners')
 
     def get_messages(self):
         updates = self.sqs.receive_message(
@@ -165,19 +139,14 @@ class CloudListener(object):
             Entries=receipts
         )
 
-    def cleanup(self, delete_topic=False):
-        logging.debug('Deleting cloudsns resources')
+    def cleanup(self):
+        logger.debug('Deleting cloudsns resources')
 
         self.sqs.delete_queue(
             QueueUrl=self.QueueUrl
         )
 
-        if delete_topic:
-            self.sns.delete_topic(
-                TopicArn=self.TopicArn
-            )
-
-        logging.debug('Done deleting cloudsns resources')
+        logger.debug('Done deleting cloudsns resources')
 
 
 def get_output_dict(stack):
@@ -258,16 +227,10 @@ class Provider(BaseProvider):
         self._cloudformation = None
         self._listener = None
         self.namespace = namespace
-        # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
-        # see: https://github.com/remind101/stacker/issues/196
-        self._pid = os.getpid()
 
     @property
     def cloudformation(self):
-        # deals w/ multiprocessing issues w/ sharing ssl conns
-        # see https://github.com/remind101/stacker/issues/196
-        pid = os.getpid()
-        if pid != self._pid or not self._cloudformation:
+        if self._cloudformation:
             session = get_session(self.region)
             self._cloudformation = session.client('cloudformation')
 
@@ -275,10 +238,7 @@ class Provider(BaseProvider):
 
     @property
     def listener(self):
-        # deals w/ multiprocessing issues w/ sharing ssl conns
-        # see https://github.com/remind101/stacker/issues/196
-        pid = os.getpid()
-        if pid != self._pid or not self._listener:
+        if self._listener:
             session = get_session(self.region)
 
             # This stays the same for stacker call in this namespace
@@ -294,7 +254,7 @@ class Provider(BaseProvider):
                 session
             )
 
-            self._listener.start()
+            self._listener.setup()
 
         return self._listener
 
@@ -411,7 +371,7 @@ class Provider(BaseProvider):
             self.try_get_outputs,
             args=[stack_name],
             exc_list=(KeyError, ),
-            min_delay=0.3
+            min_delay=0  # Delay can be instant as long as it tries again
         )
 
         return outputs

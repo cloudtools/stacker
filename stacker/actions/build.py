@@ -234,8 +234,8 @@ class Action(BaseAction):
         """Cleans up any resources that do not need to exist after stacker
         has finished building all the stacks.
 
-        This is specifically used when deleting the sqs queues used for 
-        polling events. 
+        This is specifically used when deleting the sqs queues used for
+        polling events.
 
         """
         logger.debug('Cleaning up sqs queues')

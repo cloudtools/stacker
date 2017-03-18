@@ -115,8 +115,8 @@ class DestroyWithoutNotificationQueue(Exception):
 
     def __init__(self, stack_name, *args, **kwargs):
         self.stack_name = stack_name
-        
-        message = ( 
+
+        message = (
             "You are attempting to destroy `%s` "
             "which was created using an older version of "
             "Stacker. Please first updated all your stacks using "

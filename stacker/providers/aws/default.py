@@ -1,7 +1,5 @@
 import json
 import logging
-import os
-from stacker.exceptions import NotInitialized
 import re
 import botocore
 import uuid
@@ -18,14 +16,16 @@ from stacker.status import (
 logger = logging.getLogger(__name__)
 MAX_TAIL_RETRIES = 5
 
+
 def parse_message(message):
-        msg_re = re.compile("(?P<key>[^=]+)='(?P<value>[^']*)'\n")
-        body = message["Body"]
-        data = dict(msg_re.findall(body))
-        return data
+    msg_re = re.compile("(?P<key>[^=]+)='(?P<value>[^']*)'\n")
+    body = message["Body"]
+    data = dict(msg_re.findall(body))
+    return data
 
 
 class Message(object):
+
     """Message wrapper for cloudformation"""
 
     def __init__(self, metadata, parent_queue):
@@ -42,6 +42,7 @@ class Message(object):
 
 
 class CloudListener(object):
+
     """SNS/SQS listener for cloudformation build events"""
 
     def __init__(self, queue_name, topic_name, session):
@@ -100,15 +101,15 @@ class CloudListener(object):
         self._topic_arn = topic["TopicArn"]
 
         queue = self.sqs.create_queue(
-                QueueName=self.queue_name,
-                Attributes={"MessageRetentionPeriod": "60"}
-            )
+            QueueName=self.queue_name,
+            Attributes={"MessageRetentionPeriod": "60"}
+        )
         self._queue_url = queue["QueueUrl"]
 
         attr = self.sqs.get_queue_attributes(
-                QueueUrl=self.QueueUrl,
-                AttributeNames=["QueueArn"]
-            )
+            QueueUrl=self.QueueUrl,
+            AttributeNames=["QueueArn"]
+        )
         self._queue_arn = attr["Attributes"]["QueueArn"]
 
         logger.debug('Done creating cloudformation event listeners')

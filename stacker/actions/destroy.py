@@ -8,7 +8,7 @@ from ..exceptions import (
 from .. import util
 from ..status import (
     SubmittedStatus,
-    StackDoesNotExistStatus
+    StackDoesNotExist as StackDoesNotExistStatus
 )
 from ..plan import Plan
 

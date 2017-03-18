@@ -6,8 +6,7 @@ import mock
 from stacker import exceptions
 from stacker.actions import build
 from stacker.actions.build import (
-    _resolve_parameters,
-    # _handle_missing_parameters,
+    _resolve_parameters
 )
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context

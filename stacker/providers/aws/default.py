@@ -354,7 +354,7 @@ class Provider(BaseProvider):
         return True
 
     def get_stack_name(self, stack, **kwargs):
-        return stack['StackName']
+        return stack["StackName"]
 
     def try_get_outputs(self, stack_name):
         """Attempt to get outputs from stack.
@@ -404,16 +404,16 @@ class Provider(BaseProvider):
         try:
             template = retry_on_throttling(
                 self.cloudformation.get_template,
-                kwargs=dict(StackName=stack_name))['TemplateBody']
+                kwargs=dict(StackName=stack_name))["TemplateBody"]
         except botocore.exceptions.ClientError as e:
             if "does not exist" not in e.message:
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
-        stack = stacks['Stacks'][0]
+        stack = stacks["Stacks"][0]
         parameters = dict()
-        if 'Parameters' in stack:
-            for p in stack['Parameters']:
-                parameters[p['ParameterKey']] = p['ParameterValue']
+        if "Parameters" in stack:
+            for p in stack["Parameters"]:
+                parameters[p["ParameterKey"]] = p["ParameterValue"]
 
         return [json.dumps(template), parameters]

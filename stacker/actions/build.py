@@ -238,7 +238,7 @@ class Action(BaseAction):
         polling events.
 
         """
-        logger.debug('Cleaning up sqs queues')
+        logger.debug('Cleaning up created AWS resources')
         self.provider.cleanup()
 
     def post_run(self, outline=False, dump=False, *args, **kwargs):

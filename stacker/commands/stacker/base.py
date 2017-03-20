@@ -119,39 +119,39 @@ class BaseCommand(object):
         return {}
 
     def add_arguments(self, parser):
-        parser.add_argument("-e", "--env", dest="cli_envs",
-                            metavar="ENV=VALUE", type=key_value_arg,
-                            action=KeyValueAction, default={},
-                            help="Adds environment key/value pairs from "
-                                 "the command line. Overrides your "
-                                 "environment file settings. Can be specified "
-                                 "more than once.")
-        parser.add_argument("-r", "--region",
-                            help="The AWS region to launch in.")
-        parser.add_argument("-v", "--verbose", action="count", default=0,
-                            help="Increase output verbosity. May be specified "
-                                 "up to twice.")
-        parser.add_argument("environment", type=environment_file,
-                            default={},
-                            help="Path to a simple `key: value` pair "
-                                 "environment file. The values in the "
-                                 "environment file can be used in the stack "
-                                 "config as if it were a string.Template "
-                                 "type: https://docs.python.org/2/library/"
-                                 "string.html#template-strings. Must define "
-                                 "at least a \"namespace\".")
-        parser.add_argument("config", type=argparse.FileType(),
-                            help="The config file where stack configuration "
-                                 "is located. Must be in yaml format.")
-        parser.add_argument("-i", "--interactive", action="store_true",
-                            help="Enable interactive mode. If specified, this "
-                            "will use the AWS interactive provider, which "
-                            "leverages Cloudformation Change Sets to display "
-                            "changes before running cloudformation templates. "
-                            "You'll be asked if you want to execute each "
-                            "change set. If you only want to authorize "
-                            "replacements, run with \"--replacements-only\" "
-                            "as well.")
-        parser.add_argument("--replacements-only", action="store_true",
-                            help="If interactive mode is enabled, stacker "
-                            "will only prompt to authorize replacements.")
+        parser.add_argument(
+            "-e", "--env", dest="cli_envs", metavar="ENV=VALUE",
+            type=key_value_arg, action=KeyValueAction, default={},
+            help="Adds environment key/value pairs from the command line. "
+                 "Overrides your environment file settings. Can be specified "
+                 "more than once.")
+        parser.add_argument(
+            "-r", "--region",
+            help="The AWS region to launch in.")
+        parser.add_argument(
+            "-v", "--verbose", action="count", default=0,
+            help="Increase output verbosity. May be specified up to twice.")
+        parser.add_argument(
+            "environment", type=environment_file, default={},
+            help="Path to a simple `key: value` pair environment file. The "
+                 "values in the environment file can be used in the stack "
+                 "config as if it were a string.Template type: "
+                 "https://docs.python.org/2/library/"
+                 "string.html#template-strings. Must define at least a "
+                 "\"namespace\".")
+        parser.add_argument(
+            "config", type=argparse.FileType(),
+            help="The config file where stack configuration is located. Must "
+                 "be in yaml format.")
+        parser.add_argument(
+            "-i", "--interactive", action="store_true",
+            help="Enable interactive mode. If specified, this will use the "
+                 "AWS interactive provider, which leverages Cloudformation "
+                 "Change Sets to display changes before running "
+                 "cloudformation templates. You'll be asked if you want to "
+                 "execute each change set. If you only want to authorize "
+                 "replacements, run with \"--replacements-only\" as well.")
+        parser.add_argument(
+            "--replacements-only", action="store_true",
+            help="If interactive mode is enabled, stacker will only prompt to "
+                 "authorize replacements.")

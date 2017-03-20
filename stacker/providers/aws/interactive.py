@@ -38,6 +38,11 @@ def requires_replacement(changeset):
             'True']
 
 
+def get_raw_input(message):
+    """ Just a wrapper for raw_input for testing purposes. """
+    return raw_input(message)
+
+
 def ask_for_approval(full_changeset=None, include_verbose=False):
     """Prompt the user for approval to execute a change set.
 
@@ -52,7 +57,7 @@ def ask_for_approval(full_changeset=None, include_verbose=False):
     if include_verbose:
         approval_options.append('v')
 
-    approve = raw_input("Execute the above changes? [{}] ".format(
+    approve = get_raw_input("Execute the above changes? [{}] ".format(
         '/'.join(approval_options)))
 
     if include_verbose and approve == "v":
@@ -103,6 +108,83 @@ def output_summary(fqn, action, changeset, replacements_only=False):
     logger.info('%s %s:\n%s', fqn, action, summary)
 
 
+def wait_till_change_set_complete(cfn_client, change_set_id, try_count=5,
+                                  sleep_time=.1):
+    """ Checks state of a changeset, returning when it is in a complete state.
+
+    Since changesets can take a little bit of time to get into a complete
+    state, we need to poll it until it does so. This will try to get the
+    state 5 times, waiting 2 seconds between each try. If, after that time,
+    the changeset is in a complete state it fails.
+
+    Args:
+        cfn_client (:class:`botocore.client.CloudFormation`): Used to query
+            cloudformation.
+        change_set_id (str): The unique changeset id to wait for.
+        try_count (int): Number of times to try the call.
+        sleep_time (int): Time to sleep between attempts.
+
+    Return:
+        dict: The response from cloudformation for the describe_change_set
+            call.
+    """
+    complete = False
+    response = None
+    for i in range(try_count):
+        response = retry_on_throttling(
+            cfn_client.describe_change_set,
+            kwargs={
+                'ChangeSetName': change_set_id,
+            },
+        )
+        complete = response["Status"] in ("FAILED", "CREATE_COMPLETE")
+        if complete:
+            break
+        time.sleep(sleep_time)
+    if not complete:
+        raise exceptions.ChangesetDidNotStabilize(change_set_id)
+    return response
+
+
+def create_change_set(cfn_client, fqn, template_url, parameters, tags,
+                      replacements_only=False):
+    logger.debug("Attempting to create change set for stack: %s.", fqn)
+    response = retry_on_throttling(
+        cfn_client.create_change_set,
+        kwargs={
+            'StackName': fqn,
+            'TemplateURL': template_url,
+            'Parameters': parameters,
+            'Tags': tags,
+            'Capabilities': ["CAPABILITY_NAMED_IAM"],
+            'ChangeSetName': get_change_set_name(),
+        },
+    )
+    change_set_id = response["Id"]
+    response = wait_till_change_set_complete(
+        cfn_client, change_set_id, sleep_time=2
+    )
+    status = response["Status"]
+    if status == "FAILED":
+        status_reason = response["StatusReason"]
+        if "didn't contain changes" in response["StatusReason"]:
+            logger.debug(
+                "Stack %s did not change, not updating.",
+                fqn,
+            )
+            raise exceptions.StackDidNotChange
+        raise exceptions.UnhandledChangeSetStatus(
+            fqn, change_set_id, status, status_reason
+        )
+
+    if response["ExecutionStatus"] != "AVAILABLE":
+        raise Exception("Unable to execute change set: "
+                        "{}".format(response))
+
+    changeset = response["Changes"]
+    return changeset, change_set_id
+
+
 class Provider(AWSProvider):
     """AWS Cloudformation Change Set Provider"""
 
@@ -110,68 +192,39 @@ class Provider(AWSProvider):
         self.replacements_only = kwargs.pop('replacements_only', False)
         super(Provider, self).__init__(*args, **kwargs)
 
-    def _wait_till_change_set_complete(self, change_set_id):
-        complete = False
-        response = None
-        while not complete:
-            response = retry_on_throttling(
-                self.cloudformation.describe_change_set,
+    def update_stack(self, fqn, template_url, parameters, tags, diff=False,
+                     **kwargs):
+        changeset, change_set_id = create_change_set(self.cloudformation, fqn,
+                                                     template_url, parameters,
+                                                     tags, **kwargs)
+
+        action = "replacements" if self.replacements_only else "changes"
+        full_changeset = changeset
+        if self.replacements_only:
+            changeset = requires_replacement(changeset)
+
+        if changeset:
+            output_summary(fqn, action, changeset,
+                           replacements_only=self.replacements_only)
+            if not diff:
+                ask_for_approval(
+                    full_changeset=full_changeset,
+                    include_verbose=True,
+                )
+
+        if not diff:
+            retry_on_throttling(
+                self.cloudformation.execute_change_set,
                 kwargs={
                     'ChangeSetName': change_set_id,
                 },
             )
-            complete = response["Status"] in ("FAILED", "CREATE_COMPLETE")
-            if not complete:
-                time.sleep(2)
-        return response
-
-    def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
-        logger.debug("Attempting to create change set for stack: %s.", fqn)
-        response = retry_on_throttling(
-            self.cloudformation.create_change_set,
-            kwargs={
-                'StackName': fqn,
-                'TemplateURL': template_url,
-                'Parameters': parameters,
-                'Tags': tags,
-                'Capabilities': ["CAPABILITY_NAMED_IAM"],
-                'ChangeSetName': get_change_set_name(),
-            },
-        )
-        change_set_id = response["Id"]
-        response = self._wait_till_change_set_complete(change_set_id)
-        if response["Status"] == "FAILED":
-            if "didn't contain changes" in response["StatusReason"]:
-                logger.debug(
-                    "Stack %s did not change, not updating.",
-                    fqn,
-                )
-                raise exceptions.StackDidNotChange
-            raise Exception(
-                "Failed to describe change set: {}".format(response)
+        else:
+            retry_on_throttling(
+                self.cloudformation.delete_change_set,
+                kwargs={
+                    'ChangeSetName': change_set_id,
+                },
             )
 
-        if response["ExecutionStatus"] != "AVAILABLE":
-            raise Exception("Unable to execute change set: "
-                            "{}".format(response))
-
-        action = "replacements" if self.replacements_only else "changes"
-        changeset = response["Changes"]
-        if self.replacements_only:
-            changeset = requires_replacement(changeset)
-
-        if len(changeset):
-            output_summary(fqn, action, changeset,
-                           replacements_only=self.replacements_only)
-            ask_for_approval(
-                full_changeset=response["Changes"],
-                include_verbose=True,
-            )
-
-        retry_on_throttling(
-            self.cloudformation.execute_change_set,
-            kwargs={
-                'ChangeSetName': change_set_id,
-            },
-        )
         return True

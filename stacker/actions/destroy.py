@@ -83,6 +83,17 @@ class Action(BaseAction):
                 context=self.context
             )
 
+    def cleanup(self):
+        """Cleans up any resources that do not need to exist after stacker
+        has finished building all the stacks.
+
+        This is specifically used when deleting the sqs queues used for
+        polling events.
+
+        """
+        logger.debug('Cleaning up sqs queues')
+        self.provider.cleanup()
+
     def run(self, force, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)
         if force:

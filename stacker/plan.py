@@ -81,8 +81,9 @@ class Step(object):
         """
         if not isinstance(status, Status):
             raise ValueError(
-                "Step status must return a valid Status object. "
-                "(Returned type: %s)" % (type(status)))
+                "Invalid status type: %s - must be subclass of "
+                "stacker.status.Status class. " % type(status)
+            )
 
         if status is not self.status:
             logger.debug("Setting %s state to %s.", self.stack.name,

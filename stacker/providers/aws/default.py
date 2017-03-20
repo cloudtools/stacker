@@ -12,12 +12,11 @@ from stacker.status import (
     CompleteStatus,
 )
 
-
 logger = logging.getLogger(__name__)
-MAX_TAIL_RETRIES = 5
 
 
 def parse_message(message):
+    """Parses cloudformation SNS message to grab event metdata"""
     msg_re = re.compile("(?P<key>[^=]+)='(?P<value>[^']*)'\n")
     body = message["Body"]
     data = dict(msg_re.findall(body))
@@ -49,9 +48,9 @@ class CloudListener(object):
         self.session = session
         self.queue_name = queue_name
         self.topic_name = topic_name
-        self.topic_arn = None
-        self.queue_url = None
-        self.queue_arn = None
+
+        # Create all the necessary cloudfromation resources
+        self.setup()
 
     def create_policy(self):
         return """{
@@ -73,7 +72,10 @@ class CloudListener(object):
             }""" % (self.queue_arn, self.topic_arn)
 
     def setup(self):
-        logger.debug('Creating cloudformation listener')
+        """Creates the initial SNS/SQS resources for listening to
+        cloudformation events"""
+
+        logger.debug("Creating cloudformation listener")
         self.sns = self.session.client("sns")
         self.sqs = self.session.client("sqs")
 
@@ -141,15 +143,17 @@ class CloudListener(object):
         )
 
     def cleanup(self):
-        logger.debug('Deleting cloudsns resources')
+        """Delete the sqs queue after each run of stacker. However
+        the sns topic does not get deleted as it follows a consistent
+        naming scheme of the form stacker-{namespace}."""
 
-        # print self.__dict__
+        logger.debug('Deleting cloud listener resources')
 
-        # self.sqs.delete_queue(
-        #     QueueUrl=self.queue_url
-        # )
+        self.sqs.delete_queue(
+            QueueUrl=self.queue_url
+        )
 
-        # logger.debug('Done deleting cloudsns resources')
+        logger.debug('Done deleting cloud listener resources')
 
 
 def get_output_dict(stack):
@@ -257,8 +261,6 @@ class Provider(BaseProvider):
                 session
             )
 
-            self._listener.setup()
-
         return self._listener
 
     def poll_events(self, tail):
@@ -355,27 +357,32 @@ class Provider(BaseProvider):
         return stack['StackName']
 
     def try_get_outputs(self, stack_name):
-        print "TRY GET OUTPUTS"
-        print self
-        print stack_name
+        """Attempt to get outputs from stack.
+
+            Raises:
+                KeyError: If the given stack contains no outputs yet
+        """
         if stack_name not in self._outputs:
-
             stack = self.get_stack(stack_name)
-
-            if 'Outputs' not in stack:
-                raise KeyError('No Outputs in Stack')
-
+            if "Outputs" not in stack:
+                raise KeyError("No Outputs in Stack")
             self._outputs[stack_name] = get_output_dict(stack)
 
         return self._outputs[stack_name]
 
     def get_outputs(self, stack_name):
+        """Gets a given stacks outputs
+
+        Retries fetching the stack several times because cloudformation
+        fires a CREATE_COMPLETE event before the stack actually gets updated
+        with the correct values.
+        """
         outputs = retry_with_backoff(
             self.try_get_outputs,
             args=[stack_name],
             exc_list=(KeyError, ),
             min_delay=0.2,
-            max_delay=1
+            max_delay=3
         )
 
         return outputs

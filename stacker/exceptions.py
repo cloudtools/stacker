@@ -176,3 +176,15 @@ class UnhandledChangeSetStatus(Exception):
         )
 
         super(UnhandledChangeSetStatus, self).__init__(message)
+
+
+class UnableToExecuteChangeSet(Exception):
+    def __init__(self, stack_name, change_set_id, execution_status):
+        self.stack_name = stack_name
+        self.id = change_set_id
+        self.execution_status = execution_status
+
+        message = ("Changeset '%s' on stack '%s' had bad execution status: "
+                   "%s" % (change_set_id, stack_name, execution_status))
+
+        super(UnableToExecuteChangeSet, self).__init__(message)

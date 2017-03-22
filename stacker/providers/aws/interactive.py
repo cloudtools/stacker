@@ -177,38 +177,40 @@ def create_change_set(cfn_client, fqn, template_url, parameters, tags,
             fqn, change_set_id, status, status_reason
         )
 
-    if response["ExecutionStatus"] != "AVAILABLE":
-        raise Exception("Unable to execute change set: "
-                        "{}".format(response))
+    execution_status = response["ExecutionStatus"]
+    if execution_status != "AVAILABLE":
+        raise exceptions.UnableToExecuteChangeSet(fqn,
+                                                  change_set_id,
+                                                  execution_status)
 
-    changeset = response["Changes"]
-    return changeset, change_set_id
+    changes = response["Changes"]
+    return changes, change_set_id
 
 
 class Provider(AWSProvider):
     """AWS Cloudformation Change Set Provider"""
 
-    def __init__(self, *args, **kwargs):
-        self.replacements_only = kwargs.pop('replacements_only', False)
-        super(Provider, self).__init__(*args, **kwargs)
+    def __init__(self, region, replacements_only=False, *args, **kwargs):
+        self.replacements_only = replacements_only
+        super(Provider, self).__init__(region=region, *args, **kwargs)
 
     def update_stack(self, fqn, template_url, parameters, tags, diff=False,
                      **kwargs):
-        changeset, change_set_id = create_change_set(self.cloudformation, fqn,
-                                                     template_url, parameters,
-                                                     tags, **kwargs)
+        changes, change_set_id = create_change_set(self.cloudformation, fqn,
+                                                   template_url, parameters,
+                                                   tags, **kwargs)
 
         action = "replacements" if self.replacements_only else "changes"
-        full_changeset = changeset
+        full_changes = changes
         if self.replacements_only:
-            changeset = requires_replacement(changeset)
+            changes = requires_replacement(changes)
 
-        if changeset:
-            output_summary(fqn, action, changeset,
+        if changes:
+            output_summary(fqn, action, changes,
                            replacements_only=self.replacements_only)
             if not diff:
                 ask_for_approval(
-                    full_changeset=full_changeset,
+                    full_changes=full_changes,
                     include_verbose=True,
                 )
 

@@ -1,11 +1,14 @@
 import unittest
 from datetime import datetime
+import random
+import string
 
 from mock import patch
 from botocore.stub import Stubber
 import boto3
 
 from ....providers.aws.interactive import (
+    Provider,
     requires_replacement,
     ask_for_approval,
     wait_till_change_set_complete,
@@ -13,6 +16,20 @@ from ....providers.aws.interactive import (
 )
 
 from .... import exceptions
+
+
+def random_string(length=12):
+    """ Returns a random string of variable length.
+
+    Args:
+        length (int): The # of characters to use in the random string.
+
+    Returns:
+        str: The random string.
+    """
+
+    return ''.join(
+        [random.choice(string.ascii_letters) for _ in range(length)])
 
 
 def generate_resource_change(replacement=True):
@@ -67,7 +84,35 @@ def generate_change_set_response(status, execution_status="AVAILABLE",
     }
 
 
-class TestInteractiveProvider(unittest.TestCase):
+def generate_change(action="Modify", resource_type="EC2::Instance",
+                    replacement="False", requires_recreation="Never"):
+    """ Generate a minimal change for a changeset """
+    return {
+        "Type": "Resource",
+        "ResourceChange": {
+            "Action": action,
+            "LogicalResourceId": random_string(),
+            "PhysicalResourceId": random_string(),
+            "ResourceType": resource_type,
+            "Replacement": replacement,
+            "Scope": ["Properties"],
+            "Details": [
+                {
+                    "Target": {
+                        "Attribute": "Properties",
+                        "Name": random_string(),
+                        "RequiresRecreation": requires_recreation
+                    },
+                    "Evaluation": "Static",
+                    "ChangeSource": "ResourceReference",
+                    "CausingEntity": random_string()
+                },
+            ]
+        }
+    }
+
+
+class TestInteractiveProviderMethods(unittest.TestCase):
     def setUp(self):
         self.cfn = boto3.client("cloudformation")
         self.stubber = Stubber(self.cfn)
@@ -168,3 +213,94 @@ class TestInteractiveProvider(unittest.TestCase):
                     template_url="http://fake.template.url.com/",
                     parameters=[], tags=[]
                 )
+
+    def test_create_change_set_bad_execution_status(self):
+        self.stubber.add_response(
+            "create_change_set",
+            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+        )
+
+        self.stubber.add_response(
+            "describe_change_set",
+            generate_change_set_response(
+                status="CREATE_COMPLETE", execution_status="UNAVAILABLE",
+            )
+        )
+
+        with self.stubber:
+            with self.assertRaises(exceptions.UnableToExecuteChangeSet):
+                create_change_set(
+                    cfn_client=self.cfn, fqn="my-fake-stack",
+                    template_url="http://fake.template.url.com/",
+                    parameters=[], tags=[]
+                )
+
+
+class TestInteractiveProvider(unittest.TestCase):
+    def setUp(self):
+        region = "us-east-1"
+        self.provider = Provider(region=region)
+        self.stubber = Stubber(self.provider.cloudformation)
+
+    def test_successful_init(self):
+        region = "us-east-1"
+        replacements = True
+        p = Provider(region=region, replacements_only=replacements)
+        self.assertEqual(p.region, region)
+        self.assertEqual(p.replacements_only, replacements)
+
+    @patch("stacker.providers.aws.interactive.ask_for_approval")
+    def test_update_stack_execute_success(self, patched_approval):
+        self.stubber.add_response(
+            "create_change_set",
+            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+        )
+        changes = []
+        changes.append(generate_change())
+
+        self.stubber.add_response(
+            "describe_change_set",
+            generate_change_set_response(
+                status="CREATE_COMPLETE", execution_status="AVAILABLE",
+                changes=changes,
+            )
+        )
+
+        self.stubber.add_response("execute_change_set", {})
+
+        with self.stubber:
+            self.provider.update_stack(
+                fqn="my-fake-stack",
+                template_url="http://fake.template.url.com/",
+                parameters=[], tags=[]
+            )
+
+        self.assertEqual(patched_approval.call_count, 1)
+
+    @patch("stacker.providers.aws.interactive.ask_for_approval")
+    def test_update_stack_diff_success(self, patched_approval):
+        self.stubber.add_response(
+            "create_change_set",
+            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+        )
+        changes = []
+        changes.append(generate_change())
+
+        self.stubber.add_response(
+            "describe_change_set",
+            generate_change_set_response(
+                status="CREATE_COMPLETE", execution_status="AVAILABLE",
+                changes=changes,
+            )
+        )
+
+        self.stubber.add_response("delete_change_set", {})
+
+        with self.stubber:
+            self.provider.update_stack(
+                fqn="my-fake-stack",
+                template_url="http://fake.template.url.com/",
+                parameters=[], tags=[], diff=True
+            )
+
+        self.assertEqual(patched_approval.call_count, 0)

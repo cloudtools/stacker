@@ -3,8 +3,10 @@ machine:
 
 dependencies:
   pre:
-    - pip install flake8
+    - pip install flake8 codecov
 
 test:
   override:
     - make test
+  post:
+    - codecov

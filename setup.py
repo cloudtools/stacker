@@ -20,6 +20,7 @@ tests_require = [
     "mock~=2.0.0",
     "moto~=0.4.30",
     "testfixtures~=4.10.0",
+    "coverage~=4.3.4"
 ]
 
 

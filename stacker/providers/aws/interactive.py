@@ -114,8 +114,8 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=5,
 
     Since changesets can take a little bit of time to get into a complete
     state, we need to poll it until it does so. This will try to get the
-    state 5 times, waiting 2 seconds between each try. If, after that time,
-    the changeset is in a complete state it fails.
+    state 5 times, waiting `sleep_time` seconds between each try. If, after
+    that time, the changeset is not in a complete state it fails.
 
     Args:
         cfn_client (:class:`botocore.client.CloudFormation`): Used to query

@@ -16,7 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 def parse_message(message):
-    """Parses cloudformation SNS message to grab event metdata"""
+    """Parses cloudformation SNS message to grab event metdata
+
+    Args:
+        message (dict): A message fetched from the SQS queue
+
+    Returns:
+        dict: A dictionary representing all the values in the message
+            body.
+    """
     msg_re = re.compile("(?P<key>[^=]+)='(?P<value>[^']*)'\n")
     body = message["Body"]
     data = dict(msg_re.findall(body))
@@ -27,9 +35,7 @@ class Message(object):
 
     """Message wrapper for cloudformation"""
 
-    def __init__(self, metadata, parent_queue):
-
-        self._parent_queue = parent_queue
+    def __init__(self, metadata):
 
         parsed_message = parse_message(metadata)
 
@@ -49,10 +55,12 @@ class CloudListener(object):
         self.queue_name = queue_name
         self.topic_name = topic_name
 
-        # Create all the necessary cloudfromation resources
-        self.setup()
+        # Set up clients
+        self.sns = self.session.client("sns")
+        self.sqs = self.session.client("sqs")
 
     def create_policy(self):
+        """Controls the permissions of the SQS queue"""
         return """{
               "Version":"2012-10-17",
               "Statement":[
@@ -74,10 +82,7 @@ class CloudListener(object):
     def setup(self):
         """Creates the initial SNS/SQS resources for listening to
         cloudformation events"""
-
         logger.debug("Creating cloudformation listener")
-        self.sns = self.session.client("sns")
-        self.sqs = self.session.client("sqs")
 
         topic = self.sns.create_topic(Name=self.topic_name)
         self.topic_arn = topic["TopicArn"]
@@ -120,27 +125,47 @@ class CloudListener(object):
         logger.debug('Done creating cloudformation event listeners')
 
     def get_messages(self):
+        """Fetches messages from the cloudformation SQS queues
+
+        Returns:
+            list of :class:`stacker.providers.aws.default.Message`: All the
+            messages fetched from the sqs queue.
+
+        """
         updates = self.sqs.receive_message(
             QueueUrl=self.queue_url,
             AttributeNames=["All"],
             WaitTimeSeconds=20
         )
 
-        return [Message(m, self) for m in updates.get("Messages", [])]
+        return [Message(m) for m in updates.get("Messages", [])]
 
     def delete_messages(self, messages):
+        """Deletes message in the sqs queue in batches of 10
+
+        Args: 
+            messages (list of :class:`stacker.providers.aws.default.Message`): A
+                list of messages (in batches of 10) to be deleted. 
+
+        Raises:
+            ValueError: Gets raised if any of the messages failed to delete
+
+        """
         receipts = []
         for m in messages:
-            unique_id = str(uuid.uuid4())
             receipts.append({
-                'Id': unique_id,
+                'Id': m.EventId,
                 'ReceiptHandle': m.ReceiptHandle
             })
 
-        self.sqs.delete_message_batch(
-            QueueUrl=self.queue_url,
-            Entries=receipts
-        )
+        if messages:
+            res = self.sqs.delete_message_batch(
+                QueueUrl=self.queue_url,
+                Entries=receipts
+            )
+
+            if res['Failed']:
+                raise ValueError(res['Failed'])
 
     def cleanup(self):
         """Delete the sqs queue after each run of stacker. However
@@ -261,9 +286,20 @@ class Provider(BaseProvider):
                 session
             )
 
+            self._listener.setup()
+
         return self._listener
 
     def poll_events(self, tail):
+        """Polls for updates in stack statuses
+
+        Args:
+            tail (bool): Should events be printed out
+
+        Returns:
+            dict: A StackName mapped to a :class:`stacker.Status`
+            
+        """
         messages = self.listener.get_messages()
         status_dict = {}
 
@@ -278,9 +314,20 @@ class Provider(BaseProvider):
         return status_dict
 
     def cleanup(self):
+        """Cleans up unneeded cloudlistener resources"""
         self.listener.cleanup()
 
     def get_status(self, message):
+        """Extracts the status from a :class:`stacker.Status` object
+        
+        Args:
+            message (:class:`stacker.providers.aws.default.Message`): The
+                message representing the stack event
+
+        Returns:
+            :class:`stacker.Status`: The status of the stack from the event
+
+        """
         status_name = message.ResourceStatus
 
         if status_name in self.COMPLETE_STATUSES:
@@ -295,6 +342,16 @@ class Provider(BaseProvider):
         )
 
     def destroy_stack(self, stack_name, **kwargs):
+        """Deletes a stack
+
+        Args:
+            stack_name (str): The name of the stack
+        
+        Raises:
+            :class:`stacker.exceptions.StackDoesNotExist`: If a
+                stack with stack_name does not exist
+
+        """
         logger.debug("Destroying stack: %s" % (stack_name))
         try:
             return retry_on_throttling(self.cloudformation.delete_stack,
@@ -304,7 +361,19 @@ class Provider(BaseProvider):
             if "does not exist" in e.message:
                 raise exceptions.StackDoesNotExist(stack_name)
 
+
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
+        """Creates a stack
+
+        Args:
+            fqn (str): Fully qualified name of the stack
+            template_url (str): URL of the teamplate
+            parameters (dict): The parameters for the stack
+            tags (dict): The tags for the stack
+
+        Returns:
+            bool: True 
+        """
         logger.debug("Stack %s not found, creating.", fqn)
         logger.debug("Using parameters: %s", parameters)
         logger.debug("Using tags: %s", tags)
@@ -320,6 +389,18 @@ class Provider(BaseProvider):
         return True
 
     def get_stack(self, stack_name):
+        """Gets information about a stack
+
+        Args:
+            stack_name (str): Name of the stack
+
+        Returns:
+            dict: Response of boto3.describe_stacks operation
+
+        Raises:
+            :class:`stacker.exceptions.StackDoesNotExist`: Gets raised
+                if a stack with name stack_name does not exist. 
+        """
         try:
             return retry_on_throttling(
                 self.cloudformation.describe_stacks,
@@ -330,6 +411,20 @@ class Provider(BaseProvider):
             raise exceptions.StackDoesNotExist(stack_name)
 
     def update_stack(self, fqn, template_url, parameters, tags, **kwargs):
+        """Updates the stack
+
+        Args:
+            fqn (str): Fully qualified name of the stack
+            template_url (str): URL of the teamplate
+            parameters (dict): The parameters for the stack
+            tags (dict): The tags for the stack
+
+        Raises:
+            :class:`stacker.exceptions.StackDidNotChange`: If no changes
+                need to be made to the stack
+            :class:`stacker.exceptions.StackDoesNotExist`: If a stack with
+                stack_name does not exist
+        """
         try:
             logger.debug("Attempting to update stack %s.", fqn)
             retry_on_throttling(
@@ -354,6 +449,7 @@ class Provider(BaseProvider):
         return True
 
     def get_stack_name(self, stack, **kwargs):
+        """Gets the name of the stack"""
         return stack["StackName"]
 
     def try_get_outputs(self, stack_name):
@@ -381,8 +477,8 @@ class Provider(BaseProvider):
             self.try_get_outputs,
             args=[stack_name],
             exc_list=(KeyError, ),
-            min_delay=0.2,
-            max_delay=3
+            min_delay=0.5,
+            max_delay=5
         )
 
         return outputs
@@ -392,14 +488,7 @@ class Provider(BaseProvider):
 
         Returns [ template, parameters ]
         """
-        try:
-            stacks = retry_on_throttling(
-                self.cloudformation.describe_stacks,
-                kwargs=dict(StackName=stack_name))
-        except botocore.exceptions.ClientError as e:
-            if "does not exist" not in e.message:
-                raise
-            raise exceptions.StackDoesNotExist(stack_name)
+        stack = self.get_stack(stack_name)
 
         try:
             template = retry_on_throttling(
@@ -410,7 +499,6 @@ class Provider(BaseProvider):
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
-        stack = stacks["Stacks"][0]
         parameters = dict()
         if "Parameters" in stack:
             for p in stack["Parameters"]:

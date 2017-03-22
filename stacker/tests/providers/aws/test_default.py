@@ -1,9 +1,7 @@
-import mock
 import unittest
 from mock import MagicMock
 import boto3
-from botocore.stub import Stubber, ANY
-import botocore
+from botocore.stub import Stubber
 from stacker import exceptions
 from datetime import datetime
 import json

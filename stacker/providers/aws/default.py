@@ -143,9 +143,9 @@ class CloudListener(object):
     def delete_messages(self, messages):
         """Deletes message in the sqs queue in batches of 10
 
-        Args: 
-            messages (list of :class:`stacker.providers.aws.default.Message`): A
-                list of messages (in batches of 10) to be deleted. 
+        Args:
+            messages (list of :class:`stacker.providers.aws.default.Message`):
+                A list of messages (in batches of 10) to be deleted.
 
         Raises:
             ValueError: Gets raised if any of the messages failed to delete
@@ -298,7 +298,7 @@ class Provider(BaseProvider):
 
         Returns:
             dict: A StackName mapped to a :class:`stacker.Status`
-            
+
         """
         messages = self.listener.get_messages()
         status_dict = {}
@@ -319,7 +319,7 @@ class Provider(BaseProvider):
 
     def get_status(self, message):
         """Extracts the status from a :class:`stacker.Status` object
-        
+
         Args:
             message (:class:`stacker.providers.aws.default.Message`): The
                 message representing the stack event
@@ -346,7 +346,7 @@ class Provider(BaseProvider):
 
         Args:
             stack_name (str): The name of the stack
-        
+
         Raises:
             :class:`stacker.exceptions.StackDoesNotExist`: If a
                 stack with stack_name does not exist
@@ -361,7 +361,6 @@ class Provider(BaseProvider):
             if "does not exist" in e.message:
                 raise exceptions.StackDoesNotExist(stack_name)
 
-
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
         """Creates a stack
 
@@ -372,7 +371,7 @@ class Provider(BaseProvider):
             tags (dict): The tags for the stack
 
         Returns:
-            bool: True 
+            bool: True
         """
         logger.debug("Stack %s not found, creating.", fqn)
         logger.debug("Using parameters: %s", parameters)
@@ -399,7 +398,7 @@ class Provider(BaseProvider):
 
         Raises:
             :class:`stacker.exceptions.StackDoesNotExist`: Gets raised
-                if a stack with name stack_name does not exist. 
+                if a stack with name stack_name does not exist.
         """
         try:
             return retry_on_throttling(

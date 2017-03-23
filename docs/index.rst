@@ -42,6 +42,9 @@ Main Features
 - A small library of pre-shared Blueprints can be found at the
   stacker_blueprints_ repo, making things like setting up a VPC easy.
 
+Notes for upgrading
+-------------------
+Documented in the `upgrading doc <upgrading.html>`_
 
 Contents:
 

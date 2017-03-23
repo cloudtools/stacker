@@ -119,12 +119,11 @@ class DestroyWithoutNotificationQueue(Exception):
         message = (
             "You are attempting to destroy `%s` "
             "which was created using an older version of "
-            "Stacker. Please first updated all your stacks using "
-            "`Stacker build` so that they can be adjusted "
+            "stacker. Please first updated all your stacks using "
+            "`stacker build` so that they can be adjusted "
             "for the new version. More information on "
             "this issue here: "
-            "https://github.com/remind101/stacker/blob/"
-            "master/docs/destory_error.rst"
+            "http://stacker.readthedocs.io/en/latest/upgrading.html"
         ) % stack_name
 
         super(DestroyWithoutNotificationQueue, self).__init__(message,

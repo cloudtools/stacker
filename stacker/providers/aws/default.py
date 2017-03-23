@@ -237,6 +237,12 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
                               retry_checker=_throttling_checker)
 
 
+def tail_print(message):
+    print("%s %s %s" % (message.ResourceStatus,
+                        message.ResourceType,
+                        message.EventId))
+
+
 class Provider(BaseProvider):
 
     """AWS CloudFormation Provider"""
@@ -306,7 +312,7 @@ class Provider(BaseProvider):
         for message in messages:
             status_dict[message.StackName] = self.get_status(message)
             if tail:
-                Provider._tail_print(message)
+                tail_print(message)
 
         if messages:
             self.listener.delete_messages(messages)
@@ -338,7 +344,7 @@ class Provider(BaseProvider):
         raise exceptions.UnknownStatus(
             message.StackName,
             status_name,
-            message.ResourceStatusReason
+            getattr(message, "ResourceStatusReason", "")
         )
 
     def destroy_stack(self, stack_name, **kwargs):

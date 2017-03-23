@@ -1,16 +1,22 @@
 import unittest
-from mock import MagicMock
+from mock import (
+    MagicMock,
+    patch
+)
 import boto3
 from botocore.stub import Stubber
 from stacker import exceptions
 from datetime import datetime
 import json
+import botocore
+
 
 from stacker.providers.aws.default import (
     Message,
     CloudListener,
     Provider,
-    parse_message
+    parse_message,
+    retry_on_throttling
 )
 
 from stacker.status import (
@@ -59,6 +65,58 @@ def create_fake_message(stack_name, status, message_id=None):
         status,
         message_id=message_id
     ))
+
+
+class TestRetryThrottling(unittest.TestCase):
+
+    def test_retry_on_throttling(self):
+
+        s3 = boto3.client('s3', region_name='us-east-1')
+
+        retry_stub = Stubber(s3)
+
+        retry_stub.add_client_error(
+            'list_buckets',
+            service_error_code='Throttling',
+            http_status_code=400,
+            service_error_meta=None,
+        )
+
+        retry_stub.add_response('list_buckets', {
+            'Buckets': [],
+            'Owner': {
+                'DisplayName': 'tom',
+                'ID': '1'
+            }
+        })
+
+        with retry_stub:
+            retry_on_throttling(s3.list_buckets)
+
+    def test_retry_on_throttling_fail(self):
+
+        s3 = boto3.client('s3', region_name='us-east-1')
+
+        retry_stub = Stubber(s3)
+
+        retry_stub.add_client_error(
+            'list_buckets',
+            service_error_code='Throttling',
+            http_status_code=401,
+            service_error_meta=None,
+        )
+
+        retry_stub.add_response('list_buckets', {
+            'Buckets': [],
+            'Owner': {
+                'DisplayName': 'tom',
+                'ID': '1'
+            }
+        })
+
+        with retry_stub:
+            with self.assertRaises(botocore.exceptions.ClientError):
+                retry_on_throttling(s3.list_buckets)
 
 
 class TestMessage(unittest.TestCase):
@@ -248,6 +306,16 @@ class TestProvider(unittest.TestCase):
         cfn = self.provider.cloudformation
         self.cfn_stubber = Stubber(cfn)
 
+    def test_listener(self):
+        with patch('stacker.providers.aws.default.CloudListener') as mockCloud:
+            instance = mockCloud.return_value
+            instance.setup = MagicMock()
+            self.provider.listener
+            self.provider.listener
+            self.provider.listener
+            mockCloud.assert_called_once()
+            instance.setup.assert_called_once()
+
     def test_poll_events(self):
         self.provider._listener = MagicMock()
 
@@ -261,16 +329,28 @@ class TestProvider(unittest.TestCase):
         self.assertEqual(status_dict['stack1'], CompleteStatus)
         self.assertEqual(status_dict['stack2'], SubmittedStatus)
 
-        def test_cleanup(self):
-            self.provider._listener = MagicMock()
-            self.provider.listener.cleanup = MagicMock()
+    def test_poll_events_tail(self):
+        self.provider._listener = MagicMock()
 
-            self.provider.cleanup()
+        self.provider.listener.get_messages.return_value = [
+            create_fake_message('stack1', 'CREATE_COMPLETE'),
+            create_fake_message('stack1', 'CREATE_COMPLETE'),
+        ]
 
-            self.assertEqual(
-                self.provider.listener.cleanup.called,
-                True
-            )
+        with patch('stacker.providers.aws.default.tail_print') as tailMock:
+            self.provider.poll_events(True)
+            tailMock.assert_called()
+
+    def test_cleanup(self):
+        self.provider._listener = MagicMock()
+        self.provider.listener.cleanup = MagicMock()
+
+        self.provider.cleanup()
+
+        self.assertEqual(
+            self.provider.listener.cleanup.called,
+            True
+        )
 
     def test_get_status(self):
 
@@ -312,6 +392,15 @@ class TestProvider(unittest.TestCase):
             )
             status = self.provider.get_status(message)
             self.assertEqual(status, status_test['expected'])
+
+    def test_unknown_status(self):
+        message = create_fake_message(
+            'example',
+            'DOES_NOT_EXIST'
+        )
+
+        with self.assertRaises(exceptions.UnknownStatus):
+            self.provider.get_status(message)
 
     def test_destroy_stack(self):
 
@@ -539,6 +628,12 @@ class TestProvider(unittest.TestCase):
         res = self.provider.get_outputs('stack_name')
 
         self.assertEqual(res, {'bob': 'rob'})
+
+    def test_cleanup_stack(self):
+        self.provider._listener = MagicMock()
+        self.provider._listener.cleanup = MagicMock()
+        self.provider.cleanup()
+        self.provider._listener.cleanup.assert_called()
 
     def test_get_stack_info(self):
 

@@ -10,6 +10,15 @@ class InvalidLookupCombination(Exception):
                                                        **kwargs)
 
 
+class NotInitialized(Exception):
+
+    def __init__(self, name, *args, **kwargs):
+        message = "`%s` has not been initialized yet. " % name
+        message += "Call the start method to initialize everything"
+
+        super(NotInitialized).__init__(message, *args, **kwargs)
+
+
 class UnknownLookupType(Exception):
 
     def __init__(self, lookup, *args, **kwargs):
@@ -100,6 +109,36 @@ class OutputDoesNotExist(Exception):
         message = "Output %s does not exist on stack %s" % (output,
                                                             stack_name)
         super(OutputDoesNotExist, self).__init__(message, *args, **kwargs)
+
+
+class DestroyWithoutNotificationQueue(Exception):
+
+    def __init__(self, stack_name, *args, **kwargs):
+        self.stack_name = stack_name
+
+        message = (
+            "You are attempting to destroy `%s` "
+            "which was created using an older version of "
+            "stacker. Please first updated all your stacks using "
+            "`stacker build` so that they can be adjusted "
+            "for the new version. More information on "
+            "this issue here: "
+            "http://stacker.readthedocs.io/en/latest/upgrading.html"
+        ) % stack_name
+
+        super(DestroyWithoutNotificationQueue, self).__init__(message,
+                                                              *args, **kwargs)
+
+
+class UnknownStatus(Exception):
+
+    def __init__(self, stack_name, stack_status, stack_reason,
+                 *args, **kwargs):
+
+        message = "Stack `%s` got status: `%s`. " % (stack_name, stack_status)
+        message += "%s" % stack_reason
+
+        super(UnknownStatus, self).__init__(message, *args, **kwargs)
 
 
 class MissingEnvironment(Exception):

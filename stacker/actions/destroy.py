@@ -1,24 +1,22 @@
 import logging
 
 from .base import BaseAction
-from ..exceptions import StackDoesNotExist
+from ..exceptions import (
+    StackDoesNotExist,
+    DestroyWithoutNotificationQueue
+)
 from .. import util
 from ..status import (
-    CompleteStatus,
     SubmittedStatus,
-    SUBMITTED,
+    StackDoesNotExist as StackDoesNotExistStatus
 )
 from ..plan import Plan
 
-from ..status import StackDoesNotExist as StackDoesNotExistStatus
-
 logger = logging.getLogger(__name__)
-
-DestroyedStatus = CompleteStatus("stack destroyed")
-DestroyingStatus = SubmittedStatus("submitted for destruction")
 
 
 class Action(BaseAction):
+
     """Responsible for destroying CloudFormation stacks.
 
     Generates a destruction plan based on stack dependencies. Stack
@@ -46,45 +44,33 @@ class Action(BaseAction):
 
     def _generate_plan(self, tail=False):
         plan_kwargs = {}
-        if tail:
-            plan_kwargs["watch_func"] = self.provider.tail_stack
-        plan = Plan(description="Destroy stacks", **plan_kwargs)
+        plan = Plan(description="Destroy stacks",
+                    poll_func=self.provider.poll_events,
+                    **plan_kwargs)
+
         stacks_dict = self.context.get_stacks_dict()
         dependencies = self._get_dependencies(stacks_dict)
         for stack_name in self.get_stack_execution_order(dependencies):
             plan.add(
                 stacks_dict[stack_name],
                 run_func=self._destroy_stack,
-                requires=dependencies.get(stack_name),
+                requires=dependencies.get(stack_name)
             )
         return plan
 
     def _destroy_stack(self, stack, **kwargs):
+        logger.debug("Destroying stack: %s", stack.fqn)
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:
-            logger.debug("Stack %s does not exist.", stack.fqn)
-            # Once the stack has been destroyed, it doesn't exist. If the
-            # status of the step was SUBMITTED, we know we just deleted it,
-            # otherwise it should be skipped
-            if kwargs.get("status", None) == SUBMITTED:
-                return DestroyedStatus
-            else:
-                return StackDoesNotExistStatus()
+            return StackDoesNotExistStatus('stack does not exist')
 
-        logger.debug(
-            "Stack %s provider status: %s",
-            self.provider.get_stack_name(provider_stack),
-            self.provider.get_stack_status(provider_stack),
-        )
-        if self.provider.is_stack_destroyed(provider_stack):
-            return DestroyedStatus
-        elif self.provider.is_stack_in_progress(provider_stack):
-            return DestroyingStatus
-        else:
-            logger.debug("Destroying stack: %s", stack.fqn)
-            self.provider.destroy_stack(provider_stack)
-        return DestroyingStatus
+        if not provider_stack.get("NotificationARNs"):
+            raise DestroyWithoutNotificationQueue(stack.fqn)
+
+        self.provider.destroy_stack(stack.fqn)
+        return SubmittedStatus("submitted for destruction")
 
     def pre_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
@@ -94,7 +80,19 @@ class Action(BaseAction):
                 stage="pre_destroy",
                 hooks=pre_destroy,
                 provider=self.provider,
-                context=self.context)
+                context=self.context
+            )
+
+    def cleanup(self):
+        """Cleans up any resources that do not need to exist after stacker
+        has finished building all the stacks.
+
+        This is specifically used when deleting the sqs queues used for
+        polling events.
+
+        """
+        logger.debug('Cleaning up sqs queues')
+        self.provider.cleanup()
 
     def run(self, force, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)

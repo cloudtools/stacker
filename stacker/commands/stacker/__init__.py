@@ -22,15 +22,6 @@ class Stacker(BaseCommand):
 
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)
-        if options.interactive:
-            logger.info('Using Interactive AWS Provider')
-            options.provider = interactive.Provider(
-                region=options.region,
-                replacements_only=options.replacements_only,
-            )
-        else:
-            logger.info('Using Default AWS Provider')
-            options.provider = default.Provider(region=options.region)
         options.context = Context(
             environment=options.environment,
             logger_type=self.logger_type,
@@ -39,6 +30,19 @@ class Stacker(BaseCommand):
             **options.get_context_kwargs(options)
         )
         options.context.load_config(options.config.read())
+        if options.interactive:
+            logger.info('Using Interactive AWS Provider')
+            options.provider = interactive.Provider(
+                region=options.region,
+                namespace=options.context.namespace,
+                replacements_only=options.replacements_only,
+            )
+        else:
+            logger.info('Using Default AWS Provider')
+            options.provider = default.Provider(
+                region=options.region,
+                namespace=options.context.namespace
+            )
 
     def add_arguments(self, parser):
         parser.add_argument("--version", action="version",

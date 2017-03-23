@@ -133,6 +133,9 @@ class BaseAction(object):
     def post_run(self, *args, **kwargs):
         pass
 
+    def cleanup(self, *args, **kwargs):
+        pass
+
     def _get_all_stack_names(self, dependencies):
         """Get all stack names specified in dependencies.
 

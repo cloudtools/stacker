@@ -1,11 +1,12 @@
 from stacker.session_cache import get_session
-import re, operator
+import re
+import operator
 
 from ...util import read_value_from_path
 
 TYPE_NAME = "ami"
 
-import sys
+
 def handler(value, **kwargs):
     """Fetch the most recent AMI Id using a filter
 
@@ -63,12 +64,13 @@ def handler(value, **kwargs):
 
     filters = []
     for name, value in values.iteritems():
-        filters.append({"Name":name, "Values":value.split(',')})
+        filters.append({"Name": name, "Values": value.split(',')})
     describe_args["Filters"] = filters
 
     result = ec2.describe_images(**describe_args)
 
-    images = sorted(result['Images'], key=operator.itemgetter('CreationDate'), reverse=True)
+    images = sorted(result['Images'], key=operator.itemgetter('CreationDate'),
+                    reverse=True)
     for image in images:
         if re.match("^%s$" % name_regex, image['Name']):
             return image['ImageId']

@@ -69,6 +69,7 @@ def resolve_lookups(lookups, context, provider):
         )
     return resolved_lookups
 
+
 register_lookup_handler(output.TYPE_NAME, output.handler)
 register_lookup_handler(kms.TYPE_NAME, kms.handler)
 register_lookup_handler(ssmstore.TYPE_NAME, ssmstore.handler)

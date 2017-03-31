@@ -52,7 +52,6 @@ def handler(value, **kwargs):
     owners = values.pop('owners').split(',')
     describe_args["Owners"] = owners
 
-    ### TODO do the regex
     if not values.get('name_regex'):
         raise Exception("'name_regex' value required when using ami")
     name_regex = values.pop('name_regex')

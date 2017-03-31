@@ -1,10 +1,11 @@
 from stacker.session_cache import get_session
+import re, operator
 
 from ...util import read_value_from_path
 
 TYPE_NAME = "ami"
 
-
+import sys
 def handler(value, **kwargs):
     """Fetch the most recent AMI Id using a filter
 
@@ -35,18 +36,42 @@ def handler(value, **kwargs):
     """
     value = read_value_from_path(value)
 
-    ec2 = get_session().client('ec2')
+    ec2 = get_session(None).client('ec2')
 
-    matches = re.match('owners:([A-Z0-9a-z,]+)', value)
-    owners = matches.group(1).split(',')
+    values = {}
+    describe_args = {}
 
-    matches = re.match('executable_users:([A-Z0-9a-z,]+)', value)
-    executable_users = matches.group(1).split(',')
+    # now find any other arguments that can be filters
+    matches = re.findall('([0-9a-zA-z_-]+:[^\s$]+)', value)
+    for match in matches:
+        key, value = match.split(':', 1)
+        values[key] = value
 
-    ec2.describe_images(
-            Owners=owners,
-            ExecutableUsers=executable_users
-        )
+    if not values.get('owners'):
+        raise Exception("'owners' value required when using ami")
+    owners = values.pop('owners').split(',')
+    describe_args["Owners"] = owners
 
-    decoded = value.decode("base64")
-    return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]
+    ### TODO do the regex
+    if not values.get('name_regex'):
+        raise Exception("'name_regex' value required when using ami")
+    name_regex = values.pop('name_regex')
+
+    executable_users = None
+    if values.get('executable_users'):
+        executable_users = values.pop('executable_users').split(',')
+        describe_args["ExecutableUsers"] = executable_users
+
+    filters = []
+    for name, value in values.iteritems():
+        filters.append({"Name":name, "Values":value.split(',')})
+    describe_args["Filters"] = filters
+
+    result = ec2.describe_images(**describe_args)
+
+    images = sorted(result['Images'], key=operator.itemgetter('CreationDate'), reverse=True)
+    for image in images:
+        if re.match("^%s$" % name_regex, image['Name']):
+            return image['ImageId']
+
+    raise Exception("Failed to find ami")

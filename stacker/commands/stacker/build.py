@@ -6,7 +6,7 @@ skip executing anything against the stack.
 
 """
 
-from .base import BaseCommand
+from .base import BaseCommand, cancel
 from ...actions import build
 
 
@@ -46,10 +46,15 @@ class Build(BaseCommand):
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
-        action = build.Action(options.context, provider=options.provider)
+        action = build.Action(
+            options.context,
+            provider=options.provider,
+            cancel=cancel())
+
         action.execute(outline=options.outline,
                        tail=options.tail,
-                       dump=options.dump)
+                       dump=options.dump,
+                       semaphore=self.semaphore(options))
 
     def get_context_kwargs(self, options, **kwargs):
         return {"stack_names": options.stacks, "force_stacks": options.force}

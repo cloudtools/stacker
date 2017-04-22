@@ -5,7 +5,7 @@ any manual requirements they specify or output values they rely on from other
 stacks.
 
 """
-from .base import BaseCommand
+from .base import BaseCommand, cancel
 from ...actions import destroy
 
 
@@ -31,8 +31,14 @@ class Destroy(BaseCommand):
 
     def run(self, options, **kwargs):
         super(Destroy, self).run(options, **kwargs)
-        action = destroy.Action(options.context, provider=options.provider)
-        action.execute(force=options.force, tail=options.tail)
+        action = destroy.Action(
+            options.context,
+            provider=options.provider,
+            cancel=cancel())
+        action.execute(
+            force=options.force,
+            tail=options.tail,
+            semaphore=self.semaphore(options))
 
     def get_context_kwargs(self, options, **kwargs):
         return {"stack_names": options.stacks}

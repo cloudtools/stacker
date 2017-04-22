@@ -1,10 +1,98 @@
-import copy
+import threading
 import logging
+
+from colorama.ansi import Fore
+
+from ..plan import Step
+from ..status import (
+    SUBMITTED,
+    COMPLETE,
+)
 
 import botocore.exceptions
 from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
+
+
+def outline_plan(plan, level=logging.INFO, message=""):
+    """Print an outline of the actions the plan is going to take.
+    The outline will represent the rough ordering of the steps that will be
+    taken.
+    Args:
+        level (int, optional): a valid log level that should be used to log
+            the outline
+        message (str, optional): a message that will be logged to
+            the user after the outline has been logged.
+    """
+    steps = 1
+    logger.log(level, "Plan \"%s\":", plan.description)
+
+    nodes = plan.dag.topological_sort()
+    nodes.reverse()
+    for step_name in nodes:
+        step = plan.steps[step_name]
+        logger.log(
+            level,
+            "  - step: %s: target: \"%s\", action: \"%s\"",
+            steps,
+            step_name,
+            step.fn.__name__,
+        )
+        steps += 1
+
+    if message:
+        logger.log(level, message)
+
+
+def check_point_fn():
+    """Adds a check_point function to each of the given steps."""
+
+    lock = threading.Lock()
+
+    def _fn(plan):
+        lock.acquire()
+        _check_point(plan)
+        lock.release()
+
+    return _fn
+
+
+def _check_point(plan):
+    """Outputs the current status of all steps in the plan."""
+    status_to_color = {
+        SUBMITTED.code: Fore.YELLOW,
+        COMPLETE.code: Fore.GREEN,
+    }
+    logger.info("Plan Status:", extra={"reset": True, "loop": plan.id})
+
+    longest = 0
+    messages = []
+
+    nodes = plan.dag.topological_sort()
+    nodes.reverse()
+    for step_name in nodes:
+        step = plan.steps[step_name]
+
+        length = len(step.name)
+        if length > longest:
+            longest = length
+
+        msg = "%s: %s" % (step.name, step.status.name)
+        if step.status.reason:
+            msg += " (%s)" % (step.status.reason)
+
+        messages.append((msg, step))
+
+    for msg, step in messages:
+        parts = msg.split(' ', 1)
+        fmt = "\t{0: <%d}{1}" % (longest + 2,)
+        color = status_to_color.get(step.status.code, Fore.WHITE)
+        logger.info(fmt.format(*parts), extra={
+            'loop': plan.id,
+            'color': color,
+            'last_updated': step.last_updated,
+        })
 
 
 def stack_template_key_name(blueprint):
@@ -52,11 +140,23 @@ class BaseAction(object):
             the necessary actions.
     """
 
-    def __init__(self, context, provider=None):
+    def __init__(self, context, provider=None, cancel=None):
         self.context = context
         self.provider = provider
         self.bucket_name = context.bucket_name
         self._conn = None
+        self.cancel = cancel or threading.Event()
+
+    def _action(self):
+        raise NotImplementedError
+
+    @property
+    def steps(self):
+        if not hasattr(self, "_steps"):
+            self._steps = [
+                Step(stack, fn=self._action)
+                for stack in self.context.get_stacks()]
+        return self._steps
 
     @property
     def s3_conn(self):
@@ -132,60 +232,3 @@ class BaseAction(object):
 
     def post_run(self, *args, **kwargs):
         pass
-
-    def _get_all_stack_names(self, dependencies):
-        """Get all stack names specified in dependencies.
-
-        Args:
-            - dependencies (dict): a dictionary where each key should be the
-                fully qualified name of a stack whose value is an array of
-                fully qualified stack names that the stack depends on.
-
-        Returns:
-            set: set of all stack names
-
-        """
-        return set(
-            dependencies.keys() +
-            [item for items in dependencies.values() for item in items]
-        )
-
-    def get_stack_execution_order(self, dependencies):
-        """Return the order in which the stacks should be executed.
-
-        Args:
-            - dependencies (dict): a dictionary where each key should be the
-                fully qualified name of a stack whose value is an array of
-                fully qualified stack names that the stack depends on. This is
-                used to generate the order in which the stacks should be
-                executed.
-
-        Returns:
-            array: An array of stack names in the order which they should be
-                executed.
-
-        """
-        # copy the dependencies since we pop items out of it to get the
-        # execution order, we don't want to mutate the one passed in
-        dependencies = copy.deepcopy(dependencies)
-        pending_steps = []
-        executed_steps = []
-        stack_names = self._get_all_stack_names(dependencies)
-        for stack_name in stack_names:
-            requirements = dependencies.get(stack_name, None)
-            if not requirements:
-                dependencies.pop(stack_name, None)
-                pending_steps.append(stack_name)
-
-        while dependencies:
-            for step in pending_steps:
-                for stack_name, requirements in dependencies.items():
-                    if step in requirements:
-                        requirements.remove(step)
-
-                    if not requirements:
-                        dependencies.pop(stack_name)
-                        pending_steps.append(stack_name)
-                pending_steps.remove(step)
-                executed_steps.append(step)
-        return executed_steps + pending_steps

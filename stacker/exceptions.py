@@ -188,3 +188,17 @@ class UnableToExecuteChangeSet(Exception):
                    "%s" % (change_set_id, stack_name, execution_status))
 
         super(UnableToExecuteChangeSet, self).__init__(message)
+
+
+class GraphError(Exception):
+    """Raised when the graph is invalid (e.g. acyclic dependencies)
+    """
+
+    def __init__(self, exception, stack=None, dependency=None):
+        self.stack = stack
+        self.dependency = dependency
+        self.exception = exception
+        message = ("Error detected when adding '%s' "
+                   "as a dependency of '%s': %s") % (
+                           dependency, stack, exception.message)
+        super(GraphError, self).__init__(message)

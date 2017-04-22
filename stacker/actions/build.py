@@ -1,8 +1,9 @@
 import logging
 
-from .base import BaseAction
+from .base import BaseAction, check_point_fn, outline_plan
 from .. import util
 from ..exceptions import (
+    CancelExecution,
     MissingParameterException,
     StackDidNotChange,
     StackDoesNotExist,
@@ -15,6 +16,7 @@ from ..status import (
     DidNotChangeStatus,
     SubmittedStatus,
     CompleteStatus,
+    CancelledStatus,
     SUBMITTED
 )
 
@@ -176,13 +178,20 @@ class Action(BaseAction):
         return [
             {'Key': t[0], 'Value': t[1]} for t in self.context.tags.items()]
 
-    def _launch_stack(self, stack, **kwargs):
+    def _launch_stack(self, step):
         """Handles the creating or updating of a stack in CloudFormation.
 
         Also makes sure that we don't try to create or update a stack while
         it is already updating or creating.
 
         """
+
+        stack = step.stack
+
+        # Cancel execution if flag is set.
+        if self.cancel.wait(0):
+            return CancelledStatus(reason="cancelled")
+
         if not should_submit(stack):
             return NotSubmittedStatus()
 
@@ -191,7 +200,7 @@ class Action(BaseAction):
         except StackDoesNotExist:
             provider_stack = None
 
-        old_status = kwargs.get("status")
+        old_status = step.status
         if provider_stack and old_status == SUBMITTED:
             logger.debug(
                 "Stack %s provider status: %s",
@@ -229,31 +238,19 @@ class Action(BaseAction):
                 logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()
+            except CancelExecution:
+                return CancelledStatus(reason="cancelled")
 
         return new_status
 
+    def _action(self, *args, **kwargs):
+        return self._launch_stack(*args, **kwargs)
+
     def _generate_plan(self, tail=False):
-        plan_kwargs = {}
-        if tail:
-            plan_kwargs["watch_func"] = self.provider.tail_stack
-
-        plan = Plan(description="Create/Update stacks",
-                    logger_type=self.context.logger_type, **plan_kwargs)
-        stacks = self.context.get_stacks_dict()
-        dependencies = self._get_dependencies()
-        for stack_name in self.get_stack_execution_order(dependencies):
-            plan.add(
-                stacks[stack_name],
-                run_func=self._launch_stack,
-                requires=dependencies.get(stack_name),
-            )
-        return plan
-
-    def _get_dependencies(self):
-        dependencies = {}
-        for stack in self.context.get_stacks():
-            dependencies[stack.fqn] = stack.requires
-        return dependencies
+        return Plan(
+            description="Create/Update stacks",
+            steps=self.steps,
+            check_point=check_point_fn())
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
@@ -270,7 +267,8 @@ class Action(BaseAction):
                 provider=self.provider,
                 context=self.context)
 
-    def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
+    def run(self, outline=False, tail=False,
+            dump=False, semaphore=None, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
@@ -278,9 +276,9 @@ class Action(BaseAction):
         """
         plan = self._generate_plan(tail=tail)
         if not outline and not dump:
-            plan.outline(logging.DEBUG)
+            outline_plan(plan, logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
-            plan.execute()
+            plan.execute(semaphore=semaphore)
         else:
             if outline:
                 plan.outline()

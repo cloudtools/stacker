@@ -1,8 +1,10 @@
 import logging
+import threading
 
+from .base import outline_plan
 from .. import exceptions
 from ..plan import COMPLETE, Plan
-from ..status import NotSubmittedStatus, NotUpdatedStatus
+from ..status import NotSubmittedStatus, NotUpdatedStatus, CancelledStatus
 from . import build
 import difflib
 import json
@@ -147,8 +149,15 @@ class Action(build.Action):
         print "\nNew template contents:"
         print "".join(stack)
 
-    def _diff_stack(self, stack, **kwargs):
+    def _diff_stack(self, step):
         """Handles the diffing a stack in CloudFormation vs our config"""
+
+        stack = step.stack
+
+        # Cancel execution if flag is set.
+        if self.cancel.wait(0):
+            return CancelledStatus(reason="cancelled")
+
         if not build.should_submit(stack):
             return NotSubmittedStatus()
 
@@ -183,24 +192,19 @@ class Action(build.Action):
                                 old_params)
         return COMPLETE
 
+    def _action(self, *args, **kwargs):
+        return self._diff_stack(*args, **kwargs)
+
     def _generate_plan(self):
-        plan = Plan(description="Diff stacks")
-        stacks = self.context.get_stacks_dict()
-        dependencies = self._get_dependencies()
-        for stack_name in self.get_stack_execution_order(dependencies):
-            plan.add(
-                stacks[stack_name],
-                run_func=self._diff_stack,
-                requires=dependencies.get(stack_name),
-            )
-        return plan
+        return Plan(
+            description="Diff stacks",
+            steps=self.steps)
 
     def run(self, *args, **kwargs):
         plan = self._generate_plan()
-        debug_plan = self._generate_plan()
-        debug_plan.outline(logging.DEBUG)
+        outline_plan(plan, logging.DEBUG)
         logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
-        plan.execute()
+        plan.execute(semaphore=threading.Semaphore(1))
 
     """Don't ever do anything for pre_run or post_run"""
     def pre_run(self, *args, **kwargs):

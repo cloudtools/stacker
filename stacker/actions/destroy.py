@@ -1,11 +1,12 @@
 import logging
 
-from .base import BaseAction
+from .base import BaseAction, check_point_fn, outline_plan
 from ..exceptions import StackDoesNotExist
 from .. import util
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
+    CancelledStatus,
     SUBMITTED,
 )
 from ..plan import Plan
@@ -31,35 +32,23 @@ class Action(BaseAction):
 
     """
 
-    def _get_dependencies(self, stacks_dict):
-        dependencies = {}
-        for stack_name, stack in stacks_dict.iteritems():
-            required_stacks = stack.requires
-            if not required_stacks:
-                if stack_name not in dependencies:
-                    dependencies[stack_name] = required_stacks
-                continue
-
-            for requirement in required_stacks:
-                dependencies.setdefault(requirement, set()).add(stack_name)
-        return dependencies
+    def _action(self, *args, **kwargs):
+        return self._destroy_stack(*args, **kwargs)
 
     def _generate_plan(self, tail=False):
-        plan_kwargs = {}
-        if tail:
-            plan_kwargs["watch_func"] = self.provider.tail_stack
-        plan = Plan(description="Destroy stacks", **plan_kwargs)
-        stacks_dict = self.context.get_stacks_dict()
-        dependencies = self._get_dependencies(stacks_dict)
-        for stack_name in self.get_stack_execution_order(dependencies):
-            plan.add(
-                stacks_dict[stack_name],
-                run_func=self._destroy_stack,
-                requires=dependencies.get(stack_name),
-            )
-        return plan
+        return Plan(
+            description="Destroy stacks",
+            steps=self.steps,
+            check_point=check_point_fn(),
+            reverse=True)
 
-    def _destroy_stack(self, stack, **kwargs):
+    def _destroy_stack(self, step):
+        stack = step.stack
+
+        # Cancel execution if flag is set.
+        if self.cancel.wait(0):
+            return CancelledStatus(reason="cancelled")
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:
@@ -67,7 +56,7 @@ class Action(BaseAction):
             # Once the stack has been destroyed, it doesn't exist. If the
             # status of the step was SUBMITTED, we know we just deleted it,
             # otherwise it should be skipped
-            if kwargs.get("status", None) == SUBMITTED:
+            if step.status == SUBMITTED:
                 return DestroyedStatus
             else:
                 return StackDoesNotExistStatus()
@@ -96,17 +85,15 @@ class Action(BaseAction):
                 provider=self.provider,
                 context=self.context)
 
-    def run(self, force, tail=False, *args, **kwargs):
+    def run(self, force, tail=False, semaphore=None, *args, **kwargs):
         plan = self._generate_plan(tail=tail)
         if force:
-            # need to generate a new plan to log since the outline sets the
-            # steps to COMPLETE in order to log them
-            debug_plan = self._generate_plan()
-            debug_plan.outline(logging.DEBUG)
-            plan.execute()
+            outline_plan(plan, logging.DEBUG)
+            plan.execute(semaphore=semaphore)
         else:
-            plan.outline(message="To execute this plan, run with \"--force\" "
-                                 "flag.")
+            outline_plan(
+                plan,
+                message="To execute this plan, run with \"--force\" flag.")
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

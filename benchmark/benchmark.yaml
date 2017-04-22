@@ -1,0 +1,67 @@
+# This config sets up a fairly large, and mostly fake, dependency graph, for
+# testing performance of Stacker.
+stacks:
+  - name: vpc
+    class_path: stacker.tests.blueprints.Dummy
+  - name: bastion
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output vpc::DummyOutput}
+  - name: db1
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output vpc::DummyOutput}
+  - name: db1Replica
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output db1::DummyOutput}
+  - name: db2
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output vpc::DummyOutput}
+  - name: db2Replica
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output db2::DummyOutput}
+  - name: db3
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output vpc::DummyOutput}
+  - name: db3Replica
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output db3::DummyOutput}
+  - name: db4
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output vpc::DummyOutput}
+  - name: db4Replica
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output db4::DummyOutput}
+  - name: rabbitmqYellow
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output vpc::DummyOutput}
+  - name: cluster
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      VpcId: ${output vpc::DummyOutput}
+  - name: app1
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      Cluster: ${output cluster::DummyOutput}
+  - name: app2
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      Cluster: ${output cluster::DummyOutput}
+      App1: ${output app1::DummyOutput}
+  - name: app3
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      Cluster: ${output cluster::DummyOutput}
+  - name: app4
+    class_path: stacker.tests.blueprints.Dummy
+    variables:
+      Cluster: ${output cluster::DummyOutput}
+      RabbitMQ: ${output rabbitmqYellow::DummyOutput}

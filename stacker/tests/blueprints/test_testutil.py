@@ -30,24 +30,6 @@ class Repositories(Blueprint):
             )
 
 
-expected = """{
-    "Resources": {
-        "repo1Repository": {
-            "Properties": {
-                "RepositoryName": "repo1"
-            },
-            "Type": "AWS::ECR::Repository"
-        },
-        "repo2Repository": {
-            "Properties": {
-                "RepositoryName": "repo2"
-            },
-            "Type": "AWS::ECR::Repository"
-        }
-    }
-}"""
-
-
 class TestRepositories(BlueprintTestCase):
     def test_create_template_passes(self):
         ctx = Context({'namespace': 'test'})
@@ -56,7 +38,7 @@ class TestRepositories(BlueprintTestCase):
             Variable('Repositories', ["repo1", "repo2"])
         ])
         blueprint.create_template()
-        self.assertRenderedBlueprint(blueprint, dump=False, expected=expected)
+        self.assertRenderedBlueprint(blueprint)
 
     def test_create_template_fails(self):
         ctx = Context({'namespace': 'test'})
@@ -66,8 +48,7 @@ class TestRepositories(BlueprintTestCase):
         ])
         blueprint.create_template()
         with self.assertRaises(AssertionError):
-            self.assertRenderedBlueprint(blueprint, dump=False,
-                                         expected=expected)
+            self.assertRenderedBlueprint(blueprint)
 
 
 if __name__ == '__main__':

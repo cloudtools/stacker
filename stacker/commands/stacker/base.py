@@ -141,8 +141,10 @@ class BaseCommand(object):
                  "\"namespace\".")
         parser.add_argument(
             "config", type=argparse.FileType(),
+            nargs='?',
             help="The config file where stack configuration is located. Must "
-                 "be in yaml format.")
+                 "be in yaml format. If `-` is provided, then the config will "
+                 "be read from stdin.")
         parser.add_argument(
             "-i", "--interactive", action="store_true",
             help="Enable interactive mode. If specified, this will use the "

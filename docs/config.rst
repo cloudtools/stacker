@@ -192,18 +192,27 @@ A stack has the following keys:
 Here's an example from stacker_blueprints_, used to create a VPC::
 
   stacks:
-    - name: vpc
+    - name: vpc-example
       class_path: stacker_blueprints.vpc.VPC
       locked: false
       enabled: true
-      parameters:
-        InstanceType: m3.medium
+      variables:
+        InstanceType: t2.small
         SshKeyName: default
         ImageName: NAT
         AZCount: 2
-        PublicSubnets: 10.128.0.0/24,10.128.1.0/24,10.128.2.0/24,10.128.3.0/24
-        PrivateSubnets: 10.128.8.0/22,10.128.12.0/22,10.128.16.0/22,10.128.20.0/22
+        PublicSubnets:
+          - 10.128.0.0/24
+          - 10.128.1.0/24
+          - 10.128.2.0/24
+          - 10.128.3.0/24
+        PrivateSubnets:
+          - 10.128.8.0/22
+          - 10.128.12.0/22
+          - 10.128.16.0/22
+          - 10.128.20.0/22
         CidrBlock: 10.128.0.0/16
+
 
 Parameters
 ==========

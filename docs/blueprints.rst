@@ -225,5 +225,25 @@ Below is an annotated example::
                                 variables["CloudFormationSpecificType"].ref))
 
 
+Testing Blueprints
+==================
+
+When writing your own blueprints its useful to write tests for them in order
+to make sure they behave the way you expect they would, especially if there is
+any complex logic inside.
+
+To this end, a sub-class of the `unittest.TestCase` class has been
+provided: `stacker.blueprints.testutil.BlueprintTestCase`. You use it
+like the regular TestCase class, but it comes with an addition assertion:
+`assertRenderedBlueprint`. This assertion takes a Blueprint object and renders
+it, then compares it to an expected output, usually in
+`tests/fixtures/blueprints`.
+
+Examples of using the `BlueprintTestCase` class can be found in the
+stacker_blueprints repo. For example, see the tests used to test the
+`Route53 DNSRecords Blueprint`_ and the accompanying `output results`_:
+
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
+.. _Route53 DNSRecords Blueprint: https://github.com/remind101/stacker_blueprints/blob/master/tests/test_route53.py
+.. _output results: https://github.com/remind101/stacker_blueprints/tree/master/tests/fixtures/blueprints

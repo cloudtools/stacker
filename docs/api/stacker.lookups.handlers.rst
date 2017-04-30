@@ -20,6 +20,14 @@ stacker.lookups.handlers.file module
     :undoc-members:
     :show-inheritance:
 
+stacker.lookups.handlers.hook_data module
+-----------------------------------------
+
+.. automodule:: stacker.lookups.handlers.hook_data
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 stacker.lookups.handlers.kms module
 -----------------------------------
 
@@ -32,6 +40,14 @@ stacker.lookups.handlers.output module
 --------------------------------------
 
 .. automodule:: stacker.lookups.handlers.output
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.lookups.handlers.rxref module
+-------------------------------------
+
+.. automodule:: stacker.lookups.handlers.rxref
     :members:
     :undoc-members:
     :show-inheritance:

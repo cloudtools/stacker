@@ -81,8 +81,9 @@ def _calculate_hash(files, root):
     file_hashes = []
     for fname in files:
         f = os.path.join(root, fname)
-        with open(f) as fd:
-            file_hashes.append(hashlib.md5(fd.read()).hexdigest())
+        with open(f, "rb") as fd:
+            file_hashes.append("%s:%s" % (fname,
+                                          hashlib.md5(fd.read()).hexdigest()))
 
     return hashlib.md5(' '.join(file_hashes)).hexdigest()
 

@@ -314,3 +314,14 @@ class TestLambdaHooks(unittest.TestCase):
         self.assertEqual(hash1, hash2)
         self.assertNotEqual(hash1, hash3)
         self.assertNotEqual(hash2, hash3)
+
+    def test_calculate_hash_diff_filename_same_contents(self):
+        files = ["file1.txt", "f2/file2.txt"]
+        file1, file2 = files
+        with TempDirectory() as d:
+            root = d.path
+            for fname in files:
+                d.write(fname, "data")
+            hash1 = _calculate_hash([file1], root)
+            hash2 = _calculate_hash([file2], root)
+        self.assertNotEqual(hash1, hash2)

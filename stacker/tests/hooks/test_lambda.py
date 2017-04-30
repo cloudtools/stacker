@@ -35,14 +35,6 @@ F1_FILES = [p[3:] for p in ALL_FILES if p.startswith('f1')]
 F2_FILES = [p[3:] for p in ALL_FILES if p.startswith('f2')]
 
 
-def touch(filenames):
-    """Changes update time on a list of files without changing their contents.
-    """
-    for fname in filenames:
-        with open(fname, "a"):
-            os.utime(fname, None)
-
-
 class TestLambdaHooks(unittest.TestCase):
     @classmethod
     def temp_directory_with_files(cls, files=ALL_FILES):

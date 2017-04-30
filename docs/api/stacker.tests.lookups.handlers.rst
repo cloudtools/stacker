@@ -20,6 +20,14 @@ stacker.tests.lookups.handlers.test_file module
     :undoc-members:
     :show-inheritance:
 
+stacker.tests.lookups.handlers.test_hook_data module
+----------------------------------------------------
+
+.. automodule:: stacker.tests.lookups.handlers.test_hook_data
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 stacker.tests.lookups.handlers.test_kms module
 ----------------------------------------------
 
@@ -32,6 +40,14 @@ stacker.tests.lookups.handlers.test_output module
 -------------------------------------------------
 
 .. automodule:: stacker.tests.lookups.handlers.test_output
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.tests.lookups.handlers.test_rxref module
+------------------------------------------------
+
+.. automodule:: stacker.tests.lookups.handlers.test_rxref
     :members:
     :undoc-members:
     :show-inheritance:

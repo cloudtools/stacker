@@ -19,6 +19,14 @@ stacker.blueprints.base module
     :undoc-members:
     :show-inheritance:
 
+stacker.blueprints.testutil module
+----------------------------------
+
+.. automodule:: stacker.blueprints.testutil
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

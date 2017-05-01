@@ -78,14 +78,16 @@ def _calculate_hash(files, root):
     Returns:
         str: A hash of the hashes of the given files.
     """
-    file_hashes = []
+    file_hash = hashlib.md5()
     for fname in files:
         f = os.path.join(root, fname)
+        file_hash.update(fname + "\0")
         with open(f, "rb") as fd:
-            file_hashes.append("%s:%s" % (fname,
-                                          hashlib.md5(fd.read()).hexdigest()))
+            for chunk in iter(lambda: fd.read(4096), ""):
+                file_hash.update(chunk)
+            file_hash.update("\0")
 
-    return hashlib.md5(' '.join(file_hashes)).hexdigest()
+    return file_hash.hexdigest()
 
 
 def _find_files(root, includes, excludes):

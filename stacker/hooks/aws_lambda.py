@@ -79,7 +79,7 @@ def _calculate_hash(files, root):
         str: A hash of the hashes of the given files.
     """
     file_hash = hashlib.md5()
-    for fname in files:
+    for fname in sorted(files):
         f = os.path.join(root, fname)
         file_hash.update(fname + "\0")
         with open(f, "rb") as fd:

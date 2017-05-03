@@ -2,6 +2,7 @@ import os.path
 import os
 import unittest
 import mock
+import random
 from StringIO import StringIO
 from zipfile import ZipFile
 
@@ -325,3 +326,18 @@ class TestLambdaHooks(unittest.TestCase):
             hash1 = _calculate_hash([file1], root)
             hash2 = _calculate_hash([file2], root)
         self.assertNotEqual(hash1, hash2)
+
+    def test_calculate_hash_different_ordering(self):
+        files1 = ALL_FILES
+        files2 = random.sample(ALL_FILES, k=len(ALL_FILES))
+        with TempDirectory() as d1:
+            root1 = d1.path
+            for fname in files1:
+                d1.write(fname, "")
+            with TempDirectory() as d2:
+                root2 = d2.path
+                for fname in files2:
+                    d2.write(fname, "")
+                hash1 = _calculate_hash(files1, root1)
+                hash2 = _calculate_hash(files2, root2)
+                self.assertEqual(hash1, hash2)

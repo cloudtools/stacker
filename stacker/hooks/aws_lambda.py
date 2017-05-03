@@ -181,7 +181,7 @@ def _ensure_bucket(s3_conn, bucket):
                              e.response)
 
 
-def _upload_code(s3_conn, bucket, name, contents):
+def _upload_code(s3_conn, bucket, prefix, name, contents):
     """Upload a ZIP file to S3 for use by Lambda.
 
     The key used for the upload will be unique based on the checksum of the
@@ -191,6 +191,8 @@ def _upload_code(s3_conn, bucket, name, contents):
     Args:
         s3_conn (botocore.client.S3): S3 connection to use for operations.
         bucket (str): name of the bucket to create.
+        prefix (str): S3 prefix to prepend to the constructed key name for
+            the uploaded file
         name (str): desired name of the Lambda function. Will be used to
             construct a key name for the uploaded file.
         contents (str): byte string with the content of the file upload.
@@ -207,7 +209,7 @@ def _upload_code(s3_conn, bucket, name, contents):
     hsh = hashlib.md5(contents)
     logger.debug('lambda: ZIP hash: %s', hsh.hexdigest())
 
-    key = 'lambda-{}-{}.zip'.format(name, hsh.hexdigest())
+    key = '{}lambda-{}-{}.zip'.format(prefix, name, hsh.hexdigest())
 
     info = _head_object(s3_conn, bucket, key)
     expected_etag = '"{}"'.format(hsh.hexdigest())
@@ -258,12 +260,14 @@ def _check_pattern_list(patterns, key, default=None):
                      'list of strings'.format(key))
 
 
-def _upload_function(s3_conn, bucket, name, options):
+def _upload_function(s3_conn, bucket, prefix, name, options):
     """Builds a Lambda payload from user configuration and uploads it to S3.
 
     Args:
         s3_conn (botocore.client.S3): S3 connection to use for operations.
         bucket (str): name of the bucket to upload to.
+        prefix (str): S3 prefix to prepend to the constructed key name for
+            the uploaded file
         name (str): desired name of the Lambda function. Will be used to
             construct a key name for the uploaded file.
         options (dict): configuration for how to build the payload.
@@ -307,7 +311,7 @@ def _upload_function(s3_conn, bucket, name, options):
         root = os.path.abspath(os.path.join(get_config_directory(), root))
     zip_contents = _zip_from_file_patterns(root, includes, excludes)
 
-    return _upload_code(s3_conn, bucket, name, zip_contents)
+    return _upload_code(s3_conn, bucket, prefix, name, zip_contents)
 
 
 def upload_lambda_functions(context, provider, **kwargs):
@@ -332,6 +336,8 @@ def upload_lambda_functions(context, provider, **kwargs):
     Keyword Arguments:
         bucket (str, optional): Custom bucket to upload functions to.
             Omitting it will cause the default stacker bucket to be used.
+        prefix (str, optional): S3 key prefix to prepend to the uploaded
+            zip name.
         functions (dict):
             Configurations of desired payloads to build. Keys correspond to
             function names, used to derive key names for the payload. Each
@@ -377,6 +383,7 @@ def upload_lambda_functions(context, provider, **kwargs):
                 data_key: lambda
                 args:
                   bucket: custom-bucket
+                  prefix: cloudformation-custom-resources/
                   functions:
                     MyFunction:
                       path: ./lambda_functions
@@ -414,6 +421,8 @@ def upload_lambda_functions(context, provider, **kwargs):
     else:
         logger.info('lambda: using custom bucket: %s', bucket)
 
+    prefix = kwargs.get('prefix', '')
+
     session = get_session(provider.region)
     s3_conn = session.client('s3')
 
@@ -421,6 +430,7 @@ def upload_lambda_functions(context, provider, **kwargs):
 
     results = {}
     for name, options in kwargs['functions'].items():
-        results[name] = _upload_function(s3_conn, bucket, name, options)
+        results[name] = _upload_function(s3_conn, bucket, prefix, name,
+                                         options)
 
     return results

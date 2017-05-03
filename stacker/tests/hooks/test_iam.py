@@ -5,6 +5,7 @@ from botocore.exceptions import ClientError
 
 from moto import mock_iam
 
+from stacker.providers.aws.default import Provider
 from stacker.hooks.iam import (
     create_ecs_service_role,
     _get_cert_arn_from_response,
@@ -12,7 +13,6 @@ from stacker.hooks.iam import (
 
 from ..factories import (
     mock_context,
-    mock_provider,
 )
 
 
@@ -27,7 +27,7 @@ class TestIAMHooks(unittest.TestCase):
 
     def setUp(self):
         self.context = mock_context(namespace="fake")
-        self.provider = mock_provider(region=REGION)
+        self.provider = Provider(region=REGION)
 
     def test_get_cert_arn_from_response(self):
         arn = "fake-arn"

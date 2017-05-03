@@ -9,7 +9,6 @@ import botocore
 
 import formic
 from troposphere.awslambda import Code
-from stacker.session_cache import get_session
 
 from stacker.util import get_config_directory
 
@@ -150,35 +149,6 @@ def _head_object(s3_conn, bucket, key):
             return None
         else:
             raise
-
-
-def _ensure_bucket(s3_conn, bucket):
-    """Create an S3 bucket if it does not already exist.
-
-    Args:
-        s3_conn (botocore.client.S3): S3 connection to use for operations.
-        bucket (str): name of the bucket to create.
-
-    Returns:
-        dict: S3 object information. See the AWS documentation for explanation
-        of the contents.
-
-    Raises:
-        botocore.exceptions.ClientError: any error from boto3 is passed
-            through.
-    """
-    try:
-        s3_conn.head_bucket(Bucket=bucket)
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == '404':
-            logger.info('Creating bucket %s.', bucket)
-            s3_conn.create_bucket(Bucket=bucket)
-        elif e.response['Error']['Code'] in ('401', '403'):
-            logger.exception('Access denied for bucket %s.', bucket)
-            raise
-        else:
-            logger.exception('Error creating bucket %s. Error %s', bucket,
-                             e.response)
 
 
 def _upload_code(s3_conn, bucket, name, contents):
@@ -414,13 +384,10 @@ def upload_lambda_functions(context, provider, **kwargs):
     else:
         logger.info('lambda: using custom bucket: %s', bucket)
 
-    session = get_session(provider.region)
-    s3_conn = session.client('s3')
-
-    _ensure_bucket(s3_conn, bucket)
+    provider.ensure_bucket(bucket)
 
     results = {}
     for name, options in kwargs['functions'].items():
-        results[name] = _upload_function(s3_conn, bucket, name, options)
+        results[name] = _upload_function(provider.s3, bucket, name, options)
 
     return results

@@ -5,9 +5,9 @@ from moto import mock_ecs
 from testfixtures import LogCapture
 
 from stacker.hooks.ecs import create_clusters
+from stacker.providers.aws.default import Provider
 from ..factories import (
     mock_context,
-    mock_provider,
 )
 
 REGION = "us-east-1"
@@ -16,7 +16,7 @@ REGION = "us-east-1"
 class TestECSHooks(unittest.TestCase):
 
     def setUp(self):
-        self.provider = mock_provider(region=REGION)
+        self.provider = Provider(region=REGION)
         self.context = mock_context(namespace="fake")
 
     def test_create_single_cluster(self):

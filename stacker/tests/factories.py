@@ -1,11 +1,5 @@
-from mock import MagicMock
-
 from stacker.context import Context
 from stacker.lookups import Lookup
-
-
-def mock_provider(**kwargs):
-    return MagicMock(**kwargs)
 
 
 def mock_context(namespace=None, **kwargs):

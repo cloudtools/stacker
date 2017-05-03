@@ -12,7 +12,7 @@ from testfixtures import TempDirectory, ShouldRaise, compare
 
 from stacker.context import Context
 from stacker.hooks.aws_lambda import upload_lambda_functions, ZIP_PERMS_MASK
-from ..factories import mock_provider
+from stacker.providers.aws.default import Provider
 
 
 REGION = "us-east-1"
@@ -60,7 +60,7 @@ class TestLambdaHooks(unittest.TestCase):
 
     def assert_s3_bucket(self, bucket, present=True):
         try:
-            self.s3.head_bucket(Bucket=bucket)
+            self.provider.s3.head_bucket(Bucket=bucket)
             if not present:
                 self.fail('s3: bucket {} should not exist'.format(bucket))
         except botocore.exceptions.ClientError as e:
@@ -71,7 +71,7 @@ class TestLambdaHooks(unittest.TestCase):
     def setUp(self):
         self.context = Context(environment={'namespace': 'test'})
         self.context.bucket_name = 'test'
-        self.provider = mock_provider(region="us-east-1")
+        self.provider = Provider(region="us-east-1")
 
     def run_hook(self, **kwargs):
         real_kwargs = {

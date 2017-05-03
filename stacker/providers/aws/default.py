@@ -71,6 +71,36 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
                               retry_checker=_throttling_checker)
 
 
+def ensure_bucket(s3_conn, bucket):
+    """Create an S3 bucket if it does not already exist.
+
+    Args:
+        s3_conn (botocore.client.S3): S3 connection to use for operations.
+        bucket (str): name of the bucket to create.
+
+    Returns:
+        dict: S3 object information. See the AWS documentation for explanation
+        of the contents.
+
+    Raises:
+        botocore.exceptions.ClientError: any error from boto3 is passed
+            through.
+    """
+    try:
+        return s3_conn.head_bucket(Bucket=bucket)
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == '404':
+            logger.info('Creating bucket %s.', bucket)
+            s3_conn.create_bucket(Bucket=bucket)
+        elif e.response['Error']['Code'] in ('401', '403'):
+            logger.exception('Access denied for bucket %s.', bucket)
+            raise
+        else:
+            logger.exception('Error creating bucket %s. Error %s', bucket,
+                             e.response)
+            raise
+
+
 class Provider(BaseProvider):
 
     """AWS CloudFormation Provider"""
@@ -90,21 +120,45 @@ class Provider(BaseProvider):
     def __init__(self, region, **kwargs):
         self.region = region
         self._outputs = {}
-        self._cloudformation = None
+
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
 
-    @property
-    def cloudformation(self):
+    def get_aws_client(self, service):
+        """ Get a boto3 client for the given service, caching it for re-use.
+
+        Args:
+            service(str): The name of the AWS service to interact with.
+
+        Returns:
+            :class:`boto3.Client`: The cached boto3 Client for the service.
+        """
         # deals w/ multiprocessing issues w/ sharing ssl conns
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
-        if pid != self._pid or not self._cloudformation:
+        cache_attr = "_%s" % service
+        if pid != self._pid or not getattr(self, cache_attr, None):
             session = get_session(self.region)
-            self._cloudformation = session.client('cloudformation')
+            setattr(self, cache_attr, session.client(service))
 
-        return self._cloudformation
+        return getattr(self, cache_attr)
+
+    @property
+    def cloudformation(self):
+        return self.get_aws_client("cloudformation")
+
+    @property
+    def s3(self):
+        return self.get_aws_client("s3")
+
+    @property
+    def ecs(self):
+        return self.get_aws_client("ecs")
+
+    @property
+    def iam(self):
+        return self.get_aws_client("iam")
 
     def get_stack(self, stack_name, **kwargs):
         try:
@@ -249,6 +303,10 @@ class Provider(BaseProvider):
             stack = self.get_stack(stack_name)
             self._outputs[stack_name] = get_output_dict(stack)
         return self._outputs[stack_name]
+
+    def ensure_bucket(self, bucket_name):
+        """ Ensures that bucket_name exists and is accessible. """
+        return ensure_bucket(self.s3, bucket_name)
 
     def get_stack_info(self, stack_name):
         """ Get the template and parameters of the stack currently in AWS

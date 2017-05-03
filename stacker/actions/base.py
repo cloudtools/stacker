@@ -2,7 +2,6 @@ import copy
 import logging
 
 import botocore.exceptions
-from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -62,27 +61,13 @@ class BaseAction(object):
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
-            session = get_session(self.provider.region)
-            self._s3_conn = session.client('s3')
+            self._s3_conn = self.provider.s3
 
         return self._s3_conn
 
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
-        try:
-            self.s3_conn.head_bucket(Bucket=self.bucket_name)
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Message'] == "Not Found":
-                logger.debug("Creating bucket %s.", self.bucket_name)
-                self.s3_conn.create_bucket(Bucket=self.bucket_name)
-            elif e.response['Error']['Message'] == "Forbidden":
-                logger.exception("Access denied for bucket %s.",
-                                 self.bucket_name)
-                raise
-            else:
-                logger.exception("Error creating bucket %s. Error %s",
-                                 self.bucket_name, e.response)
-                raise
+        return self.provider.ensure_bucket(self.bucket_name)
 
     def stack_template_url(self, blueprint):
         return stack_template_url(self.bucket_name, blueprint)

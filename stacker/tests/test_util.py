@@ -8,9 +8,9 @@ from stacker.util import (
     cf_safe_name, load_object_from_string,
     camel_to_snake, handle_hooks, retry_with_backoff)
 
+from stacker.providers.aws.default import Provider
 from .factories import (
     mock_context,
-    mock_provider,
 )
 
 regions = ["us-east-1", "cn-north-1", "ap-northeast-1", "eu-west-1",
@@ -77,7 +77,7 @@ class TestHooks(unittest.TestCase):
 
     def setUp(self):
         self.context = mock_context(namespace="namespace")
-        self.provider = mock_provider(region="us-east-1")
+        self.provider = Provider(region="us-east-1")
 
     def test_empty_hook_stage(self):
         hooks = []

@@ -98,7 +98,7 @@ class TestLambdaHooks(unittest.TestCase):
         self.assert_s3_bucket('custom')
 
     @mock_s3
-    def test_prefix_missing(self):
+    def test_prefix(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(prefix='cloudformation-custom-resources/',
                                     functions={
@@ -116,7 +116,7 @@ class TestLambdaHooks(unittest.TestCase):
             'cloudformation-custom-resources/lambda-MyFunction-'))
 
     @mock_s3
-    def test_prefix(self):
+    def test_prefix_missing(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(functions={
                 'MyFunction': {

@@ -2,7 +2,7 @@
 
 class TroposphereType(object):
 
-    def __init__(self, defined_type, many=False):
+    def __init__(self, defined_type, many=False, optional=False):
         """Represents a Troposphere type.
 
         :class:`Troposphere` will convert the value provided to the variable to
@@ -14,13 +14,23 @@ class TroposphereType(object):
                 accepts a single object or a list of objects.
 
         """
+
         self._validate_type(defined_type)
+        if many and optional:
+            raise ValueError("Cannot specify both `many` and `optional`")
+
         self._type = defined_type
         self._many = many
+        self._optional = optional
 
     def _validate_type(self, defined_type):
         if not hasattr(defined_type, "from_dict"):
             raise ValueError("Type must have `from_dict` attribute")
+
+    @property
+    def resource_name(self):
+        return (getattr(self._type, 'resource_name', None)
+                or self._type.__name__)
 
     def create(self, value):
         """Create the troposphere type from the value.
@@ -35,17 +45,37 @@ class TroposphereType(object):
                 type
 
         """
-        if not self._many and len(value) > 1:
-            message = (
-                "Only one resource can be provided for single "
-                "TroposphereType"
-            )
-            raise ValueError(message)
+        if self._optional and not value:
+            return None
 
-        output = [self._type.from_dict(title, values) for title, values in
-                  value.items()]
+        if hasattr(self._type, 'resource_type'):
+            # Our type is a resource, so ensure we have a dict of title to
+            # parameters
+            if not isinstance(value, dict):
+                raise ValueError("Resources must be specified as a dict of "
+                                 "title to parameters")
+            if not self._many and len(value) > 1:
+                raise ValueError("Only one resource can be provided for single "
+                                 "TroposphereType")
 
-        return output if self._many else output[0]
+            result = [self._type.from_dict(title, v) for title, v in
+                      value.items()]
+        else:
+            # Our type is for properties, not a resource, so don't use
+            # titles
+            if self._many:
+                result = [self._type.from_dict(None, v) for v in value]
+            elif not isinstance(value, dict):
+                raise ValueError("TroposphereType for a single non-resource"
+                                 "type must be specified as a dict of "
+                                 "parameters")
+            else:
+                result = [self._type.from_dict(None, value)]
+
+        for v in result:
+            v._validate_props()
+
+        return result[0] if not self._many else result
 
 
 class CFNType(object):

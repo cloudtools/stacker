@@ -196,8 +196,8 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     if provided_variable:
         if not provided_variable.resolved:
             raise UnresolvedVariable(blueprint_name, provided_variable)
-        if provided_variable.value is not None:
-            value = provided_variable.value
+
+        value = provided_variable.value
     else:
         # Variable value not provided, try using the default, if it exists
         # in the definition

@@ -55,8 +55,8 @@ class TroposphereType(object):
                 raise ValueError("Resources must be specified as a dict of "
                                  "title to parameters")
             if not self._many and len(value) > 1:
-                raise ValueError("Only one resource can be provided for single "
-                                 "TroposphereType")
+                raise ValueError("Only one resource can be provided for this "
+                                 "TroposphereType variable")
 
             result = [self._type.from_dict(title, v) for title, v in
                       value.items()]

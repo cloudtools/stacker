@@ -222,7 +222,7 @@ class TestVariables(unittest.TestCase):
 
     def test_resolve_variable_troposphere_type_props_optional(self):
         sub = self._resolve_troposphere_var(sns.Subscription, None,
-                                              optional=True)
+                                            optional=True)
         self.assertEqual(sub, None)
 
     def test_resolve_variable_troposphere_type_props_many(self):

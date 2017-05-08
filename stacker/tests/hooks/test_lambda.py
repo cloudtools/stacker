@@ -104,6 +104,40 @@ class TestLambdaHooks(unittest.TestCase):
         self.assert_s3_bucket('custom')
 
     @mock_s3
+    def test_prefix(self):
+        with self.temp_directory_with_files() as d:
+            results = self.run_hook(prefix='cloudformation-custom-resources/',
+                                    functions={
+                                        'MyFunction': {
+                                            'path': d.path + '/f1'
+                                        }
+                                    })
+
+        self.assertIsNotNone(results)
+
+        code = results.get('MyFunction')
+        self.assertIsInstance(code, Code)
+        self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, F1_FILES)
+        self.assertTrue(code.S3Key.startswith(
+            'cloudformation-custom-resources/lambda-MyFunction-'))
+
+    @mock_s3
+    def test_prefix_missing(self):
+        with self.temp_directory_with_files() as d:
+            results = self.run_hook(functions={
+                'MyFunction': {
+                    'path': d.path + '/f1'
+                }
+            })
+
+        self.assertIsNotNone(results)
+
+        code = results.get('MyFunction')
+        self.assertIsInstance(code, Code)
+        self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, F1_FILES)
+        self.assertTrue(code.S3Key.startswith('lambda-MyFunction-'))
+
+    @mock_s3
     def test_path_missing(self):
         msg = "missing required property 'path' in function 'MyFunction'"
         with ShouldRaise(ValueError(msg)):

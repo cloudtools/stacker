@@ -1,6 +1,8 @@
 import os.path
+import os
 import unittest
 import mock
+import random
 from StringIO import StringIO
 from zipfile import ZipFile
 
@@ -11,7 +13,11 @@ from moto import mock_s3
 from testfixtures import TempDirectory, ShouldRaise, compare
 
 from stacker.context import Context
-from stacker.hooks.aws_lambda import upload_lambda_functions, ZIP_PERMS_MASK
+from stacker.hooks.aws_lambda import (
+    upload_lambda_functions,
+    ZIP_PERMS_MASK,
+    _calculate_hash
+)
 from ..factories import mock_provider
 
 
@@ -306,16 +312,9 @@ class TestLambdaHooks(unittest.TestCase):
                 }
             }
 
-            # Force the bucket to keep track of versions for us. This is more
-            # complicated than using LastModified, but much more reliable,
-            # since the date only has a 1-second granularity, and dates could
-            # seem equal because insufficient time has elapsed between runs.
             self.s3.create_bucket(Bucket=bucket_name)
-            self.s3.put_bucket_versioning(
-                Bucket=bucket_name,
-                VersioningConfiguration={'Status': 'Enabled'})
 
-            version = None
+            previous = None
             for i in range(2):
                 results = self.run_hook(bucket=bucket_name,
                                         functions=functions)
@@ -324,11 +323,55 @@ class TestLambdaHooks(unittest.TestCase):
                 code = results.get('MyFunction')
                 self.assertIsInstance(code, Code)
 
-                info = self.s3.head_object(Bucket=code.S3Bucket,
-                                           Key=code.S3Key)
-                if not version:
-                    version = info['VersionId']
-                else:
-                    compare(version, info['VersionId'],
-                            prefix='S3 object must not be modified in '
-                                   'repeated runs')
+                if not previous:
+                    previous = code.S3Key
+                    continue
+
+                compare(previous, code.S3Key,
+                        prefix="zipfile name should not be modified in "
+                               "repeated runs.")
+
+    def test_calculate_hash(self):
+        with self.temp_directory_with_files() as d1:
+            root = d1.path
+            hash1 = _calculate_hash(ALL_FILES, root)
+
+        with self.temp_directory_with_files() as d2:
+            root = d2.path
+            hash2 = _calculate_hash(ALL_FILES, root)
+
+        with self.temp_directory_with_files() as d3:
+            root = d3.path
+            with open(os.path.join(root, ALL_FILES[0]), "w") as fd:
+                fd.write("modified file data")
+            hash3 = _calculate_hash(ALL_FILES, root)
+
+        self.assertEqual(hash1, hash2)
+        self.assertNotEqual(hash1, hash3)
+        self.assertNotEqual(hash2, hash3)
+
+    def test_calculate_hash_diff_filename_same_contents(self):
+        files = ["file1.txt", "f2/file2.txt"]
+        file1, file2 = files
+        with TempDirectory() as d:
+            root = d.path
+            for fname in files:
+                d.write(fname, "data")
+            hash1 = _calculate_hash([file1], root)
+            hash2 = _calculate_hash([file2], root)
+        self.assertNotEqual(hash1, hash2)
+
+    def test_calculate_hash_different_ordering(self):
+        files1 = ALL_FILES
+        files2 = random.sample(ALL_FILES, k=len(ALL_FILES))
+        with TempDirectory() as d1:
+            root1 = d1.path
+            for fname in files1:
+                d1.write(fname, "")
+            with TempDirectory() as d2:
+                root2 = d2.path
+                for fname in files2:
+                    d2.write(fname, "")
+                hash1 = _calculate_hash(files1, root1)
+                hash2 = _calculate_hash(files2, root2)
+                self.assertEqual(hash1, hash2)

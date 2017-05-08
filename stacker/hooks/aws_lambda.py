@@ -36,6 +36,7 @@ def _zip_files(files, root):
 
     Returns:
         str: content of the ZIP file as a byte string.
+        str: A calculated hash of all the files.
 
     """
     zip_data = StringIO()
@@ -61,8 +62,32 @@ def _zip_files(files, root):
 
     contents = zip_data.getvalue()
     zip_data.close()
+    content_hash = _calculate_hash(files, root)
 
-    return contents
+    return contents, content_hash
+
+
+def _calculate_hash(files, root):
+    """ Returns a hash of all of the given files at the given root.
+
+    Args:
+        files (list[str]): file names to include in the hash calculation,
+            relative to ``root``.
+        root (str): base directory to analyze files in.
+
+    Returns:
+        str: A hash of the hashes of the given files.
+    """
+    file_hash = hashlib.md5()
+    for fname in sorted(files):
+        f = os.path.join(root, fname)
+        file_hash.update(fname + "\0")
+        with open(f, "rb") as fd:
+            for chunk in iter(lambda: fd.read(4096), ""):
+                file_hash.update(chunk)
+            file_hash.update("\0")
+
+    return file_hash.hexdigest()
 
 
 def _find_files(root, includes, excludes):
@@ -137,7 +162,7 @@ def _head_object(s3_conn, bucket, key):
 
     Returns:
         dict: S3 object information, or None if the object does not exist.
-        See the AWS documentation for explanation of the contents.
+            See the AWS documentation for explanation of the contents.
 
     Raises:
         botocore.exceptions.ClientError: any error from boto3 other than key
@@ -181,7 +206,7 @@ def _ensure_bucket(s3_conn, bucket):
                              e.response)
 
 
-def _upload_code(s3_conn, bucket, prefix, name, contents):
+def _upload_code(s3_conn, bucket, prefix, name, contents, content_hash):
     """Upload a ZIP file to S3 for use by Lambda.
 
     The key used for the upload will be unique based on the checksum of the
@@ -196,6 +221,7 @@ def _upload_code(s3_conn, bucket, prefix, name, contents):
         name (str): desired name of the Lambda function. Will be used to
             construct a key name for the uploaded file.
         contents (str): byte string with the content of the file upload.
+        content_hash (str): md5 hash of the contents to be uploaded.
 
     Returns:
         troposphere.awslambda.Code: CloudFormation Lambda Code object,
@@ -206,15 +232,10 @@ def _upload_code(s3_conn, bucket, prefix, name, contents):
             through.
     """
 
-    hsh = hashlib.md5(contents)
-    logger.debug('lambda: ZIP hash: %s', hsh.hexdigest())
+    logger.debug('lambda: ZIP hash: %s', content_hash)
+    key = '{}lambda-{}-{}.zip'.format(prefix, name, content_hash)
 
-    key = '{}lambda-{}-{}.zip'.format(prefix, name, hsh.hexdigest())
-
-    info = _head_object(s3_conn, bucket, key)
-    expected_etag = '"{}"'.format(hsh.hexdigest())
-
-    if info and info['ETag'] == expected_etag:
+    if _head_object(s3_conn, bucket, key):
         logger.info('lambda: object %s already exists, not uploading', key)
     else:
         logger.info('lambda: uploading object %s', key)
@@ -309,9 +330,12 @@ def _upload_function(s3_conn, bucket, prefix, name, options):
     # absolute path, which is exactly what we want.
     if not os.path.isabs(root):
         root = os.path.abspath(os.path.join(get_config_directory(), root))
-    zip_contents = _zip_from_file_patterns(root, includes, excludes)
+    zip_contents, content_hash = _zip_from_file_patterns(root,
+                                                         includes,
+                                                         excludes)
 
-    return _upload_code(s3_conn, bucket, prefix, name, zip_contents)
+    return _upload_code(s3_conn, bucket, prefix, name, zip_contents,
+                        content_hash)
 
 
 def upload_lambda_functions(context, provider, **kwargs):

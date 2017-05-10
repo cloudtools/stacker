@@ -1,3 +1,9 @@
+## 1.0.2 (2017-05-10)
+
+- fix lambda hook determinism [GH-372]
+- give lambda hook ability to upload to a prefix [GH-376]
+- fix bad argument for approval in interactive provider [GH-381]
+
 ## 1.0.1 (2017-04-24)
 
 - rxref lookup [GH-328]

@@ -275,6 +275,9 @@ class TestInteractiveProvider(unittest.TestCase):
                 parameters=[], tags=[]
             )
 
+        patched_approval.assert_called_with(full_changeset=changes,
+                                            include_verbose=True)
+
         self.assertEqual(patched_approval.call_count, 1)
 
     @patch("stacker.providers.aws.interactive.ask_for_approval")

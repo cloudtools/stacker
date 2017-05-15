@@ -1,10 +1,13 @@
 import collections
+import logging
 import sys
 
 from .config import parse_config
 from .exceptions import MissingEnvironment
 from .stack import Stack
 from .lookups import register_lookup_handler
+
+logger = logging.getLogger(__name__)
 
 
 def get_fqn(base_fqn, delimiter, name=None):
@@ -71,7 +74,9 @@ class Context(object):
         self.mappings = self.config.get("mappings", {})
         namespace_delimiter = self.config.get("namespace_delimiter", None)
         if "sys_path" in self.config:
+            logger.debug("Appending %s to sys.path.", self.config["sys_path"])
             sys.path.append(self.config["sys_path"])
+            logger.debug("sys.path is now %s", sys.path)
         if namespace_delimiter is not None:
             self.namespace_delimiter = namespace_delimiter
         bucket_name = self.config.get("stacker_bucket", None)

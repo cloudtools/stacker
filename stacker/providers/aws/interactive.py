@@ -115,8 +115,8 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
     Since changesets can take a little bit of time to get into a complete
     state, we need to poll it until it does so. This will try to get the
     state `try_count` times, waiting `sleep_time` * 2 seconds between each try
-    up to the `max_sleep` number of seconds. If, after that time, the changeset 
-    is not in a complete state it fails. These default settings will wait a 
+    up to the `max_sleep` number of seconds. If, after that time, the changeset
+    is not in a complete state it fails. These default settings will wait a
     little over one minute.
 
     Args:

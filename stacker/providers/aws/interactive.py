@@ -143,6 +143,11 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
         complete = response["Status"] in ("FAILED", "CREATE_COMPLETE")
         if complete:
             break
+        if sleep_time == max_sleep:
+            logger.debug(
+                "Still waiting on changeset for another %s seconds",
+                sleep_time
+            )
         time.sleep(sleep_time)
 
         # exponential backoff with max

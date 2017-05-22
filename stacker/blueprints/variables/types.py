@@ -8,10 +8,28 @@ class TroposphereType(object):
         :class:`Troposphere` will convert the value provided to the variable to
         the specified Troposphere type.
 
+        Both resource and parameter classes (which are just used to configure
+        other resources) are acceptable as configuration values.
+
+        Complete resource definitions must be dictionaries, with the keys
+        identifying the resource titles, and the values being used as the
+        constructor parameters.
+
+        Parameter classes can be defined as dictionariy or a list of
+        dictionaries. In either case, the keys and values will be used directly
+        as constructor parameters.
+
         Args:
             defined_type (type): Troposphere type
-            many (Optional[bool]): Boolean indicating whether or not the type
-                accepts a single object or a list of objects.
+            many (Optional[bool]): Boolean indicating whether or not multiple
+                resources can be constructed. If the defined type is a
+                resource, multiple resources can be passed as a dictionary of
+                dictionaries
+                If it is a parameter class, multiple resources are passed as
+                a list.
+            optional (Optional[bool]): Boolean indicating if an undefined/null
+                configured value is acceptable, and can be passed to the
+                template instead of triggering an error.
 
         """
 
@@ -36,8 +54,10 @@ class TroposphereType(object):
         """Create the troposphere type from the value.
 
         Args:
-            value (dict): a dictionary of the resource name to a dictionary of
-                the values you want to pass to `from_dict` for the troposphere
+            value (Union[dict, list]): A dictionary or list of dictionaries
+                (see class documentation for details) to use as parameters to
+                create the Troposphere type instance.
+                Each dictionary will be passed to the `from_dict` method of the
                 type.
 
         Returns:

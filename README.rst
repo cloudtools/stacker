@@ -20,8 +20,8 @@ stacker
 
 For full documentation, please see the readthedocs_ site.
 
-About
-=====
+About Stacker
+=============
 
 stacker is a tool and library used to create & update multiple CloudFormation
 stacks. It was originally written at Remind_ and

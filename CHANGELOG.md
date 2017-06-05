@@ -1,4 +1,19 @@
-## 1.0.0 (2016-03-04)
+## 1.0.2 (2017-05-10)
+
+- fix lambda hook determinism [GH-372]
+- give lambda hook ability to upload to a prefix [GH-376]
+- fix bad argument for approval in interactive provider [GH-381]
+
+## 1.0.1 (2017-04-24)
+
+- rxref lookup [GH-328]
+- Cleaned up raise statement in blueprints [GH-348]
+- Fix missing default provider for build\_parameters [GH-353]
+- Setup codecov [GH-354]
+- Added blueprint testing harness [GH-362]
+- context hook\_data lookup [GH-366]
+
+## 1.0.0 (2017-03-04)
 
 This is a major release with the main change being the removal of the old
 Parameters logic in favor of Blueprint Variables and Lookups.
@@ -31,7 +46,6 @@ Parameters logic in favor of Blueprint Variables and Lookups.
 - Added region to the ssm store test client [GH-316]
 - Add default lookup [GH-317]
 - Clean up errors from variables [GH-319]
-
 
 ## 0.8.6 (2017-01-26)
 

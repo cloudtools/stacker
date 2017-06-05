@@ -63,3 +63,5 @@ vm_setup.sh
 # Ignore development conf/env files
 dev.yaml
 dev.env
+
+tests/fixtures/blueprints/*-result

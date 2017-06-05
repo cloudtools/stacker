@@ -151,3 +151,40 @@ class ValidatorError(Exception):
 
     def __str__(self):
         return self.message
+
+
+class ChangesetDidNotStabilize(Exception):
+    def __init__(self, change_set_id):
+        self.id = change_set_id
+        message = "Changeset '%s' did not reach a completed state." % (
+            change_set_id
+        )
+
+        super(ChangesetDidNotStabilize, self).__init__(message)
+
+
+class UnhandledChangeSetStatus(Exception):
+    def __init__(self, stack_name, change_set_id, status, status_reason):
+        self.stack_name = stack_name
+        self.id = change_set_id
+        self.status = status
+        self.status_reason = status_reason
+        message = (
+            "Changeset '%s' on stack '%s' returned an unhandled status "
+            "'%s: %s'." % (change_set_id, stack_name, status,
+                           status_reason)
+        )
+
+        super(UnhandledChangeSetStatus, self).__init__(message)
+
+
+class UnableToExecuteChangeSet(Exception):
+    def __init__(self, stack_name, change_set_id, execution_status):
+        self.stack_name = stack_name
+        self.id = change_set_id
+        self.execution_status = execution_status
+
+        message = ("Changeset '%s' on stack '%s' had bad execution status: "
+                   "%s" % (change_set_id, stack_name, execution_status))
+
+        super(UnableToExecuteChangeSet, self).__init__(message)

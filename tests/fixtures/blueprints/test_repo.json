@@ -1,0 +1,16 @@
+{
+    "Resources": {
+        "repo1Repository": {
+            "Properties": {
+                "RepositoryName": "repo1"
+            },
+            "Type": "AWS::ECR::Repository"
+        },
+        "repo2Repository": {
+            "Properties": {
+                "RepositoryName": "repo2"
+            },
+            "Type": "AWS::ECR::Repository"
+        }
+    }
+}

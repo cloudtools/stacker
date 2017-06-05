@@ -10,9 +10,9 @@ from .handlers import ami
 from .handlers import file as file_handler
 from .handlers import split
 from .handlers import default
+from .handlers import hook_data
 
 LOOKUP_HANDLERS = {}
-DEFAULT_LOOKUP = output.TYPE_NAME
 
 
 def register_lookup_handler(lookup_type, handler_or_path):
@@ -79,3 +79,4 @@ register_lookup_handler(ami.TYPE_NAME, ami.handler)
 register_lookup_handler(file_handler.TYPE_NAME, file_handler.handler)
 register_lookup_handler(split.TYPE_NAME, split.handler)
 register_lookup_handler(default.TYPE_NAME, default.handler)
+register_lookup_handler(hook_data.TYPE_NAME, hook_data.handler)

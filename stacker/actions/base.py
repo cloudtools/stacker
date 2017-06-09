@@ -33,7 +33,7 @@ def stack_template_url(bucket_name, blueprint):
         string: S3 URL.
     """
     key_name = stack_template_key_name(blueprint)
-    return "https://s3.amazonaws.com/%s/%s" % (bucket_name, key_name)
+    return "https://%s.s3.amazonaws.com/%s" % (bucket_name, key_name)
 
 
 class BaseAction(object):

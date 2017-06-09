@@ -535,6 +535,20 @@ class TestVariables(unittest.TestCase):
         with self.assertRaises(AttributeError):
             TestBlueprint(name="test", context=MagicMock())
 
+    def test_variable_exists_but_value_is_none(self):
+        var_name = "testVar"
+        var_def = {"type": str}
+        var_value = None
+        provided_variable = Variable(var_name, var_value)
+        blueprint_name = "testBlueprint"
+
+        with self.assertRaises(ValidatorError) as cm:
+            resolve_variable(var_name, var_def, provided_variable,
+                             blueprint_name)
+
+        exc = cm.exception.exception  # The wrapped exception
+        self.assertIsInstance(exc, UnboundLocalError)
+
 
 class TestCFNParameter(unittest.TestCase):
     def test_cfnparameter_convert_boolean(self):

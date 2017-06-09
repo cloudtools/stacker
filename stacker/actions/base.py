@@ -20,7 +20,7 @@ def stack_template_key_name(blueprint):
     return "%s-%s.json" % (blueprint.name, blueprint.version)
 
 
-def stack_template_url(bucket_name, blueprint):
+def stack_template_url(bucket_name, blueprint, endpoint="s3.amazonaws.com"):
     """Produces an s3 url for a given blueprint.
 
     Args:
@@ -28,12 +28,14 @@ def stack_template_url(bucket_name, blueprint):
             templates are stored.
         blueprint (:class:`stacker.blueprints.base.Blueprint`): The blueprint
             object to create the URL to.
+        endpoint (string): S3 endpoint. Can be overriden for use with buckets
+            in isolated regions.
 
     Returns:
         string: S3 URL.
     """
     key_name = stack_template_key_name(blueprint)
-    return "https://s3.amazonaws.com/%s/%s" % (bucket_name, key_name)
+    return "https://%s/%s/%s" % (endpoint, bucket_name, key_name)
 
 
 class BaseAction(object):
@@ -85,7 +87,13 @@ class BaseAction(object):
                 raise
 
     def stack_template_url(self, blueprint):
-        return stack_template_url(self.bucket_name, blueprint)
+        if 'stacker_bucket_endpoint' in self.context.config:
+            return stack_template_url(
+                self.bucket_name,
+                blueprint,
+                self.context.config['stacker_bucket_endpoint'])
+        else:
+            return stack_template_url(self.bucket_name, blueprint)
 
     def s3_stack_push(self, blueprint, force=False):
         """Pushes the rendered blueprint's template to S3.

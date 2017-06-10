@@ -215,6 +215,8 @@ class TestVariables(unittest.TestCase):
 
     def test_resolve_variable_troposphere_type_props_single(self):
         sub_defs = {"Endpoint": "test", "Protocol": "lambda"}
+        # Note that sns.Subscription != sns.SubscriptionResource. The former
+        # is a property type, the latter is a complete resource.
         sub = self._resolve_troposphere_var(sns.Subscription, sub_defs)
 
         self.assertTrue(isinstance(sub, sns.Subscription))

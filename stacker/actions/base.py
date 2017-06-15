@@ -76,7 +76,8 @@ class BaseAction(object):
                 logger.debug("Creating bucket %s.", self.bucket_name)
                 self.s3_conn.create_bucket(Bucket=self.bucket_name)
             elif e.response['Error']['Message'] == "Forbidden":
-                logger.exception("Access denied for bucket %s.",
+                logger.exception("Access denied for bucket %s.  Did " +
+                                 "you remember to use a globally unique name?",
                                  self.bucket_name)
                 raise
             else:

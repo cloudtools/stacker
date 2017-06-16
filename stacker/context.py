@@ -30,7 +30,6 @@ class Context(object):
     the command line and specified in the config to `Stack` objects.
 
     Args:
-        namespace (str): A unique namespace for the stacks being built.
         environment (dict): A dictionary used to pass in information about
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,

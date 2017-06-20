@@ -1,4 +1,5 @@
 import unittest
+import sys
 from mock import patch
 
 from mock import MagicMock
@@ -105,6 +106,13 @@ class TestVariables(unittest.TestCase):
         value = validate_variable_type(var_name, var_type, provided_value)
         self.assertIsInstance(value, CFNParameter)
 
+    def test_validate_variable_type_cfntype_none_value(self):
+        var_name = "testVar"
+        var_type = CFNString
+        provided_value = None
+        with self.assertRaises(ValueError):
+            validate_variable_type(var_name, var_type, provided_value)
+
     def test_validate_variable_type_matching_type(self):
         var_name = "testVar"
         var_type = str
@@ -192,6 +200,10 @@ class TestVariables(unittest.TestCase):
         bucket = self._resolve_troposphere_var(s3.Bucket, None, optional=True)
         self.assertEqual(bucket, None)
 
+    def test_resolve_variable_troposphere_type_value_blank_required(self):
+        with self.assertRaises(ValidatorError):
+            self._resolve_troposphere_var(s3.Bucket, None)
+
     def test_resolve_variable_troposphere_type_resource_many(self):
         bucket_defs = {
             "FirstBucket": {"BucketName": "some-bucket"},
@@ -209,9 +221,15 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(buckets, [])
 
     def test_resolve_variable_troposphere_type_resource_fail(self):
-        with self.assertRaises(ValidatorError):
-            self._resolve_troposphere_var(s3.Bucket,
-                                          {"MyBucket": {"BucketName": 1}})
+        # Do this to silence the error reporting here:
+        # https://github.com/cloudtools/troposphere/commit/dc8abd5c
+        with open("/dev/null", "w") as devnull:
+            _stderr = sys.stderr
+            sys.stderr = devnull
+            with self.assertRaises(ValidatorError):
+                self._resolve_troposphere_var(s3.Bucket,
+                                              {"MyBucket": {"BucketName": 1}})
+            sys.stderr = _stderr
 
     def test_resolve_variable_troposphere_type_props_single(self):
         sub_defs = {"Endpoint": "test", "Protocol": "lambda"}
@@ -590,12 +608,9 @@ class TestVariables(unittest.TestCase):
         provided_variable = Variable(var_name, var_value)
         blueprint_name = "testBlueprint"
 
-        with self.assertRaises(ValidatorError) as cm:
+        with self.assertRaises(ValueError):
             resolve_variable(var_name, var_def, provided_variable,
                              blueprint_name)
-
-        exc = cm.exception.exception  # The wrapped exception
-        self.assertIsInstance(exc, UnboundLocalError)
 
 
 class TestCFNParameter(unittest.TestCase):

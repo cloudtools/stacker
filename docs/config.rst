@@ -42,9 +42,9 @@ in the config.
 
 S3 Bucket Endpoint
 ------------------
-Isolated AWS regions don't permit access to S3 buckets via the default
-'s3.amazonaws.com' endpoint. This endpoint can be overriden via the
-**stacker_bucket_endpoint** top level keyword in the config, e.g.::
+The correct S3 endpoint should be automatically chosen, but it can also be
+overriden via the **stacker_bucket_endpoint** top level keyword in the config,
+e.g.::
 
   stacker_bucket_endpoint: s3.cn-north-1.amazonaws.com.cn
 

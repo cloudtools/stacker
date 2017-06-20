@@ -87,13 +87,16 @@ class BaseAction(object):
                 raise
 
     def stack_template_url(self, blueprint):
-        if 'stacker_bucket_endpoint' in self.context.config:
-            return stack_template_url(
-                self.bucket_name,
-                blueprint,
-                self.context.config['stacker_bucket_endpoint'])
-        else:
-            return stack_template_url(self.bucket_name, blueprint)
+        # Assume default S3 endpoint
+        endpoint = "s3.amazonaws.com"
+        # Allow the endpoint to be overriden manually
+        if "stacker_bucket_endpoint" in self.context.config:
+            endpoint = self.context.config['stacker_bucket_endpoint']
+        # Or fallback to automatically overriding it for isolated regions
+        # http://docs.amazonaws.cn/en_us/general/latest/gr/rande.html#cnnorth_region
+        elif self.provider.region == "cn-north-1":
+            endpoint = "s3.cn-north-1.amazonaws.com.cn"
+        return stack_template_url(self.bucket_name, blueprint, endpoint)
 
     def s3_stack_push(self, blueprint, force=False):
         """Pushes the rendered blueprint's template to S3.

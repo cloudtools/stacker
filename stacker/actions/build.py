@@ -285,7 +285,7 @@ class Action(BaseAction):
             if outline:
                 plan.outline()
             if dump:
-                plan.dump(directory=dump, context=self.context)
+                plan.dump(directory=dump, context=self.context, provider=self.provider)
 
     def post_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""

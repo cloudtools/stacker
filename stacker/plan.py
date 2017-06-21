@@ -11,7 +11,8 @@ from .status import (
     SUBMITTED,
     COMPLETE,
     SKIPPED,
-    CANCELLED
+    CANCELLED,
+    CancelledStatus
 )
 
 logger = logging.getLogger(__name__)
@@ -42,8 +43,12 @@ class Step(object):
         """
 
         while not self.done:
-            status = self.fn(self)
-            self.set_status(status)
+            try:
+                status = self.fn(self)
+                self.set_status(status)
+            except Exception as e:
+                self.set_status(CancelledStatus(e.message))
+                raise
         return self.ok
 
     @property

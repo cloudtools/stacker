@@ -110,6 +110,30 @@ class TestPlan(unittest.TestCase):
 
         self.assertEquals(calls, ['namespace-vpc.1'])
 
+    def test_execute_plan_exception(self):
+        vpc = Stack(
+            definition=generate_definition('vpc', 1),
+            context=self.context)
+        bastion = Stack(
+            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            context=self.context)
+
+        calls = []
+
+        def fn(step):
+            calls.append(step.name)
+            if step == vpc_step:
+                raise ValueError('Boom')
+            return COMPLETE
+
+        vpc_step = Step(vpc, fn)
+        bastion_step = Step(bastion, fn)
+        plan = Plan(description="Test", steps=[vpc_step, bastion_step])
+
+        plan.execute()
+
+        self.assertEquals(calls, ['namespace-vpc.1'])
+
     def test_execute_plan_skipped(self):
         vpc = Stack(
             definition=generate_definition('vpc', 1),

@@ -92,10 +92,21 @@ class Provider(BaseProvider):
         self.region = region
         self.profile = None
         self._outputs = {}
+        self._session = None
         self._cloudformation = None
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
+
+    @property
+    def session(self):
+        # deals w/ multiprocessing issues w/ sharing ssl conns
+        # see https://github.com/remind101/stacker/issues/196
+        pid = os.getpid()
+        if pid != self._pid or not self._session:
+            self._session = get_session(self.region, profile=self.profile)
+
+        return self._session
 
     @property
     def cloudformation(self):
@@ -103,14 +114,14 @@ class Provider(BaseProvider):
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
         if pid != self._pid or not self._cloudformation:
-            session = get_session(self.region, profile=self.profile)
-            self._cloudformation = session.client('cloudformation')
+            self._cloudformation = self.session.client('cloudformation')
 
         return self._cloudformation
 
     def with_profile(self, profile):
         provider = copy(self)
         provider.profile = profile
+        provider._session = None
         provider._cloudformation = None
         return provider
 

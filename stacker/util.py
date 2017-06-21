@@ -306,6 +306,9 @@ def handle_hooks(stage, hooks, provider, context):
         data_key = hook.get("data_key")
         required = hook.get("required", True)
         kwargs = hook.get("args", {})
+        profile = hook.get("profile")
+        if profile:
+            provider = provider.with_profile(profile)
         try:
             method = load_object_from_string(hook["path"])
         except (AttributeError, ImportError):

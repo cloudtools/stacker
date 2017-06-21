@@ -113,6 +113,7 @@ class Context(object):
                 definition=stack_def,
                 context=self,
                 mappings=self.mappings,
+                profile=stack_def.get("profile"),
                 force=stack_def["name"] in self.force_stacks,
                 locked=stack_def.get("locked", False),
                 enabled=stack_def.get("enabled", True),

@@ -155,6 +155,7 @@ class TestBuildAction(unittest.TestCase):
         _, step = plan.list_pending()[0]
         step.stack = mock.MagicMock()
         step.stack.locked = False
+        step.stack.profile = None
 
         # mock provider shouldn't return a stack at first since it hasn't been
         # launched

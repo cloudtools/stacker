@@ -43,6 +43,20 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(var.value, "resolved")
 
     def test_variable_resolve_simple_lookup(self):
+        self.context.get_stacks_dict.return_value = {}
+        var = Variable("Param1", "${output fakeStack::FakeOutput}")
+        self.assertEqual(len(var.lookups), 1)
+        self.provider.get_output.return_value = "resolved"
+        var.resolve(self.context, self.provider)
+        self.assertTrue(var.resolved)
+        self.assertEqual(var.value, "resolved")
+
+    def test_variable_resolve_simple_lookup_stack_in_config(self):
+        stack = MagicMock()
+        stack.fqn = "fakeStack"
+        stack.profile = None
+        self.context.get_stacks_dict.return_value = {
+            'fakeStack': stack}
         var = Variable("Param1", "${output fakeStack::FakeOutput}")
         self.assertEqual(len(var.lookups), 1)
         self.provider.get_output.return_value = "resolved"
@@ -65,6 +79,8 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(var.value, "url://resolved@resolved2")
 
     def test_variable_resolve_multiple_lookups_string(self):
+        self.context.get_stacks_dict.return_value = {}
+
         var = Variable(
             "Param1",
             "url://${output fakeStack::FakeOutput}@"
@@ -160,6 +176,7 @@ class TestVariables(unittest.TestCase):
             var.resolve(self.context, self.provider)
 
     def test_variable_resolve_nested_lookup(self):
+        self.context.get_stacks_dict.return_value = {}
 
         def mock_handler(value, context, provider, **kwargs):
             return "looked up: {}".format(value)

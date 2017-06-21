@@ -186,8 +186,12 @@ class Action(BaseAction):
         if not should_submit(stack):
             return NotSubmittedStatus()
 
+        provider = self.provider
+        if stack.profile:
+            provider = self.provider.with_profile(stack.profile)
+
         try:
-            provider_stack = self.provider.get_stack(stack.fqn)
+            provider_stack = provider.get_stack(stack.fqn)
         except StackDoesNotExist:
             provider_stack = None
 
@@ -196,17 +200,17 @@ class Action(BaseAction):
             logger.debug(
                 "Stack %s provider status: %s",
                 stack.fqn,
-                self.provider.get_stack_status(provider_stack),
+                provider.get_stack_status(provider_stack),
             )
-            if self.provider.is_stack_completed(provider_stack):
+            if provider.is_stack_completed(provider_stack):
                 submit_reason = getattr(old_status, "reason", None)
                 return CompleteStatus(submit_reason)
-            elif self.provider.is_stack_in_progress(provider_stack):
+            elif provider.is_stack_in_progress(provider_stack):
                 logger.debug("Stack %s in progress.", stack.fqn)
                 return old_status
 
         logger.debug("Resolving stack %s", stack.fqn)
-        stack.resolve(self.context, self.provider)
+        stack.resolve(self.context, provider)
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
@@ -217,15 +221,15 @@ class Action(BaseAction):
         if not provider_stack:
             new_status = SubmittedStatus("creating new stack")
             logger.debug("Creating new stack: %s", stack.fqn)
-            self.provider.create_stack(stack.fqn, template_url, parameters,
-                                       tags)
+            provider.create_stack(stack.fqn, template_url, parameters,
+                                  tags)
         else:
             if not should_update(stack):
                 return NotUpdatedStatus()
             try:
                 new_status = SubmittedStatus("updating existing stack")
-                self.provider.update_stack(stack.fqn, template_url, parameters,
-                                           tags)
+                provider.update_stack(stack.fqn, template_url, parameters,
+                                      tags)
                 logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()

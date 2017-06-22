@@ -35,6 +35,12 @@ def setup_logging(verbosity, interactive):
         fmt = ColorFormatter(COLOR_FORMAT, ISO_8601)
         hdlr = LogLoopStreamHandler()
         hdlr.setFormatter(fmt)
+
+        # When in the loop logger, stack traces will get overwritten by the
+        # ANSI escape sequences. To see raw exceptions, don't use the loop
+        # logger.
+        hdlr.addFilter(NoExceptions())
+
         logging.root.addHandler(hdlr)
         logging.root.setLevel(log_level)
     else:
@@ -44,3 +50,10 @@ def setup_logging(verbosity, interactive):
             level=log_level,
         )
     return log_type
+
+
+class NoExceptions(object):
+    def filter(self, record):
+        if record.levelno == logging.ERROR:
+            return 0
+        return 1

@@ -6,7 +6,7 @@ skip executing anything against the stack.
 
 """
 
-from .base import BaseCommand
+from .base import BaseCommand, cancel
 from ...actions import build
 
 
@@ -33,10 +33,10 @@ class Build(BaseCommand):
                                  "the config.")
         parser.add_argument("--stacks", action="append",
                             metavar="STACKNAME", type=str,
-                            help="Only work on the stacks given. Can be "
-                                 "specified more than once. If not specified "
-                                 "then stacker will work on all stacks in the "
-                                 "config file.")
+                            help="Only work on the stacks given, and their "
+                                 "dependencies. Can be specified more than "
+                                 "once. If not specified then stacker will "
+                                 "work on all stacks in the config file.")
         parser.add_argument("-t", "--tail", action="store_true",
                             help="Tail the CloudFormation logs while working"
                                  "with stacks")
@@ -46,10 +46,16 @@ class Build(BaseCommand):
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
-        action = build.Action(options.context, provider=options.provider)
+        action = build.Action(
+            options.context,
+            provider=options.provider,
+            cancel=cancel())
+
         action.execute(outline=options.outline,
                        tail=options.tail,
-                       dump=options.dump)
+                       dump=options.dump,
+                       stack_names=options.stacks,
+                       semaphore=self.semaphore(options))
 
     def get_context_kwargs(self, options, **kwargs):
-        return {"stack_names": options.stacks, "force_stacks": options.force}
+        return {"force_stacks": options.force}

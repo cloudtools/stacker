@@ -40,6 +40,14 @@ updating your stacks. By default it uses a bucket named
 If you want to change this, provide the **stacker_bucket** top level key word
 in the config.
 
+S3 Bucket Endpoint
+------------------
+The correct S3 endpoint should be automatically chosen, but it can also be
+overriden via the **stacker_bucket_endpoint** top level keyword in the config,
+e.g.::
+
+  stacker_bucket_endpoint: s3.cn-north-1.amazonaws.com.cn
+
 Module Paths
 ----------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to

@@ -20,7 +20,7 @@ def stack_template_key_name(blueprint):
     return "%s-%s.json" % (blueprint.name, blueprint.version)
 
 
-def stack_template_url(bucket_name, blueprint):
+def stack_template_url(bucket_name, blueprint, endpoint="s3.amazonaws.com"):
     """Produces an s3 url for a given blueprint.
 
     Args:
@@ -28,12 +28,14 @@ def stack_template_url(bucket_name, blueprint):
             templates are stored.
         blueprint (:class:`stacker.blueprints.base.Blueprint`): The blueprint
             object to create the URL to.
+        endpoint (string): S3 endpoint. Can be overriden for use with buckets
+            in isolated regions.
 
     Returns:
         string: S3 URL.
     """
     key_name = stack_template_key_name(blueprint)
-    return "https://s3.amazonaws.com/%s/%s" % (bucket_name, key_name)
+    return "https://%s/%s/%s" % (endpoint, bucket_name, key_name)
 
 
 def get_client_region(client):
@@ -143,7 +145,16 @@ class BaseAction(object):
                 raise
 
     def stack_template_url(self, blueprint):
-        return stack_template_url(self.bucket_name, blueprint)
+        # Assume default S3 endpoint
+        endpoint = "s3.amazonaws.com"
+        # Allow the endpoint to be overriden manually
+        if "stacker_bucket_endpoint" in self.context.config:
+            endpoint = self.context.config['stacker_bucket_endpoint']
+        # Or fallback to automatically overriding it for isolated regions
+        # http://docs.amazonaws.cn/en_us/general/latest/gr/rande.html#cnnorth_region
+        elif self.provider.region == "cn-north-1":
+            endpoint = "s3.cn-north-1.amazonaws.com.cn"
+        return stack_template_url(self.bucket_name, blueprint, endpoint)
 
     def s3_stack_push(self, blueprint, force=False):
         """Pushes the rendered blueprint's template to S3.

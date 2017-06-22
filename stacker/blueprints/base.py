@@ -211,10 +211,6 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     try:
         value = validator(value)
     except Exception as exc:
-        try:
-            value
-        except UnboundLocalError:
-            value = "mising or undefined"
         raise ValidatorError(var_name, validator.__name__, value, exc)
 
     # Ensure that the resulting value is the correct type

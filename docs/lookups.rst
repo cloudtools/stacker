@@ -261,7 +261,9 @@ For example::
 
 Encrypted values ("SecureStrings") can also be used, which will be
 automatically decrypted (assuming the Stacker user has access to the
-associated KMS key).
+associated KMS key). Care should be taken when using this with encrypted
+values (i.e. a safe policy is to only use it with ``no_echo`` CFNString
+values)
 
 The region can be omitted (e.g. ``DBUser: ${ssmstore MyDBUser}``), in which
 case ``us-east-1`` will be assumed.

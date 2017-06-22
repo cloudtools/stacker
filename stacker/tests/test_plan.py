@@ -10,7 +10,7 @@ from stacker.lookups.registry import (
 )
 from stacker.plan import (
     Step,
-    Plan,
+    build_plan,
 )
 from stacker.status import (
     COMPLETE,
@@ -60,9 +60,9 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
             context=self.context)
 
-        plan = Plan(description="Test", steps=[Step(vpc), Step(bastion)])
+        plan = build_plan(description="Test", steps=[Step(vpc), Step(bastion)])
 
-        self.assertEqual(plan.dag.graph, {
+        self.assertEqual(plan.graph.dag.graph, {
             'namespace-bastion.1': set(['namespace-vpc.1']),
             'namespace-vpc.1': set([])})
 
@@ -80,11 +80,37 @@ class TestPlan(unittest.TestCase):
             calls.append(step.name)
             return COMPLETE
 
-        plan = Plan(
+        plan = build_plan(
             description="Test", steps=[Step(vpc, fn), Step(bastion, fn)])
         plan.execute()
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
+
+    def test_execute_plan_filtered(self):
+        vpc = Stack(
+            definition=generate_definition('vpc', 1),
+            context=self.context)
+        db = Stack(
+            definition=generate_definition('db', 1, requires=[vpc.fqn]),
+            context=self.context)
+        app = Stack(
+            definition=generate_definition('app', 1, requires=[db.fqn]),
+            context=self.context)
+
+        calls = []
+
+        def fn(step):
+            calls.append(step.name)
+            return COMPLETE
+
+        plan = build_plan(
+            description="Test",
+            steps=[Step(vpc, fn), Step(db, fn), Step(app, fn)],
+            step_names=['db.1'])
+        plan.execute()
+
+        self.assertEquals(calls, [
+            'namespace-vpc.1', 'namespace-db.1'])
 
     def test_execute_plan_cancelled(self):
         vpc = Stack(
@@ -104,7 +130,7 @@ class TestPlan(unittest.TestCase):
 
         vpc_step = Step(vpc, fn)
         bastion_step = Step(bastion, fn)
-        plan = Plan(description="Test", steps=[vpc_step, bastion_step])
+        plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
 
         plan.execute()
 
@@ -128,7 +154,7 @@ class TestPlan(unittest.TestCase):
 
         vpc_step = Step(vpc, fn)
         bastion_step = Step(bastion, fn)
-        plan = Plan(description="Test", steps=[vpc_step, bastion_step])
+        plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
 
         plan.execute()
 
@@ -153,7 +179,7 @@ class TestPlan(unittest.TestCase):
         vpc_step = Step(vpc, fn)
         bastion_step = Step(bastion, fn)
 
-        plan = Plan(description="Test", steps=[vpc_step, bastion_step])
+        plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
         plan.execute()
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
@@ -165,7 +191,7 @@ class TestPlan(unittest.TestCase):
             context=self.context)
 
         with self.assertRaises(GraphError) as expected:
-            Plan(description="Test", steps=[Step(bastion, None)])
+            build_plan(description="Test", steps=[Step(bastion, None)])
         message = ("Error detected when adding 'namespace-vpc.1' "
                    "as a dependency of 'namespace-bastion.1': node "
                    "namespace-vpc.1 does not exist")
@@ -186,7 +212,7 @@ class TestPlan(unittest.TestCase):
             context=self.context)
 
         with self.assertRaises(GraphError) as expected:
-            Plan(
+            build_plan(
                 description="Test",
                 steps=[Step(vpc, None), Step(db, None), Step(app, None)])
         message = ("Error detected when adding 'namespace-db.1' "

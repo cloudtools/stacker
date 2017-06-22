@@ -27,21 +27,11 @@ class TestContext(unittest.TestCase):
     def test_context_optional_keys_set(self):
         context = Context(
             environment=self.environment,
-            stack_names=["stack"],
             mappings={},
             config={},
         )
         for key in ["mappings", "config"]:
             self.assertEqual(getattr(context, key), {})
-        self.assertEqual(context.stack_names, ["stack"])
-
-    def test_context_get_stacks_specific_stacks(self):
-        context = Context(
-            environment=self.environment,
-            config=self.config,
-            stack_names=["stack2"],
-        )
-        self.assertEqual(len(context.get_stacks()), 1)
 
     def test_context_get_stacks(self):
         context = Context(self.environment, config=self.config)

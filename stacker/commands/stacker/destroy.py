@@ -21,10 +21,10 @@ class Destroy(BaseCommand):
                                  " with destroying the stacks")
         parser.add_argument("--stacks", action="append",
                             metavar="STACKNAME", type=str,
-                            help="Only work on the stacks given. Can be "
-                                 "specified more than once. If not specified "
-                                 "then stacker will work on all stacks in the "
-                                 "config file.")
+                            help="Only work on the stacks given, and their "
+                                 "dependencies. Can be specified more than "
+                                 "once. If not specified then stacker will "
+                                 "work on all stacks in the config file.")
         parser.add_argument("-t", "--tail", action="store_true",
                             help="Tail the CloudFormation logs while working"
                                  "with stacks")
@@ -38,7 +38,8 @@ class Destroy(BaseCommand):
         action.execute(
             force=options.force,
             tail=options.tail,
+            stack_names=options.stacks,
             semaphore=self.semaphore(options))
 
     def get_context_kwargs(self, options, **kwargs):
-        return {"stack_names": options.stacks}
+        return {}

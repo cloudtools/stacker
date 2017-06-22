@@ -31,16 +31,12 @@ def outline_plan(plan, level=logging.INFO, message=""):
     steps = 1
     logger.log(level, "Plan \"%s\":", plan.description)
 
-    nodes = plan.dag.topological_sort()
-    nodes.reverse()
-    for step_name in nodes:
-        step = plan.steps[step_name]
+    for step in plan.steps:
         logger.log(
             level,
-            "  - step: %s: target: \"%s\", action: \"%s\"",
+            "  - step: %s: target: \"%s\"",
             steps,
-            step_name,
-            step.fn.__name__,
+            step.name
         )
         steps += 1
 
@@ -74,11 +70,7 @@ def _check_point(plan):
     longest = 0
     messages = []
 
-    nodes = plan.dag.topological_sort()
-    nodes.reverse()
-    for step_name in nodes:
-        step = plan.steps[step_name]
-
+    for step in plan.steps:
         length = len(step.name)
         if length > longest:
             longest = length

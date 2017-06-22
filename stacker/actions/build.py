@@ -9,7 +9,7 @@ from ..exceptions import (
     StackDoesNotExist,
 )
 
-from ..plan import Plan
+from ..plan import build_plan
 from ..status import (
     NotSubmittedStatus,
     NotUpdatedStatus,
@@ -242,10 +242,11 @@ class Action(BaseAction):
     def _action(self, *args, **kwargs):
         return self._launch_stack(*args, **kwargs)
 
-    def _generate_plan(self, tail=False):
-        return Plan(
+    def _generate_plan(self, tail=False, stack_names=None):
+        return build_plan(
             description="Create/Update stacks",
             steps=self.steps,
+            step_names=stack_names,
             check_point=check_point_fn())
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
@@ -264,16 +265,17 @@ class Action(BaseAction):
                 context=self.context)
 
     def run(self, outline=False, tail=False,
-            dump=False, semaphore=None, *args, **kwargs):
+            dump=False, stack_names=None, semaphore=None,
+            *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
 
         """
-        plan = self._generate_plan(tail=tail)
+        plan = self._generate_plan(tail=tail, stack_names=stack_names)
         if not outline and not dump:
             outline_plan(plan, logging.DEBUG)
-            logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
+            logger.debug("Launching stacks: %s", ", ".join(plan.step_names))
             plan.execute(semaphore=semaphore)
         else:
             if outline:

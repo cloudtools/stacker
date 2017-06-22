@@ -33,8 +33,6 @@ class Context(object):
         namespace (str): A unique namespace for the stacks being built.
         environment (dict): A dictionary used to pass in information about
             the environment. Useful for templating.
-        stack_names (list): A list of stack_names to operate on. If not passed,
-            usually all stacks defined in the config will be operated on.
         mappings (dict): Used as Cloudformation mappings for the blueprint.
         config (dict): The configuration being operated on, containing the
             stack definitions.
@@ -44,7 +42,6 @@ class Context(object):
     """
 
     def __init__(self, environment,  # pylint: disable-msg=too-many-arguments
-                 stack_names=None,
                  mappings=None,
                  config=None,
                  logger_type=None,
@@ -55,7 +52,6 @@ class Context(object):
             raise MissingEnvironment(["namespace"])
 
         self.environment = environment
-        self.stack_names = stack_names or []
         self.mappings = mappings or {}
         self.logger_type = logger_type
         self.namespace_delimiter = "-"
@@ -91,10 +87,7 @@ class Context(object):
             register_lookup_handler(key, handler)
 
     def _get_stack_definitions(self):
-        if not self.stack_names:
-            return self.config["stacks"]
-        return [s for s in self.config["stacks"] if s["name"] in
-                self.stack_names]
+        return self.config["stacks"]
 
     def get_stacks(self):
         """Get the stacks for the current action.

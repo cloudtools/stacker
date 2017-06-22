@@ -199,7 +199,7 @@ class Action(build.Action):
     def run(self, *args, **kwargs):
         plan = self._generate_plan()
         outline_plan(plan, logging.DEBUG)
-        logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
+        logger.info("Diffing stacks: %s", ", ".join(plan.step_names))
         plan.execute(semaphore=threading.Semaphore(1))
 
     """Don't ever do anything for pre_run or post_run"""

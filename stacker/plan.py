@@ -56,6 +56,10 @@ class Step(object):
         return self.stack.fqn
 
     @property
+    def short_name(self):
+        return self.stack.name
+
+    @property
     def requires(self):
         return self.stack.requires
 
@@ -124,6 +128,28 @@ class Step(object):
         self.set_status(SUBMITTED)
 
 
+def build_plan(description=None, steps=None,
+               step_names=None, reverse=False,
+               check_point=None):
+    graph = build_graph(steps)
+
+    # If we want to execute the plan in reverse (e.g. Destroy), transpose the
+    # graph.
+    if reverse:
+        graph = graph.transposed()
+
+    # If we only want to build a specific target, filter the graph.
+    if step_names:
+        nodes = []
+        for step_name in step_names:
+            for step in steps:
+                if step.short_name == step_name:
+                    nodes.append(step.name)
+        graph = graph.filtered(nodes)
+
+    return Plan(description=description, graph=graph, check_point=check_point)
+
+
 class Plan(object):
     """A collection of :class:`Step` objects to execute.
 
@@ -133,18 +159,13 @@ class Plan(object):
     steps and their dependencies.
 
     Args:
-        description (str): description of the plan
-        steps (list): a list of :class:`Step` objects to execute.
-        reverse (bool, optional): by default, the plan will be run in
-            topological order based on each steps dependencies. Put
-            more simply, the steps with no dependencies will be ran
-            first. When this flag is set, the plan will be executed
-            in reverse order.
+        description (str): description of the plan.
+        graph (:class:`Graph`): a graph of steps.
+        check_point (func): a function to call whenever steps change status.
 
     """
 
-    def __init__(self, description=None, steps=None,
-                 reverse=False, check_point=None):
+    def __init__(self, description=None, graph=None, check_point=None):
         self.id = uuid.uuid4()
         self.description = description
         self.check_point = check_point or null_check_point
@@ -153,13 +174,10 @@ class Plan(object):
             def _check_point():
                 check_point(self)
 
-            for step in steps:
+            for step_name, step in graph.steps.iteritems():
                 step.check_point = _check_point
 
-        self.steps = {step.name: step for step in steps}
-        self.dag = build_dag(steps)
-        if reverse:
-            self.dag = self.dag.transpose()
+        self.graph = graph
 
     def execute(self, **kwargs):
         self.check_point(self)
@@ -182,47 +200,89 @@ class Plan(object):
         if not semaphore:
             semaphore = UnlimitedSemaphore()
 
-        def walk_func(step_name):
-            step = self.steps[step_name]
+        def walk_func(step):
             semaphore.acquire()
             try:
                 return step.run()
             finally:
                 semaphore.release()
 
-        return self.dag.walk(walk_func)
+        return self.graph.walk(walk_func)
 
-    def keys(self):
-        return [k for k in self.steps]
+    @property
+    def steps(self):
+        steps = self.graph.topological_sort()
+        steps.reverse()
+        return steps
+
+    @property
+    def step_names(self):
+        return [step.name for step in self.steps]
 
 
 def null_check_point(plan):
     pass
 
 
-def build_dag(steps):
-    """Builds a Directed Acyclic Graph, given a list of steps.
+def build_graph(steps):
+    """Builds a graph of steps.
 
     Args:
         steps (list): a list of :class:`Step` objects to execute.
 
     """
 
-    dag = DAG()
+    graph = Graph()
 
     for step in steps:
-        dag.add_node(step.name)
+        graph.add_step(step)
 
     for step in steps:
         for dep in step.requires:
-            try:
-                dag.add_edge(step.name, dep)
-            except KeyError as e:
-                raise GraphError(e, step.name, dep)
-            except DAGValidationError as e:
-                raise GraphError(e, step.name, dep)
+            graph.connect(step, dep)
 
-    return dag
+    return graph
+
+
+class Graph(object):
+    """Graph represents a graph of steps."""
+
+    def __init__(self, steps=None, dag=None):
+        self.steps = steps or {}
+        self.dag = dag or DAG()
+
+    def add_step(self, step):
+        self.steps[step.name] = step
+        self.dag.add_node(step.name)
+
+    def connect(self, step, dep):
+        try:
+            self.dag.add_edge(step.name, dep)
+        except KeyError as e:
+            raise GraphError(e, step.name, dep)
+        except DAGValidationError as e:
+            raise GraphError(e, step.name, dep)
+
+    def walk(self, walk_func):
+        def fn(step_name):
+            step = self.steps[step_name]
+            return walk_func(step)
+
+        return self.dag.walk(fn)
+
+    def transposed(self):
+        """Returns a "transposed" version of this graph. Useful for walking in
+        reverse.
+        """
+        return Graph(steps=self.steps, dag=self.dag.transpose())
+
+    def filtered(self, step_names):
+        """Returns a "filtered" version of this graph."""
+        return Graph(steps=self.steps, dag=self.dag.filter(step_names))
+
+    def topological_sort(self):
+        nodes = self.dag.topological_sort()
+        return [self.steps[step_name] for step_name in nodes]
 
 
 class UnlimitedSemaphore(object):

@@ -8,7 +8,7 @@ from ..status import (
     SubmittedStatus,
     SUBMITTED,
 )
-from ..plan import Plan
+from ..plan import build_plan
 
 from ..status import StackDoesNotExist as StackDoesNotExistStatus
 
@@ -34,10 +34,11 @@ class Action(BaseAction):
     def _action(self, *args, **kwargs):
         return self._destroy_stack(*args, **kwargs)
 
-    def _generate_plan(self, tail=False):
-        return Plan(
+    def _generate_plan(self, tail=False, stack_names=None):
+        return build_plan(
             description="Destroy stacks",
             steps=self.steps,
+            step_names=stack_names,
             check_point=check_point_fn(),
             reverse=True)
 
@@ -80,8 +81,10 @@ class Action(BaseAction):
                 provider=self.provider,
                 context=self.context)
 
-    def run(self, force, tail=False, semaphore=None, *args, **kwargs):
-        plan = self._generate_plan(tail=tail)
+    def run(self, force, tail=False, semaphore=None,
+            stack_names=None,
+            *args, **kwargs):
+        plan = self._generate_plan(tail=tail, stack_names=stack_names)
         if force:
             outline_plan(plan, logging.DEBUG)
             plan.execute(semaphore=semaphore)

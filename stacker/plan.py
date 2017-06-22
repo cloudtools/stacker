@@ -12,7 +12,8 @@ from .status import (
     COMPLETE,
     SKIPPED,
     CANCELLED,
-    CancelledStatus
+    ERRORED,
+    ErroredStatus
 )
 
 logger = logging.getLogger(__name__)
@@ -47,8 +48,7 @@ class Step(object):
                 status = self.fn(self)
                 self.set_status(status)
             except Exception as e:
-                self.set_status(CancelledStatus(e.message))
-                raise
+                self.set_status(ErroredStatus(e.message))
         return self.ok
 
     @property
@@ -75,11 +75,16 @@ class Step(object):
         return self.status == CANCELLED
 
     @property
+    def errored(self):
+        """Returns True if the step is in a ERRORED state."""
+        return self.status == ERRORED
+
+    @property
     def done(self):
         """Returns True if the step is finished (either COMPLETE, SKIPPED or
         CANCELLED)
         """
-        return self.completed or self.skipped or self.cancelled
+        return self.completed or self.skipped or self.cancelled or self.errored
 
     @property
     def ok(self):

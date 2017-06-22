@@ -4,7 +4,7 @@ import threading
 from .base import outline_plan
 from .. import exceptions
 from ..plan import COMPLETE, Plan
-from ..status import NotSubmittedStatus, NotUpdatedStatus, CancelledStatus
+from ..status import NotSubmittedStatus, NotUpdatedStatus
 from . import build
 import difflib
 import json
@@ -153,10 +153,6 @@ class Action(build.Action):
         """Handles the diffing a stack in CloudFormation vs our config"""
 
         stack = step.stack
-
-        # Cancel execution if flag is set.
-        if self.cancel.wait(0):
-            return CancelledStatus(reason="cancelled")
 
         if not build.should_submit(stack):
             return NotSubmittedStatus()

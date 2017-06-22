@@ -17,7 +17,7 @@ from ..status import (
     SubmittedStatus,
     CompleteStatus,
     CancelledStatus,
-    SUBMITTED
+    SUBMITTED,
 )
 
 
@@ -188,10 +188,6 @@ class Action(BaseAction):
 
         stack = step.stack
 
-        # Cancel execution if flag is set.
-        if self.cancel.wait(0):
-            return CancelledStatus(reason="cancelled")
-
         if not should_submit(stack):
             return NotSubmittedStatus()
 
@@ -238,8 +234,8 @@ class Action(BaseAction):
                 logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()
-            except CancelExecution:
-                return CancelledStatus(reason="cancelled")
+            except CancelExecution as e:
+                return CancelledStatus(reason=e.message)
 
         return new_status
 

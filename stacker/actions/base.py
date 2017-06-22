@@ -7,6 +7,9 @@ from ..plan import Step
 from ..status import (
     SUBMITTED,
     COMPLETE,
+    ERRORED,
+    CANCELLED,
+    INTERRUPTED,
 )
 
 import botocore.exceptions
@@ -63,6 +66,8 @@ def _check_point(plan):
     status_to_color = {
         SUBMITTED.code: Fore.YELLOW,
         COMPLETE.code: Fore.GREEN,
+        CANCELLED.code: Fore.MAGENTA,
+        ERRORED.code: Fore.RED,
     }
     logger.info("Plan Status:", extra={"reset": True, "loop": plan.id})
 
@@ -147,14 +152,21 @@ class BaseAction(object):
         self._conn = None
         self.cancel = cancel or threading.Event()
 
-    def _action(self):
+    def _action(self, *args, **kwargs):
         raise NotImplementedError
+
+    def _run_action(self, *args, **kwargs):
+        # Cancel execution if flag is set.
+        if self.cancel.wait(0):
+            return INTERRUPTED
+
+        return self._action(*args, **kwargs)
 
     @property
     def steps(self):
         if not hasattr(self, "_steps"):
             self._steps = [
-                Step(stack, fn=self._action)
+                Step(stack, fn=self._run_action)
                 for stack in self.context.get_stacks()]
         return self._steps
 

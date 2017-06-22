@@ -6,7 +6,6 @@ from .. import util
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
-    CancelledStatus,
     SUBMITTED,
 )
 from ..plan import Plan
@@ -44,10 +43,6 @@ class Action(BaseAction):
 
     def _destroy_stack(self, step):
         stack = step.stack
-
-        # Cancel execution if flag is set.
-        if self.cancel.wait(0):
-            return CancelledStatus(reason="cancelled")
 
         try:
             provider_stack = self.provider.get_stack(stack.fqn)

@@ -49,6 +49,7 @@ class Step(object):
                 self.set_status(status)
             except Exception as e:
                 self.set_status(ErroredStatus(e.message))
+                logger.exception(e)
         return self.ok
 
     @property

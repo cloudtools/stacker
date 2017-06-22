@@ -134,9 +134,10 @@ def validate_variable_type(var_name, var_type, value):
             raise ValidatorError(var_name, name, value, exc)
     else:
         if not isinstance(value, var_type):
-            raise ValueError("Variable %s must be of type %s or is missing"
-                             " from your config with no blueprint default set."
-                             % (var_name, var_type))
+            raise ValueError(
+                "Value for variable %s must be of type %s. Actual "
+                "type: %s." % (var_name, var_type, type(value))
+            )
 
     return value
 

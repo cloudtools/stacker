@@ -1,11 +1,13 @@
 import unittest
+import sys
 from mock import patch
 
 from mock import MagicMock
 from troposphere import (
     Base64,
     Ref,
-    s3
+    s3,
+    sns
 )
 
 from stacker.blueprints.base import (
@@ -104,6 +106,13 @@ class TestVariables(unittest.TestCase):
         value = validate_variable_type(var_name, var_type, provided_value)
         self.assertIsInstance(value, CFNParameter)
 
+    def test_validate_variable_type_cfntype_none_value(self):
+        var_name = "testVar"
+        var_type = CFNString
+        provided_value = None
+        with self.assertRaises(ValueError):
+            validate_variable_type(var_name, var_type, provided_value)
+
     def test_validate_variable_type_matching_type(self):
         var_name = "testVar"
         var_type = str
@@ -170,34 +179,91 @@ class TestVariables(unittest.TestCase):
             resolve_variable(var_name, var_def, provided_variable,
                              blueprint_name)
 
-    def test_resolve_variable_troposphere_list_type(self):
+    def _resolve_troposphere_var(self, tpe, value, **kwargs):
         var_name = "testVar"
-        var_def = {"type": TroposphereType(s3.Bucket, many=True)}
-        bucket_defs = {
-            "FirstBucket": {"BucketName": "some-bucket"},
-            "SecondBucket": {"BucketName": "some-other-bucket"},
-        }
-        provided_variable = Variable(var_name, bucket_defs)
+        var_def = {"type": TroposphereType(tpe, **kwargs)}
+        provided_variable = Variable(var_name, value)
         blueprint_name = "testBlueprint"
 
-        value = resolve_variable(var_name, var_def, provided_variable,
-                                 blueprint_name)
-        for bucket in value:
+        return resolve_variable(var_name, var_def, provided_variable,
+                                blueprint_name)
+
+    def test_resolve_variable_troposphere_type_resource_single(self):
+        bucket_defs = {"MyBucket": {"BucketName": "some-bucket"}}
+        bucket = self._resolve_troposphere_var(s3.Bucket, bucket_defs)
+
+        self.assertTrue(isinstance(bucket, s3.Bucket))
+        self.assertEqual(bucket.properties, bucket_defs[bucket.title])
+        self.assertEqual(bucket.title, "MyBucket")
+
+    def test_resolve_variable_troposphere_type_resource_optional(self):
+        bucket = self._resolve_troposphere_var(s3.Bucket, None, optional=True)
+        self.assertEqual(bucket, None)
+
+    def test_resolve_variable_troposphere_type_value_blank_required(self):
+        with self.assertRaises(ValidatorError):
+            self._resolve_troposphere_var(s3.Bucket, None)
+
+    def test_resolve_variable_troposphere_type_resource_many(self):
+        bucket_defs = {
+            "FirstBucket": {"BucketName": "some-bucket"},
+            "SecondBucket": {"BucketName": "some-other-bucket"}
+        }
+        buckets = self._resolve_troposphere_var(s3.Bucket, bucket_defs,
+                                                many=True)
+
+        for bucket in buckets:
             self.assertTrue(isinstance(bucket, s3.Bucket))
             self.assertEqual(bucket.properties, bucket_defs[bucket.title])
 
-    def test_resolve_variable_troposphere_type(self):
-        var_name = "testVar"
-        var_def = {"type": TroposphereType(s3.Bucket)}
-        provided_variable = Variable(var_name, {"MyBucket": {"BucketName":
-                                                             "some-bucket"}})
-        blueprint_name = "testBlueprint"
+    def test_resolve_variable_troposphere_type_resource_many_empty(self):
+        buckets = self._resolve_troposphere_var(s3.Bucket, {}, many=True)
+        self.assertEqual(buckets, [])
 
-        value = resolve_variable(var_name, var_def, provided_variable,
-                                 blueprint_name)
-        self.assertTrue(isinstance(value, s3.Bucket))
-        self.assertEqual(value.properties["BucketName"], "some-bucket")
-        self.assertEqual(value.title, "MyBucket")
+    def test_resolve_variable_troposphere_type_resource_fail(self):
+        # Do this to silence the error reporting here:
+        # https://github.com/cloudtools/troposphere/commit/dc8abd5c
+        with open("/dev/null", "w") as devnull:
+            _stderr = sys.stderr
+            sys.stderr = devnull
+            with self.assertRaises(ValidatorError):
+                self._resolve_troposphere_var(s3.Bucket,
+                                              {"MyBucket": {"BucketName": 1}})
+            sys.stderr = _stderr
+
+    def test_resolve_variable_troposphere_type_props_single(self):
+        sub_defs = {"Endpoint": "test", "Protocol": "lambda"}
+        # Note that sns.Subscription != sns.SubscriptionResource. The former
+        # is a property type, the latter is a complete resource.
+        sub = self._resolve_troposphere_var(sns.Subscription, sub_defs)
+
+        self.assertTrue(isinstance(sub, sns.Subscription))
+        self.assertEqual(sub.properties, sub_defs)
+
+    def test_resolve_variable_troposphere_type_props_optional(self):
+        sub = self._resolve_troposphere_var(sns.Subscription, None,
+                                            optional=True)
+        self.assertEqual(sub, None)
+
+    def test_resolve_variable_troposphere_type_props_many(self):
+        sub_defs = [
+            {"Endpoint": "test1", "Protocol": "lambda"},
+            {"Endpoint": "test2", "Protocol": "lambda"}
+        ]
+        subs = self._resolve_troposphere_var(sns.Subscription, sub_defs,
+                                             many=True)
+
+        for i, sub in enumerate(subs):
+            self.assertTrue(isinstance(sub, sns.Subscription))
+            self.assertEqual(sub.properties, sub_defs[i])
+
+    def test_resolve_variable_troposphere_type_props_many_empty(self):
+        subs = self._resolve_troposphere_var(sns.Subscription, [], many=True)
+        self.assertEqual(subs, [])
+
+    def test_resolve_variable_troposphere_type_props_fail(self):
+        with self.assertRaises(ValidatorError):
+            self._resolve_troposphere_var(sns.Subscription, {})
 
     def test_resolve_variable_provided_resolved(self):
         var_name = "testVar"
@@ -542,12 +608,9 @@ class TestVariables(unittest.TestCase):
         provided_variable = Variable(var_name, var_value)
         blueprint_name = "testBlueprint"
 
-        with self.assertRaises(ValidatorError) as cm:
+        with self.assertRaises(ValueError):
             resolve_variable(var_name, var_def, provided_variable,
                              blueprint_name)
-
-        exc = cm.exception.exception  # The wrapped exception
-        self.assertIsInstance(exc, UnboundLocalError)
 
 
 class TestCFNParameter(unittest.TestCase):

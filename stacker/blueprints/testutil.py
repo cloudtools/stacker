@@ -15,7 +15,7 @@ def diff(a, b):
 
 
 class BlueprintTestCase(unittest.TestCase):
-    OUTPUT_PATH = "tests/fixtures/blueprints/"
+    OUTPUT_PATH = "tests/fixtures/blueprints"
 
     def assertEqualsDiff(self, a, b):  # noqa: N802
         self.assertEquals(a, b, diff(a, b))

@@ -224,8 +224,9 @@ class Action(BaseAction):
                 return NotUpdatedStatus()
             try:
                 new_status = SubmittedStatus("updating existing stack")
-                self.provider.update_stack(stack.fqn, template_url, parameters,
-                                           tags)
+                existing_params = provider_stack.get('Parameters', [])
+                self.provider.update_stack(stack.fqn, template_url,
+                                           existing_params, parameters, tags)
                 logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()

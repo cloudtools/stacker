@@ -1,13 +1,61 @@
+import difflib
+import json
 import logging
+from operator import attrgetter
 
+from . import build
 from .. import exceptions
 from ..plan import COMPLETE, Plan
 from ..status import NotSubmittedStatus, NotUpdatedStatus
-from . import build
-import difflib
-import json
 
 logger = logging.getLogger(__name__)
+
+
+class DictValue(object):
+    ADDED = "ADDED"
+    REMOVED = "REMOVED"
+    MODIFIED = "MODIFIED"
+    UNMODIFIED = "UNMODIFIED"
+
+    formatter = "%s%s = %s"
+
+    def __init__(self, key, old_value, new_value):
+        self.key = key
+        self.old_value = old_value
+        self.new_value = new_value
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+    def changes(self):
+        """Returns a list of changes to represent the diff between
+        old and new value.
+
+        Returns:
+            list: [string] representation of the change (if any)
+                between old and new value
+        """
+        output = []
+        if self.status() is self.UNMODIFIED:
+            output = [self.formatter % (' ', self.key, self.old_value)]
+        elif self.status() is self.ADDED:
+            output.append(self.formatter % ('+', self.key, self.new_value))
+        elif self.status() is self.REMOVED:
+            output.append(self.formatter % ('-', self.key, self.old_value))
+        elif self.status() is self.MODIFIED:
+            output.append(self.formatter % ('-', self.key, self.old_value))
+            output.append(self.formatter % ('+', self.key, self.new_value))
+        return output
+
+    def status(self):
+        if self.old_value == self.new_value:
+            return self.UNMODIFIED
+        elif self.old_value is None:
+            return self.ADDED
+        elif self.new_value is None:
+            return self.REMOVED
+        else:
+            return self.MODIFIED
 
 
 def diff_dictionaries(old_dict, new_dict):
@@ -22,9 +70,7 @@ def diff_dictionaries(old_dict, new_dict):
 
     Returns: list()
         int: number of changed records
-        list: [str(<change type>), <key>, <value>]
-
-        Where <change type>: +, - or <space>
+        list: [DictValue]
     """
 
     old_set = set(old_dict)
@@ -38,44 +84,44 @@ def diff_dictionaries(old_dict, new_dict):
     output = []
     for key in added_set:
         changes += 1
-        output.append(["+", key, new_dict[key]])
+        output.append(DictValue(key, None, new_dict[key]))
 
     for key in removed_set:
         changes += 1
-        output.append(["-", key, old_dict[key]])
+        output.append(DictValue(key, old_dict[key], None))
 
     for key in common_set:
+        output.append(DictValue(key, old_dict[key], new_dict[key]))
         if str(old_dict[key]) != str(new_dict[key]):
             changes += 1
-            output.append(["-", key, old_dict[key]])
-            output.append(["+", key, new_dict[key]])
-        else:
-            output.append([" ", key, new_dict[key]])
 
+    output.sort(key=attrgetter("key"))
     return [changes, output]
 
 
-def print_diff_parameters(parameter_diff):
-    """Handles the printing of differences in parameters.
+def format_params_diff(parameter_diff):
+    """Handles the formatting of differences in parameters.
 
     Args:
-        parameter_diff (list): A list dictionaries detailing the differences
-            between two parameters returned by
+        parameter_diff (list): A list of DictValues detailing the
+            differences between two dicts returned by
             :func:`stacker.actions.diff.diff_dictionaries`
+    Returns:
+        string: A formatted string that represents a parameter diff
     """
 
-    print """--- Old Parameters
+    params_output = '\n'.join([line for v in parameter_diff
+                               for line in v.changes()])
+    return """--- Old Parameters
 +++ New Parameters
-******************"""
-
-    for line in parameter_diff:
-        print "%s%s = %s" % (line[0], line[1], line[2])
+******************
+%s\n""" % params_output
 
 
 def diff_parameters(old_params, new_params):
-    """Compares the old vs. new parameters and prints a "diff"
+    """Compares the old vs. new parameters and returns a "diff"
 
-    If there are no changes, we print nothing.
+    If there are no changes, we return an empty list.
 
     Args:
         old_params(dict): old paramters
@@ -104,7 +150,7 @@ def print_stack_changes(stack_name, new_stack, old_stack, new_params,
         print "*** No changes to template ***"
     else:
         param_diffs = diff_parameters(old_params, new_params)
-        print_diff_parameters(param_diffs)
+        print format_params_diff(param_diffs)
         print "".join(template_changes)
 
 

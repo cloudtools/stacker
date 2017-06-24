@@ -51,13 +51,15 @@ class TestBaseActionFunctions(unittest.TestCase):
             self.assertEqual(get_s3_endpoint(client), endpoint_map[region])
 
     def test_s3_create_bucket_location_constraint(self):
-        client = boto3.client("s3", region_name="us-east-1")
-        self.assertEqual(s3_create_bucket_location_constraint(client), "")
-        client = boto3.client("s3", region_name="us-west-1")
-        self.assertEqual(
-            s3_create_bucket_location_constraint(client),
-            "us-west-1"
+        tests = (
+            ("us-east-1", ""),
+            ("us-west-1", "us-west-1")
         )
+        for region, result in tests:
+            self.assertEqual(
+                s3_create_bucket_location_constraint(region),
+                result
+            )
 
 
 class TestBaseAction(unittest.TestCase):

@@ -65,7 +65,7 @@ def get_s3_endpoint(client):
     return client._endpoint.host
 
 
-def s3_create_bucket_location_constraint(client):
+def s3_create_bucket_location_constraint(region):
     """Returns the appropriate LocationConstraint info for a new S3 bucket.
 
     When creating a bucket in a region OTHER than us-east-1, you need to
@@ -73,14 +73,11 @@ def s3_create_bucket_location_constraint(client):
     This function helps you determine the right value given a given client.
 
     Args:
-        client (:class:`boto3.client.Client`): The client being used to create
-            the bucket.
+        region (str): The region where the bucket will be created in.
 
     Returns:
         string: The string to use with the given client for creating a bucket.
     """
-    region = get_client_region(client)
-
     if region == "us-east-1":
         return ""
     return region
@@ -117,6 +114,13 @@ class BaseAction(object):
 
         return self._s3_conn
 
+    @property
+    def bucket_region(self):
+        return self.context.config.get(
+            "stacker_bucket_region",
+            get_client_region(self.s3_conn)
+        )
+
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
         try:
@@ -126,7 +130,7 @@ class BaseAction(object):
                 logger.debug("Creating bucket %s.", self.bucket_name)
                 create_args = {"Bucket": self.bucket_name}
                 location_constraint = s3_create_bucket_location_constraint(
-                    self.s3_conn
+                    self.bucket_region
                 )
                 if location_constraint:
                     create_args["CreateBucketConfiguration"] = {

@@ -4,6 +4,12 @@ import logging
 import botocore.exceptions
 from stacker.session_cache import get_session
 
+from stacker.util import (
+    get_client_region,
+    ensure_s3_bucket,
+    get_s3_endpoint,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,52 +41,6 @@ def stack_template_url(bucket_name, blueprint, endpoint):
     """
     key_name = stack_template_key_name(blueprint)
     return "%s/%s/%s" % (endpoint, bucket_name, key_name)
-
-
-def get_client_region(client):
-    """Gets the region from a :class:`boto3.client.Client` object.
-
-    Args:
-        client (:class:`boto3.client.Client`): The client to get the region
-            from.
-
-    Returns:
-        string: AWS region string.
-    """
-
-    return client._client_config.region_name
-
-
-def get_s3_endpoint(client):
-    """Gets the s3 endpoint for the given :class:`boto3.client.Client` object.
-
-    Args:
-        client (:class:`boto3.client.Client`): The client to get the endpoint
-            from.
-
-    Returns:
-        string: The AWS endpoint for the client.
-    """
-
-    return client._endpoint.host
-
-
-def s3_create_bucket_location_constraint(region):
-    """Returns the appropriate LocationConstraint info for a new S3 bucket.
-
-    When creating a bucket in a region OTHER than us-east-1, you need to
-    specify a LocationConstraint inside the CreateBucketConfiguration argument.
-    This function helps you determine the right value given a given client.
-
-    Args:
-        region (str): The region where the bucket will be created in.
-
-    Returns:
-        string: The string to use with the given client for creating a bucket.
-    """
-    if region == "us-east-1":
-        return ""
-    return region
 
 
 class BaseAction(object):
@@ -123,29 +83,7 @@ class BaseAction(object):
 
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
-        try:
-            self.s3_conn.head_bucket(Bucket=self.bucket_name)
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Message'] == "Not Found":
-                logger.debug("Creating bucket %s.", self.bucket_name)
-                create_args = {"Bucket": self.bucket_name}
-                location_constraint = s3_create_bucket_location_constraint(
-                    self.bucket_region
-                )
-                if location_constraint:
-                    create_args["CreateBucketConfiguration"] = {
-                        "LocationConstraint": location_constraint
-                    }
-                self.s3_conn.create_bucket(**create_args)
-            elif e.response['Error']['Message'] == "Forbidden":
-                logger.exception("Access denied for bucket %s.  Did " +
-                                 "you remember to use a globally unique name?",
-                                 self.bucket_name)
-                raise
-            else:
-                logger.exception("Error creating bucket %s. Error %s",
-                                 self.bucket_name, e.response)
-                raise
+        ensure_s3_bucket(self.s3_conn, self.bucket_name, self.bucket_region)
 
     def stack_template_url(self, blueprint):
         return stack_template_url(

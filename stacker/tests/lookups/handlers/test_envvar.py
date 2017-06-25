@@ -16,7 +16,5 @@ class TestEnvVarHandler(unittest.TestCase):
         self.assertEqual(value, self.testval)
 
     def test_invalid_envvar(self):
-        try:
+        with self.assertRaises(ValueError):
             handler(self.invalidtestkey)
-        except ValueError:
-            assert True

@@ -15,7 +15,7 @@ def handler(value, **kwargs):
 
         You can optionally store the value in a file, ie:
 
-        envvar_value.txt
+        $ cat envvar_value.txt
         ENV_VAR_NAME
 
         and reference it within stacker (NOTE: the path should be relative to
@@ -25,11 +25,10 @@ def handler(value, **kwargs):
 
         # Both of the above would resolve to
         conf_key: ENV_VALUE
-
     """
     value = read_value_from_path(value)
 
-    if value in os.environ:
+    try:
         return os.environ[value]
-    else:
+    except:
         raise ValueError('EnvVar "{}" does not exist'.format(value))

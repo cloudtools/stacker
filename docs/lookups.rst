@@ -144,7 +144,7 @@ For example::
 .. _rxref:
 
 RXRef Lookup
------------
+------------
 
 The ``rxref`` lookup type is very similar to the ``output`` and ``xref`` lookup
 type, the difference being that ``rxref`` resolves output values from stacks
@@ -238,7 +238,7 @@ Base64 or a GenericHelperFn troposphere object.
 .. _ssmstore:
 
 SSM Parameter Store Lookup
-----------
+--------------------------
 
 The ``ssmstore`` lookup type retrieves a value from the Simple Systems
 Manager Parameter Store.
@@ -256,7 +256,7 @@ For example::
   # In stacker we would reference the value like:
   DBUser: ${ssmstore us-east-1@MyDBUser}
 
-  # The above would resolve to
+  # Which would resolve to:
   DBUser: root
 
 Encrypted values ("SecureStrings") can also be used, which will be
@@ -267,6 +267,31 @@ values)
 
 The region can be omitted (e.g. ``DBUser: ${ssmstore MyDBUser}``), in which
 case ``us-east-1`` will be assumed.
+
+.. _envvar:
+
+Shell Environment Lookup
+------------------------
+
+The ``envvar`` lookup type retries a value from a variable in the shell's
+environment.
+
+Example::
+
+  # Set an environment variable in the current shell.
+  $ export DATABASE_USER=root
+
+  # In the stacker config we could reference the value:
+  DBUser: ${envvar DATABASE_UER}
+
+  # Which would resolve to:
+  DBUser: root
+
+You can also get the variable name from a file, by using the ``file://`` prefix
+in the lookup, like so::
+
+  DBUser: ${envvar file://dbuser_file.txt}
+
 
 Custom Lookups
 --------------

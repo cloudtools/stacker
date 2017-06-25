@@ -275,7 +275,6 @@ def cf_safe_name(name):
     return "".join([uppercase_first_letter(part) for part in parts])
 
 
-# TODO: perhaps make this a part of the builder?
 def handle_hooks(stage, hooks, provider, context):
     """ Used to handle pre/post_build hooks.
 

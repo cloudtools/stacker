@@ -118,3 +118,28 @@ class TestAMILookup(unittest.TestCase):
         with self.stubber:
             with self.assertRaises(ImageNotFound):
                 handler("owners:self name_regex:Fake\sImage\s\d")
+
+    @mock.patch("stacker.lookups.handlers.ami.get_session",
+                return_value=SessionStub(client))
+    def test_basic_lookup_no_matching_images_from_name(self, mock_client):
+        image_id = "ami-fffccc111"
+        self.stubber.add_response(
+            "describe_images",
+            {
+                "Images": [
+                    {
+                        "OwnerId": "897883143566",
+                        "Architecture": "x86_64",
+                        "CreationDate": "2011-02-13T01:17:44.000Z",
+                        "State": "available",
+                        "ImageId": image_id,
+                        "Name": "Fake Image 1",
+                        "VirtualizationType": "hvm",
+                    }
+                ]
+            }
+        )
+
+        with self.stubber:
+            with self.assertRaises(ImageNotFound):
+                handler("owners:self name_regex:MyImage\s\d")

@@ -24,6 +24,7 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
 	@echo "  html       to make standalone HTML files"
+	@echo "  serve      to run a webserver in the html dir (0.0.0.0:8000)"
 	@echo "  dirhtml    to make HTML files named index.html in directories"
 	@echo "  singlehtml to make a single large HTML file"
 	@echo "  pickle     to make pickle files"
@@ -55,6 +56,10 @@ html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+
+
+serve:
+	cd $(BUILDDIR)/html/ && python -m SimpleHTTPServer
 
 dirhtml:
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml

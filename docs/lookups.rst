@@ -54,14 +54,19 @@ dictionary::
     },
   }
 
+
 stacker includes the following lookup types:
 
-  - output_
-  - kms_
-  - xref_
-  - rxref
+  - `output lookup`_
+  - `kms lookup`_
+  - `xref lookup`_
+  - `rxref lookup`_
+  - `file lookup`_
+  - `ssmstore lookup`_
+  - `envvar lookup`_
+  - `custom lookup`_
 
-.. _output:
+.. _`output lookup`:
 
 Output Lookup
 -------------
@@ -78,7 +83,7 @@ You can specify an output lookup with the following syntax::
 
   ConfVariable: ${output someStack::SomeOutput}
 
-.. _kms:
+.. _`kms lookup`:
 
 KMS Lookup
 ----------
@@ -117,7 +122,7 @@ value is large) using the ``file://`` prefix, ie::
   Lookups resolve the path specified with `file://` relative to
   the location of the config file, not where the stacker command is run.
 
-.. _xref:
+.. _`xref lookup`:
 
 XRef Lookup
 -----------
@@ -139,9 +144,7 @@ For example::
 
   ConfVariable: ${xref fully-qualified-stack::SomeOutput}
 
-.. file:
-
-.. _rxref:
+.. _`rxref lookup`:
 
 RXRef Lookup
 ------------
@@ -163,7 +166,7 @@ For example::
 
   ConfVariable: ${rxref fully-qualified-stack::SomeOutput}
 
-.. file:
+.. _`file lookup`:
 
 File Lookup
 -----------
@@ -235,7 +238,7 @@ and then assign UserData in a LaunchConfiguration or Instance to self.get_variab
 Note that we use AWSHelperFn as the type because the parameterized-b64 codec returns either a
 Base64 or a GenericHelperFn troposphere object.
 
-.. _ssmstore:
+.. _`ssmstore lookup`:
 
 SSM Parameter Store Lookup
 --------------------------
@@ -268,7 +271,7 @@ values)
 The region can be omitted (e.g. ``DBUser: ${ssmstore MyDBUser}``), in which
 case ``us-east-1`` will be assumed.
 
-.. _envvar:
+.. _`envvar lookup`:
 
 Shell Environment Lookup
 ------------------------
@@ -292,9 +295,10 @@ in the lookup, like so::
 
   DBUser: ${envvar file://dbuser_file.txt}
 
+.. _`custom lookup`:
 
-Custom Lookups
+Custom Lookup
 --------------
 
-Custom lookups can be registered within the config. For more information
-see `Configuring Lookups <config.html#lookups>`_.
+A custom lookup may be registered within the config.
+For more information see `Configuring Lookups <config.html#lookups>`_.

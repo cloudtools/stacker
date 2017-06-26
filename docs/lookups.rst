@@ -144,7 +144,7 @@ For example::
 .. _rxref:
 
 RXRef Lookup
------------
+------------
 
 The ``rxref`` lookup type is very similar to the ``output`` and ``xref`` lookup
 type, the difference being that ``rxref`` resolves output values from stacks
@@ -234,6 +234,64 @@ as such::
 and then assign UserData in a LaunchConfiguration or Instance to self.get_variables()["UserData"].
 Note that we use AWSHelperFn as the type because the parameterized-b64 codec returns either a
 Base64 or a GenericHelperFn troposphere object.
+
+.. _ssmstore:
+
+SSM Parameter Store Lookup
+--------------------------
+
+The ``ssmstore`` lookup type retrieves a value from the Simple Systems
+Manager Parameter Store.
+
+As an example, if you have a database and it has a parameter called
+``DBUser`` that you don't want to store in clear text in your config,
+you could instead store it as a SSM parameter named ``MyDBUser``.
+
+For example::
+
+  # We use the aws cli to store the d
+  $ aws ssm put-parameter --name "MyDBUser" --type "String" \
+      --value "root"
+
+  # In stacker we would reference the value like:
+  DBUser: ${ssmstore us-east-1@MyDBUser}
+
+  # Which would resolve to:
+  DBUser: root
+
+Encrypted values ("SecureStrings") can also be used, which will be
+automatically decrypted (assuming the Stacker user has access to the
+associated KMS key). Care should be taken when using this with encrypted
+values (i.e. a safe policy is to only use it with ``no_echo`` CFNString
+values)
+
+The region can be omitted (e.g. ``DBUser: ${ssmstore MyDBUser}``), in which
+case ``us-east-1`` will be assumed.
+
+.. _envvar:
+
+Shell Environment Lookup
+------------------------
+
+The ``envvar`` lookup type retries a value from a variable in the shell's
+environment.
+
+Example::
+
+  # Set an environment variable in the current shell.
+  $ export DATABASE_USER=root
+
+  # In the stacker config we could reference the value:
+  DBUser: ${envvar DATABASE_UER}
+
+  # Which would resolve to:
+  DBUser: root
+
+You can also get the variable name from a file, by using the ``file://`` prefix
+in the lookup, like so::
+
+  DBUser: ${envvar file://dbuser_file.txt}
+
 
 Custom Lookups
 --------------

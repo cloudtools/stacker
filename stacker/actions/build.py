@@ -136,6 +136,29 @@ def _handle_missing_parameters(params, required_params, existing_stack=None):
     return params.items()
 
 
+def handle_hooks(stage, hooks, provider, context, dump, outline):
+    """Handle pre/post hooks.
+
+    Args:
+        stage (str): The name of the hook stage - pre_build/post_build.
+        hooks (list): A list of dictionaries containing the hooks to execute.
+        provider (:class:`stacker.provider.base.BaseProvider`): The provider
+            the current stack is using.
+        context (:class:`stacker.context.Context`): The current stacker
+            context.
+        dump (bool): Whether running with dump set or not.
+        outline (bool): Whether running with outline set or not.
+
+    """
+    if not outline and not dump and hooks:
+        util.handle_hooks(
+            stage=stage,
+            hooks=hooks,
+            provider=provider,
+            context=context
+        )
+
+
 class Action(BaseAction):
     """Responsible for building & coordinating CloudFormation stacks.
 
@@ -257,18 +280,15 @@ class Action(BaseAction):
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
-        pre_build = self.context.config.get("pre_build")
-        should_run_hooks = (
-            not outline and
-            not dump and
-            pre_build
+        hooks = self.context.config.get("pre_build")
+        handle_hooks(
+            "post_build",
+            hooks,
+            self.provider,
+            self.context,
+            dump,
+            outline
         )
-        if should_run_hooks:
-            util.handle_hooks(
-                stage="pre_build",
-                hooks=pre_build,
-                provider=self.provider,
-                context=self.context)
 
     def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
@@ -285,14 +305,17 @@ class Action(BaseAction):
             if outline:
                 plan.outline()
             if dump:
-                plan.dump(directory=dump, context=self.context)
+                plan.dump(directory=dump, context=self.context,
+                          provider=self.provider)
 
     def post_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""
-        post_build = self.context.config.get("post_build")
-        if not outline and not dump and post_build:
-            util.handle_hooks(
-                stage="post_build",
-                hooks=post_build,
-                provider=self.provider,
-                context=self.context)
+        hooks = self.context.config.get("post_build")
+        handle_hooks(
+            "post_build",
+            hooks,
+            self.provider,
+            self.context,
+            dump,
+            outline
+        )

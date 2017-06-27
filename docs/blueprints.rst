@@ -308,7 +308,7 @@ Below is an annotated example:
 
 
 Utilizing Stack name within your Blueprint
-==================
+==========================================
 
 Sometimes your blueprint might want to utilize the already existing stack name
 within your blueprint. Stacker provides access to both the fully qualified
@@ -316,7 +316,7 @@ stack name matching what’s shown in the CloudFormation console, in addition to
 the stacks short name you have set in your YAML config.
 
 Referencing Fully Qualified Stack name
--------
+--------------------------------------
 
 The fully qualified name is a combination of the Stacker namespace + the short
 name (what you set as `name` in your YAML config file). If your stacker
@@ -329,7 +329,7 @@ To use this in your blueprint, you can get the name from context. The
 ``self.context.get_fqn(self.name)``
 
 Referencing the Stack short name
--------
+--------------------------------
 
 The Stack short name is the name you specified for the stack within your YAML
 config. It does not include the namespace. If your stacker namespace is

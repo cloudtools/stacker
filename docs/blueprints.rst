@@ -307,6 +307,84 @@ Below is an annotated example:
                                 variables["CloudFormationSpecificType"].ref))
 
 
+Utilizing Stack name within your Blueprint
+==========================================
+
+Sometimes your blueprint might want to utilize the already existing stack name
+within your blueprint. Stacker provides access to both the fully qualified
+stack name matching what’s shown in the CloudFormation console, in addition to
+the stacks short name you have set in your YAML config.
+
+Referencing Fully Qualified Stack name
+--------------------------------------
+
+The fully qualified name is a combination of the Stacker namespace + the short
+name (what you set as `name` in your YAML config file). If your stacker
+namespace is `StackerIsCool` and the stacks short name is
+`myAwesomeEC2Instance`, the fully qualified name would be:
+
+``StackerIsCool-myAwesomeEC2Instance``
+
+To use this in your blueprint, you can get the name from context. The
+``self.context.get_fqn(self.name)``
+
+Referencing the Stack short name
+--------------------------------
+
+The Stack short name is the name you specified for the stack within your YAML
+config. It does not include the namespace. If your stacker namespace is
+`StackerIsCool` and the stacks short name is `myAwesomeEC2Instance`, the
+short name would be:
+
+``myAwesomeEC2Instance``
+
+To use this in your blueprint, you can get the name from self.name: ``self.name``
+
+Example
+^^^^^^^
+
+Below is an annotated example creating a security group:
+
+.. code-block:: python
+
+  # we are importing Ref to allow for CFN References in the EC2 resource.  Tags
+  # will be used to set the Name tag
+  from troposphere import Ref, ec2, Tags
+  from stacker.blueprints.base import Blueprint
+  # CFNString is imported to allow for stand alone stack use
+  from stacker.blueprints.variables.types import CFNString
+
+  class SampleBlueprint(Blueprint):
+
+    # VpcId set here to allow for blueprint to be reused
+    VARIABLES = {
+    "VpcId": {
+        "type": CFNString,
+        "description": "The VPC to create the Security group in",
+        }
+    }
+
+
+    def create_template(self):
+        template = self.template
+        # Assigning the variables to a variable
+        variables = self.get_variables()
+        # now adding a SecurityGroup resource named `SecurityGroup` to the CFN template
+        template.add_resource(
+          ec2.SecurityGroup(
+            "SecurityGroup",
+            # Refering the VpcId set as the varible
+            VpcId=variables['VpcId'].ref,
+            # Setting the group description as the fully qualified name
+            GroupDescription=self.context.get_fqn(self.name),
+            # setting the Name tag to be the stack short name
+            Tags=Tags(
+              Name=self.name
+              )
+            )
+          )
+
+
 Testing Blueprints
 ==================
 

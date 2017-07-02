@@ -129,13 +129,17 @@ XRef Lookup
 
 The ``xref`` lookup type is very similar to the ``output`` lookup type, the
 difference being that ``xref`` resolves output values from stacks that
-aren't contained within the current namespace.
+aren't contained within the current stacker namespace, but are existing stacks
+containing outputs within the same region on the AWS account you are deploying
+into. ``xref`` allows you to lookup these outputs from the stacks already on
+your account by specifying the stacks fully qualified name in the
+CloudFormation console.
 
-The ``output`` type will take a stack name and use the current context to
-expand the fully qualified stack name based on the namespace. ``xref``
+Where the ``output`` type will take a stack name and use the current context
+to expand the fully qualified stack name based on the namespace, ``xref``
 skips this expansion because it assumes you've provided it with
 the fully qualified stack name already. This allows you to reference
-output values from any CloudFormation stack.
+output values from any CloudFormation stack in the same region.
 
 Also, unlike the ``output`` lookup type, ``xref`` doesn't impact stack
 requirements.
@@ -149,22 +153,39 @@ For example::
 RXRef Lookup
 ------------
 
-The ``rxref`` lookup type is very similar to the ``output`` and ``xref`` lookup
-type, the difference being that ``rxref`` resolves output values from stacks
-that are relative to the current namespace but external to the stack.
+The ``rxref`` lookup type is very similar to the ``xref`` lookup type,
+the difference being that ``rxref`` will lookup output values from stacks
+that are relative to the current namespace but external to the stack, but
+will not resolve them. ``rxref`` assumes the stack containing the output
+already exists.
 
-The ``output`` type will take a stack name prefixed by the namespace
-and use the current context to expand the fully qualified stack name
-based on the namespace. ``rxref`` skips this expansion because it assumes
-you've provided it with the fully qualified stack name already. This allows
-you to reference output values from any CloudFormation stack.
+Where the ``xref`` type assumes you provided a fully qualified stack name,
+``rxref``, like ``output`` expands and retrieves the output from the given
+stack name within the current namespace, even if not defined in the stacker
+config you provided it.
+
+Because there is no requirement to keep all stacks defined within the same
+stacker YAML config, you might need the ability to read outputs from other
+stacks deployed by stacker into your same account under the same namespace.
+``rxref`` gives you that ability. This is useful if you want to break up
+very large configs into smaller groupings.
 
 Also, unlike the ``output`` lookup type, ``rxref`` doesn't impact stack
 requirements.
 
 For example::
 
-  ConfVariable: ${rxref fully-qualified-stack::SomeOutput}
+  # in stacker.env
+  namespace: MyNamespace
+
+  # in stacker.yml
+  ConfVariable: ${rxref my-stack::SomeOutput}
+
+  # the above would effectively resolve to
+  ConfVariable: ${xref MyNamespace-my-stack::SomeOutput}
+
+Although possible, it is not recommended to use ``rxref`` for stacks defined
+within the same stacker YAML config.
 
 .. _`file lookup`:
 

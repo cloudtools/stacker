@@ -416,7 +416,7 @@ def s3_bucket_location_constraint(region):
     return region
 
 
-def ensure_s3_bucket(s3_client, bucket_name, bucket_region=None):
+def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
     """Ensure an s3 bucket exists, if it does not then create it.
 
     Args:
@@ -432,7 +432,6 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region=None):
         if e.response['Error']['Message'] == "Not Found":
             logger.debug("Creating bucket %s.", bucket_name)
             create_args = {"Bucket": bucket_name}
-            bucket_region = bucket_region or get_client_region(s3_client)
             location_constraint = s3_bucket_location_constraint(
                 bucket_region
             )

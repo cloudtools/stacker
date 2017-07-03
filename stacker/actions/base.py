@@ -5,7 +5,6 @@ import botocore.exceptions
 from stacker.session_cache import get_session
 
 from stacker.util import (
-    get_client_region,
     ensure_s3_bucket,
     get_s3_endpoint,
 )
@@ -69,7 +68,8 @@ class BaseAction(object):
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
-            session = get_session(self.provider.region)
+            # Always use the global client for s3
+            session = get_session("us-east-1")
             self._s3_conn = session.client('s3')
 
         return self._s3_conn
@@ -78,7 +78,7 @@ class BaseAction(object):
     def bucket_region(self):
         return self.context.config.get(
             "stacker_bucket_region",
-            get_client_region(self.s3_conn)
+            self.provider.region
         )
 
     def ensure_cfn_bucket(self):

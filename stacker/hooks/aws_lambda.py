@@ -463,7 +463,8 @@ def upload_lambda_functions(context, provider, **kwargs):
         provider.region
     )
 
-    session = get_session(bucket_region)
+    # Always use the global client for s3
+    session = get_session("us-east-1")
     s3_client = session.client('s3')
 
     ensure_s3_bucket(s3_client, bucket_name, bucket_region)

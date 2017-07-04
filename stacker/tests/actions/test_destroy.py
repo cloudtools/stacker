@@ -19,6 +19,7 @@ class MockStack(object):
     def __init__(self, name, tags=None, **kwargs):
         self.name = name
         self.fqn = name
+        self.profile = None
         self.requires = []
 
 

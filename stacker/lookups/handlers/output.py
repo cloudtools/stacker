@@ -43,7 +43,14 @@ def handler(value, provider=None, context=None, fqn=False, rfqn=False,
 
     stack_fqn = d.stack_name
     if not fqn:
-        stack_fqn = context.get_fqn(d.stack_name)
+        stacks = context.get_stacks_dict()
+        stack = stacks.get(d.stack_name)
+        if stack:
+            if stack.profile:
+                provider = provider.with_profile(stack.profile)
+            stack_fqn = stack.fqn
+        else:
+            stack_fqn = context.get_fqn(d.stack_name)
 
     output = provider.get_output(stack_fqn, d.output_name)
     return output

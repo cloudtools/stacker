@@ -10,7 +10,8 @@ class TestRxrefHandler(unittest.TestCase):
     def setUp(self):
         self.provider = MagicMock()
         self.context = Context(
-            environment={"namespace": "ns"}
+            environment={"namespace": "ns"},
+            config={"stacks": []}
         )
 
     def test_rxref_handler(self):

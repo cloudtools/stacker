@@ -64,7 +64,7 @@ class Stack(object):
     """
 
     def __init__(self, definition, context, variables=None, mappings=None,
-                 locked=False, force=False, enabled=True):
+                 locked=False, force=False, enabled=True, profile=None):
         self.name = definition["name"]
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
@@ -73,6 +73,7 @@ class Stack(object):
         self.locked = locked
         self.force = force
         self.enabled = enabled
+        self.profile = profile
         self.context = copy.deepcopy(context)
 
     def __repr__(self):

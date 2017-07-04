@@ -12,6 +12,7 @@ class TestOutputHandler(unittest.TestCase):
 
     def test_output_handler(self):
         self.provider.get_output.return_value = "Test Output"
+        self.context.get_stacks_dict.return_value = {}
         self.context.get_fqn.return_value = "fully-qualified-stack-name"
         value = handler("stack-name::SomeOutput",
                         provider=self.provider, context=self.context)

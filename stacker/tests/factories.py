@@ -1,11 +1,20 @@
-from mock import MagicMock
+import boto3
 
 from stacker.context import Context
 from stacker.lookups import Lookup
 
 
+class MockProvider(object):
+    def __init__(self, region, **kwargs):
+        self.region = region
+
+    @property
+    def session(self):
+        return boto3.Session()
+
+
 def mock_provider(**kwargs):
-    return MagicMock(**kwargs)
+    return MockProvider(**kwargs)
 
 
 def mock_context(namespace=None, **kwargs):

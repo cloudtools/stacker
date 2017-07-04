@@ -16,11 +16,14 @@ install_requires = [
 ]
 
 tests_require = [
-    "nose~=1.0",
     "mock~=2.0.0",
     "moto~=0.4.30",
     "testfixtures~=4.10.0",
     "coverage~=4.3.4"
+]
+
+setup_requires = [
+    "nose",
 ]
 
 
@@ -44,5 +47,6 @@ if __name__ == "__main__":
         scripts=glob.glob(os.path.join(src_dir, "scripts", "*")),
         install_requires=install_requires,
         tests_require=tests_require,
+        setup_requires=setup_requires,
         test_suite="nose.collector",
     )

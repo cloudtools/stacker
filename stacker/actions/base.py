@@ -69,7 +69,7 @@ class BaseAction(object):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
             # Always use the global client for s3
-            session = get_session("us-east-1")
+            session = get_session(self.bucket_region)
             self._s3_conn = session.client('s3')
 
         return self._s3_conn

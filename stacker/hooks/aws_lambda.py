@@ -177,12 +177,13 @@ def _head_object(s3_conn, bucket, key):
             raise
 
 
-def _ensure_bucket(s3_conn, bucket):
+def _ensure_bucket(s3_conn, bucket, bucketregion):
     """Create an S3 bucket if it does not already exist.
 
     Args:
         s3_conn (botocore.client.S3): S3 connection to use for operations.
         bucket (str): name of the bucket to create.
+        bucketregion (str): AWS Region to create S3 bucket in.
 
     Returns:
         dict: S3 object information. See the AWS documentation for explanation
@@ -196,8 +197,9 @@ def _ensure_bucket(s3_conn, bucket):
         s3_conn.head_bucket(Bucket=bucket)
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == '404':
-            logger.info('Creating bucket %s.', bucket)
-            s3_conn.create_bucket(Bucket=bucket)
+            logger.info('Creating bucket %s in %s', bucket, bucketregion)
+            s3_conn.create_bucket(Bucket=bucket, CreateBucketConfiguration={
+                'LocationConstraint': bucketregion})
         elif e.response['Error']['Code'] in ('401', '403'):
             logger.exception('Access denied for bucket %s.', bucket)
             raise
@@ -360,6 +362,9 @@ def upload_lambda_functions(context, provider, **kwargs):
     Keyword Arguments:
         bucket (str, optional): Custom bucket to upload functions to.
             Omitting it will cause the default stacker bucket to be used.
+        bucketregion (str, optional): Region to create S3 bucket in.
+            Omitting it will cause the bucket to be created in region
+            Stacker is deploying into.
         prefix (str, optional): S3 key prefix to prepend to the uploaded
             zip name.
         functions (dict):
@@ -407,6 +412,7 @@ def upload_lambda_functions(context, provider, **kwargs):
                 data_key: lambda
                 args:
                   bucket: custom-bucket
+                  bucketregion: region-overide
                   prefix: cloudformation-custom-resources/
                   functions:
                     MyFunction:
@@ -445,12 +451,20 @@ def upload_lambda_functions(context, provider, **kwargs):
     else:
         logger.info('lambda: using custom bucket: %s', bucket)
 
+    bucketregion = kwargs.get('bucketregion')
+    if not bucketregion:
+        bucketregion = provider.region
+        logger.info('lambda: using bucket region from stacker '
+                    'session: %s', bucketregion)
+    else:
+        logger.info('lambda: using custom bucket region: %s', bucketregion)
+
     prefix = kwargs.get('prefix', '')
 
     session = get_session(provider.region)
     s3_conn = session.client('s3')
 
-    _ensure_bucket(s3_conn, bucket)
+    _ensure_bucket(s3_conn, bucket, bucketregion)
 
     results = {}
     for name, options in kwargs['functions'].items():

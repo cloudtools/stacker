@@ -4,6 +4,11 @@ import logging
 import botocore.exceptions
 from stacker.session_cache import get_session
 
+from stacker.util import (
+    ensure_s3_bucket,
+    get_s3_endpoint,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,55 +42,6 @@ def stack_template_url(bucket_name, blueprint, endpoint):
     return "%s/%s/%s" % (endpoint, bucket_name, key_name)
 
 
-def get_client_region(client):
-    """Gets the region from a :class:`boto3.client.Client` object.
-
-    Args:
-        client (:class:`boto3.client.Client`): The client to get the region
-            from.
-
-    Returns:
-        string: AWS region string.
-    """
-
-    return client._client_config.region_name
-
-
-def get_s3_endpoint(client):
-    """Gets the s3 endpoint for the given :class:`boto3.client.Client` object.
-
-    Args:
-        client (:class:`boto3.client.Client`): The client to get the endpoint
-            from.
-
-    Returns:
-        string: The AWS endpoint for the client.
-    """
-
-    return client._endpoint.host
-
-
-def s3_create_bucket_location_constraint(client):
-    """Returns the appropriate LocationConstraint info for a new S3 bucket.
-
-    When creating a bucket in a region OTHER than us-east-1, you need to
-    specify a LocationConstraint inside the CreateBucketConfiguration argument.
-    This function helps you determine the right value given a given client.
-
-    Args:
-        client (:class:`boto3.client.Client`): The client being used to create
-            the bucket.
-
-    Returns:
-        string: The string to use with the given client for creating a bucket.
-    """
-    region = get_client_region(client)
-
-    if region == "us-east-1":
-        return ""
-    return region
-
-
 class BaseAction(object):
 
     """Actions perform the actual work of each Command.
@@ -112,36 +68,22 @@ class BaseAction(object):
     def s3_conn(self):
         """The boto s3 connection object used for communication with S3."""
         if not hasattr(self, "_s3_conn"):
-            session = get_session(self.provider.region)
+            # Always use the global client for s3
+            session = get_session(self.bucket_region)
             self._s3_conn = session.client('s3')
 
         return self._s3_conn
 
+    @property
+    def bucket_region(self):
+        return self.context.config.get(
+            "stacker_bucket_region",
+            self.provider.region
+        )
+
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
-        try:
-            self.s3_conn.head_bucket(Bucket=self.bucket_name)
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Message'] == "Not Found":
-                logger.debug("Creating bucket %s.", self.bucket_name)
-                create_args = {"Bucket": self.bucket_name}
-                location_constraint = s3_create_bucket_location_constraint(
-                    self.s3_conn
-                )
-                if location_constraint:
-                    create_args["CreateBucketConfiguration"] = {
-                        "LocationConstraint": location_constraint
-                    }
-                self.s3_conn.create_bucket(**create_args)
-            elif e.response['Error']['Message'] == "Forbidden":
-                logger.exception("Access denied for bucket %s.  Did " +
-                                 "you remember to use a globally unique name?",
-                                 self.bucket_name)
-                raise
-            else:
-                logger.exception("Error creating bucket %s. Error %s",
-                                 self.bucket_name, e.response)
-                raise
+        ensure_s3_bucket(self.s3_conn, self.bucket_name, self.bucket_region)
 
     def stack_template_url(self, blueprint):
         return stack_template_url(

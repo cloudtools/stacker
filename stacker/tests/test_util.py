@@ -4,9 +4,18 @@ import string
 import os
 import Queue
 
+import boto3
+
 from stacker.util import (
-    cf_safe_name, load_object_from_string,
-    camel_to_snake, handle_hooks, retry_with_backoff)
+    cf_safe_name,
+    load_object_from_string,
+    camel_to_snake,
+    handle_hooks,
+    retry_with_backoff,
+    get_client_region,
+    get_s3_endpoint,
+    s3_bucket_location_constraint,
+)
 
 from .factories import (
     mock_context,
@@ -47,6 +56,35 @@ class TestUtil(unittest.TestCase):
         )
         for t in tests:
             self.assertEqual(camel_to_snake(t[0]), t[1])
+
+    def test_get_client_region(self):
+        regions = ["us-east-1", "us-west-1", "eu-west-1", "sa-east-1"]
+        for region in regions:
+            client = boto3.client("s3", region_name=region)
+            self.assertEqual(get_client_region(client), region)
+
+    def test_get_s3_endpoint(self):
+        endpoint_map = {
+            "us-east-1": "https://s3.amazonaws.com",
+            "us-west-1": "https://s3-us-west-1.amazonaws.com",
+            "eu-west-1": "https://s3-eu-west-1.amazonaws.com",
+            "sa-east-1": "https://s3-sa-east-1.amazonaws.com",
+        }
+
+        for region in endpoint_map:
+            client = boto3.client("s3", region_name=region)
+            self.assertEqual(get_s3_endpoint(client), endpoint_map[region])
+
+    def test_s3_bucket_location_constraint(self):
+        tests = (
+            ("us-east-1", ""),
+            ("us-west-1", "us-west-1")
+        )
+        for region, result in tests:
+            self.assertEqual(
+                s3_bucket_location_constraint(region),
+                result
+            )
 
 
 hook_queue = Queue.Queue()

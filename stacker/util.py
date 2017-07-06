@@ -8,6 +8,8 @@ import re
 import sys
 import time
 
+import botocore.exceptions
+
 logger = logging.getLogger(__name__)
 
 
@@ -275,7 +277,6 @@ def cf_safe_name(name):
     return "".join([uppercase_first_letter(part) for part in parts])
 
 
-# TODO: perhaps make this a part of the builder?
 def handle_hooks(stage, hooks, provider, context):
     """ Used to handle pre/post_build hooks.
 
@@ -366,3 +367,84 @@ def read_value_from_path(value):
         with open(relative_path) as read_file:
             value = read_file.read()
     return value
+
+
+def get_client_region(client):
+    """Gets the region from a :class:`boto3.client.Client` object.
+
+    Args:
+        client (:class:`boto3.client.Client`): The client to get the region
+            from.
+
+    Returns:
+        string: AWS region string.
+    """
+
+    return client._client_config.region_name
+
+
+def get_s3_endpoint(client):
+    """Gets the s3 endpoint for the given :class:`boto3.client.Client` object.
+
+    Args:
+        client (:class:`boto3.client.Client`): The client to get the endpoint
+            from.
+
+    Returns:
+        string: The AWS endpoint for the client.
+    """
+
+    return client._endpoint.host
+
+
+def s3_bucket_location_constraint(region):
+    """Returns the appropriate LocationConstraint info for a new S3 bucket.
+
+    When creating a bucket in a region OTHER than us-east-1, you need to
+    specify a LocationConstraint inside the CreateBucketConfiguration argument.
+    This function helps you determine the right value given a given client.
+
+    Args:
+        region (str): The region where the bucket will be created in.
+
+    Returns:
+        string: The string to use with the given client for creating a bucket.
+    """
+    if region == "us-east-1":
+        return ""
+    return region
+
+
+def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
+    """Ensure an s3 bucket exists, if it does not then create it.
+
+    Args:
+        s3_client (:class:`botocore.client.Client`): An s3 client used to
+            verify and create the bucket.
+        bucket_name (str): The bucket being checked/created.
+        bucket_region (str, optional): The region to create the bucket in. If
+            not provided, will be determined by s3_client's region.
+    """
+    try:
+        s3_client.head_bucket(Bucket=bucket_name)
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Message'] == "Not Found":
+            logger.debug("Creating bucket %s.", bucket_name)
+            create_args = {"Bucket": bucket_name}
+            location_constraint = s3_bucket_location_constraint(
+                bucket_region
+            )
+            if location_constraint:
+                create_args["CreateBucketConfiguration"] = {
+                    "LocationConstraint": location_constraint
+                }
+            s3_client.create_bucket(**create_args)
+        elif e.response['Error']['Message'] == "Forbidden":
+            logger.exception("Access denied for bucket %s.  Did " +
+                             "you remember to use a globally unique name?",
+                             bucket_name)
+            raise
+        else:
+            logger.exception("Error creating bucket %s. Error %s",
+                             bucket_name, e.response)
+            raise

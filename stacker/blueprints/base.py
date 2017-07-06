@@ -134,9 +134,10 @@ def validate_variable_type(var_name, var_type, value):
             raise ValidatorError(var_name, name, value, exc)
     else:
         if not isinstance(value, var_type):
-            raise ValueError("Variable %s must be of type %s or is missing"
-                             " from your config with no blueprint default set."
-                             % (var_name, var_type))
+            raise ValueError(
+                "Value for variable %s must be of type %s. Actual "
+                "type: %s." % (var_name, var_type, type(value))
+            )
 
     return value
 
@@ -196,8 +197,8 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     if provided_variable:
         if not provided_variable.resolved:
             raise UnresolvedVariable(blueprint_name, provided_variable)
-        if provided_variable.value is not None:
-            value = provided_variable.value
+
+        value = provided_variable.value
     else:
         # Variable value not provided, try using the default, if it exists
         # in the definition

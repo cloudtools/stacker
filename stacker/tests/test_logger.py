@@ -38,6 +38,9 @@ class TestLogStreamLoopHandler(unittest.TestCase):
         self.assertEqual(logger, BASIC_LOGGER_TYPE)
         logger = setup_logging(verbosity=0, interactive=True)
         self.assertEqual(logger, BASIC_LOGGER_TYPE)
+        logger = setup_logging(verbosity=0, interactive=False, tail=True)
+        self.assertEqual(logger, BASIC_LOGGER_TYPE)
+
         patched_sys.stdout.isatty.return_value = False
         logger = setup_logging(verbosity=0, interactive=False)
         self.assertEqual(logger, BASIC_LOGGER_TYPE)

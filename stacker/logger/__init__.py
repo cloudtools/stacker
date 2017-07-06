@@ -15,11 +15,11 @@ BASIC_LOGGER_TYPE = 0
 LOOP_LOGGER_TYPE = 1
 
 
-def setup_logging(verbosity, interactive):
+def setup_logging(verbosity, interactive=False, tail=False):
     enable_loop_logger = (
         verbosity == 0 and
         sys.stdout.isatty() and
-        not interactive
+        not (interactive or tail)
     )
     log_level = logging.INFO
     log_format = INFO_FORMAT

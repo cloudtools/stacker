@@ -1,9 +1,41 @@
 import unittest
 
+from operator import attrgetter
 from stacker.actions.diff import (
     diff_dictionaries,
-    diff_parameters
+    diff_parameters,
+    DictValue
 )
+
+
+class TestDictValueFormat(unittest.TestCase):
+    def test_status(self):
+        added = DictValue("k0", None, "value_0")
+        self.assertEqual(added.status(), DictValue.ADDED)
+        removed = DictValue("k1", "value_1", None)
+        self.assertEqual(removed.status(), DictValue.REMOVED)
+        modified = DictValue("k2", "value_1", "value_2")
+        self.assertEqual(modified.status(), DictValue.MODIFIED)
+        unmodified = DictValue("k3", "value_1", "value_1")
+        self.assertEqual(unmodified.status(), DictValue.UNMODIFIED)
+
+    def test_format(self):
+        added = DictValue("k0", None, "value_0")
+        self.assertEqual(added.changes(),
+                         ['+%s = %s' % (added.key, added.new_value)])
+        removed = DictValue("k1", "value_1", None)
+        self.assertEqual(removed.changes(),
+                         ['-%s = %s' % (removed.key, removed.old_value)])
+        modified = DictValue("k2", "value_1", "value_2")
+        self.assertEqual(modified.changes(), [
+            '-%s = %s' % (modified.key, modified.old_value),
+            '+%s = %s' % (modified.key, modified.new_value)
+        ])
+        unmodified = DictValue("k3", "value_1", "value_1")
+        self.assertEqual(unmodified.changes(), [' %s = %s' % (
+            unmodified.key, unmodified.old_value)])
+        self.assertEqual(unmodified.changes(), [' %s = %s' % (
+            unmodified.key, unmodified.new_value)])
 
 
 class TestDiffDictionary(unittest.TestCase):
@@ -22,19 +54,17 @@ class TestDiffDictionary(unittest.TestCase):
         [count, changes] = diff_dictionaries(old_dict, new_dict)
         self.assertEqual(count, 3)
         expected_output = [
-            [" ", "a", "Apple"],
-            ["-", "b", "Banana"],
-            ["+", "b", "Bob"],
-            ["-", "c", "Corn"],
-            ["+", "d", "Doug"],
+            DictValue("a", "Apple", "Apple"),
+            DictValue("b", "Banana", "Bob"),
+            DictValue("c", "Corn", None),
+            DictValue("d", None, "Doug"),
         ]
-        changes.sort()
-        expected_output.sort()
+        expected_output.sort(key=attrgetter("key"))
 
         # compare all the outputs to the expected change
         for expected_change in expected_output:
             change = changes.pop(0)
-            self.assertListEqual(change, expected_change)
+            self.assertEqual(change, expected_change)
 
         # No extra output
         self.assertEqual(len(changes), 0)

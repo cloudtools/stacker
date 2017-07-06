@@ -40,6 +40,10 @@ updating your stacks. By default it uses a bucket named
 If you want to change this, provide the **stacker_bucket** top level key word
 in the config.
 
+The bucket will be created in the same region that the stacks will be launched
+in.  If you want to change this, you can set the **stacker_bucket_region** to
+the region where you want to create the bucket.
+
 Module Paths
 ----------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to

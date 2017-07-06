@@ -64,6 +64,7 @@ stacker includes the following lookup types:
   - `file lookup`_
   - `ssmstore lookup`_
   - `envvar lookup`_
+  - `ami lookup`_
   - `custom lookup`_
 
 .. _`output lookup`:
@@ -297,7 +298,7 @@ case ``us-east-1`` will be assumed.
 Shell Environment Lookup
 ------------------------
 
-The ``envvar`` lookup type retries a value from a variable in the shell's
+The ``envvar`` lookup type retrieves a value from a variable in the shell's
 environment.
 
 Example::
@@ -315,6 +316,35 @@ You can also get the variable name from a file, by using the ``file://`` prefix
 in the lookup, like so::
 
   DBUser: ${envvar file://dbuser_file.txt}
+
+.. _`ami lookup`:
+
+EC2 AMI Lookup
+--------------
+
+The ``ami`` lookup is meant to search for the most recent AMI created that
+matches the given filters.
+
+Valid arguments::
+
+  owners (comma delimited) REQUIRED ONCE:
+      aws_account_id | amazon | self
+
+  name_regex (a regex) REQUIRED ONCE:
+      e.g. my-ubuntu-server-[0-9]+
+
+  executable_users (comma delimited) OPTIONAL ONCE:
+      aws_account_id | amazon | self
+
+Any other arguments specified are sent as filters to the aws api
+For example, "architecture:x86_64" will add a filter.
+
+Example::
+
+  # Grabs the most recently created AMI that is owned by either this account,
+  # amazon, or the account id 888888888888 that has a name that matches
+  # the regex "server[0-9]+" and has "i386" as it's architecture.
+  ImageId: ${ami owners:self,888888888888,amazon name_regex:server[0-9]+ architecture:i386}
 
 .. _`custom lookup`:
 

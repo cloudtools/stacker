@@ -1,3 +1,33 @@
+## 1.0.3 (2017-07-06)
+
+There was some reworking on how regions are handled, specifically around
+s3 and where the buckets for both stacker and the awslambda lookup are created.
+Now the stacker bucket will default to being created in the region where the
+stacks are being created (ie: from the `--region` argument). If you want to
+have the bucket be in a different region you now can set the
+`stacker_bucket_region` top level config value.
+
+For the awslambda hook, you also have the option of using `bucket_region` as
+an argument, provided you are using a custom `bucket` for the hook. If you
+are not using a custom bucket, then it will use the logic used above.
+
+- add ami lookup [GH-360]
+- Add support for Property objects in TroposphereType variables [GH-379]
+- Add debugging statements to sys.path appending [GH-385]
+- Catch undefined variable value [GH-388]
+- Exponential backoff waiting for AWS changeset to stabilize [GH-389]
+- Add parameter changes to diff output [GH-394]
+- Add CODE\_OF\_CONDUCT.md [GH-399]
+- Add a hint for forbidden bucket access [GH-401]
+- Fix issues w/ "none" as variable values [GH-405]
+- Remove extra '/' in blueprint tests [GH-409]
+- Fix dump provider interaction with lookups [GH-410]
+- Add ssmstore lookup docs [GH-411]
+- Fix issue w/ s3 buckets in different regions [GH-413, GH-417]
+- Disable loop logger whe --tail is provided [GH-414]
+- Add envvar lookup [GH-418]
+
+
 ## 1.0.2 (2017-05-10)
 
 - fix lambda hook determinism [GH-372]

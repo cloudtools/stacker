@@ -28,7 +28,7 @@ requests, as well as given guidance in stacker's development:
 - `Adam McElwee`_
 - `Daniel Miranda`_
 - `Troy Ready`_
-- `GarrisonLotus`_
+- `Garison Draper`_
 - `Mariusz`_
 - `Tolga Tarhan`_
 
@@ -45,6 +45,6 @@ requests, as well as given guidance in stacker's development:
 .. _`Adam McElwee`: https://github.com/acmcelwee
 .. _`Daniel Miranda`: https://github.com/danielkza
 .. _`Troy Ready`: https://github.com/troyready
-.. _`GarrisonLotus`: https://github.com/GarisonLotus
+.. _`Garison Draper`: https://github.com/GarisonLotus
 .. _`Mariusz`: https://github.com/discobean
 .. _`Tolga Tarhan`: https://github.com/ttarhan

@@ -5,7 +5,8 @@ from stacker.lookups.handlers.ami import handler, ImageNotFound
 import boto3
 from stacker.tests.factories import SessionStub, mock_provider
 
-REGION="us-east-1"
+REGION = "us-east-1"
+
 
 class TestAMILookup(unittest.TestCase):
     client = boto3.client("ec2", region_name=REGION)

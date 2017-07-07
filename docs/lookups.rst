@@ -327,6 +327,9 @@ matches the given filters.
 
 Valid arguments::
 
+  region OPTIONAL ONCE:
+      e.g. us-east-1@
+
   owners (comma delimited) REQUIRED ONCE:
       aws_account_id | amazon | self
 
@@ -343,8 +346,10 @@ Example::
 
   # Grabs the most recently created AMI that is owned by either this account,
   # amazon, or the account id 888888888888 that has a name that matches
-  # the regex "server[0-9]+" and has "i386" as it's architecture.
-  ImageId: ${ami owners:self,888888888888,amazon name_regex:server[0-9]+ architecture:i386}
+  # the regex "server[0-9]+" and has "i386" as its architecture.
+
+  # Note: The region is optional, and defaults to the current stacker region
+  ImageId: ${ami [<region>@]owners:self,888888888888,amazon name_regex:server[0-9]+ architecture:i386}
 
 .. _`custom lookup`:
 

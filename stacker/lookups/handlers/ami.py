@@ -16,16 +16,18 @@ class ImageNotFound(Exception):
         super(ImageNotFound, self).__init__(message)
 
 
-def handler(value, **kwargs):
+def handler(value, provider, **kwargs):
     """Fetch the most recent AMI Id using a filter
 
     For example:
 
-        ${ami owners:self,account,amazon name_regex:serverX-[0-9]+ architecture:x64,i386}
+        ${ami [<region>@]owners:self,account,amazon name_regex:serverX-[0-9]+ architecture:x64,i386}
 
         The above fetches the most recent AMI where owner is self
         account or amazon and the ami name matches the regex described,
         the architecture will be either x64 or i386
+
+        You can also optionally specify the region in which to perform the AMI lookup.
 
         Valid arguments:
 
@@ -43,7 +45,12 @@ def handler(value, **kwargs):
     """  # noqa
     value = read_value_from_path(value)
 
-    ec2 = get_session().client('ec2')
+    if "@" in value:
+        region, value = value.split("@", 1)
+    else:
+        region = provider.region
+
+    ec2 = get_session(region).client('ec2')
 
     values = {}
     describe_args = {}

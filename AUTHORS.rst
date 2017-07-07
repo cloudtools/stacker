@@ -6,16 +6,16 @@ Stacker was designed and developed by the OpsEng team at `Remind, Inc.`_
 Current Maintainers
 -------------------
 
-  * `Michael Barrett`_
-  * `Eric Holmes`_
-  * `Ignacio Nin`_
-  * `Russell Ballestrini`_
+- `Michael Barrett`_
+- `Eric Holmes`_
+- `Ignacio Nin`_
+- `Russell Ballestrini`_
 
 Alumni
 ------
 
-  * `Michael Hahn`_
-  * `Tom Taubkin`_
+- `Michael Hahn`_
+- `Tom Taubkin`_
 
 Thanks
 ------
@@ -25,12 +25,12 @@ has formed around it. Thank you to everyone who has contributed, and special
 thanks to the following folks who have contributed great features and bug
 requests, as well as given guidance in stacker's development:
 
-  * `Adam McElwee`_
-  * `Daniel Miranda`_
-  * `Troy Ready`_
-  * `GarrisonLotus`_
-  * `Mariusz`_
-  * `Tolga Tarhan`_
+- `Adam McElwee`_
+- `Daniel Miranda`_
+- `Troy Ready`_
+- `GarrisonLotus`_
+- `Mariusz`_
+- `Tolga Tarhan`_
 
 .. _`Remind, Inc.`: https://www.remind.com/
 

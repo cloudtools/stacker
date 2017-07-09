@@ -18,7 +18,6 @@ def handler(value, **kwargs):
     `AWS_DEFAULT_REGION` if not specified.
 
 
-
     """
     value = read_value_from_path(value)
     table_info = None
@@ -41,10 +40,10 @@ def handler(value, **kwargs):
     table_lookup, table_keys = table_keys.split(":", 1)
     table_keys = table_keys.split(".")
 
-    clean_table_keys = []
+    clean_table_keys, new_keys = []
     regex_matcher = "\[([^\]]+)]"
 
-    new_keys = []
+    #we need to parse the key lookup passed in
     for key in table_keys:
         match = re.search(regex_matcher, key)
         if match:
@@ -62,6 +61,7 @@ def handler(value, **kwargs):
 
     projection_expression = _buildProjectionExpression(clean_table_keys)
 
+    #lookup the data from dynamodb
     dynamodb = get_session(region).client('dynamodb')
     try:
         response = dynamodb.get_item(
@@ -77,6 +77,7 @@ def handler(value, **kwargs):
         elif e.response['Error']['Code'] == 'ValidationException':
             raise ValueError('No dynamo record matched that partition key')
 
+    #find and return the key from the dynamo data returned
     if 'Item' in response:
         if len(response['Item']) > 0:
             return (_getValFromDict(response['Item'], new_keys[1:]))
@@ -88,6 +89,8 @@ def handler(value, **kwargs):
 
 
 def _buildProjectionExpression(clean_table_keys):
+    """this builds the lookup for dynamodb
+    """
     projection_expression = ""
     for key in clean_table_keys[:-1]:
         projection_expression += ("{},").format(key)
@@ -96,6 +99,8 @@ def _buildProjectionExpression(clean_table_keys):
 
 
 def _getValFromDict(data, keylist):
+    """This finds the key inside the data returned by dynamodb
+    """
     nextType = None
     for k in keylist:
         for k1 in k:
@@ -106,11 +111,17 @@ def _getValFromDict(data, keylist):
                 data = temp_dict[k[k1]]
             nextType = k1
     if nextType == "L":
-        ret_list = []
-        for v in data[nextType]:
-            for v1 in v:
-                ret_list.append(v[v1])
-        return ret_list
+        return _convertDDBListToList(data[nextType]
     if nextType == "N":
         return int(data[nextType])
     return str(data[nextType])
+
+def _convertDDBListToList(convlist):
+    """This removes the variable types from the list before passing it to the
+        lookup
+    """
+    ret_list = []
+    for v in convlist:
+        for v1 in v:
+            ret_list.append(v[v1])
+    return ret_list

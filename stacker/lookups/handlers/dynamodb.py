@@ -40,10 +40,11 @@ def handler(value, **kwargs):
     table_lookup, table_keys = table_keys.split(":", 1)
     table_keys = table_keys.split(".")
 
-    clean_table_keys, new_keys = []
+    clean_table_keys = []
+    new_keys = []
     regex_matcher = "\[([^\]]+)]"
 
-    #we need to parse the key lookup passed in
+    # we need to parse the key lookup passed in
     for key in table_keys:
         match = re.search(regex_matcher, key)
         if match:
@@ -61,7 +62,7 @@ def handler(value, **kwargs):
 
     projection_expression = _buildProjectionExpression(clean_table_keys)
 
-    #lookup the data from dynamodb
+    # lookup the data from dynamodb
     dynamodb = get_session(region).client('dynamodb')
     try:
         response = dynamodb.get_item(
@@ -77,7 +78,7 @@ def handler(value, **kwargs):
         elif e.response['Error']['Code'] == 'ValidationException':
             raise ValueError('No dynamo record matched that partition key')
 
-    #find and return the key from the dynamo data returned
+    # find and return the key from the dynamo data returned
     if 'Item' in response:
         if len(response['Item']) > 0:
             return (_getValFromDict(response['Item'], new_keys[1:]))
@@ -111,10 +112,11 @@ def _getValFromDict(data, keylist):
                 data = temp_dict[k[k1]]
             nextType = k1
     if nextType == "L":
-        return _convertDDBListToList(data[nextType]
+        return _convertDDBListToList(data[nextType])
     if nextType == "N":
         return int(data[nextType])
     return str(data[nextType])
+
 
 def _convertDDBListToList(convlist):
     """This removes the variable types from the list before passing it to the

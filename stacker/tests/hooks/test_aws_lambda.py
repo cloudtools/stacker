@@ -76,8 +76,8 @@ class TestLambdaHooks(unittest.TestCase):
                     self.fail('s3: bucket {} does not exist'.format(bucket))
 
     def setUp(self):
-        self.context = Context(environment={'namespace': 'test'})
-        self.context.bucket_name = 'test'
+        self.context = Context(
+            config={'namespace': 'test', 'stacker_bucket': 'test'})
         self.provider = mock_provider(region="us-east-1")
 
     def run_hook(self, **kwargs):

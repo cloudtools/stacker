@@ -13,6 +13,22 @@ duplicating config. (See `YAML anchors & references`_ for details)
 Top Level Keywords
 ==================
 
+Namespace
+---------
+
+You can provide a **namespace** to create all stacks within. The namespace will
+be used as a prefix for the name of any stack that stacker creates, and makes
+it unnecessary to specify the fully qualified name of the stack in output
+lookups.
+
+In addition, this value will be used to create an S3 bucket that stacker will
+use to upload and store all CloudFormation templates.
+
+In general, this is paired with the concept of `Environments
+<environments.html>`_ to create a namespace per environment::
+
+  namespace: ${namespace}
+
 Namespace Delimiter
 -------------------
 

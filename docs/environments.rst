@@ -2,13 +2,11 @@
 Environments
 ============
 
-Every config stacker builds belongs to an Environment. An environment is, at
-its most basic, a name-space in which all the stacks will be created (by
-prepending the namespace to each stack name when creating the stack in
-CloudFormation). Every environment is a file that is provided on the command
-line when interacting with stacker. The format of the file is a single
-key/value per line, separated by a colon (**:**). At the minimum the
-environment must provide a namespace, like this::
+When running stacker, you can optionally provide an "environment" file. The
+stacker config file will be interpolated as a `string.Template
+<https://docs.python.org/2/library/string.html#template-strings>`_ using the
+key/value pairs from the environment file. The format of the file is a single
+key/value per line, separated by a colon (**:**), like this::
 
   namespace: stage-mycompany
 

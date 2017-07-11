@@ -136,7 +136,7 @@ class BaseCommand(object):
             "-v", "--verbose", action="count", default=0,
             help="Increase output verbosity. May be specified up to twice.")
         parser.add_argument(
-            "environment", type=environment_file, default={},
+            "environment", type=environment_file, nargs='?', default={},
             help="Path to a simple `key: value` pair environment file. The "
                  "values in the environment file can be used in the stack "
                  "config as if it were a string.Template type: "

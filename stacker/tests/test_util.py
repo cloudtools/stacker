@@ -2,9 +2,9 @@ import unittest
 
 import string
 import os
-import shutil
-import sys
-import tempfile
+# import shutil
+# import sys
+# import tempfile
 import Queue
 
 import mock
@@ -128,26 +128,26 @@ class TestUtil(unittest.TestCase):
                 '857b4834980e582874d70feef77bb064b60762d1'
             )
 
-    def test_SourceProcessor_operation(self):
-        tmp_dir = tempfile.mkdtemp(prefix='stackerunittest')
-        try:
-            sp = SourceProcessor(stacker_cache_dir=tmp_dir)
-            sp.get_package_sources(
-                {'git': [{
-                    'uri': 'https://github.com/remind101/'
-                           'stacker_blueprints.git',
-                    'tag': '1.0.0',
-                    'paths': ['stacker_blueprints']}]}
-            )
-            self.assertEqual(
-                sys.path[-1],
-                os.path.join(
-                    sp.package_cache_dir,
-                    'https___github.com_remind101_stacker_blueprints-1.0.0',
-                    'stacker_blueprints')
-            )
-        finally:
-            shutil.rmtree(tmp_dir)
+    # def test_SourceProcessor_operation(self):
+    #     tmp_dir = tempfile.mkdtemp(prefix='stackerunittest')
+    #     try:
+    #         sp = SourceProcessor(stacker_cache_dir=tmp_dir)
+    #         sp.get_package_sources(
+    #             {'git': [{
+    #                 'uri': 'https://github.com/remind101/'
+    #                        'stacker_blueprints.git',
+    #                 'tag': '1.0.0',
+    #                 'paths': ['stacker_blueprints']}]}
+    #         )
+    #         self.assertEqual(
+    #             sys.path[-1],
+    #             os.path.join(
+    #                 sp.package_cache_dir,
+    #                 'https___github.com_remind101_stacker_blueprints-1.0.0',
+    #                 'stacker_blueprints')
+    #         )
+    #     finally:
+    #         shutil.rmtree(tmp_dir)
 
 
 hook_queue = Queue.Queue()

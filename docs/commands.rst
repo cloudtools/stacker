@@ -17,8 +17,9 @@ pushing them up into CloudFormation.
 
   # stacker build -h
   usage: stacker build [-h] [-e ENV=VALUE] [-r REGION] [-v] [-i]
-                       [--replacements-only] [-m MAX_ZONES] [-o]
-                       [--force STACKNAME] [--stacks STACKNAME] [-t] [-d DUMP]
+                       [--replacements-only] [-o] [--force STACKNAME]
+                       [--stacks STACKNAME] [-t] [-d DUMP]
+
                        environment config
 
   Launches or updates CloudFormation stacks based on the given config. Stacker
@@ -55,11 +56,6 @@ pushing them up into CloudFormation.
                           only" as well.
     --replacements-only   If interactive mode is enabled, stacker will only
                           prompt to authorize replacements.
-    -m MAX_ZONES, --max-zones MAX_ZONES
-                          Gives you the ability to limit the # of zones that
-                          resources will be launched in. If not given, then
-                          resources will be launched in all available
-                          availability zones.
     -o, --outline         Print an outline of what steps will be taken to build
                           the stacks
     --force STACKNAME     If a stackname is provided to --force, it will be
@@ -70,8 +66,7 @@ pushing them up into CloudFormation.
     -t, --tail            Tail the CloudFormation logs while workingwith stacks
     -d DUMP, --dump DUMP  Dump the rendered Cloudformation templates to a
                           directory
-
-
+                          
 Destroy
 -------
 
@@ -100,7 +95,7 @@ already been destroyed).
     config                The config file where stack configuration is located.
                           Must be in yaml format. If `-` is provided, then the
                           config will be read from stdin.
-
+                          
   optional arguments:
     -h, --help            show this help message and exit
     -e ENV=VALUE, --env ENV=VALUE

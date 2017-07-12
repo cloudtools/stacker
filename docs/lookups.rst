@@ -274,7 +274,7 @@ you could instead store it as a SSM parameter named ``MyDBUser``.
 
 For example::
 
-  # We use the aws cli to store the d
+  # We use the aws cli to store the database username
   $ aws ssm put-parameter --name "MyDBUser" --type "String" \
       --value "root"
 

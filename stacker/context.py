@@ -2,6 +2,7 @@ import collections
 import logging
 import sys
 
+from stacker.util import SourceProcessor
 from .config import parse_config
 from .exceptions import MissingEnvironment
 from .stack import Stack
@@ -89,6 +90,12 @@ class Context(object):
         lookups = self.config.get("lookups", {})
         for key, handler in lookups.iteritems():
             register_lookup_handler(key, handler)
+        sources = self.config.get("package_sources")
+        if sources is not None:
+            processor = SourceProcessor(
+                stacker_cache_dir=self.config.get("stacker_cache_dir")
+            )
+            processor.get_package_sources(sources=sources)
 
     def _get_stack_definitions(self):
         if not self.stack_names:

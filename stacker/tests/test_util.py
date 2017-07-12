@@ -4,6 +4,8 @@ import string
 import os
 import Queue
 
+import mock
+
 import boto3
 
 from stacker.util import (
@@ -15,6 +17,7 @@ from stacker.util import (
     get_client_region,
     get_s3_endpoint,
     s3_bucket_location_constraint,
+    SourceProcessor
 )
 
 from .factories import (
@@ -25,6 +28,11 @@ from .factories import (
 regions = ["us-east-1", "cn-north-1", "ap-northeast-1", "eu-west-1",
            "ap-southeast-1", "ap-southeast-2", "us-west-2", "us-gov-west-1",
            "us-west-1", "eu-central-1", "sa-east-1"]
+
+
+def mock_create_cache_directories(self, **kwargs):
+    # Don't actually need the directories created in testing
+    return 1
 
 
 class TestUtil(unittest.TestCase):
@@ -84,6 +92,64 @@ class TestUtil(unittest.TestCase):
             self.assertEqual(
                 s3_bucket_location_constraint(region),
                 result
+            )
+
+    def test_SourceProcessor_helpers(self):
+        with mock.patch.object(SourceProcessor,
+                               'create_cache_directories',
+                               new=mock_create_cache_directories):
+            sp = SourceProcessor()
+
+            self.assertEqual(
+                sp.sanitize_git_path('git@github.com:foo/bar.git'),
+                'git_github.com_foo_bar'
+            )
+            self.assertEqual(
+                sp.sanitize_git_path('git@github.com:foo/bar.git', 'v1'),
+                'git_github.com_foo_bar-v1'
+            )
+
+            self.assertEqual(
+                sp.determine_git_ls_remote_ref({'branch': 'foo'}),
+                'refs/heads/foo'
+            )
+            for i in [{'uri': 'git@foo'}, {'tag': 'foo'}, {'commit': '1234'}]:
+                self.assertEqual(
+                    sp.determine_git_ls_remote_ref(i),
+                    'HEAD'
+                )
+
+            self.assertEqual(
+                sp.git_ls_remote('https://github.com/remind101/stacker.git',
+                                 'refs/heads/release-1.0'),
+                '857b4834980e582874d70feef77bb064b60762d1'
+            )
+
+            bad_configs = [{'uri': 'x',
+                            'commit': '1234',
+                            'tag': 'v1',
+                            'branch': 'x'},
+                           {'uri': 'x', 'commit': '1234', 'tag': 'v1'},
+                           {'uri': 'x', 'commit': '1234', 'branch': 'x'},
+                           {'uri': 'x', 'tag': 'v1', 'branch': 'x'},
+                           {'uri': 'x', 'commit': '1234', 'branch': 'x'}]
+            for i in bad_configs:
+                with self.assertRaises(ImportError):
+                    sp.determine_git_ref(i)
+
+            self.assertEqual(
+                sp.determine_git_ref({'uri': 'https://github.com/remind101/'
+                                             'stacker.git',
+                                      'branch': 'release-1.0'}),
+                '857b4834980e582874d70feef77bb064b60762d1'
+            )
+            self.assertEqual(
+                sp.determine_git_ref({'uri': 'git@foo', 'commit': '1234'}),
+                '1234'
+            )
+            self.assertEqual(
+                sp.determine_git_ref({'uri': 'git@foo', 'tag': 'v1.0.0'}),
+                'v1.0.0'
             )
 
 

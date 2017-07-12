@@ -1,6 +1,5 @@
 import os
 from setuptools import setup, find_packages
-import glob
 
 VERSION = "1.0.4"
 
@@ -12,7 +11,8 @@ install_requires = [
     "PyYAML~=3.11",
     "awacs~=0.6.0",
     "colorama~=0.3.7",
-    "formic~=0.9b"
+    "formic~=0.9b",
+    "click~=6.7"
 ]
 
 tests_require = [
@@ -44,9 +44,12 @@ if __name__ == "__main__":
         description="Opinionated AWS CloudFormation Stack manager",
         long_description=read("README.rst"),
         packages=find_packages(),
-        scripts=glob.glob(os.path.join(src_dir, "scripts", "*")),
         install_requires=install_requires,
         tests_require=tests_require,
         setup_requires=setup_requires,
         test_suite="nose.collector",
+        entry_points='''
+            [console_scripts]
+            stacker=stacker.cli.stacker.base:cli
+        ''',
     )

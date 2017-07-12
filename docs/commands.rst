@@ -19,6 +19,7 @@ pushing them up into CloudFormation.
   usage: stacker build [-h] [-e ENV=VALUE] [-r REGION] [-v] [-i]
                        [--replacements-only] [-o] [--force STACKNAME]
                        [--stacks STACKNAME] [-t] [-d DUMP]
+
                        environment config
 
   Launches or updates CloudFormation stacks based on the given config. Stacker
@@ -65,7 +66,7 @@ pushing them up into CloudFormation.
     -t, --tail            Tail the CloudFormation logs while workingwith stacks
     -d DUMP, --dump DUMP  Dump the rendered Cloudformation templates to a
                           directory
-
+                          
 Destroy
 -------
 
@@ -78,8 +79,8 @@ already been destroyed).
 
   # stacker destroy -h
   usage: stacker destroy [-h] [-e ENV=VALUE] [-r REGION] [-v] [-i]
-			 [--replacements-only] [-f] [--stacks STACKNAME] [-t]
-			 environment config
+                         [--replacements-only] [-f] [--stacks STACKNAME] [-t]
+                         environment config
 
   Destroys CloudFormation stacks based on the given config. Stacker will
   determine the order in which stacks should be destroyed based on any manual
@@ -87,38 +88,38 @@ already been destroyed).
 
   positional arguments:
     environment           Path to a simple `key: value` pair environment file.
-			  The values in the environment file can be used in the
-			  stack config as if it were a string.Template type:
-			  https://docs.python.org/2/library/string.html
-			  #template-strings. Must define at least a "namespace".
+                          The values in the environment file can be used in the
+                          stack config as if it were a string.Template type:
+                          https://docs.python.org/2/library/string.html
+                          #template-strings. Must define at least a "namespace".
     config                The config file where stack configuration is located.
-			  Must be in yaml format. If `-` is provided, then the
-			  config will be read from stdin.
-
+                          Must be in yaml format. If `-` is provided, then the
+                          config will be read from stdin.
+                          
   optional arguments:
     -h, --help            show this help message and exit
     -e ENV=VALUE, --env ENV=VALUE
-			  Adds environment key/value pairs from the command
-			  line. Overrides your environment file settings. Can be
-			  specified more than once.
+                          Adds environment key/value pairs from the command
+                          line. Overrides your environment file settings. Can be
+                          specified more than once.
     -r REGION, --region REGION
-			  The AWS region to launch in.
+                          The AWS region to launch in.
     -v, --verbose         Increase output verbosity. May be specified up to
-			  twice.
+                          twice.
     -i, --interactive     Enable interactive mode. If specified, this will use
-			  the AWS interactive provider, which leverages
-			  Cloudformation Change Sets to display changes before
-			  running cloudformation templates. You'll be asked if
-			  you want to execute each change set. If you only want
-			  to authorize replacements, run with "--replacements-
-			  only" as well.
+                          the AWS interactive provider, which leverages
+                          Cloudformation Change Sets to display changes before
+                          running cloudformation templates. You'll be asked if
+                          you want to execute each change set. If you only want
+                          to authorize replacements, run with "--replacements-
+                          only" as well.
     --replacements-only   If interactive mode is enabled, stacker will only
-			  prompt to authorize replacements.
+                          prompt to authorize replacements.
     -f, --force           Whether or not you want to go through with destroying
-			  the stacks
+                          the stacks
     --stacks STACKNAME    Only work on the stacks given. Can be specified more
-			  than once. If not specified then stacker will work on
-			  all stacks in the config file.
+                          than once. If not specified then stacker will work on
+                          all stacks in the config file.
     -t, --tail            Tail the CloudFormation logs while workingwith stacks
 
 Info
@@ -132,43 +133,43 @@ config.
 
   # stacker info -h
   usage: stacker info [-h] [-e ENV=VALUE] [-r REGION] [-v] [-i]
-		      [--replacements-only] [--stacks STACKNAME]
-		      environment config
+                      [--replacements-only] [--stacks STACKNAME]
+                      environment config
 
   Gets information on the CloudFormation stacks based on the given config.
 
   positional arguments:
     environment           Path to a simple `key: value` pair environment file.
-			  The values in the environment file can be used in the
-			  stack config as if it were a string.Template type:
-			  https://docs.python.org/2/library/string.html
-			  #template-strings. Must define at least a "namespace".
+                          The values in the environment file can be used in the
+                          stack config as if it were a string.Template type:
+                          https://docs.python.org/2/library/string.html
+                          #template-strings. Must define at least a "namespace".
     config                The config file where stack configuration is located.
-			  Must be in yaml format. If `-` is provided, then the
-			  config will be read from stdin.
+                          Must be in yaml format. If `-` is provided, then the
+                          config will be read from stdin.
 
   optional arguments:
     -h, --help            show this help message and exit
     -e ENV=VALUE, --env ENV=VALUE
-			  Adds environment key/value pairs from the command
-			  line. Overrides your environment file settings. Can be
-			  specified more than once.
+                          Adds environment key/value pairs from the command
+                          line. Overrides your environment file settings. Can be
+                          specified more than once.
     -r REGION, --region REGION
-			  The AWS region to launch in.
+                          The AWS region to launch in.
     -v, --verbose         Increase output verbosity. May be specified up to
-			  twice.
+                          twice.
     -i, --interactive     Enable interactive mode. If specified, this will use
-			  the AWS interactive provider, which leverages
-			  Cloudformation Change Sets to display changes before
-			  running cloudformation templates. You'll be asked if
-			  you want to execute each change set. If you only want
-			  to authorize replacements, run with "--replacements-
-			  only" as well.
+                          the AWS interactive provider, which leverages
+                          Cloudformation Change Sets to display changes before
+                          running cloudformation templates. You'll be asked if
+                          you want to execute each change set. If you only want
+                          to authorize replacements, run with "--replacements-
+                          only" as well.
     --replacements-only   If interactive mode is enabled, stacker will only
-			  prompt to authorize replacements.
+                          prompt to authorize replacements.
     --stacks STACKNAME    Only work on the stacks given. Can be specified more
-			  than once. If not specified then stacker will work on
-			  all stacks in the config file.
+                          than once. If not specified then stacker will work on
+                          all stacks in the config file.
 
 Diff
 ----
@@ -182,9 +183,9 @@ possible, but it should give a good idea if anything has changed.
 
   # stacker diff -h
   usage: stacker diff [-h] [-e ENV=VALUE] [-r REGION] [-v] [-i]
-		      [--replacements-only] [--force STACKNAME]
-		      [--stacks STACKNAME]
-		      environment config
+                      [--replacements-only] [--force STACKNAME]
+                      [--stacks STACKNAME]
+                      environment config
 
   Diffs the config against the currently running CloudFormation stacks Sometimes
   small changes can have big impacts. Run "stacker diff" before "stacker build"
@@ -192,35 +193,35 @@ possible, but it should give a good idea if anything has changed.
 
   positional arguments:
     environment           Path to a simple `key: value` pair environment file.
-			  The values in the environment file can be used in the
-			  stack config as if it were a string.Template type:
-			  https://docs.python.org/2/library/string.html
-			  #template-strings. Must define at least a "namespace".
+                          The values in the environment file can be used in the
+                          stack config as if it were a string.Template type:
+                          https://docs.python.org/2/library/string.html
+                          #template-strings. Must define at least a "namespace".
     config                The config file where stack configuration is located.
-			  Must be in yaml format. If `-` is provided, then the
-			  config will be read from stdin.
+                          Must be in yaml format. If `-` is provided, then the
+                          config will be read from stdin.
 
   optional arguments:
     -h, --help            show this help message and exit
     -e ENV=VALUE, --env ENV=VALUE
-			  Adds environment key/value pairs from the command
-			  line. Overrides your environment file settings. Can be
-			  specified more than once.
+                          Adds environment key/value pairs from the command
+                          line. Overrides your environment file settings. Can be
+                          specified more than once.
     -r REGION, --region REGION
-			  The AWS region to launch in.
+                          The AWS region to launch in.
     -v, --verbose         Increase output verbosity. May be specified up to
-			  twice.
+                          twice.
     -i, --interactive     Enable interactive mode. If specified, this will use
-			  the AWS interactive provider, which leverages
-			  Cloudformation Change Sets to display changes before
-			  running cloudformation templates. You'll be asked if
-			  you want to execute each change set. If you only want
-			  to authorize replacements, run with "--replacements-
-			  only" as well.
+                          the AWS interactive provider, which leverages
+                          Cloudformation Change Sets to display changes before
+                          running cloudformation templates. You'll be asked if
+                          you want to execute each change set. If you only want
+                          to authorize replacements, run with "--replacements-
+                          only" as well.
     --replacements-only   If interactive mode is enabled, stacker will only
-			  prompt to authorize replacements.
+                          prompt to authorize replacements.
     --force STACKNAME     If a stackname is provided to --force, it will be
-			  diffed, even if it is locked in the config.
+                          diffed, even if it is locked in the config.
     --stacks STACKNAME    Only work on the stacks given. Can be specified more
-			  than once. If not specified then stacker will work on
-			  all stacks in the config file.
+                          than once. If not specified then stacker will work on
+                          all stacks in the config file.

@@ -1,3 +1,7 @@
+## 1.0.4 (2017-07-07)
+
+- Fix issue w/ tail being required (but not existing) on diff/info/etc [GH-429]
+
 ## 1.0.3 (2017-07-06)
 
 There was some reworking on how regions are handled, specifically around
@@ -26,7 +30,6 @@ are not using a custom bucket, then it will use the logic used above.
 - Fix issue w/ s3 buckets in different regions [GH-413, GH-417]
 - Disable loop logger whe --tail is provided [GH-414]
 - Add envvar lookup [GH-418]
-
 
 ## 1.0.2 (2017-05-10)
 

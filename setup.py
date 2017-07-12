@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 import glob
 
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 
 src_dir = os.path.dirname(__file__)
 

@@ -474,14 +474,11 @@ class SourceProcessor():
         self.create_cache_directories()
 
     def create_cache_directories(self):
-        """Ensures that SourceProcessor cache directories exist.
-
-           Returns True to indicate the cache directories are present."""
+        """Ensures that SourceProcessor cache directories exist."""
         if not os.path.isdir(self.package_cache_dir):
             if not os.path.isdir(self.stacker_cache_dir):
                 os.mkdir(self.stacker_cache_dir)
             os.mkdir(self.package_cache_dir)
-        return True
 
     def get_package_sources(self, sources):
         """Makes remote python packages available for local use
@@ -514,27 +511,11 @@ class SourceProcessor():
             config (dict): Dictionary of git repo configuration
 
         """
-        # If a specific commit or tag is defined, first check to see if it is
-        # already cached.
-        if config.get('commit'):
-            ref = config['commit']
-            dir_name = self.sanitize_git_path(uri=config['uri'],
-                                              ref=ref)
-        elif config.get('tag'):
-            ref = config['tag']
-            dir_name = self.sanitize_git_path(uri=config['uri'],
-                                              ref=ref)
-        else:
-            ref = self.git_ls_remote(
-                config['uri'],
-                self.determine_git_ls_remote_ref(config)
-            )
-            dir_name = self.sanitize_git_path(uri=config['uri'],
-                                              ref=ref)
-
+        ref = self.determine_git_ref(config)
+        dir_name = self.sanitize_git_path(uri=config['uri'], ref=ref)
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
 
-        # Clone the repo if it doesn't already exist
+        # We can skip cloning the repo if it's already been cached
         if not os.path.isdir(cached_dir_path):
             tmp_dir = tempfile.mkdtemp(prefix='stacker')
             try:
@@ -568,7 +549,8 @@ class SourceProcessor():
             uri (string): git URI
             ref (string): git ref
 
-        Returns: string (commit id)
+        Returns:
+            str: A commit id
         """
         logger.debug("Invoking git to retrieve commit id for repo %s...", uri)
         lsremote_output = subprocess.check_output(['git',
@@ -589,13 +571,50 @@ class SourceProcessor():
         Args:
             config (dict): git config dictionary; 'branch' key is optional
 
-        Returns: string (a branch reference or "HEAD")
+        Returns:
+            str: A branch reference or "HEAD"
         """
         if 'branch' in config:
             ref = "refs/heads/%s" % config.get('branch')
         else:
             ref = "HEAD"
 
+        return ref
+
+    def determine_git_ref(self, config):
+        """Takes a dict describing a git repo and determines the ref to be used
+           for 'git checkout'.
+
+        Args:
+            config (dict): git config dictionary
+
+        Returns:
+            str: A commit id or tag name
+        """
+        # First ensure redundant config keys aren't specified (which could
+        # cause confusion as to which take precedence)
+        ref_config_keys = 0
+        for i in ['commit', 'tag', 'branch']:
+            if config.get(i):
+                ref_config_keys += 1
+        if ref_config_keys > 1:
+            raise ImportError("Fetching remote git sources failed: "
+                              "conflicting revisions (e.g. 'commit', 'tag', "
+                              "'branch') specified for a package source")
+
+        # Now check for a specific point in time referenced and return it if
+        # present
+        if config.get('commit'):
+            ref = config['commit']
+        elif config.get('tag'):
+            ref = config['tag']
+        else:
+            # Since a specific commit/tag point in time has not been specified,
+            # check the remote repo for the commit id to use
+            ref = self.git_ls_remote(
+                config['uri'],
+                self.determine_git_ls_remote_ref(config)
+            )
         return ref
 
     def sanitize_git_path(self, uri, ref=None):
@@ -606,7 +625,8 @@ class SourceProcessor():
                           (e.g. git@github.com:foo/bar.git)
             ref (string): optional git ref to be appended to the path
 
-        Returns: string (directory name for the supplied uri)
+        Returns:
+            str: Directory name for the supplied uri
         """
         if uri.endswith('.git'):
             dir_name = uri[:-4]  # drop .git

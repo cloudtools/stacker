@@ -1,7 +1,4 @@
-# import os
-# import shutil
 import sys
-# import tempfile
 import textwrap
 import unittest
 
@@ -164,32 +161,6 @@ class TestContext(unittest.TestCase):
         stage = "pre_build"
         handle_hooks(stage, context.config[stage], "mock-region-1", context)
         self.assertEqual("mockResult", context.hook_data["myHook"]["result"])
-
-#     def test_package_sources_in_config(self):
-#         tmp_dir = tempfile.mkdtemp(prefix='stackerunittest')
-#         try:
-#             context = Context({"namespace": "test"})
-#             config = textwrap.dedent("""\
-#                 stacker_cache_dir: %s
-#                 package_sources:
-#                   git:
-#                     - uri: git@github.com:remind101/stacker_blueprints.git
-#                       tag: 1.0.0
-#                       paths:
-#                         - stacker_blueprints
-#             """ % tmp_dir)
-#             context.load_config(config)
-#             self.assertEqual(
-#                 sys.path[-1],
-#                 os.path.join(
-#                     tmp_dir,
-#                     'packages',
-#                     'git_github.com_remind101_stacker_blueprints-1.0.0',
-#                     'stacker_blueprints'
-#                 )
-#             )
-#         finally:
-#             shutil.rmtree(tmp_dir)
 
 
 class TestFunctions(unittest.TestCase):

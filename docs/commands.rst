@@ -19,8 +19,7 @@ pushing them up into CloudFormation.
   usage: stacker build [-h] [-e ENV=VALUE] [-r REGION] [-v] [-i]
                        [--replacements-only] [-o] [--force STACKNAME]
                        [--stacks STACKNAME] [-t] [-d DUMP]
-
-                       environment config
+                       [environment] config
 
   Launches or updates CloudFormation stacks based on the given config. Stacker
   is smart enough to figure out if anything (the template or parameters) have
@@ -66,7 +65,7 @@ pushing them up into CloudFormation.
     -t, --tail            Tail the CloudFormation logs while workingwith stacks
     -d DUMP, --dump DUMP  Dump the rendered Cloudformation templates to a
                           directory
-                          
+
 Destroy
 -------
 

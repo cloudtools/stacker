@@ -110,6 +110,14 @@ class MissingEnvironment(Exception):
         super(MissingEnvironment, self).__init__(message, *args, **kwargs)
 
 
+class MissingConfig(Exception):
+
+    def __init__(self, key, *args, **kwargs):
+        self.key = key
+        message = "Config missing key %s." % (key,)
+        super(MissingConfig, self).__init__(message, *args, **kwargs)
+
+
 class ImproperlyConfigured(Exception):
 
     def __init__(self, cls, error, *args, **kwargs):

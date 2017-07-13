@@ -3,9 +3,9 @@ import textwrap
 import unittest
 
 from ..context import Context, get_fqn
-from ..exceptions import MissingEnvironment
 from ..lookups.registry import LOOKUP_HANDLERS
 from ..util import handle_hooks
+from ..exceptions import MissingConfig
 
 
 class TestContext(unittest.TestCase):
@@ -14,21 +14,10 @@ class TestContext(unittest.TestCase):
         self.environment = {"namespace": "namespace"}
         self.config = {"stacks": [{"name": "stack1"}, {"name": "stack2"}]}
 
-    def test_context_environment_namespace_required(self):
-        with self.assertRaises(TypeError):
-            Context()
-
-        with self.assertRaises(MissingEnvironment):
-            Context({"value": "random"})
-
-        context = Context({"namespace": "test"})
-        self.assertEqual(context.namespace, "test")
-
     def test_context_optional_keys_set(self):
         context = Context(
             environment=self.environment,
             stack_names=["stack"],
-            mappings={},
             config={},
         )
         for key in ["mappings", "config"]:
@@ -63,6 +52,16 @@ class TestContext(unittest.TestCase):
         context = Context({"namespace": "my.namespace"})
         fqn = context.get_fqn()
         self.assertEqual(fqn, "my-namespace")
+
+    def test_context_get_fqn_empty_namespace(self):
+        context = Context(config={"namespace": ""})
+        fqn = context.get_fqn("vpc")
+        self.assertEqual(fqn, "vpc")
+
+    def test_context_get_fqn_missing_namespace(self):
+        context = Context(config={}, environment={})
+        with self.assertRaises(MissingConfig):
+            context.get_fqn("stack")
 
     def test_context_get_fqn_stack_name(self):
         context = Context(self.environment)

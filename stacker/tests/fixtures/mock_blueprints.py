@@ -1,3 +1,6 @@
+from troposphere import Output
+from troposphere.cloudformation import WaitConditionHandle
+
 from stacker.blueprints.base import Blueprint
 from stacker.blueprints.variables.types import (
     CFNCommaDelimitedList,
@@ -8,6 +11,18 @@ from stacker.blueprints.variables.types import (
     EC2SubnetIdList,
     EC2VPCId,
 )
+
+
+class Dummy(Blueprint):
+    VARIABLES = {
+        "StringVariable": {
+            "type": str,
+            "default": ""}
+    }
+
+    def create_template(self):
+        self.template.add_resource(WaitConditionHandle("Dummy"))
+        self.template.add_output(Output("DummyId", Value="dummy-1234"))
 
 
 class VPC(Blueprint):
@@ -30,8 +45,6 @@ class VPC(Blueprint):
             "type": CFNString,
             "description": "NAT EC2 instance type.",
             "default": "m3.medium"},
-        "SshKeyName": {
-            "type": EC2KeyPairKeyName},
         "BaseDomain": {
             "type": CFNString,
             "default": "",
@@ -58,7 +71,7 @@ class VPC(Blueprint):
     }
 
     def create_template(self):
-        return
+        self.template.add_resource(WaitConditionHandle("VPC"))
 
 
 class Bastion(Blueprint):

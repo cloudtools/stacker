@@ -12,12 +12,10 @@ def handler(value, **kwargs):
 
     dynamodb field types should be in the following format:
 
-        [<region>:<tablename>@]<primarypartionkey>.<keyvalue>.<keyvalue>...
+        [<region>:]<tablename>@<primarypartionkey>.<keyvalue>.<keyvalue>...
 
     Note: The region is optional, and defaults to the environment's
     `AWS_DEFAULT_REGION` if not specified.
-
-
     """
     value = read_value_from_path(value)
     table_info = None
@@ -55,12 +53,12 @@ def handler(value, **kwargs):
                 clean_table_keys.append(key)
             else:
                 raise ValueError(
-                    'Stacker does not support looking up that datatype')
+                    'Stacker does not support looking up the datatype: {}').format(str(match.group(1)))
         else:
             new_keys.append({"S": key})
             clean_table_keys.append(key)
 
-    projection_expression = _buildProjectionExpression(clean_table_keys)
+    projection_expression = _build_projection_expression(clean_table_keys)
 
     # lookup the data from dynamodb
     dynamodb = get_session(region).client('dynamodb')
@@ -81,17 +79,24 @@ def handler(value, **kwargs):
     # find and return the key from the dynamo data returned
     if 'Item' in response:
         if len(response['Item']) > 0:
-            return (_getValFromDict(response['Item'], new_keys[1:]))
+            return (_get_val_from_ddb_data(response['Item'], new_keys[1:]))
         else:
             raise ValueError('The specified dynamo record could not be found')
     else:
         raise ValueError(
-            'No dynamo record with those paramters could be found')
+            'No dynamo record with those parameters could be found')
 
 
-def _buildProjectionExpression(clean_table_keys):
-    """this builds the lookup for dynamodb
-    """
+def _build_projection_expression(clean_table_keys):
+        """Given cleaned up keys, this will return a projection expression for
+        the dynamodb lookup.
+
+        Args:
+            clean_table_keys (dictionary)  : keys without the data types attached
+
+        Returns:
+            string: A projection expression for the dynamodb lookup.
+        """
     projection_expression = ""
     for key in clean_table_keys[:-1]:
         projection_expression += ("{},").format(key)
@@ -99,10 +104,20 @@ def _buildProjectionExpression(clean_table_keys):
     return projection_expression
 
 
-def _getValFromDict(data, keylist):
-    """This finds the key inside the data returned by dynamodb
+def _get_val_from_ddb_data(data, keylist):
+    """Given a dictionary of dynamodb data (including the datatypes) and a
+    properly structured keylist, it will return the value of the lookup
+
+    Args:
+        - data(dictionary): the raw dynamodb data
+            keylist(list): a list of keys to lookup. This must include the data type
+
+    Returns:
+        various: It returns the value from the dynamodb record, and casts it
+            to a matching python datatype
     """
     nextType = None
+    #iterate through the keylist to find the matching key/datatype
     for k in keylist:
         for k1 in k:
             if nextType is None:
@@ -112,13 +127,17 @@ def _getValFromDict(data, keylist):
                 data = temp_dict[k[k1]]
             nextType = k1
     if nextType == "L":
-        return _convertDDBListToList(data[nextType])
+        #if type is list, convert it to a list and return
+        return _convert_ddb_list_to_list(data[nextType])
     if nextType == "N":
+        # TODO: handle various types of 'number' datatypes, (e.g. int, double)
+        #if a number, convert to an int and return
         return int(data[nextType])
+    #else, just assume its a string and return
     return str(data[nextType])
 
 
-def _convertDDBListToList(convlist):
+def _convert_ddb_list_to_list(convlist):
     """This removes the variable types from the list before passing it to the
         lookup
     """

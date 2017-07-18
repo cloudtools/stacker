@@ -41,7 +41,7 @@ class FunctionalTests(Blueprint):
     def create_template(self):
         t = self.template
 
-        bucket_arn = Sub("arn:aws:s3:::${StackerBucket}")
+        bucket_arn = Sub("arn:aws:s3:::${StackerBucket}*")
         cloudformation_scope = Sub(
             "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:"
             "stack/${StackerNamespace}-*")
@@ -62,7 +62,7 @@ class FunctionalTests(Blueprint):
                             awacs.s3.CreateBucket]),
                     Statement(
                         Effect="Allow",
-                        Resource=[Join("", [bucket_arn, "/*"])],
+                        Resource=[bucket_arn],
                         Action=[
                             awacs.s3.GetObject,
                             awacs.s3.GetObjectAcl,
@@ -73,6 +73,11 @@ class FunctionalTests(Blueprint):
                         Resource=[changeset_scope],
                         Action=[
                             awacs.cloudformation.DescribeChangeSet]),
+                    Statement(
+                        Effect="Deny",
+                        Resource=[Ref("AWS::StackId")],
+                        Action=[
+                            awacs.cloudformation.Action("*")]),
                     Statement(
                         Effect="Allow",
                         Resource=[cloudformation_scope],

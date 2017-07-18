@@ -1,5 +1,13 @@
 machine:
   timezone: America/Los_Angeles
+  pre:
+    - sudo add-apt-repository -y ppa:duggan/bats
+    - sudo apt-get update
+    - sudo apt-get install -y bats
+    - bats --version
+  environment:
+    AWS_DEFAULT_REGION: "us-east-1"
+    STACKER_NAMESPACE: "stacker-functional-tests-$CIRCLE_BUILD_NUM"
 
 dependencies:
   pre:
@@ -7,6 +15,6 @@ dependencies:
 
 test:
   override:
-    - make test
+    - make ci
   post:
     - codecov

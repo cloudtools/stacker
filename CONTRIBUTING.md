@@ -91,6 +91,8 @@ Ready to contribute? Here's how to set up `stacker` for local development.
 
 7. Submit a pull request through the GitHub website.
 
+For information about the functional testing suite, see [tests/README.md](./tests).
+
 ## Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:

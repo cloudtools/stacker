@@ -63,6 +63,7 @@ stacker includes the following lookup types:
   - `rxref lookup`_
   - `file lookup`_
   - `ssmstore lookup`_
+  - `dynamodb lookup`_
   - `envvar lookup`_
   - `ami lookup`_
   - `custom lookup`_

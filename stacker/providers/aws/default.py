@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+import urlparse
 
 import botocore.exceptions
 
@@ -207,18 +208,46 @@ class Provider(BaseProvider):
         return True
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
-        logger.debug("Stack %s not found, creating.", fqn)
-        logger.debug("Using parameters: %s", parameters)
-        logger.debug("Using tags: %s", tags)
-        retry_on_throttling(
-            self.cloudformation.create_stack,
-            kwargs=dict(StackName=fqn,
-                        TemplateURL=template_url,
-                        Parameters=parameters,
-                        Tags=tags,
-                        Capabilities=["CAPABILITY_NAMED_IAM"]),
-        )
-        return True
+        try:
+            logger.debug("Stack %s not found, creating.", fqn)
+            logger.debug("Using parameters: %s", parameters)
+            logger.debug("Using tags: %s", tags)
+            logger.debug("Using template_url: %s", template_url)
+            retry_on_throttling(
+                self.cloudformation.create_stack,
+                kwargs=dict(StackName=fqn,
+                            TemplateURL=template_url,
+                            Parameters=parameters,
+                            Tags=tags,
+                            Capabilities=["CAPABILITY_NAMED_IAM"]),
+            )
+            return True
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Message'].startswith('TemplateURL'):
+                logger.warn("DEPRECATION WARNING: Falling back to legacy "
+                            "stacker S3 bucket region for templates. Using "
+                            "us-east-1 region. This fallback will be removed "
+                            "in a future stacker release. Please provide the "
+                            "stacker_bucket_region top level key word in your "
+                            "config to ensure future functionality.")
+                logger.debug("Modifying the S3 TemplateURL to point to "
+                             "us-east-1 endpoint")
+                template_url_parsed = urlparse.urlparse(template_url)
+                template_url_parsed = template_url_parsed._replace(
+                    netloc="s3.amazonaws.com")
+                template_url = urlparse.urlunparse(template_url_parsed)
+                logger.debug("Using template_url: %s", template_url)
+                retry_on_throttling(
+                    self.cloudformation.create_stack,
+                    kwargs=dict(StackName=fqn,
+                                TemplateURL=template_url,
+                                Parameters=parameters,
+                                Tags=tags,
+                                Capabilities=["CAPABILITY_NAMED_IAM"]),
+                )
+                return True
+            else:
+                raise exceptions.BotoClientError(e)
 
     def update_stack(self, fqn, template_url, old_parameters, parameters,
                      tags, **kwargs):

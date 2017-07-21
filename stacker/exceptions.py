@@ -196,3 +196,10 @@ class UnableToExecuteChangeSet(Exception):
                    "%s" % (change_set_id, stack_name, execution_status))
 
         super(UnableToExecuteChangeSet, self).__init__(message)
+
+
+class BotoClientError(Exception):
+    def __init__(self, exception):
+        self.exception = exception
+        message = "Unexpected Boto error: %s" % exception
+        super(BotoClientError, self).__init__(message)

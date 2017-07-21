@@ -8,6 +8,7 @@ import mock
 
 import boto3
 
+from stacker.config import Hook, GitPackageSource
 from stacker.util import (
     cf_safe_name,
     load_object_from_string,
@@ -110,12 +111,13 @@ class TestUtil(unittest.TestCase):
             )
 
             self.assertEqual(
-                sp.determine_git_ls_remote_ref({'branch': 'foo'}),
+                sp.determine_git_ls_remote_ref(
+                    GitPackageSource({'branch': 'foo'})),
                 'refs/heads/foo'
             )
             for i in [{'uri': 'git@foo'}, {'tag': 'foo'}, {'commit': '1234'}]:
                 self.assertEqual(
-                    sp.determine_git_ls_remote_ref(i),
+                    sp.determine_git_ls_remote_ref(GitPackageSource(i)),
                     'HEAD'
                 )
 
@@ -135,20 +137,23 @@ class TestUtil(unittest.TestCase):
                            {'uri': 'x', 'commit': '1234', 'branch': 'x'}]
             for i in bad_configs:
                 with self.assertRaises(ImportError):
-                    sp.determine_git_ref(i)
+                    sp.determine_git_ref(GitPackageSource(i))
 
             self.assertEqual(
-                sp.determine_git_ref({'uri': 'https://github.com/remind101/'
+                sp.determine_git_ref(
+                    GitPackageSource({'uri': 'https://github.com/remind101/'
                                              'stacker.git',
-                                      'branch': 'release-1.0'}),
+                                      'branch': 'release-1.0'})),
                 '857b4834980e582874d70feef77bb064b60762d1'
             )
             self.assertEqual(
-                sp.determine_git_ref({'uri': 'git@foo', 'commit': '1234'}),
+                sp.determine_git_ref(
+                    GitPackageSource({'uri': 'git@foo', 'commit': '1234'})),
                 '1234'
             )
             self.assertEqual(
-                sp.determine_git_ref({'uri': 'git@foo', 'tag': 'v1.0.0'}),
+                sp.determine_git_ref(
+                    GitPackageSource({'uri': 'git@foo', 'tag': 'v1.0.0'})),
                 'v1.0.0'
             )
 
@@ -189,7 +194,7 @@ class TestHooks(unittest.TestCase):
         self.assertTrue(hook_queue.empty())
 
     def test_missing_required_hook(self):
-        hooks = [{"path": "not.a.real.path", "required": True}]
+        hooks = [Hook({"path": "not.a.real.path", "required": True})]
         with self.assertRaises(ImportError):
             handle_hooks("missing", hooks, self.provider, self.context)
 
@@ -199,18 +204,19 @@ class TestHooks(unittest.TestCase):
             handle_hooks("missing", hooks, self.provider, self.context)
 
     def test_missing_non_required_hook_method(self):
-        hooks = [{"path": "stacker.hooks.blah", "required": False}]
+        hooks = [Hook({"path": "stacker.hooks.blah", "required": False})]
         handle_hooks("missing", hooks, self.provider, self.context)
         self.assertTrue(hook_queue.empty())
 
     def test_default_required_hook(self):
-        hooks = [{"path": "stacker.hooks.blah"}]
+        hooks = [Hook({"path": "stacker.hooks.blah"})]
         with self.assertRaises(AttributeError):
             handle_hooks("missing", hooks, self.provider, self.context)
 
     def test_valid_hook(self):
-        hooks = [{"path": "stacker.tests.test_util.mock_hook",
-                  "required": True}]
+        hooks = [
+            Hook({"path": "stacker.tests.test_util.mock_hook",
+                  "required": True})]
         handle_hooks("missing", hooks, self.provider, self.context)
         good = hook_queue.get_nowait()
         self.assertEqual(good["provider"].region, "us-east-1")
@@ -218,34 +224,37 @@ class TestHooks(unittest.TestCase):
             hook_queue.get_nowait()
 
     def test_context_provided_to_hook(self):
-        hooks = [{"path": "stacker.tests.test_util.context_hook",
-                  "required": True}]
+        hooks = [
+            Hook({"path": "stacker.tests.test_util.context_hook",
+                  "required": True})]
         handle_hooks("missing", hooks, "us-east-1", self.context)
 
     def test_hook_failure(self):
-        hooks = [{"path": "stacker.tests.test_util.fail_hook",
-                  "required": True}]
+        hooks = [
+            Hook({"path": "stacker.tests.test_util.fail_hook",
+                  "required": True})]
         with self.assertRaises(SystemExit):
             handle_hooks("fail", hooks, self.provider, self.context)
         hooks = [{"path": "stacker.tests.test_util.exception_hook",
                   "required": True}]
         with self.assertRaises(Exception):
             handle_hooks("fail", hooks, self.provider, self.context)
-        hooks = [{"path": "stacker.tests.test_util.exception_hook",
-                  "required": False}]
+        hooks = [
+            Hook({"path": "stacker.tests.test_util.exception_hook",
+                  "required": False})]
         # Should pass
         handle_hooks("ignore_exception", hooks, self.provider, self.context)
 
     def test_return_data_hook(self):
         hooks = [
-            {
+            Hook({
                 "path": "stacker.tests.test_util.result_hook",
                 "data_key": "my_hook_results"
-            },
+            }),
             # Shouldn't return data
-            {
+            Hook({
                 "path": "stacker.tests.test_util.context_hook"
-            }
+            })
         ]
         handle_hooks("result", hooks, "us-east-1", self.context)
 
@@ -260,14 +269,14 @@ class TestHooks(unittest.TestCase):
 
     def test_return_data_hook_duplicate_key(self):
         hooks = [
-            {
+            Hook({
                 "path": "stacker.tests.test_util.result_hook",
                 "data_key": "my_hook_results"
-            },
-            {
+            }),
+            Hook({
                 "path": "stacker.tests.test_util.result_hook",
                 "data_key": "my_hook_results"
-            }
+            })
         ]
 
         with self.assertRaises(KeyError):

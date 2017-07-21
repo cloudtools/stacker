@@ -459,7 +459,7 @@ def upload_lambda_functions(context, provider, **kwargs):
     bucket_region = select_bucket_region(
         custom_bucket,
         custom_bucket_region,
-        context.config.get("stacker_bucket_region"),
+        context.config.stacker_bucket_region,
         provider.region
     )
 

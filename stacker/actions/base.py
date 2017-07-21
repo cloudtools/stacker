@@ -76,10 +76,8 @@ class BaseAction(object):
 
     @property
     def bucket_region(self):
-        return self.context.config.get(
-            "stacker_bucket_region",
-            self.provider.region
-        )
+        return self.context.config.stacker_bucket_region \
+                or self.provider.region
 
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""

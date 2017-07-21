@@ -289,7 +289,8 @@ def handle_hooks(stage, hooks, provider, context):
 
     Args:
         stage (string): The current stage (pre_run, post_run, etc).
-        hooks (list): A list of dictionaries containing the hooks to execute.
+        hooks (list): A list of :class:`stacker.config.Hook` containing the
+            hooks to execute.
         provider (:class:`stacker.provider.base.BaseProvider`): The provider
             the current stack is using.
         context (:class:`stacker.context.Context`): The current stacker
@@ -302,45 +303,45 @@ def handle_hooks(stage, hooks, provider, context):
     hook_paths = []
     for i, h in enumerate(hooks):
         try:
-            hook_paths.append(h["path"])
+            hook_paths.append(h.path)
         except KeyError:
             raise ValueError("%s hook #%d missing path." % (stage, i))
 
     logger.info("Executing %s hooks: %s", stage, ", ".join(hook_paths))
     for hook in hooks:
-        data_key = hook.get("data_key")
-        required = hook.get("required", True)
-        kwargs = hook.get("args", {})
+        data_key = hook.data_key
+        required = hook.required
+        kwargs = hook.args or {}
         try:
-            method = load_object_from_string(hook["path"])
+            method = load_object_from_string(hook.path)
         except (AttributeError, ImportError):
-            logger.exception("Unable to load method at %s:", hook["path"])
+            logger.exception("Unable to load method at %s:", hook.path)
             if required:
                 raise
             continue
         try:
             result = method(context=context, provider=provider, **kwargs)
         except Exception:
-            logger.exception("Method %s threw an exception:", hook["path"])
+            logger.exception("Method %s threw an exception:", hook.path)
             if required:
                 raise
             continue
         if not result:
             if required:
                 logger.error("Required hook %s failed. Return value: %s",
-                             hook["path"], result)
+                             hook.path, result)
                 sys.exit(1)
             logger.warning("Non-required hook %s failed. Return value: %s",
-                           hook["path"], result)
+                           hook.path, result)
         else:
             if isinstance(result, collections.Mapping):
                 if data_key:
                     logger.debug("Adding result for hook %s to context in "
-                                 "data_key %s.", hook["path"], data_key)
+                                 "data_key %s.", hook.path, data_key)
                     context.set_hook_data(data_key, result)
                 else:
                     logger.debug("Hook %s returned result data, but no data "
-                                 "key set, so ignoring.", hook["path"])
+                                 "key set, so ignoring.", hook.path)
 
 
 def get_config_directory():
@@ -500,19 +501,20 @@ class SourceProcessor():
 
         """
         # Checkout git repositories specified in config
-        if 'git' in sources:
-            for config in sources['git']:
+        if sources.git:
+            for config in sources.git:
                 self.fetch_git_package(config=config)
 
     def fetch_git_package(self, config):
         """Makes a remote git repository available for local use
 
         Args:
-            config (dict): Dictionary of git repo configuration
+            config (:class:`stacker.config.GitPackageSource`): git config
+                dictionary
 
         """
         ref = self.determine_git_ref(config)
-        dir_name = self.sanitize_git_path(uri=config['uri'], ref=ref)
+        dir_name = self.sanitize_git_path(uri=config.uri, ref=ref)
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
 
         # We can skip cloning the repo if it's already been cached
@@ -520,7 +522,7 @@ class SourceProcessor():
             tmp_dir = tempfile.mkdtemp(prefix='stacker')
             try:
                 tmp_repo_path = os.path.join(tmp_dir, dir_name)
-                with Repo.clone_from(config['uri'], tmp_repo_path) as repo:
+                with Repo.clone_from(config.uri, tmp_repo_path) as repo:
                     repo.head.reference = ref
                     repo.head.reset(index=True, working_tree=True)
                 shutil.move(tmp_repo_path, self.package_cache_dir)
@@ -529,8 +531,8 @@ class SourceProcessor():
 
         # Cloning (if necessary) is complete. Now add the appropriate
         # directory (or directories) to sys.path
-        if 'paths' in config:
-            for path in config['paths']:
+        if config.paths:
+            for path in config.paths:
                 path_to_append = os.path.join(self.package_cache_dir,
                                               dir_name,
                                               path)
@@ -569,13 +571,14 @@ class SourceProcessor():
            with the "git ls-remote" command
 
         Args:
-            config (dict): git config dictionary; 'branch' key is optional
+            config (:class:`stacker.config.GitPackageSource`): git config
+                dictionary; 'branch' key is optional
 
         Returns:
             str: A branch reference or "HEAD"
         """
-        if 'branch' in config:
-            ref = "refs/heads/%s" % config.get('branch')
+        if config.branch:
+            ref = "refs/heads/%s" % config.branch
         else:
             ref = "HEAD"
 
@@ -586,7 +589,8 @@ class SourceProcessor():
            for 'git checkout'.
 
         Args:
-            config (dict): git config dictionary
+            config (:class:`stacker.config.GitPackageSource`): git config
+                dictionary
 
         Returns:
             str: A commit id or tag name
@@ -604,15 +608,15 @@ class SourceProcessor():
 
         # Now check for a specific point in time referenced and return it if
         # present
-        if config.get('commit'):
-            ref = config['commit']
-        elif config.get('tag'):
-            ref = config['tag']
+        if config.commit:
+            ref = config.commit
+        elif config.tag:
+            ref = config.tag
         else:
             # Since a specific commit/tag point in time has not been specified,
             # check the remote repo for the commit id to use
             ref = self.git_ls_remote(
-                config['uri'],
+                config.uri,
                 self.determine_git_ls_remote_ref(config)
             )
         return ref

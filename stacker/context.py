@@ -1,12 +1,8 @@
 import collections
 import logging
-import sys
 
-from stacker.util import SourceProcessor
-from .exceptions import MissingConfig
-from .config import parse_config
+from stacker.config import Config
 from .stack import Stack
-from .lookups import register_lookup_handler
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +34,8 @@ class Context(object):
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,
             usually all stacks defined in the config will be operated on.
-        config (dict): The configuration being operated on, containing the
-            stack definitions.
+        config (:class:`stacker.config.Config`): The stacker configuration
+            being operated on.
         force_stacks (list): A list of stacks to force work on. Used to work
             on locked stacks.
 
@@ -53,46 +49,34 @@ class Context(object):
         self.environment = environment
         self.stack_names = stack_names or []
         self.logger_type = logger_type
-        self.config = config or {}
+        self.config = config or Config()
         self.force_stacks = force_stacks or []
         self.hook_data = {}
 
     @property
     def namespace(self):
-        namespace = self.config.get("namespace")
-        if namespace is not None:
-            return namespace
-
-        # For backwards compatibility, we fallback to attempting to
-        # fetch the namespace from the environment file, if provided.
-        namespace = self.environment.get("namespace")
-        if namespace:
-            logger.warn("specifying namespace in the environment is "
-                        "deprecated, and should be moved to the config")
-            return namespace
-
-        # Raise an error if no namespace was provided.
-        raise MissingConfig("namespace")
+        return self.config.namespace
 
     @property
     def namespace_delimiter(self):
-        return self.config.get(
-                "namespace_delimiter",
-                DEFAULT_NAMESPACE_DELIMITER)
+        delimiter = self.config.namespace_delimiter
+        if delimiter is not None:
+            return delimiter
+        return DEFAULT_NAMESPACE_DELIMITER
 
     @property
     def bucket_name(self):
-        return self.config.get("stacker_bucket") \
+        return self.config.stacker_bucket \
                 or "stacker-%s" % (self.get_fqn(),)
 
     @property
     def tags(self):
-        tags = self.config.get("tags", None)
+        tags = self.config.tags
         if tags is not None:
-            return dict([(str(tag_key), str(tag_value)) for tag_key,
-                         tag_value in tags.items()])
-        else:
-            return {'stacker_namespace': self.namespace}
+            return tags
+        if self.namespace:
+            return {"stacker_namespace": self.namespace}
+        return {}
 
     @property
     def _base_fqn(self):
@@ -100,28 +84,12 @@ class Context(object):
 
     @property
     def mappings(self):
-        return self.config.get("mappings", {})
-
-    def load_config(self, conf_string):
-        self.config = parse_config(conf_string, environment=self.environment)
-        if "sys_path" in self.config:
-            logger.debug("Appending %s to sys.path.", self.config["sys_path"])
-            sys.path.append(self.config["sys_path"])
-            logger.debug("sys.path is now %s", sys.path)
-        lookups = self.config.get("lookups", {})
-        for key, handler in lookups.iteritems():
-            register_lookup_handler(key, handler)
-        sources = self.config.get("package_sources")
-        if sources is not None:
-            processor = SourceProcessor(
-                stacker_cache_dir=self.config.get("stacker_cache_dir")
-            )
-            processor.get_package_sources(sources=sources)
+        return self.config.mappings or {}
 
     def _get_stack_definitions(self):
         if not self.stack_names:
-            return self.config["stacks"]
-        return [s for s in self.config["stacks"] if s["name"] in
+            return self.config.stacks
+        return [s for s in self.config.stacks if s.name in
                 self.stack_names]
 
     def get_stacks(self):
@@ -141,9 +109,9 @@ class Context(object):
                 definition=stack_def,
                 context=self,
                 mappings=self.mappings,
-                force=stack_def["name"] in self.force_stacks,
-                locked=stack_def.get("locked", False),
-                enabled=stack_def.get("enabled", True),
+                force=stack_def.name in self.force_stacks,
+                locked=stack_def.locked,
+                enabled=stack_def.enabled,
             )
             stacks.append(stack)
         return stacks

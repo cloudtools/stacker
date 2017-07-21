@@ -3,6 +3,7 @@ import unittest
 import mock
 
 from stacker.context import Context
+from stacker.context import Config
 from stacker.exceptions import ImproperlyConfigured, FailedVariableLookup
 from stacker.lookups.registry import (
     register_lookup_handler,
@@ -31,7 +32,8 @@ count = 0
 class TestStep(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context({"namespace": "namespace"})
+        self.config = Config({"namespace": "namespace"})
+        self.context = Context(config=self.config)
         stack = Stack(
             definition=generate_definition("vpc", 1),
             context=self.context,
@@ -56,8 +58,8 @@ class TestPlan(unittest.TestCase):
 
     def setUp(self):
         self.count = 0
-        self.environment = {"namespace": "namespace"}
-        self.context = Context(self.environment)
+        self.config = Config({"namespace": "namespace"})
+        self.context = Context(config=self.config)
         register_lookup_handler("noop", lambda **kwargs: "test")
 
     def tearDown(self):

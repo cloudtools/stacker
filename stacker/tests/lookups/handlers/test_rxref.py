@@ -3,6 +3,7 @@ import unittest
 
 from stacker.lookups.handlers.rxref import handler
 from ....context import Context
+from ....config import Config
 
 
 class TestRxrefHandler(unittest.TestCase):
@@ -10,7 +11,7 @@ class TestRxrefHandler(unittest.TestCase):
     def setUp(self):
         self.provider = MagicMock()
         self.context = Context(
-            environment={"namespace": "ns"}
+            config=Config({"namespace": "ns"})
         )
 
     def test_rxref_handler(self):

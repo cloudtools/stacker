@@ -38,12 +38,7 @@ def _gather_variables(stack_def):
             attribute. Currently only when using old parameters, rather than
             variables.
     """
-    stack_name = stack_def["name"]
-    if "parameters" in stack_def:
-        raise AttributeError("Stack definition %s contains deprecated "
-                             "'parameters', rather than 'variables'. Please "
-                             "update your config." % stack_name)
-    variable_values = copy.deepcopy(stack_def.get('variables', {}))
+    variable_values = copy.deepcopy(stack_def.variables or {})
     return [Variable(k, v) for k, v in variable_values.iteritems()]
 
 
@@ -52,7 +47,7 @@ class Stack(object):
     """Represents gathered information about a stack to be built/updated.
 
     Args:
-        definition (dict): A stack definition.
+        definition (:class:`stacker.config.Stack`): A stack definition.
         context (:class:`stacker.context.Context`): Current context for
             building the stack.
         mappings (dict, optional): Cloudformation mappings passed to the
@@ -65,7 +60,7 @@ class Stack(object):
 
     def __init__(self, definition, context, variables=None, mappings=None,
                  locked=False, force=False, enabled=True):
-        self.name = definition["name"]
+        self.name = definition.name
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
         self.variables = _gather_variables(definition)
@@ -81,7 +76,7 @@ class Stack(object):
     @property
     def requires(self):
         requires = set([self.context.get_fqn(r) for r in
-                        self.definition.get("requires", [])])
+                        self.definition.requires or []])
 
         # Add any dependencies based on output lookups
         for variable in self.variables:
@@ -107,7 +102,7 @@ class Stack(object):
     @property
     def blueprint(self):
         if not hasattr(self, "_blueprint"):
-            class_path = self.definition["class_path"]
+            class_path = self.definition.class_path
             blueprint_class = util.load_object_from_string(class_path)
             if not hasattr(blueprint_class, "rendered"):
                 raise AttributeError("Stack class %s does not have a "

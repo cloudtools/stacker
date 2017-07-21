@@ -4,6 +4,7 @@ import mock
 
 from stacker.actions import destroy
 from stacker.context import Context
+from stacker.config import Config
 from stacker.exceptions import StackDoesNotExist
 from stacker.status import (
     COMPLETE,
@@ -25,8 +26,8 @@ class MockStack(object):
 class TestDestroyAction(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context({"namespace": "namespace"})
-        self.context.config = {
+        config = Config({
+            "namespace": "namespace",
             "stacks": [
                 {"name": "vpc"},
                 {"name": "bastion", "requires": ["vpc"]},
@@ -34,7 +35,8 @@ class TestDestroyAction(unittest.TestCase):
                 {"name": "db", "requires": ["instance", "vpc", "bastion"]},
                 {"name": "other", "requires": ["db"]},
             ],
-        }
+        })
+        self.context = Context(config=config)
         self.action = destroy.Action(self.context, provider=mock.MagicMock())
 
     def test_generate_plan(self):
@@ -74,14 +76,15 @@ class TestDestroyAction(unittest.TestCase):
     def test_destroy_stack_in_parallel(self):
         count = {"_count": 0}
         mock_provider = mock.MagicMock()
-        self.context.config = {
+        self.context.config = Config({
+            "namespace": "namespace",
             "stacks": [
                 {"name": "vpc"},
                 {"name": "bastion", "requires": ["vpc"]},
                 {"name": "instance", "requires": ["vpc"]},
-                {"name": "db", "requies": ["vpc"]},
+                {"name": "db", "requires": ["vpc"]},
             ],
-        }
+        })
         stacks_dict = self.context.get_stacks_dict()
 
         def get_stack(stack_name):

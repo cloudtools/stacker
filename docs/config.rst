@@ -57,8 +57,30 @@ If you want to change this, provide the **stacker_bucket** top level key word
 in the config.
 
 The bucket will be created in the same region that the stacks will be launched
-in.  If you want to change this, you can set the **stacker_bucket_region** to
+in.  If you want to change this, or if you already have an existing bucket
+in a different region, you can set the **stacker_bucket_region** to
 the region where you want to create the bucket.
+
+**S3 Bucket location prior to 1.0.4:**
+  There was a "bug" early on in stacker that created the s3 bucket in us-east-1,
+  no matter what you specified as your --region. An issue came up leading us to
+  believe this shouldn't be the expected behavior, so we fixed the behavior.
+  If you executed a stacker build prior to V 1.0.4, your bucket for templates
+  would already exist in us-east-1, requiring you to specify the
+  **stacker_bucket_region** top level keyword.
+
+**Deprecation of legacy template bucket:**
+  We will first try the region you defined using the top level keyword
+  under **stacker_bucket_region**, or what was specified in the --region flag.
+  If that fails, we fallback to the us-east-1 region. The fallback to us-east-1
+  will be removed in a future release resulting in the following botocore
+  excpetion to be thrown:
+
+  ``TemplateURL must reference a valid S3 object to which you have access.``
+
+  To avoid this issue, specify the stacker_bucket_region top level keyword
+  as described above. You can specify this keyword now to remove the
+  deprecation warning.
 
 Module Paths
 ----------------

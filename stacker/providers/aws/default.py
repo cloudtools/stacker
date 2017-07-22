@@ -221,15 +221,14 @@ class Provider(BaseProvider):
                             Tags=tags,
                             Capabilities=["CAPABILITY_NAMED_IAM"]),
             )
-            return True
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Message'].startswith('TemplateURL'):
+            if e.response['Error']['Message'] == ('TemplateURL must reference '
+                                                  'a valid S3 object to which '
+                                                  'you have access.'):
                 logger.warn("DEPRECATION WARNING: Falling back to legacy "
-                            "stacker S3 bucket region for templates. Using "
-                            "us-east-1 region. This fallback will be removed "
-                            "in a future stacker release. Please provide the "
-                            "stacker_bucket_region top level key word in your "
-                            "config to ensure future functionality.")
+                            "stacker S3 bucket region for templates. See "
+                            "https://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
+                            " for more information.")
                 logger.debug("Modifying the S3 TemplateURL to point to "
                              "us-east-1 endpoint")
                 template_url_parsed = urlparse.urlparse(template_url)
@@ -245,14 +244,17 @@ class Provider(BaseProvider):
                                 Tags=tags,
                                 Capabilities=["CAPABILITY_NAMED_IAM"]),
                 )
-                return True
             else:
-                raise exceptions.BotoClientError(e)
+                raise
+        return True
 
     def update_stack(self, fqn, template_url, old_parameters, parameters,
                      tags, **kwargs):
         try:
             logger.debug("Attempting to update stack %s.", fqn)
+            logger.debug("Using parameters: %s", parameters)
+            logger.debug("Using tags: %s", tags)
+            logger.debug("Using template_url: %s", template_url)
             retry_on_throttling(
                 self.cloudformation.update_stack,
                 kwargs=dict(StackName=fqn,
@@ -268,7 +270,31 @@ class Provider(BaseProvider):
                     fqn,
                 )
                 raise exceptions.StackDidNotChange
-            raise
+            elif e.response['Error']['Message'] == ('TemplateURL must '
+                                                    'reference a valid '
+                                                    'S3 object to which '
+                                                    'you have access.'):
+                logger.warn("DEPRECATION WARNING: Falling back to legacy "
+                            "stacker S3 bucket region for templates. See "
+                            "https://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
+                            " for more information. ")
+                logger.debug("Modifying the S3 TemplateURL to point to "
+                             "us-east-1 endpoint")
+                template_url_parsed = urlparse.urlparse(template_url)
+                template_url_parsed = template_url_parsed._replace(
+                    netloc="s3.amazonaws.com")
+                template_url = urlparse.urlunparse(template_url_parsed)
+                logger.debug("Using template_url: %s", template_url)
+                retry_on_throttling(
+                    self.cloudformation.create_stack,
+                    kwargs=dict(StackName=fqn,
+                                TemplateURL=template_url,
+                                Parameters=parameters,
+                                Tags=tags,
+                                Capabilities=["CAPABILITY_NAMED_IAM"]),
+                )
+            else:
+                raise
         return True
 
     def get_stack_name(self, stack, **kwargs):

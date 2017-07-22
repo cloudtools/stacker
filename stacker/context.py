@@ -2,12 +2,16 @@ import collections
 import logging
 import sys
 
+from stacker.util import SourceProcessor
+from .exceptions import MissingConfig
 from .config import parse_config
-from .exceptions import MissingEnvironment
 from .stack import Stack
 from .lookups import register_lookup_handler
 
 logger = logging.getLogger(__name__)
+
+
+DEFAULT_NAMESPACE_DELIMITER = "-"
 
 
 def get_fqn(base_fqn, delimiter, name=None):
@@ -30,12 +34,10 @@ class Context(object):
     the command line and specified in the config to `Stack` objects.
 
     Args:
-        namespace (str): A unique namespace for the stacks being built.
         environment (dict): A dictionary used to pass in information about
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,
             usually all stacks defined in the config will be operated on.
-        mappings (dict): Used as Cloudformation mappings for the blueprint.
         config (dict): The configuration being operated on, containing the
             stack definitions.
         force_stacks (list): A list of stacks to force work on. Used to work
@@ -43,52 +45,78 @@ class Context(object):
 
     """
 
-    def __init__(self, environment,  # pylint: disable-msg=too-many-arguments
+    def __init__(self, environment=None,
                  stack_names=None,
-                 mappings=None,
                  config=None,
                  logger_type=None,
                  force_stacks=None):
-        try:
-            self.namespace = environment["namespace"]
-        except KeyError:
-            raise MissingEnvironment(["namespace"])
-
         self.environment = environment
         self.stack_names = stack_names or []
-        self.mappings = mappings or {}
         self.logger_type = logger_type
-        self.namespace_delimiter = "-"
         self.config = config or {}
         self.force_stacks = force_stacks or []
-        self._base_fqn = self.namespace.replace(".", "-").lower()
-        self.bucket_name = "stacker-%s" % (self.get_fqn(),)
-        self.tags = {
-            'stacker_namespace': self.namespace
-        }
-
         self.hook_data = {}
+
+    @property
+    def namespace(self):
+        namespace = self.config.get("namespace")
+        if namespace is not None:
+            return namespace
+
+        # For backwards compatibility, we fallback to attempting to
+        # fetch the namespace from the environment file, if provided.
+        namespace = self.environment.get("namespace")
+        if namespace:
+            logger.warn("specifying namespace in the environment is "
+                        "deprecated, and should be moved to the config")
+            return namespace
+
+        # Raise an error if no namespace was provided.
+        raise MissingConfig("namespace")
+
+    @property
+    def namespace_delimiter(self):
+        return self.config.get(
+                "namespace_delimiter",
+                DEFAULT_NAMESPACE_DELIMITER)
+
+    @property
+    def bucket_name(self):
+        return self.config.get("stacker_bucket") \
+                or "stacker-%s" % (self.get_fqn(),)
+
+    @property
+    def tags(self):
+        tags = self.config.get("tags", None)
+        if tags is not None:
+            return dict([(str(tag_key), str(tag_value)) for tag_key,
+                         tag_value in tags.items()])
+        else:
+            return {'stacker_namespace': self.namespace}
+
+    @property
+    def _base_fqn(self):
+        return self.namespace.replace(".", "-").lower()
+
+    @property
+    def mappings(self):
+        return self.config.get("mappings", {})
 
     def load_config(self, conf_string):
         self.config = parse_config(conf_string, environment=self.environment)
-        self.mappings = self.config.get("mappings", {})
-        namespace_delimiter = self.config.get("namespace_delimiter", None)
         if "sys_path" in self.config:
             logger.debug("Appending %s to sys.path.", self.config["sys_path"])
             sys.path.append(self.config["sys_path"])
             logger.debug("sys.path is now %s", sys.path)
-        if namespace_delimiter is not None:
-            self.namespace_delimiter = namespace_delimiter
-        bucket_name = self.config.get("stacker_bucket", None)
-        if bucket_name:
-            self.bucket_name = bucket_name
-        tags = self.config.get("tags", None)
-        if tags is not None:
-            self.tags = dict([(str(tag_key), str(tag_value)) for tag_key,
-                              tag_value in tags.items()])
         lookups = self.config.get("lookups", {})
         for key, handler in lookups.iteritems():
             register_lookup_handler(key, handler)
+        sources = self.config.get("package_sources")
+        if sources is not None:
+            processor = SourceProcessor(
+                stacker_cache_dir=self.config.get("stacker_cache_dir")
+            )
+            processor.get_package_sources(sources=sources)
 
     def _get_stack_definitions(self):
         if not self.stack_names:

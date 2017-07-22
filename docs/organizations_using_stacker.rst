@@ -40,3 +40,15 @@ AltoStack_
   We are an Amazon Web Services - (AWS) APN Consulting Partner.
 
 .. _AltoStack: https://altostack.io/
+
+Cobli_
+
+  Cobli develops cutting-edge solutions for fleet management efficiency and
+  intelligence in South America. We bring advanced tracking, analysis and
+  predictions to fleets of any size by connecting vehicles to an easy to use
+  platform through smart devices.
+
+  Cobli manages most of its AWS infrastructure using stacker, and we encourage
+  our developers to contribute to free-software whenever possible.
+
+.. _Cobli: https://cobli.co/

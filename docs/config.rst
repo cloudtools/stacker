@@ -13,6 +13,22 @@ duplicating config. (See `YAML anchors & references`_ for details)
 Top Level Keywords
 ==================
 
+Namespace
+---------
+
+You can provide a **namespace** to create all stacks within. The namespace will
+be used as a prefix for the name of any stack that stacker creates, and makes
+it unnecessary to specify the fully qualified name of the stack in output
+lookups.
+
+In addition, this value will be used to create an S3 bucket that stacker will
+use to upload and store all CloudFormation templates.
+
+In general, this is paired with the concept of `Environments
+<environments.html>`_ to create a namespace per environment::
+
+  namespace: ${namespace}
+
 Namespace Delimiter
 -------------------
 
@@ -52,6 +68,36 @@ inside the same repo as config files).
 
 Adding a path (e.g. ``./``) to the **sys_path** top level key word will allow
 modules from that path location to be used.
+
+Remote Packages
+----------------
+The **package_sources** top level keyword can be used to define remote git
+sources for blueprints (e.g., retrieving ``stacker_blueprints`` on github at
+tag ``v1.0.2``).
+
+The only required key for a git repository config is ``uri``, but ``branch``,
+``tag``, & ``commit`` can also be specified::
+  package_sources:
+    git:
+      - uri: git@github.com:acmecorp/stacker_blueprints.git
+      - uri: git@github.com:remind101/stacker_blueprints.git
+        tag: 1.0.0
+        paths:
+          - stacker_blueprints
+      - uri: git@github.com:contoso/webapp.git
+        branch: staging
+      - uri: git@github.com:contoso/foo.git
+        commit: 12345678
+
+Use the ``paths`` option when subdirectories of the repo should be added to
+Stacker's ``sys.path``.
+
+If no specific commit or tag is specified for a repo, the remote repository
+will be checked for newer commits on every execution of Stacker.
+
+Cloned repositories will be cached between builds; the cache location defaults
+to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
+level keyword.
 
 Pre & Post Hooks
 ----------------
@@ -170,10 +216,6 @@ A stack has the following keys:
   will be prepended to this)
 **class_path:**
   The python class path to the Blueprint to be used.
-**parameters:**
-  A dictionary of Parameters_ to pass into CloudFormation when the
-  stack is submitted. (note: parameters will be deprecated in the future
-  in favor of variables)
 **variables:**
   A dictionary of Variables_ to pass into the Blueprint when rendering the
   CloudFormation template. Variables_ can be any valid YAML data
@@ -218,64 +260,6 @@ Here's an example from stacker_blueprints_, used to create a VPC::
         CidrBlock: 10.128.0.0/16
 
 
-Parameters
-==========
-
-.. note::
-  Parameters have been deprecated in favor of Variables_ and will be
-  removed in a future release.
-
-Parameters are a CloudFormation concept that allow you to re-use an existing
-CloudFormation template, but modify its behavior by passing in different
-values.
-
-stacker tries to make working with Parameters a little easier in a few ways:
-
-Parameter YAML anchors & references
------------------------------------
-
-If you have a common set of parameters that you need to pass around in many
-places, it can be annoying to have to copy and paste them in multiple places.
-Instead, using a feature of YAML known as `anchors & references`_, you can
-define common values in a single place and then refer to them with a simple
-syntax.
-
-For example, say you pass a common domain name to each of your stacks, each of
-them taking it as a Parameter. Rather than having to enter the domain into
-each stack (and hopefully not typo'ing any of them) you could do the
-following::
-
-  domain_name: mydomain.com &domain
-
-Now you have an anchor called **domain** that you can use in place of any value
-in the config to provide the value **mydomain.com**. You use the anchor with
-a reference::
-
-  stacks:
-    - name: vpc
-      class_path: stacker_blueprints.vpc.VPC
-      parameters:
-        DomainName: *domain
-
-Even more powerful is the ability to anchor entire dictionaries, and then
-reference them in another dictionary, effectively providing it with default
-values. For example::
-
-  common_variables: &common_parameters
-    DomainName: mydomain.com
-    InstanceType: m3.medium
-    AMI: ami-12345abc
-
-Now, rather than having to provide each of those Parameters to every stack that
-could use them, you can just do this instead::
-
-  stacks:
-    - name: vpc
-      class_path: stacker_blueprints.vpc.VPC
-      parameters:
-        << : *common_variables
-        InstanceType: c4.xlarge # override the InstanceType in this stack
-
 Variables
 ==========
 
@@ -317,7 +301,7 @@ Even more powerful is the ability to anchor entire dictionaries, and then
 reference them in another dictionary, effectively providing it with default
 values. For example::
 
-  common_variables: &common_parameters
+  common_variables: &common_variables
     DomainName: mydomain.com
     InstanceType: m3.medium
     AMI: ami-12345abc

@@ -31,7 +31,7 @@ def handler(value, **kwargs):
     else:
         raise ValueError('Please make sure to include a tablename')
 
-    if table_name is '':
+    if not table_name:
         raise ValueError('Please make sure to include a dynamodb table name')
 
     table_lookup, table_keys = table_keys.split(':', 1)
@@ -78,7 +78,7 @@ def _lookup_key_parse(table_keys):
     """Return the order in which the stacks should be executed.
 
     Args:
-        - dependencies (dict): a dictionary where each key should be the
+        dependencies (dict): a dictionary where each key should be the
             fully qualified name of a stack whose value is an array of
             fully qualified stack names that the stack depends on. This is
             used to generate the order in which the stacks should be
@@ -123,10 +123,10 @@ def _build_projection_expression(clean_table_keys):
     the dynamodb lookup.
 
     Args:
-        clean_table_keys (dictionary): keys without the data types attached
+        clean_table_keys (dict): keys without the data types attached
 
     Returns:
-        string: A projection expression for the dynamodb lookup.
+        str: A projection expression for the dynamodb lookup.
     """
     projection_expression = ''
     for key in clean_table_keys[:-1]:
@@ -140,7 +140,7 @@ def _get_val_from_ddb_data(data, keylist):
     properly structured keylist, it will return the value of the lookup
 
     Args:
-        - data(dictionary): the raw dynamodb data
+        data (dict): the raw dynamodb data
             keylist(list): a list of keys to lookup. This must include the
                 datatype
 
@@ -174,7 +174,7 @@ def _convert_ddb_list_to_list(conversion_list):
         datatypes
 
     Args:
-        - conversion_list(dictionary): a dynamodb list which includes the
+        conversion_list (dict): a dynamodb list which includes the
             datatypes
 
     Returns:

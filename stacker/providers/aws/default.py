@@ -229,6 +229,7 @@ class Provider(BaseProvider):
                             "stacker S3 bucket region for templates. See "
                             "https://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
                             " for more information.")
+                logger.warn("\n")
                 logger.debug("Modifying the S3 TemplateURL to point to "
                              "us-east-1 endpoint")
                 template_url_parsed = urlparse.urlparse(template_url)
@@ -277,7 +278,8 @@ class Provider(BaseProvider):
                 logger.warn("DEPRECATION WARNING: Falling back to legacy "
                             "stacker S3 bucket region for templates. See "
                             "https://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
-                            " for more information. ")
+                            " for more information.")
+                logger.warn("\n")
                 logger.debug("Modifying the S3 TemplateURL to point to "
                              "us-east-1 endpoint")
                 template_url_parsed = urlparse.urlparse(template_url)
@@ -286,7 +288,7 @@ class Provider(BaseProvider):
                 template_url = urlparse.urlunparse(template_url_parsed)
                 logger.debug("Using template_url: %s", template_url)
                 retry_on_throttling(
-                    self.cloudformation.create_stack,
+                    self.cloudformation.update_stack,
                     kwargs=dict(StackName=fqn,
                                 TemplateURL=template_url,
                                 Parameters=parameters,

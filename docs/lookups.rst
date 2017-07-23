@@ -63,6 +63,7 @@ stacker includes the following lookup types:
   - `rxref lookup`_
   - `file lookup`_
   - `ssmstore lookup`_
+  - `dynamodb lookup`_
   - `envvar lookup`_
   - `ami lookup`_
   - `custom lookup`_
@@ -292,6 +293,42 @@ values)
 
 The region can be omitted (e.g. ``DBUser: ${ssmstore MyDBUser}``), in which
 case ``us-east-1`` will be assumed.
+
+.. _`dynamodb lookup`:
+
+DynamoDb Lookup
+--------------------------
+
+The ``dynamodb`` lookup type retrieves a value from a DynamoDb table.
+
+As an example, if you have a Dynamo Table named ``TestTable`` and it has an Item
+with a Primary Partition key called ``TestKey`` and a value named ``BucketName``
+, you can look it up by using Stacker. The lookup key in this case is TestVal
+
+For example::
+
+  # We can reference that dynamo value
+  BucketName: ${dynamodb us-east-1:TestTable@TestKey:TestVal.BucketName}
+
+  # Which would resolve to:
+  DBUser: stacker-test-bucket
+
+You can lookup other data types by putting the data type in the lookup. Valid
+values are "S"(String), "N"(Number), "M"(Map), "L"(List).
+
+For example::
+
+  ServerCount: ${dynamodb us-east-1:TestTable@TestKey:TestVal.ServerCount[N]}
+
+  This would return an int value, rather than a string
+
+You can lookup values inside of a map:
+
+For example::
+
+  ServerCount: ${dynamodb us-east-1:TestTable@TestKey:TestVal.ServerInfo[M].
+                                                                ServerCount[N]}
+
 
 .. _`envvar lookup`:
 

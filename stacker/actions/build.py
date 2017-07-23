@@ -283,7 +283,7 @@ class Action(BaseAction):
         """Any steps that need to be taken prior to running the action."""
         hooks = self.context.config.get("pre_build")
         handle_hooks(
-            "post_build",
+            "pre_build",
             hooks,
             self.provider,
             self.context,

@@ -1,3 +1,9 @@
+class InvalidConfig(Exception):
+    def __init__(self, errors):
+        super(InvalidConfig, self).__init__(errors)
+        self.errors = errors
+
+
 class InvalidLookupCombination(Exception):
 
     def __init__(self, lookup, lookups, value, *args, **kwargs):
@@ -108,14 +114,6 @@ class MissingEnvironment(Exception):
         self.key = key
         message = "Environment missing key %s." % (key,)
         super(MissingEnvironment, self).__init__(message, *args, **kwargs)
-
-
-class MissingConfig(Exception):
-
-    def __init__(self, key, *args, **kwargs):
-        self.key = key
-        message = "Config missing key %s." % (key,)
-        super(MissingConfig, self).__init__(message, *args, **kwargs)
 
 
 class ImproperlyConfigured(Exception):

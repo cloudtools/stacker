@@ -11,11 +11,7 @@ load test_helper
 @test "stacker build - empty config" {
   stacker build <(echo "")
   assert ! "$status" -eq 0
-
-  # FIXME(ejholmes): This is thrown because yaml.load doesn't know it should be
-  # a dict. This is a pretty bad first experience if someone provides an empty
-  # config to stacker.
-  assert_has_line "TypeError: argument of type 'NoneType' is not iterable"
+  assert_has_line 'Should have more than one element'
 }
 
 @test "stacker build - config with no stacks" {
@@ -23,10 +19,7 @@ load test_helper
 namespace: ${STACKER_NAMESPACE}
 EOF
   assert ! "$status" -eq 0
-
-  # FIXME(ejholmes): This is thrown because the config doesn't specify any
-  # stacks. Again, not a great first user experience.
-  assert_has_line "KeyError: 'stacks'"
+  assert_has_line 'Should have more than one element'
 }
 
 @test "stacker build - config with no namespace" {
@@ -37,7 +30,7 @@ stacks:
     class_path: stacker.tests.fixtures.mock_blueprints.VPC
 EOF
   assert ! "$status" -eq 0
-  assert_has_line "stacker.exceptions.MissingConfig: Config missing key namespace"
+  assert_has_line "This field is required"
 }
 
 @test "stacker build - missing environment key" {
@@ -63,6 +56,19 @@ EOF
   stacker build <(environment) <(config)
   assert ! "$status" -eq 0
   assert_has_line "stacker.exceptions.MissingEnvironment: Environment missing key vpc_public_subnets."
+}
+
+@test "stacker build - duplicate stacks" {
+  stacker build - <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.VPC
+  - name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+EOF
+  assert ! "$status" -eq 0
+  assert_has_line "Duplicate stack vpc found"
 }
 
 @test "stacker build - missing variable" {
@@ -181,6 +187,28 @@ EOF
 
   # Create the new stacks.
   stacker build <(environment) <(config)
+  assert "$status" -eq 0
+}
+
+@test "stacker build - no namespace" {
+  needs_aws
+
+  config() {
+    cat <<EOF
+namespace: ""
+stacker_bucket: stacker-${STACKER_NAMESPACE}
+stacks:
+  - name: ${STACKER_NAMESPACE}-vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(config)
+  }
+
+  # Create the new stacks.
+  stacker build <(config)
   assert "$status" -eq 0
 }
 

@@ -12,7 +12,8 @@ install_requires = [
     "awacs~=0.6.0",
     "colorama~=0.3.7",
     "formic~=0.9b",
-    "gitpython~=2.0"
+    "gitpython~=2.0",
+    "schematics~=2.0.1"
 ]
 
 tests_require = [

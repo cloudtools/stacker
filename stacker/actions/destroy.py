@@ -88,7 +88,7 @@ class Action(BaseAction):
 
     def pre_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
-        pre_destroy = self.context.config.get("pre_destroy")
+        pre_destroy = self.context.config.pre_destroy
         if not outline and pre_destroy:
             util.handle_hooks(
                 stage="pre_destroy",
@@ -110,7 +110,7 @@ class Action(BaseAction):
 
     def post_run(self, outline=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""
-        post_destroy = self.context.config.get("post_destroy")
+        post_destroy = self.context.config.post_destroy
         if not outline and post_destroy:
             util.handle_hooks(
                 stage="post_destroy",

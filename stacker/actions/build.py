@@ -281,7 +281,7 @@ class Action(BaseAction):
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
-        hooks = self.context.config.get("pre_build")
+        hooks = self.context.config.pre_build
         handle_hooks(
             "pre_build",
             hooks,
@@ -311,7 +311,7 @@ class Action(BaseAction):
 
     def post_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken after running the action."""
-        hooks = self.context.config.get("post_build")
+        hooks = self.context.config.post_build
         handle_hooks(
             "post_build",
             hooks,

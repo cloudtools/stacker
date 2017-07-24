@@ -11,6 +11,7 @@ from stacker.actions.build import (
 )
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context
+from stacker.config import Config
 from stacker.exceptions import StackDidNotChange
 from stacker.providers.base import BaseProvider
 from stacker.status import (
@@ -49,20 +50,23 @@ class TestProvider(BaseProvider):
 
 class TestBuildAction(unittest.TestCase):
     def setUp(self):
-        self.context = Context({"namespace": "namespace"})
+        self.context = Context(config=Config({"namespace": "namespace"}))
         self.build_action = build.Action(self.context, provider=TestProvider())
 
     def _get_context(self, **kwargs):
-        config = {"stacks": [
-            {"name": "vpc"},
-            {"name": "bastion",
-             "variables": {"test": "${output vpc::something}"}},
-            {"name": "db",
-             "variables": {"test": "${output vpc::something}",
-                           "else": "${output bastion::something}"}},
-            {"name": "other", "variables": {}}
-        ]}
-        return Context({"namespace": "namespace"}, config=config, **kwargs)
+        config = Config({
+            "namespace": "namespace",
+            "stacks": [
+                {"name": "vpc"},
+                {"name": "bastion",
+                 "variables": {"test": "${output vpc::something}"}},
+                {"name": "db",
+                 "variables": {"test": "${output vpc::something}",
+                               "else": "${output bastion::something}"}},
+                {"name": "other", "variables": {}}
+            ]
+        })
+        return Context(config=config, **kwargs)
 
     def test_handle_missing_params(self):
         stack = {'StackName': 'teststack'}

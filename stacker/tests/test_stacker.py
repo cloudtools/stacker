@@ -1,6 +1,7 @@
 import unittest
 
 from stacker.commands import Stacker
+from stacker.exceptions import InvalidConfig
 
 
 class TestStacker(unittest.TestCase):
@@ -85,6 +86,9 @@ class TestStacker(unittest.TestCase):
              "stacker/tests/fixtures/basic.env",
              "stacker/tests/fixtures/vpc-bastion-db-web-pre-1.0.yaml"]
         )
-        stacker.configure(args)
-        with self.assertRaises(AttributeError):
-            args.context.get_stacks_dict()
+        with self.assertRaises(InvalidConfig):
+            stacker.configure(args)
+
+
+if __name__ == '__main__':
+    unittest.main()

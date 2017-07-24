@@ -1,6 +1,7 @@
 from mock import MagicMock
 
 from stacker.context import Context
+from stacker.config import Config, Stack
 from stacker.lookups import Lookup
 
 
@@ -9,11 +10,12 @@ def mock_provider(**kwargs):
 
 
 def mock_context(namespace=None, **kwargs):
+    config = Config({"namespace": namespace})
     environment = kwargs.get("environment", {})
-    if namespace is not None:
-        environment["namespace"] = namespace
-
-    return Context(environment, **kwargs)
+    return Context(
+        config=config,
+        environment=environment,
+        **kwargs)
 
 
 def generate_definition(base_name, stack_id, **overrides):
@@ -21,11 +23,10 @@ def generate_definition(base_name, stack_id, **overrides):
         "name": "%s.%d" % (base_name, stack_id),
         "class_path": "stacker.tests.fixtures.mock_blueprints.%s" % (
             base_name.upper()),
-        "namespace": "example-com",
         "requires": []
     }
     definition.update(overrides)
-    return definition
+    return Stack(definition)
 
 
 def mock_lookup(lookup_input, lookup_type, raw=None):

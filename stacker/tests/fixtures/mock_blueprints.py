@@ -1,4 +1,4 @@
-from troposphere import Output, Sub, Join, Ref
+from troposphere import Output, Sub, Ref
 from troposphere import iam
 
 from awacs.aws import Policy, Statement

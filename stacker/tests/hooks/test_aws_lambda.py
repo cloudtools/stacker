@@ -13,6 +13,7 @@ from moto import mock_s3
 from testfixtures import TempDirectory, ShouldRaise, compare
 
 from stacker.context import Context
+from stacker.config import Config
 from stacker.hooks.aws_lambda import (
     upload_lambda_functions,
     ZIP_PERMS_MASK,
@@ -77,7 +78,7 @@ class TestLambdaHooks(unittest.TestCase):
 
     def setUp(self):
         self.context = Context(
-            config={'namespace': 'test', 'stacker_bucket': 'test'})
+            config=Config({'namespace': 'test', 'stacker_bucket': 'test'}))
         self.provider = mock_provider(region="us-east-1")
 
     def run_hook(self, **kwargs):

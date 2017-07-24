@@ -5,6 +5,7 @@ from .destroy import Destroy
 from .info import Info
 from .diff import Diff
 from .base import BaseCommand
+from ...config import render_parse_load as load_config
 from ...context import Context
 from ...providers.aws import (
     default,
@@ -31,14 +32,20 @@ class Stacker(BaseCommand):
         else:
             logger.info('Using Default AWS Provider')
             options.provider = default.Provider(region=options.region)
+
+        config = load_config(
+            options.config.read(),
+            environment=options.environment,
+            validate=True)
+
         options.context = Context(
             environment=options.environment,
+            config=config,
             logger_type=self.logger_type,
             # Allow subcommands to provide any specific kwargs to the Context
             # that it wants.
             **options.get_context_kwargs(options)
         )
-        options.context.load_config(options.config.read())
 
     def add_arguments(self, parser):
         parser.add_argument("--version", action="version",

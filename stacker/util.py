@@ -467,7 +467,7 @@ class SourceProcessor():
                                         Default to $HOME/.stacker
         """
         stacker_cache_dir = (stacker_cache_dir or
-                             os.path.join(os.environ['HOME'], '.stacker'))
+                             os.path.expanduser("~/.stacker"))
         package_cache_dir = os.path.join(stacker_cache_dir, 'packages')
         self.stacker_cache_dir = stacker_cache_dir
         self.package_cache_dir = package_cache_dir

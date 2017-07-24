@@ -25,6 +25,21 @@ class TestConfig(unittest.TestCase):
             render(config, env)
         self.assertEqual(expected.exception.key, "b")
 
+    def test_render_missing_env_and_lookup(self):
+        env = {}
+
+        # This exception should be raised, but currently is not. It's not
+        # raised, because the strings.Template first hits the ${kms ...}
+        # lookup, which raises a ValueError that's rescued, then we use
+        # `safe_substitute` which ignores missing keys.
+        with self.assertRaises(exceptions.MissingEnvironment)
+            render("""stacks:
+- name: vpc
+  class_path: blueprints.VPC
+  variables:
+    ${kms us-east@fooo)
+namespace: $namespace # missing""", env)
+
     def test_render_no_variable_config(self):
         c = render("namespace: prod", {})
         self.assertEqual("namespace: prod", c)

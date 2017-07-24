@@ -1,6 +1,5 @@
 import os
 from setuptools import setup, find_packages
-import glob
 
 VERSION = "1.0.4"
 
@@ -27,6 +26,12 @@ setup_requires = [
     "nose",
 ]
 
+scripts = [
+    "scripts/compare_env",
+    "scripts/docker-stacker",
+    "scripts/stacker"
+]
+
 
 def read(filename):
     full_path = os.path.join(src_dir, filename)
@@ -45,7 +50,7 @@ if __name__ == "__main__":
         description="Opinionated AWS CloudFormation Stack manager",
         long_description=read("README.rst"),
         packages=find_packages(),
-        scripts=glob.glob(os.path.join(src_dir, "scripts", "*")),
+        scripts=scripts,
         install_requires=install_requires,
         tests_require=tests_require,
         setup_requires=setup_requires,

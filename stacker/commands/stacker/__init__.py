@@ -31,6 +31,11 @@ class Stacker(BaseCommand):
         else:
             logger.info('Using Default AWS Provider')
             options.provider = default.Provider(region=options.region)
+
+        # Copy the region from the provider, if set, to the environment
+        if options.provider.region:
+            options.environment.update({'region': options.provider.region})
+
         options.context = Context(
             environment=options.environment,
             logger_type=self.logger_type,

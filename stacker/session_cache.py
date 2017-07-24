@@ -5,7 +5,7 @@ import boto3
 import logging
 
 
-def get_session(region):
+def get_session(region=None):
     """Creates a boto3 session with a cache
 
     Args:

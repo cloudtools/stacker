@@ -94,6 +94,9 @@ class Provider(BaseProvider):
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
+        # If region is not set explicitly, fetch it from the boto session
+        if not self.region:
+            self.region = get_session().region_name
 
     @property
     def cloudformation(self):

@@ -1,6 +1,7 @@
 import logging
 
 from .base import BaseAction
+from ..providers.base import Template
 from .. import util
 from ..exceptions import (
     MissingParameterException,
@@ -233,7 +234,7 @@ class Action(BaseAction):
         stack.resolve(self.context, self.provider)
 
         logger.debug("Launching stack %s now.", stack.fqn)
-        template_url = self.s3_stack_push(stack.blueprint)
+        template = self._template(stack.blueprint)
         tags = build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
 
@@ -241,7 +242,7 @@ class Action(BaseAction):
         if not provider_stack:
             new_status = SubmittedStatus("creating new stack")
             logger.debug("Creating new stack: %s", stack.fqn)
-            self.provider.create_stack(stack.fqn, template_url, parameters,
+            self.provider.create_stack(stack.fqn, template, parameters,
                                        tags)
         else:
             if not should_update(stack):
@@ -249,13 +250,26 @@ class Action(BaseAction):
             try:
                 new_status = SubmittedStatus("updating existing stack")
                 existing_params = provider_stack.get('Parameters', [])
-                self.provider.update_stack(stack.fqn, template_url,
+                self.provider.update_stack(stack.fqn, template,
                                            existing_params, parameters, tags)
                 logger.debug("Updating existing stack: %s", stack.fqn)
             except StackDidNotChange:
                 return DidNotChangeStatus()
 
         return new_status
+
+    def _template(self, blueprint):
+        """Generates a suitable template based on whether or not an S3 bucket
+        is set.
+
+        If an S3 bucket is set, then the template will be uploaded to S3 first,
+        and CreateStack/UpdateStack operations will use the uploaded template.
+        If not bucket is set, then the template will be inlined.
+        """
+        if self.bucket_name:
+            return Template(url=self.s3_stack_push(blueprint))
+        else:
+            return Template(body=blueprint.rendered)
 
     def _generate_plan(self, tail=False):
         plan_kwargs = {}

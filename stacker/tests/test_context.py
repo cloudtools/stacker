@@ -71,7 +71,7 @@ class TestContext(unittest.TestCase):
     def test_context_bucket_name_is_overriden_but_is_none(self):
         config = Config({"namespace": "test", "stacker_bucket": ""})
         context = Context(config=config)
-        self.assertEqual(context.bucket_name, "stacker-test")
+        self.assertEqual(context.bucket_name, None)
 
         config = Config({"namespace": "test", "stacker_bucket": None})
         context = Context(config=config)
@@ -81,6 +81,17 @@ class TestContext(unittest.TestCase):
         config = Config({"namespace": "test", "stacker_bucket": "bucket123"})
         context = Context(config=config)
         self.assertEqual(context.bucket_name, "bucket123")
+
+    def test_context_default_bucket_no_namespace(self):
+        context = Context(config=Config({"namespace": ""}))
+        self.assertEqual(context.bucket_name, None)
+
+        context = Context(config=Config({"namespace": None}))
+        self.assertEqual(context.bucket_name, None)
+
+        context = Context(
+            config=Config({"namespace": None, "stacker_bucket": ""}))
+        self.assertEqual(context.bucket_name, None)
 
     def test_context_namespace_delimiter_is_overriden_and_not_none(self):
         config = Config({"namespace": "namespace", "namespace_delimiter": "_"})

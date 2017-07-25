@@ -31,3 +31,16 @@ class BaseProvider(object):
     def get_output(self, stack_name, output):
         # pylint: disable=unused-argument
         return self.get_outputs(stack_name)[output]
+
+
+class Template(object):
+    """A value object that represents a CloudFormation stack template, which
+    could be optionally uploaded to s3.
+
+    Presence of the url attribute indicates that the template was uploaded to
+    S3, and the uploaded template should be used for CreateStack/UpdateStack
+    calls.
+    """
+    def __init__(self, url=None, body=None):
+        self.url = url
+        self.body = body

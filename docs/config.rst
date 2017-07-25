@@ -83,6 +83,13 @@ the region where you want to create the bucket.
   as described above. You can specify this keyword now to remove the
   deprecation warning.
 
+If you want stacker to upload templates directly to CloudFormation, instead of
+first uploading to S3, you can set **stacker_bucket** to an empty string.
+However, note that template size is greatly limited when uploading directly.
+See the `CloudFormation Limits Reference`_.
+
+.. _`CloudFormation Limits Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html
+
 Module Paths
 ----------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to

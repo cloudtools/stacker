@@ -66,8 +66,32 @@ class Context(object):
 
     @property
     def bucket_name(self):
+        if not self.upload_templates_to_s3:
+            return None
+
         return self.config.stacker_bucket \
-                or "stacker-%s" % (self.get_fqn(),)
+            or "stacker-%s" % (self.get_fqn(),)
+
+    @property
+    def upload_templates_to_s3(self):
+        # Don't upload stack templates to S3 if `stacker_bucket` is explicitly
+        # set to an empty string.
+        if self.config.stacker_bucket == '':
+            logger.debug("Not uploading templates to s3 because "
+                         "`stacker_bucket` is explicity set to an "
+                         "empty string")
+            return False
+
+        # If no namespace is specificied, and there's no explicit stacker
+        # bucket specified, don't upload to s3. This makes sense because we
+        # can't realistically auto generate a stacker bucket name in this case.
+        if not self.namespace and not self.config.stacker_bucket:
+            logger.debug("Not uploading templates to s3 because "
+                         "there is no namespace set, and no "
+                         "stacker_bucket set")
+            return False
+
+        return True
 
     @property
     def tags(self):

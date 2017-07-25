@@ -16,6 +16,22 @@ logger = logging.getLogger(__name__)
 MAX_TAIL_RETRIES = 5
 
 
+def template_args(template):
+    """Given a template object, this will return a dict that can be used in
+    CreateStack/UpdateStack calls, based on whether or not the template is
+    inline, or uploaded to S3.
+
+    Args:
+        template (:class:`stacker.providers.base.Template`): The template
+            object.
+
+    """
+    if template.url:
+        return {'TemplateURL': template.url}
+    else:
+        return {'TemplateBody': template.body}
+
+
 def get_output_dict(stack):
     """Returns a dict of key/values for the outputs for a given CF stack.
 
@@ -235,44 +251,46 @@ class Provider(BaseProvider):
                             kwargs=dict(StackName=self.get_stack_name(stack)))
         return True
 
-    def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
+    def create_stack(self, fqn, template, parameters, tags, **kwargs):
         try:
             logger.debug("Stack %s not found, creating.", fqn)
             logger.debug("Using parameters: %s", parameters)
             logger.debug("Using tags: %s", tags)
-            logger.debug("Using template_url: %s", template_url)
+            if template.url:
+                logger.debug("Using template_url: %s", template.url)
+            args = dict(StackName=fqn,
+                        Parameters=parameters,
+                        Tags=tags,
+                        Capabilities=["CAPABILITY_NAMED_IAM"])
             retry_on_throttling(
                 self.cloudformation.create_stack,
-                kwargs=dict(StackName=fqn,
-                            TemplateURL=template_url,
-                            Parameters=parameters,
-                            Tags=tags,
-                            Capabilities=["CAPABILITY_NAMED_IAM"]),
+                kwargs=dict(args, **template_args(template)),
             )
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Message'] == ('TemplateURL must reference '
                                                   'a valid S3 object to which '
                                                   'you have access.'):
-                s3_fallback(fqn, template_url, parameters, tags,
+                s3_fallback(fqn, template.url, parameters, tags,
                             self.cloudformation.create_stack)
             else:
                 raise
         return True
 
-    def update_stack(self, fqn, template_url, old_parameters, parameters,
+    def update_stack(self, fqn, template, old_parameters, parameters,
                      tags, **kwargs):
+        args = dict(StackName=fqn,
+                    Parameters=parameters,
+                    Tags=tags,
+                    Capabilities=["CAPABILITY_NAMED_IAM"])
         try:
             logger.debug("Attempting to update stack %s.", fqn)
             logger.debug("Using parameters: %s", parameters)
             logger.debug("Using tags: %s", tags)
-            logger.debug("Using template_url: %s", template_url)
+            if template.url:
+                logger.debug("Using template_url: %s", template.url)
             retry_on_throttling(
                 self.cloudformation.update_stack,
-                kwargs=dict(StackName=fqn,
-                            TemplateURL=template_url,
-                            Parameters=parameters,
-                            Tags=tags,
-                            Capabilities=["CAPABILITY_NAMED_IAM"]),
+                kwargs=dict(args, **template_args(template)),
             )
         except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in e.message:
@@ -285,7 +303,7 @@ class Provider(BaseProvider):
                                                     'reference a valid '
                                                     'S3 object to which '
                                                     'you have access.'):
-                s3_fallback(fqn, template_url, parameters, tags,
+                s3_fallback(fqn, template.url, parameters, tags,
                             self.cloudformation.update_stack)
             else:
                 raise

@@ -9,6 +9,7 @@ import boto3
 
 from ....actions.diff import DictValue
 
+from ....providers.base import Template
 from ....providers.aws.interactive import (
     Provider,
     requires_replacement,
@@ -252,7 +253,7 @@ class TestInteractiveProviderMethods(unittest.TestCase):
             with self.assertRaises(exceptions.StackDidNotChange):
                 create_change_set(
                     cfn_client=self.cfn, fqn="my-fake-stack",
-                    template_url="http://fake.template.url.com/",
+                    template=Template(url="http://fake.template.url.com/"),
                     parameters=[], tags=[]
                 )
 
@@ -273,7 +274,7 @@ class TestInteractiveProviderMethods(unittest.TestCase):
             with self.assertRaises(exceptions.UnhandledChangeSetStatus):
                 create_change_set(
                     cfn_client=self.cfn, fqn="my-fake-stack",
-                    template_url="http://fake.template.url.com/",
+                    template=Template(url="http://fake.template.url.com/"),
                     parameters=[], tags=[]
                 )
 
@@ -294,7 +295,7 @@ class TestInteractiveProviderMethods(unittest.TestCase):
             with self.assertRaises(exceptions.UnableToExecuteChangeSet):
                 create_change_set(
                     cfn_client=self.cfn, fqn="my-fake-stack",
-                    template_url="http://fake.template.url.com/",
+                    template=Template(url="http://fake.template.url.com/"),
                     parameters=[], tags=[]
                 )
 
@@ -334,7 +335,7 @@ class TestInteractiveProvider(unittest.TestCase):
         with self.stubber:
             self.provider.update_stack(
                 fqn="my-fake-stack",
-                template_url="http://fake.template.url.com/",
+                template=Template(url="http://fake.template.url.com/"),
                 old_parameters=[],
                 parameters=[], tags=[]
             )
@@ -367,7 +368,7 @@ class TestInteractiveProvider(unittest.TestCase):
         with self.stubber:
             self.provider.update_stack(
                 fqn="my-fake-stack",
-                template_url="http://fake.template.url.com/",
+                template=Template(url="http://fake.template.url.com/"),
                 old_parameters=[],
                 parameters=[], tags=[], diff=True
             )

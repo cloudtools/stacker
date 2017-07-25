@@ -217,6 +217,8 @@ class Stack(Model):
 
     parameters = DictType(AnyType, serialize_when_none=False)
 
+    tags = DictType(StringType, serialize_when_none=False)
+
     def validate_parameters(self, data, value):
         if value:
             stack_name = data['name']
@@ -279,7 +281,8 @@ class Config(Model):
 
     lookups = DictType(StringType, serialize_when_none=False)
 
-    stacks = ListType(ModelType(Stack), default=[], validators=[not_empty_list])
+    stacks = ListType(
+        ModelType(Stack), default=[], validators=[not_empty_list])
 
     def validate(self):
         try:

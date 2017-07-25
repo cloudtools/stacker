@@ -116,6 +116,19 @@ class Stack(object):
         return self._blueprint
 
     @property
+    def tags(self):
+        """Returns the tags that should be set on this stack. Includes both the
+        global tags, as well as any stack specific tags or overrides.
+
+        Returns:
+
+            dict: dictionary of tags
+
+        """
+        tags = self.definition.tags or {}
+        return dict(self.context.tags, **tags)
+
+    @property
     def parameter_values(self):
         """Return all CloudFormation Parameters for the stack.
 

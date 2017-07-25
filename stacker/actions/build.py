@@ -22,6 +22,12 @@ from ..status import (
 logger = logging.getLogger(__name__)
 
 
+def build_stack_tags(stack):
+    """Builds a common set of tags to attach to a stack"""
+    return [
+        {'Key': t[0], 'Value': t[1]} for t in stack.tags.items()]
+
+
 def should_update(stack):
     """Tests whether a stack should be submitted for updates to CF.
 
@@ -194,11 +200,6 @@ class Action(BaseAction):
              'ParameterValue': str(p[1])} for p in parameters
         ]
 
-    def _build_stack_tags(self, stack):
-        """Builds a common set of tags to attach to a stack"""
-        return [
-            {'Key': t[0], 'Value': t[1]} for t in self.context.tags.items()]
-
     def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.
 
@@ -233,7 +234,7 @@ class Action(BaseAction):
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template_url = self.s3_stack_push(stack.blueprint)
-        tags = self._build_stack_tags(stack)
+        tags = build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
 
         new_status = None

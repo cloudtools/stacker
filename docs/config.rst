@@ -234,6 +234,9 @@ A stack has the following keys:
   (optional) a list of other stacks this stack requires. This is for explicit
   dependencies - you do not need to set this if you refer to another stack in
   a Parameter, so this is rarely necessary.
+**tags:**
+  (optional) a dictionary of CloudFormation tags to apply to this stack. This
+  will be combined with the global tags, but these tags will take precendence.
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 

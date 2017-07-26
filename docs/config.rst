@@ -69,9 +69,10 @@ the region where you want to create the bucket.
   would already exist in us-east-1, requiring you to specify the
   **stacker_bucket_region** top level keyword.
 
-**Deprecation of legacy template bucket:**
-  We will first try the region you defined using the top level keyword
-  under **stacker_bucket_region**, or what was specified in the --region flag.
+.. note::
+  Deprecation of fallback to legacy template bucket. We will first try
+  the region you defined using the top level keyword under
+  **stacker_bucket_region**, or what was specified in the --region flag.
   If that fails, we fallback to the us-east-1 region. The fallback to us-east-1
   will be removed in a future release resulting in the following botocore
   excpetion to be thrown:

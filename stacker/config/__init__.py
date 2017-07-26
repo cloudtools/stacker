@@ -224,10 +224,11 @@ class Stack(Model):
         if value:
             stack_name = data['name']
             raise ValidationError(
-                    "DEPRECATION WARNING: Stack definition %s contains "
-                    "deprecated 'parameters', rather than 'variables'. Please "
-                    "update your config. See https://stacker.readthedocs.io/en"
-                    "/latest/config.html#variables for additional information."
+                    "DEPRECATION: Stack definition %s contains "
+                    "deprecated 'parameters', rather than 'variables'. You are"
+                    " Required to update your config. See https://stacker.rea"
+                    "dthedocs.io/en/latest/config.html#variables for "
+                    "additional information."
                     % stack_name)
         return value
 

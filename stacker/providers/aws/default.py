@@ -72,6 +72,54 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
                               retry_checker=_throttling_checker)
 
 
+def s3_fallback(self, fqn, template_url, parameters, tags, create_or_update, **kwargs):
+    logger.warn("DEPRECATION WARNING: Falling back to legacy "
+                "stacker S3 bucket region for templates. See "
+                "http://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
+                " for more information.")
+    # extra line break on purpose to avoid status updates removing URL
+    # from view
+    logger.warn("\n")
+    logger.debug("Modifying the S3 TemplateURL to point to "
+                 "us-east-1 endpoint")
+    template_url_parsed = urlparse.urlparse(template_url)
+    template_url_parsed = template_url_parsed._replace(
+        netloc="s3.amazonaws.com")
+    template_url = urlparse.urlunparse(template_url_parsed)
+    logger.debug("Using template_url: %s", template_url)
+    if create_or_update == "update":
+        retry_on_throttling(
+            self.cloudformation.update_stack,
+            kwargs=dict(StackName=fqn,
+                        TemplateURL=template_url,
+                        Parameters=parameters,
+                        Tags=tags,
+                        Capabilities=["CAPABILITY_NAMED_IAM"]),
+        )
+    elif create_or_update == "create":
+        retry_on_throttling(
+            self.cloudformation.create_stack,
+            kwargs=dict(StackName=fqn,
+                        TemplateURL=template_url,
+                        Parameters=parameters,
+                        Tags=tags,
+                        Capabilities=["CAPABILITY_NAMED_IAM"]),
+        )
+    elif create_or_update == "create_changeset":
+        response = retry_on_throttling(
+            self.create_change_set,
+            kwargs=dict(StackName=fqn,
+                        TemplateURL=template_url,
+                        Parameters=parameters,
+                        Tags=tags,
+                        Capabilities=["CAPABILITY_NAMED_IAM"],
+                        ChangeSetName=kwargs['ChangeSetName']),
+        )
+        return response
+    else:
+        pass
+
+
 class Provider(BaseProvider):
 
     """AWS CloudFormation Provider"""
@@ -225,26 +273,9 @@ class Provider(BaseProvider):
             if e.response['Error']['Message'] == ('TemplateURL must reference '
                                                   'a valid S3 object to which '
                                                   'you have access.'):
-                logger.warn("DEPRECATION WARNING: Falling back to legacy "
-                            "stacker S3 bucket region for templates. See "
-                            "https://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
-                            " for more information.")
-                logger.warn("\n")
-                logger.debug("Modifying the S3 TemplateURL to point to "
-                             "us-east-1 endpoint")
-                template_url_parsed = urlparse.urlparse(template_url)
-                template_url_parsed = template_url_parsed._replace(
-                    netloc="s3.amazonaws.com")
-                template_url = urlparse.urlunparse(template_url_parsed)
-                logger.debug("Using template_url: %s", template_url)
-                retry_on_throttling(
-                    self.cloudformation.create_stack,
-                    kwargs=dict(StackName=fqn,
-                                TemplateURL=template_url,
-                                Parameters=parameters,
-                                Tags=tags,
-                                Capabilities=["CAPABILITY_NAMED_IAM"]),
-                )
+                s3_fallback(
+                    self, fqn, template_url, parameters, tags,
+                    "create", **kwargs)
             else:
                 raise
         return True
@@ -275,26 +306,9 @@ class Provider(BaseProvider):
                                                     'reference a valid '
                                                     'S3 object to which '
                                                     'you have access.'):
-                logger.warn("DEPRECATION WARNING: Falling back to legacy "
-                            "stacker S3 bucket region for templates. See "
-                            "https://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
-                            " for more information.")
-                logger.warn("\n")
-                logger.debug("Modifying the S3 TemplateURL to point to "
-                             "us-east-1 endpoint")
-                template_url_parsed = urlparse.urlparse(template_url)
-                template_url_parsed = template_url_parsed._replace(
-                    netloc="s3.amazonaws.com")
-                template_url = urlparse.urlunparse(template_url_parsed)
-                logger.debug("Using template_url: %s", template_url)
-                retry_on_throttling(
-                    self.cloudformation.update_stack,
-                    kwargs=dict(StackName=fqn,
-                                TemplateURL=template_url,
-                                Parameters=parameters,
-                                Tags=tags,
-                                Capabilities=["CAPABILITY_NAMED_IAM"]),
-                )
+                s3_fallback(
+                    self, fqn, template_url, parameters, tags,
+                    "update", **kwargs)
             else:
                 raise
         return True

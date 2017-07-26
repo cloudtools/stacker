@@ -52,8 +52,11 @@ def render_parse_load(raw_config, environment=None, validate=True):
     if config.namespace is None:
         namespace = environment.get("namespace")
         if namespace:
-            logger.warn("specifying namespace in the environment is "
-                        "deprecated, and should be moved to the config")
+            logger.warn("DEPRECATION WARNING: specifying namespace in the "
+                        "environment is deprecated, see "
+                        "https://stacker.readthedocs.io/en/latest/config.html"
+                        "#namespace "
+                        "for more info.")
             config.namespace = namespace
 
     if validate:

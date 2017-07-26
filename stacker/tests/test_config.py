@@ -160,7 +160,7 @@ stacks: []
             "DEPRECATION WARNING: Stack definition vpc contains deprecated "
             "'parameters', rather than 'variables'. Please update your "
             "config. See https://stacker.readthedocs.io/en/latest/c"
-            "onfig.html#variables additional information.")
+            "onfig.html#variables for additional information.")
 
     def test_config_build(self):
         vpc = Stack({"name": "vpc", "class_path": "blueprints.VPC"})

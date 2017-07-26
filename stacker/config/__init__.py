@@ -226,7 +226,7 @@ class Stack(Model):
             raise ValidationError(
                     "DEPRECATION: Stack definition %s contains "
                     "deprecated 'parameters', rather than 'variables'. You are"
-                    " Required to update your config. See https://stacker.rea"
+                    " required to update your config. See https://stacker.rea"
                     "dthedocs.io/en/latest/config.html#variables for "
                     "additional information."
                     % stack_name)

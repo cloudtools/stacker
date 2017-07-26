@@ -370,7 +370,9 @@ def upload_lambda_functions(context, provider, **kwargs):
             Configurations of desired payloads to build. Keys correspond to
             function names, used to derive key names for the payload. Each
             value should itself be a dictionary, with the following data:
+
                 * path (str):
+
                     Base directory of the Lambda function payload content.
                     If it not an absolute path, it will be considered relative
                     to the directory containing the stacker configuration file
@@ -385,13 +387,16 @@ def upload_lambda_functions(context, provider, **kwargs):
                     this directory. So, for example, all the files contained
                     directly under this directory will be added to the root of
                     the ZIP file.
+
                 * include(str or list[str], optional):
+
                     Pattern or list of patterns of files to include in the
                     payload. If provided, only files that match these
                     patterns will be included in the payload.
 
                     Omitting it is equivalent to accepting all files that are
                     not otherwise excluded.
+
                 * exclude(str or list[str], optional):
                     Pattern or list of patterns of files to exclude from the
                     payload. If provided, any files that match will be ignored,

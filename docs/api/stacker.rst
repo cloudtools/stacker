@@ -14,7 +14,6 @@ Subpackages
     stacker.logger
     stacker.lookups
     stacker.providers
-    stacker.tests
 
 Submodules
 ----------

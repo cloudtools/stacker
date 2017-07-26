@@ -10,11 +10,11 @@ TYPE_NAME = "file"
 def handler(value, **kwargs):
     """Translate a filename into the file contents.
 
-    Fields should use the following format:
+    Fields should use the following format::
 
         <codec>:<path>
 
-    For example:
+    For example::
 
         # We've written a file to /some/path:
         $ echo "hello there" > /some/path
@@ -33,47 +33,52 @@ def handler(value, **kwargs):
         conf_key: aGVsbG8gdGhlcmUK
 
     Supported codecs:
-     - plain
-     - base64 - encode the plain text file at the given path with base64 prior
-       to returning it
-     - parameterized - the same as plain, but additionally supports
-       referencing template parameters to create userdata that's supplemented
-       with information from the template, as is commonly needed in EC2
-       UserData. For example, given a template parameter of BucketName, the
-       file could contain the following text:
 
-         #!/bin/sh
-         aws s3 sync s3://{{BucketName}}/somepath /somepath
+        - plain
 
-       and then you could use something like this in the YAML config file:
+        - base64 - encode the plain text file at the given path with base64
+          prior to returning it
 
-         UserData: ${file parameterized:/path/to/file}
+        - parameterized - the same as plain, but additionally supports
+          referencing template parameters to create userdata that's
+          supplemented with information from the template, as is commonly
+          needed in EC2 UserData. For example, given a template parameter of
+          BucketName, the file could contain the following text::
 
-       resulting in the UserData parameter being defined as:
+            #!/bin/sh
+            aws s3 sync s3://{{BucketName}}/somepath /somepath
 
-         { "Fn::Join" : ["", [
-           "#!/bin/sh\naws s3 sync s3://",
-           {"Ref" : "BucketName"},
-           "/somepath /somepath"
-         ]] }
+          and then you could use something like this in the YAML config file::
 
-     - parameterized-b64 - the same as parameterized, with the results
-       additionally wrapped in { "Fn::Base64": ... } , which is what you
-       actually need for EC2 UserData
+            UserData: ${file parameterized:/path/to/file}
+
+          resulting in the UserData parameter being defined as::
+
+              { "Fn::Join" : ["", [
+                  "#!/bin/sh\\naws s3 sync s3://",
+                  {"Ref" : "BucketName"},
+                  "/somepath /somepath"
+              ]] }
+
+        - parameterized-b64 - the same as parameterized, with the results
+          additionally wrapped in *{ "Fn::Base64": ... }* , which is what you
+          actually need for EC2 UserData
 
     When using parameterized-b64 for UserData, you should use a variable
     defined as such:
 
-    from troposphere import AWSHelperFn
+    .. code-block:: python
 
-      "UserData": {
-        "type": AWSHelperFn,
-        "description": "Instance user data",
-        "default": Ref("AWS::NoValue")
-      }
+        from troposphere import AWSHelperFn
+
+          "UserData": {
+              "type": AWSHelperFn,
+              "description": "Instance user data",
+              "default": Ref("AWS::NoValue")
+          }
 
     and then assign UserData in a LaunchConfiguration or Instance to
-    self.get_variables()["UserData"]. Note that we use AWSHelperFn as the
+    *self.get_variables()["UserData"]*. Note that we use AWSHelperFn as the
     type because the parameterized-b64 codec returns either a Base64 or a
     GenericHelperFn troposphere object
     """

@@ -77,17 +77,18 @@ tag ``v1.0.2``).
 
 The only required key for a git repository config is ``uri``, but ``branch``,
 ``tag``, & ``commit`` can also be specified::
-  package_sources:
-    git:
-      - uri: git@github.com:acmecorp/stacker_blueprints.git
-      - uri: git@github.com:remind101/stacker_blueprints.git
-        tag: 1.0.0
-        paths:
-          - stacker_blueprints
-      - uri: git@github.com:contoso/webapp.git
-        branch: staging
-      - uri: git@github.com:contoso/foo.git
-        commit: 12345678
+
+    package_sources:
+      git:
+        - uri: git@github.com:acmecorp/stacker_blueprints.git
+        - uri: git@github.com:remind101/stacker_blueprints.git
+          tag: 1.0.0
+          paths:
+            - stacker_blueprints
+        - uri: git@github.com:contoso/webapp.git
+          branch: staging
+        - uri: git@github.com:contoso/foo.git
+          commit: 12345678
 
 Use the ``paths`` option when subdirectories of the repo should be added to
 Stacker's ``sys.path``.

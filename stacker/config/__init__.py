@@ -53,7 +53,7 @@ def render_parse_load(raw_config, environment=None, validate=True):
         namespace = environment.get("namespace")
         if namespace:
             logger.warn("DEPRECATION WARNING: specifying namespace in the "
-                        "environment is deprecated, see "
+                        "environment is deprecated. See "
                         "https://stacker.readthedocs.io/en/latest/config.html"
                         "#namespace "
                         "for more info.")
@@ -224,9 +224,11 @@ class Stack(Model):
         if value:
             stack_name = data['name']
             raise ValidationError(
-                    "Stack definition %s contains deprecated "
-                    "'parameters', rather than 'variables'. Please "
-                    "update your config." % stack_name)
+                    "DEPRECATION WARNING: Stack definition %s contains "
+                    "deprecated 'parameters', rather than 'variables'. Please "
+                    "update your config. See https://stacker.readthedocs.io/en"
+                    "/latest/config.html#variables additional information."
+                    % stack_name)
         return value
 
 

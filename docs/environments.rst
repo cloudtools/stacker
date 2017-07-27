@@ -15,13 +15,13 @@ your configs for the specific environment you are deploying into. They
 act as keys that can be used in your config file, providing a sort of
 templating ability. This allows you to change the values of your config
 based on the environment you are in. For example, if you have a *webserver*
-stack, and you need to provide it a Parameter for the instance size it
+stack, and you need to provide it a variable for the instance size it
 should use, you would have something like this in your config file::
 
   stacks:
     - name: webservers
       class_path: stacker_blueprints.asg.AutoscalingGroup
-      parameters:
+      variables:
         InstanceType: m3.medium
 
 But what if you needed more CPU in your production environment, but not in your
@@ -40,7 +40,7 @@ files in your config. For example::
   stacks:
     - name: webservers
       class_path: stacker_blueprints.asg.AutoscalingGroup
-      parameters:
+      variables:
         InstanceType: ${web_instance_type}
 
 .. note::

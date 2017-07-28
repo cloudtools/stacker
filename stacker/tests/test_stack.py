@@ -72,3 +72,36 @@ class TestStack(unittest.TestCase):
         self.assertEqual(len(stack.parameter_values.keys()), 1)
         param = stack.parameter_values["Param2"]
         self.assertEqual(param, "Some Resolved Value")
+
+    def test_stack_tags_default(self):
+        self.config.tags = {"environment": "prod"}
+        definition = generate_definition(
+            base_name="vpc",
+            stack_id=1
+        )
+        stack = Stack(definition=definition, context=self.context)
+        self.assertEquals(stack.tags, {"environment": "prod"})
+
+    def test_stack_tags_override(self):
+        self.config.tags = {"environment": "prod"}
+        definition = generate_definition(
+            base_name="vpc",
+            stack_id=1,
+            tags={"environment": "stage"}
+        )
+        stack = Stack(definition=definition, context=self.context)
+        self.assertEquals(stack.tags, {"environment": "stage"})
+
+    def test_stack_tags_extra(self):
+        self.config.tags = {"environment": "prod"}
+        definition = generate_definition(
+            base_name="vpc",
+            stack_id=1,
+            tags={"app": "graph"}
+        )
+        stack = Stack(definition=definition, context=self.context)
+        self.assertEquals(stack.tags, {"environment": "prod", "app": "graph"})
+
+
+if __name__ == '__main__':
+    unittest.main()

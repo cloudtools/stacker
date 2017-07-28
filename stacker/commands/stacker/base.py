@@ -141,8 +141,7 @@ class BaseCommand(object):
                  "values in the environment file can be used in the stack "
                  "config as if it were a string.Template type: "
                  "https://docs.python.org/2/library/"
-                 "string.html#template-strings. Must define at least a "
-                 "\"namespace\".")
+                 "string.html#template-strings.")
         parser.add_argument(
             "config", type=argparse.FileType(),
             help="The config file where stack configuration is located. Must "

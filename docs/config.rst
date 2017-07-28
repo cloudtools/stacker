@@ -50,8 +50,8 @@ S3 Bucket
 Stacker, by default, pushes your CloudFormation templates into an S3 bucket
 and points CloudFormation at the template in that bucket when launching or
 updating your stacks. By default it uses a bucket named
-**stacker-${namespace}**, where the namespace is the namespace provided in the
-`environment <environments.html>`_ file.
+**stacker-${namespace}**, where the namespace is the namespace provided the
+config.
 
 If you want to change this, provide the **stacker_bucket** top level key word
 in the config.

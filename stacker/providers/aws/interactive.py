@@ -228,16 +228,9 @@ def create_change_set(cfn_client, fqn, template_url, parameters, tags,
         if e.response['Error']['Message'] == ('TemplateURL must reference '
                                               'a valid S3 object to which '
                                               'you have access.'):
-            kwargs = dict(StackName=fqn,
-                          TemplateURL=template_url,
-                          Parameters=parameters,
-                          Tags=tags,
-                          Capabilities=["CAPABILITY_NAMED_IAM"],
-                          ChangeSetName=get_change_set_name(),
-                          )
-            response = s3_fallback(
-                cfn_client, fqn, template_url, parameters,
-                tags, "create_changeset", **kwargs)
+            response = s3_fallback(fqn, template_url, parameters,
+                                   tags, cfn_client.create_change_set,
+                                   get_change_set_name())
         else:
             raise
     change_set_id = response["Id"]

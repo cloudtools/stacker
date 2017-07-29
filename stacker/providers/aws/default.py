@@ -72,7 +72,8 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
                               retry_checker=_throttling_checker)
 
 
-def s3_fallback(self, fqn, template_url, parameters, tags, create_or_update, **kwargs):
+def s3_fallback(fqn, template_url, parameters, tags, method,
+                ChangeSetName=None):
     logger.warn("DEPRECATION WARNING: Falling back to legacy "
                 "stacker S3 bucket region for templates. See "
                 "http://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
@@ -87,37 +88,16 @@ def s3_fallback(self, fqn, template_url, parameters, tags, create_or_update, **k
         netloc="s3.amazonaws.com")
     template_url = urlparse.urlunparse(template_url_parsed)
     logger.debug("Using template_url: %s", template_url)
-    if create_or_update == "update":
-        retry_on_throttling(
-            self.cloudformation.update_stack,
-            kwargs=dict(StackName=fqn,
-                        TemplateURL=template_url,
-                        Parameters=parameters,
-                        Tags=tags,
-                        Capabilities=["CAPABILITY_NAMED_IAM"]),
-        )
-    elif create_or_update == "create":
-        retry_on_throttling(
-            self.cloudformation.create_stack,
-            kwargs=dict(StackName=fqn,
-                        TemplateURL=template_url,
-                        Parameters=parameters,
-                        Tags=tags,
-                        Capabilities=["CAPABILITY_NAMED_IAM"]),
-        )
-    elif create_or_update == "create_changeset":
-        response = retry_on_throttling(
-            self.create_change_set,
-            kwargs=dict(StackName=fqn,
-                        TemplateURL=template_url,
-                        Parameters=parameters,
-                        Tags=tags,
-                        Capabilities=["CAPABILITY_NAMED_IAM"],
-                        ChangeSetName=kwargs['ChangeSetName']),
-        )
-        return response
-    else:
-        pass
+    kwargs = dict(StackName=fqn,
+                  TemplateURL=template_url,
+                  Parameters=parameters,
+                  Tags=tags,
+                  Capabilities=["CAPABILITY_NAMED_IAM"],
+                  )
+    if ChangeSetName is not None:
+        kwargs['ChangeSetName'] = ChangeSetName
+    response = retry_on_throttling(method, kwargs=kwargs)
+    return response
 
 
 class Provider(BaseProvider):
@@ -273,9 +253,8 @@ class Provider(BaseProvider):
             if e.response['Error']['Message'] == ('TemplateURL must reference '
                                                   'a valid S3 object to which '
                                                   'you have access.'):
-                s3_fallback(
-                    self, fqn, template_url, parameters, tags,
-                    "create", **kwargs)
+                s3_fallback(fqn, template_url, parameters, tags,
+                            self.cloudformation.create_stack)
             else:
                 raise
         return True
@@ -306,9 +285,8 @@ class Provider(BaseProvider):
                                                     'reference a valid '
                                                     'S3 object to which '
                                                     'you have access.'):
-                s3_fallback(
-                    self, fqn, template_url, parameters, tags,
-                    "update", **kwargs)
+                s3_fallback(fqn, template_url, parameters, tags,
+                            self.cloudformation.update_stack)
             else:
                 raise
         return True

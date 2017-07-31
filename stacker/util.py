@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import yaml
 from git import Repo
 
 import botocore.exceptions
@@ -265,6 +266,23 @@ def load_object_from_string(fqcn):
     return getattr(sys.modules[module_path], object_name)
 
 
+def merge_map(a, b):
+    """Recursively merge elements of argument b into argument a.
+
+    Primarly used for merging two dictionaries together, where dict b takes
+    precedence over dict a. If 2 lists are provided, they are concatenated.
+    """
+    if isinstance(a, list) and isinstance(b, list):
+        return a + b
+
+    if not isinstance(a, dict) or not isinstance(b, dict):
+        return b
+
+    for key in b.keys():
+        a[key] = merge_map(a[key], b[key]) if key in a else b[key]
+    return a
+
+
 def uppercase_first_letter(s):
     """Return string "s" with first character upper case."""
     return s[0].upper() + s[1:]
@@ -459,19 +477,19 @@ class SourceProcessor():
     """Makes remote python package sources available in the running python
        environment."""
 
-    def __init__(self, stacker_cache_dir=None):
+    def __init__(self, config={}):
         """
         Processes a config's list of package sources
 
         Args:
-            stacker_cache_dir (string): Directory of stacker local cache.
-                                        Default to $HOME/.stacker
+            config (dict): Stacker config dictionary
         """
-        stacker_cache_dir = (stacker_cache_dir or
+        stacker_cache_dir = (config.get('stacker_cache_dir') or
                              os.path.expanduser("~/.stacker"))
         package_cache_dir = os.path.join(stacker_cache_dir, 'packages')
         self.stacker_cache_dir = stacker_cache_dir
         self.package_cache_dir = package_cache_dir
+        self.config = config
         self.create_cache_directories()
 
     def create_cache_directories(self):
@@ -481,29 +499,12 @@ class SourceProcessor():
                 os.mkdir(self.stacker_cache_dir)
             os.mkdir(self.package_cache_dir)
 
-    def get_package_sources(self, sources):
-        """Makes remote python packages available for local use
-
-        Example::
-
-            {'git': [
-                {'uri': 'git@github.com:remind101/stacker_blueprints.git',
-                 'tag': '1.0.0',
-                 'paths': ['stacker_blueprints']},
-                {'uri': 'git@github.com:acmecorp/stacker_blueprints.git'},
-                {'uri': 'git@github.com:contoso/webapp.git',
-                 'branch': 'staging'},
-                {'uri': 'git@github.com:contoso/foo.git',
-                 'commit': '12345678'}
-            ]}
-
-        Args:
-            sources (dict): Dictionary of remote sources from config.
-                Currently supports git repositories
-        """
+    def get_package_sources(self):
+        """Makes remote python packages available for local use."""
         # Checkout git repositories specified in config
-        if sources.git:
-            for config in sources.git:
+        if (self.config.get('package_sources') and
+                self.config['package_sources'].get('git')):
+            for config in self.config['package_sources']['git']:
                 self.fetch_git_package(config=config)
 
     def fetch_git_package(self, config):
@@ -515,7 +516,7 @@ class SourceProcessor():
 
         """
         ref = self.determine_git_ref(config)
-        dir_name = self.sanitize_git_path(uri=config.uri, ref=ref)
+        dir_name = self.sanitize_git_path(uri=config['uri'], ref=ref)
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
 
         # We can skip cloning the repo if it's already been cached
@@ -523,7 +524,7 @@ class SourceProcessor():
             tmp_dir = tempfile.mkdtemp(prefix='stacker')
             try:
                 tmp_repo_path = os.path.join(tmp_dir, dir_name)
-                with Repo.clone_from(config.uri, tmp_repo_path) as repo:
+                with Repo.clone_from(config['uri'], tmp_repo_path) as repo:
                     repo.head.reference = ref
                     repo.head.reset(index=True, working_tree=True)
                 shutil.move(tmp_repo_path, self.package_cache_dir)
@@ -532,8 +533,8 @@ class SourceProcessor():
 
         # Cloning (if necessary) is complete. Now add the appropriate
         # directory (or directories) to sys.path
-        if config.paths:
-            for path in config.paths:
+        if config.get('paths'):
+            for path in config['paths']:
                 path_to_append = os.path.join(self.package_cache_dir,
                                               dir_name,
                                               path)
@@ -544,6 +545,15 @@ class SourceProcessor():
                                              path))
         else:
             sys.path.append(cached_dir_path)
+
+        # If the configuration defines a set of remote config yamls to
+        # include, merge them into the main config
+        if config.get('configs'):
+            for config_filename in config['configs']:
+                remote_config = yaml.safe_load(
+                    open(os.path.join(cached_dir_path, config_filename))
+                )
+                self.config = merge_map(remote_config, self.config)
 
     def git_ls_remote(self, uri, ref):
         """Determines the latest commit id for a given ref.
@@ -578,8 +588,8 @@ class SourceProcessor():
         Returns:
             str: A branch reference or "HEAD"
         """
-        if config.branch:
-            ref = "refs/heads/%s" % config.branch
+        if config.get('branch'):
+            ref = "refs/heads/%s" % config['branch']
         else:
             ref = "HEAD"
 
@@ -609,15 +619,15 @@ class SourceProcessor():
 
         # Now check for a specific point in time referenced and return it if
         # present
-        if config.commit:
-            ref = config.commit
-        elif config.tag:
-            ref = config.tag
+        if config.get('commit'):
+            ref = config['commit']
+        elif config.get('tag'):
+            ref = config['tag']
         else:
             # Since a specific commit/tag point in time has not been specified,
             # check the remote repo for the commit id to use
             ref = self.git_ls_remote(
-                config.uri,
+                config['uri'],
                 self.determine_git_ls_remote_ref(config)
             )
         return ref

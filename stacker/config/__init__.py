@@ -45,6 +45,16 @@ def render_parse_load(raw_config, environment=None, validate=True):
 
     rendered = render(raw_config, environment)
 
+    # Stage any remote package sources and merge into their defined
+    # configurations (if any)
+    pre_config = yaml.safe_load(rendered)
+    if pre_config.get('package_sources'):
+        processor = SourceProcessor(config=pre_config)
+        processor.get_package_sources()
+        # Call the render again as the package_sources may have merged in
+        # additional environment lookups
+        rendered = render(str(processor.config), environment)
+
     config = parse(rendered)
 
     # For backwards compatibility, if the config doesn't specify a namespace,
@@ -106,6 +116,24 @@ def parse(raw_config):
 
     """
 
+    # Convert any applicable dictionaries back into lists
+    config_dict = yaml.safe_load(raw_config)
+    if config_dict.get('stacks') and isinstance(config_dict['stacks'], dict):
+        stack_list = []
+        for key, value in config_dict['stacks'].iteritems():
+            tmp_dict = value
+            tmp_dict['name'] = key
+            stack_list.append(tmp_dict)
+        config_dict['stacks'] = stack_list
+    for stage in ['pre', 'post']:
+        for i in ['%s_build' % stage, '%s_destroy' % stage]:
+            if config_dict.get(i) and isinstance(config_dict[i], dict):
+                hook_list = []
+                for key, value in config_dict[i].iteritems():
+                    tmp_dict = value
+                    hook_list.append(tmp_dict)
+                config_dict[i] = hook_list
+
     # We have to enable non-strict mode, because people may be including top
     # level keys for re-use with stacks (e.g. including something like
     # `common_variables: &common_variables`).
@@ -118,7 +146,7 @@ def parse(raw_config):
     # should consider enabling this in the future.
     strict = False
 
-    return Config(yaml.safe_load(raw_config), strict=strict)
+    return Config(config_dict, strict=strict)
 
 
 def load(config):
@@ -140,12 +168,6 @@ def load(config):
     if config.lookups:
         for key, handler in config.lookups.iteritems():
             register_lookup_handler(key, handler)
-    sources = config.package_sources
-    if sources is not None:
-        processor = SourceProcessor(
-            stacker_cache_dir=config.stacker_cache_dir
-        )
-        processor.get_package_sources(sources=sources)
 
     return config
 
@@ -189,6 +211,8 @@ class GitPackageSource(Model):
     commit = StringType(serialize_when_none=False)
 
     paths = ListType(StringType, serialize_when_none=False)
+
+    configs = ListType(StringType, serialize_when_none=False)
 
 
 class PackageSources(Model):

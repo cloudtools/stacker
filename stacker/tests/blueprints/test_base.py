@@ -20,6 +20,7 @@ from stacker.blueprints.base import (
     parse_user_data
 )
 from stacker.blueprints.variables.types import (
+    CFNCommaDelimitedList,
     CFNNumber,
     CFNString,
     EC2AvailabilityZoneNameList,
@@ -54,6 +55,45 @@ class TestBuildParameter(unittest.TestCase):
         p = build_parameter("BasicParam", {"type": "String"})
         p.validate()
         self.assertEquals(p.Type, "String")
+
+
+class TestBlueprintRendering(unittest.TestCase):
+
+    def test_to_json(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"default": "default", "type": CFNString},
+                "Param2": {"type": CFNNumber},
+                "Param3": {"type": CFNCommaDelimitedList},
+                "Param4": {"default": "foo", "type": str},
+                "Param5": {"default": 5, "type": int}
+            }
+
+            def create_template(self):
+                self.template.add_version('2010-09-09')
+                self.template.add_description('TestBlueprint')
+
+        expected_json = """{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "TestBlueprint",
+    "Parameters": {
+        "Param1": {
+            "Default": "default",
+            "Type": "String"
+        },
+        "Param2": {
+            "Type": "Number"
+        },
+        "Param3": {
+            "Type": "CommaDelimitedList"
+        }
+    },
+    "Resources": {}
+}"""
+        self.assertEqual(
+            TestBlueprint(name="test", context=MagicMock()).to_json(),
+            expected_json,
+        )
 
 
 class TestVariables(unittest.TestCase):

@@ -3,6 +3,7 @@ import hashlib
 import logging
 import string
 from stacker.util import read_value_from_path
+from stacker.variables import Variable
 
 from troposphere import (
     Parameter,
@@ -468,6 +469,16 @@ class Blueprint(object):
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
+
+    def to_json(self):
+        """Render the blueprint and return the template in json form."""
+
+        variables = []
+        for k in self.get_parameter_definitions():
+            variables.append(Variable(k, 'unused_value'))
+        self.resolve_variables(variables)
+
+        return self.render_template()[1]
 
     def read_user_data(self, user_data_path):
         """Reads and parses a user_data file.

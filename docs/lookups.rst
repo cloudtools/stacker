@@ -66,6 +66,7 @@ stacker includes the following lookup types:
   - `dynamodb lookup`_
   - `envvar lookup`_
   - `ami lookup`_
+  - `hook_data lookup`_
   - `custom lookup`_
 
 .. _`output lookup`:
@@ -388,6 +389,28 @@ Example::
   # Note: The region is optional, and defaults to the current stacker region
   ImageId: ${ami [<region>@]owners:self,888888888888,amazon name_regex:server[0-9]+ architecture:i386}
 
+.. _`hook_data lookup`:
+
+Hook Data Lookup
+----------------
+
+When using hooks, you can have the hook store results in the
+`hook_data`_ dictionary on the context by setting *data_key* in the hook
+config.
+
+This lookup lets you look up values in that dictionary. A good example of this
+is when you use the `aws_lambda hook`_ to upload AWS Lambda code, then need to
+pass that code object as the *Code* variable in the `aws_lambda blueprint`_
+dictionary.
+
+Example::
+
+  # If you set the "data_key" config on the aws_lambda hook to be "myfunction"
+  # and you name the function package "TheCode" you can get the troposphere
+  # awslambda.Code object with:
+
+  Code: ${hook_data myfunction::TheCode}
+
 .. _`custom lookup`:
 
 Custom Lookup
@@ -395,3 +418,8 @@ Custom Lookup
 
 A custom lookup may be registered within the config.
 For more information see `Configuring Lookups <config.html#lookups>`_.
+
+
+.. _`hook_data`: http://stacker.readthedocs.io/en/latest/config.html#pre-post-hooks
+.. _`aws_lambda hook`: http://stacker.readthedocs.io/en/latest/api/stacker.hooks.html#stacker.hooks.aws_lambda.upload_lambda_functions
+.. _`aws_lambda blueprint`: https://github.com/remind101/stacker_blueprints/blob/master/stacker_blueprints/aws_lambda.py

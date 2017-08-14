@@ -182,7 +182,8 @@ the build action::
 Dictionary Hook Paths
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Hooks can also be defined as a dictionary::
+Hooks can also be defined as a dictionary (as long as their execution order
+isn't important)::
 
   pre_build:
     my_route53_hook:

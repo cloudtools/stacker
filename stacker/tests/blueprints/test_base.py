@@ -265,6 +265,14 @@ class TestVariables(unittest.TestCase):
         with self.assertRaises(ValidatorError):
             self._resolve_troposphere_var(sns.Subscription, {})
 
+    def test_resolve_variable_troposphere_type_unvalidated(self):
+        self._resolve_troposphere_var(sns.Subscription, {}, validate=False)
+
+    def test_resolve_variable_troposphere_type_optional_many(self):
+        res = self._resolve_troposphere_var(sns.Subscription, {},
+                                            many=True, optional=True)
+        self.assertIsNone(res)
+
     def test_resolve_variable_provided_resolved(self):
         var_name = "testVar"
         var_def = {"type": str}

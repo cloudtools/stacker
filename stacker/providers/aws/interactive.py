@@ -45,6 +45,7 @@ def requires_replacement(changeset):
     except KeyError:
         pass
 
+
 def get_raw_input(message):
     """ Just a wrapper for raw_input for testing purposes. """
     return raw_input(message)

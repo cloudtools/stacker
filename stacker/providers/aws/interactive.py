@@ -39,11 +39,8 @@ def requires_replacement(changeset):
         list: A list of changes that require replacement, if any.
 
     """
-    try:
-        return [r for r in changeset if r["ResourceChange"]["Replacement"] ==
-                'True']
-    except KeyError:
-        pass
+    return [r for r in changeset if "Replacement" in r["ResourceChange"] and r[
+            "ResourceChange"]["Replacement"] == 'True']
 
 
 def get_raw_input(message):

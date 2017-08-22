@@ -334,7 +334,7 @@ EOF
   assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: submitted (creating new stack)"
   assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: complete (creating new stack)"
 
-  # Perform a additional resouce addition in replacements-only mode, should not crash
+  # Perform a additional resouce addition in replacements-only mode, should not crash.  This is testing issue #463.
   stacker build -i --replacements-only <(config2)
   assert "$status" -eq 0
   assert_has_line "Using Interactive AWS Provider"

@@ -109,6 +109,22 @@ class Dummy(Blueprint):
         self.template.add_resource(WaitConditionHandle("Dummy"))
         self.template.add_output(Output("DummyId", Value="dummy-1234"))
 
+class Dummy2(Blueprint):
+    """
+    This blueprint allows tests of only additional resources to occur.
+    Just swap out the Dummy class for Dummy2 on the same stack.
+    """
+    VARIABLES = {
+        "StringVariable": {
+            "type": str,
+            "default": ""}
+    }
+
+    def create_template(self):
+        self.template.add_resource(WaitConditionHandle("Dummy"))
+        self.template.add_output(Output("DummyId", Value="dummy-1234"))
+        self.template.add_resource(WaitConditionHandle("Dummy2"))
+
 
 class VPC(Blueprint):
     VARIABLES = {

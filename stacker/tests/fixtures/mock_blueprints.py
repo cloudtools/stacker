@@ -109,6 +109,7 @@ class Dummy(Blueprint):
         self.template.add_resource(WaitConditionHandle("Dummy"))
         self.template.add_output(Output("DummyId", Value="dummy-1234"))
 
+
 class Dummy2(Blueprint):
     """
     This blueprint allows tests of only additional resources to occur.

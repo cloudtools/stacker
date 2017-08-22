@@ -2,7 +2,8 @@
 
 class TroposphereType(object):
 
-    def __init__(self, defined_type, many=False, optional=False):
+    def __init__(self, defined_type, many=False, optional=False,
+                 validate=True):
         """Represents a Troposphere type.
 
         :class:`Troposphere` will convert the value provided to the variable to
@@ -21,25 +22,27 @@ class TroposphereType(object):
 
         Args:
             defined_type (type): Troposphere type
-            many (Optional[bool]): Boolean indicating whether or not multiple
-                resources can be constructed. If the defined type is a
-                resource, multiple resources can be passed as a dictionary of
-                dictionaries
+            many (bool): Whether or not multiple resources can be constructed.
+                If the defined type is a resource, multiple resources can be
+                passed as a dictionary of dictionaries.
                 If it is a parameter class, multiple resources are passed as
                 a list.
-            optional (Optional[bool]): Boolean indicating if an undefined/null
-                configured value is acceptable, and can be passed to the
-                template instead of triggering an error.
+            optional (bool): Whether an undefined/null configured value is
+                acceptable. In that case a value of ``None`` will be passed to
+                the template, even if ``many`` is enabled.
+            validate (bool): Whether to validate the generated object on
+                creation. Should be left enabled unless the object will be
+                augmented with mandatory parameters in the template code, such
+                that it must be validated at a later point.
 
         """
 
         self._validate_type(defined_type)
-        if many and optional:
-            raise ValueError("Cannot specify both `many` and `optional`")
 
         self._type = defined_type
         self._many = many
         self._optional = optional
+        self._validate = validate
 
     def _validate_type(self, defined_type):
         if not hasattr(defined_type, "from_dict"):
@@ -65,7 +68,9 @@ class TroposphereType(object):
                 type
 
         """
-        if self._optional and not value:
+
+        # Explicitly check with len such that non-sequence types throw.
+        if self._optional and (value is None or len(value) == 0):
             return None
 
         if hasattr(self._type, 'resource_type'):
@@ -92,8 +97,9 @@ class TroposphereType(object):
             else:
                 result = [self._type.from_dict(None, value)]
 
-        for v in result:
-            v._validate_props()
+        if self._validate:
+            for v in result:
+                v._validate_props()
 
         return result[0] if not self._many else result
 

@@ -1,11 +1,13 @@
 import logging
 import time
+import botocore.exceptions
 
 import yaml
 
 from .default import (
     Provider as AWSProvider,
     retry_on_throttling,
+    s3_fallback,
 )
 from ... import exceptions
 from ...actions.diff import (
@@ -210,17 +212,27 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
 def create_change_set(cfn_client, fqn, template_url, parameters, tags,
                       replacements_only=False):
     logger.debug("Attempting to create change set for stack: %s.", fqn)
-    response = retry_on_throttling(
-        cfn_client.create_change_set,
-        kwargs={
-            'StackName': fqn,
-            'TemplateURL': template_url,
-            'Parameters': parameters,
-            'Tags': tags,
-            'Capabilities': ["CAPABILITY_NAMED_IAM"],
-            'ChangeSetName': get_change_set_name(),
-        },
-    )
+    try:
+        response = retry_on_throttling(
+            cfn_client.create_change_set,
+            kwargs={
+                'StackName': fqn,
+                'TemplateURL': template_url,
+                'Parameters': parameters,
+                'Tags': tags,
+                'Capabilities': ["CAPABILITY_NAMED_IAM"],
+                'ChangeSetName': get_change_set_name(),
+            },
+        )
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Message'] == ('TemplateURL must reference '
+                                              'a valid S3 object to which '
+                                              'you have access.'):
+            response = s3_fallback(fqn, template_url, parameters,
+                                   tags, cfn_client.create_change_set,
+                                   get_change_set_name())
+        else:
+            raise
     change_set_id = response["Id"]
     response = wait_till_change_set_complete(
         cfn_client, change_set_id

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+import urlparse
 
 import botocore.exceptions
 
@@ -69,6 +70,34 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
     return retry_with_backoff(fn, args=args, kwargs=kwargs, attempts=attempts,
                               exc_list=(botocore.exceptions.ClientError, ),
                               retry_checker=_throttling_checker)
+
+
+def s3_fallback(fqn, template_url, parameters, tags, method,
+                ChangeSetName=None):
+    logger.warn("DEPRECATION WARNING: Falling back to legacy "
+                "stacker S3 bucket region for templates. See "
+                "http://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
+                " for more information.")
+    # extra line break on purpose to avoid status updates removing URL
+    # from view
+    logger.warn("\n")
+    logger.debug("Modifying the S3 TemplateURL to point to "
+                 "us-east-1 endpoint")
+    template_url_parsed = urlparse.urlparse(template_url)
+    template_url_parsed = template_url_parsed._replace(
+        netloc="s3.amazonaws.com")
+    template_url = urlparse.urlunparse(template_url_parsed)
+    logger.debug("Using template_url: %s", template_url)
+    kwargs = dict(StackName=fqn,
+                  TemplateURL=template_url,
+                  Parameters=parameters,
+                  Tags=tags,
+                  Capabilities=["CAPABILITY_NAMED_IAM"],
+                  )
+    if ChangeSetName is not None:
+        kwargs['ChangeSetName'] = ChangeSetName
+    response = retry_on_throttling(method, kwargs=kwargs)
+    return response
 
 
 class Provider(BaseProvider):
@@ -207,23 +236,36 @@ class Provider(BaseProvider):
         return True
 
     def create_stack(self, fqn, template_url, parameters, tags, **kwargs):
-        logger.debug("Stack %s not found, creating.", fqn)
-        logger.debug("Using parameters: %s", parameters)
-        logger.debug("Using tags: %s", tags)
-        retry_on_throttling(
-            self.cloudformation.create_stack,
-            kwargs=dict(StackName=fqn,
-                        TemplateURL=template_url,
-                        Parameters=parameters,
-                        Tags=tags,
-                        Capabilities=["CAPABILITY_NAMED_IAM"]),
-        )
+        try:
+            logger.debug("Stack %s not found, creating.", fqn)
+            logger.debug("Using parameters: %s", parameters)
+            logger.debug("Using tags: %s", tags)
+            logger.debug("Using template_url: %s", template_url)
+            retry_on_throttling(
+                self.cloudformation.create_stack,
+                kwargs=dict(StackName=fqn,
+                            TemplateURL=template_url,
+                            Parameters=parameters,
+                            Tags=tags,
+                            Capabilities=["CAPABILITY_NAMED_IAM"]),
+            )
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Message'] == ('TemplateURL must reference '
+                                                  'a valid S3 object to which '
+                                                  'you have access.'):
+                s3_fallback(fqn, template_url, parameters, tags,
+                            self.cloudformation.create_stack)
+            else:
+                raise
         return True
 
     def update_stack(self, fqn, template_url, old_parameters, parameters,
                      tags, **kwargs):
         try:
             logger.debug("Attempting to update stack %s.", fqn)
+            logger.debug("Using parameters: %s", parameters)
+            logger.debug("Using tags: %s", tags)
+            logger.debug("Using template_url: %s", template_url)
             retry_on_throttling(
                 self.cloudformation.update_stack,
                 kwargs=dict(StackName=fqn,
@@ -239,7 +281,14 @@ class Provider(BaseProvider):
                     fqn,
                 )
                 raise exceptions.StackDidNotChange
-            raise
+            elif e.response['Error']['Message'] == ('TemplateURL must '
+                                                    'reference a valid '
+                                                    'S3 object to which '
+                                                    'you have access.'):
+                s3_fallback(fqn, template_url, parameters, tags,
+                            self.cloudformation.update_stack)
+            else:
+                raise
         return True
 
     def get_stack_name(self, stack, **kwargs):

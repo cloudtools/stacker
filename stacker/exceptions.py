@@ -82,7 +82,8 @@ class VariableTypeRequired(Exception):
 class StackDoesNotExist(Exception):
 
     def __init__(self, stack_name, *args, **kwargs):
-        message = "Stack: \"%s\" does not exist in outputs" % (stack_name,)
+        message = ("Stack: \"%s\" does not exist in outputs or the lookup is "
+                   "not available in this stacker run") % (stack_name,)
         super(StackDoesNotExist, self).__init__(message, *args, **kwargs)
 
 

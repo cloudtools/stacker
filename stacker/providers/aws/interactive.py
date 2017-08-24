@@ -8,6 +8,7 @@ from .default import (
     Provider as AWSProvider,
     retry_on_throttling,
     s3_fallback,
+    template_args,
 )
 from ... import exceptions
 from ...actions.diff import (
@@ -209,26 +210,24 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
     return response
 
 
-def create_change_set(cfn_client, fqn, template_url, parameters, tags,
+def create_change_set(cfn_client, fqn, template, parameters, tags,
                       replacements_only=False):
     logger.debug("Attempting to create change set for stack: %s.", fqn)
     try:
-        response = retry_on_throttling(
-            cfn_client.create_change_set,
-            kwargs={
-                'StackName': fqn,
-                'TemplateURL': template_url,
+        args = {'StackName': fqn,
                 'Parameters': parameters,
                 'Tags': tags,
                 'Capabilities': ["CAPABILITY_NAMED_IAM"],
-                'ChangeSetName': get_change_set_name(),
-            },
+                'ChangeSetName': get_change_set_name()}
+        response = retry_on_throttling(
+            cfn_client.create_change_set,
+            kwargs=dict(args, **template_args(template))
         )
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Message'] == ('TemplateURL must reference '
                                               'a valid S3 object to which '
                                               'you have access.'):
-            response = s3_fallback(fqn, template_url, parameters,
+            response = s3_fallback(fqn, template.url, parameters,
                                    tags, cfn_client.create_change_set,
                                    get_change_set_name())
         else:
@@ -267,10 +266,10 @@ class Provider(AWSProvider):
         self.replacements_only = replacements_only
         super(Provider, self).__init__(region=region, *args, **kwargs)
 
-    def update_stack(self, fqn, template_url, old_parameters, parameters,
+    def update_stack(self, fqn, template, old_parameters, parameters,
                      tags, diff=False, **kwargs):
         changes, change_set_id = create_change_set(self.cloudformation, fqn,
-                                                   template_url, parameters,
+                                                   template, parameters,
                                                    tags, **kwargs)
         params_diff = diff_parameters(
             AWSProvider.params_as_dict(old_parameters),

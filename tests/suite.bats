@@ -196,7 +196,6 @@ EOF
   config() {
     cat <<EOF
 namespace: ""
-stacker_bucket: stacker-${STACKER_NAMESPACE}
 stacks:
   - name: ${STACKER_NAMESPACE}-vpc
     class_path: stacker.tests.fixtures.mock_blueprints.Dummy

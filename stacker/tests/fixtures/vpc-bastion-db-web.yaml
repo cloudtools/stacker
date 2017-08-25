@@ -1,3 +1,4 @@
+namespace: ${stacker_namespace}
 # Hooks require a path.
 # If the build should stop when a hook fails, set required to true.
 # pre_build happens before the build
@@ -58,7 +59,7 @@ stacks:
       # the PublicSubnets, but stacker deals with it for you.
       << : *vpc_parameters
       InstanceType: m3.medium
-      OfficeNetwork: 203.0.113.0/24
+      OfficeNetwork: ${output vpc::OfficeNetwork}
       MinSize: 2
       MaxSize: 2
       SshKeyName: default

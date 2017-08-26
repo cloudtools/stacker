@@ -11,7 +11,7 @@ machine:
 
 dependencies:
   pre:
-    - pip install flake8 codecov
+    - pip install flake8 codecov pep8-naming
 
 test:
   override:

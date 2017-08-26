@@ -148,25 +148,25 @@ def _get_val_from_ddb_data(data, keylist):
         various: It returns the value from the dynamodb record, and casts it
             to a matching python datatype
     """
-    nextType = None
+    next_type = None
     # iterate through the keylist to find the matching key/datatype
     for k in keylist:
         for k1 in k:
-            if nextType is None:
+            if next_type is None:
                 data = data[k[k1]]
             else:
-                temp_dict = data[nextType]
+                temp_dict = data[next_type]
                 data = temp_dict[k[k1]]
-            nextType = k1
-    if nextType == 'L':
+            next_type = k1
+    if next_type == 'L':
         # if type is list, convert it to a list and return
-        return _convert_ddb_list_to_list(data[nextType])
-    if nextType == 'N':
+        return _convert_ddb_list_to_list(data[next_type])
+    if next_type == 'N':
         # TODO: handle various types of 'number' datatypes, (e.g. int, double)
         # if a number, convert to an int and return
-        return int(data[nextType])
+        return int(data[next_type])
     # else, just assume its a string and return
-    return str(data[nextType])
+    return str(data[next_type])
 
 
 def _convert_ddb_list_to_list(conversion_list):

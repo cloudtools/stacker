@@ -89,7 +89,7 @@ def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
 
 
 def s3_fallback(fqn, template_url, parameters, tags, method,
-                ChangeSetName=None):
+                change_set_name=None):
     logger.warn("DEPRECATION WARNING: Falling back to legacy "
                 "stacker S3 bucket region for templates. See "
                 "http://stacker.readthedocs.io/en/latest/config.html#s3-bucket"
@@ -110,8 +110,8 @@ def s3_fallback(fqn, template_url, parameters, tags, method,
                   Tags=tags,
                   Capabilities=["CAPABILITY_NAMED_IAM"],
                   )
-    if ChangeSetName is not None:
-        kwargs['ChangeSetName'] = ChangeSetName
+    if change_set_name is not None:
+        kwargs['ChangeSetName'] = change_set_name
     response = retry_on_throttling(method, kwargs=kwargs)
     return response
 

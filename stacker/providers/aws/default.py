@@ -588,7 +588,7 @@ class Provider(BaseProvider):
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
         """
-
+        logger.debug("Using interactive provider mode for %s.", fqn)
         changes, change_set_id = create_change_set(self.cloudformation, fqn,
                                                    template, parameters,
                                                    tags, **kwargs)

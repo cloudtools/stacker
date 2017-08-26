@@ -7,10 +7,11 @@ This directory contains the functional testing suite for stacker. It exercises a
   ```console
   $ source venv/bin/activate
   ```
-2. Set a stacker namespace for the test suite to use:
+2. Set a stacker namespace & the AWS region for the test suite to use:
 
   ```console
   $ export STACKER_NAMESPACE=my-stacker-test-namespace
+  $ export AWS_DEFAULT_REGION=us-east-1
   ```
 3. Generate an IAM user for the test suite to use:
 

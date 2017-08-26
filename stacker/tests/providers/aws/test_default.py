@@ -117,7 +117,7 @@ def generate_change(action="Modify", resource_type="EC2::Instance",
     }
 
 
-class TestInteractiveProviderMethods(unittest.TestCase):
+class TestMethods(unittest.TestCase):
     def setUp(self):
         self.cfn = boto3.client("cloudformation")
         self.stubber = Stubber(self.cfn)
@@ -301,7 +301,7 @@ class TestInteractiveProviderMethods(unittest.TestCase):
                 )
 
 
-class TestInteractiveProvider(unittest.TestCase):
+class TestProviderInteractiveMode(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
         self.provider = Provider(region=region, interactive=True)

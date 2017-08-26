@@ -268,13 +268,15 @@ class Action(BaseAction):
         dependencies = self._get_dependencies()
         for stack_name in self.get_stack_execution_order(dependencies):
             try:
-                plan.add(
-                    stacks[stack_name],
-                    run_func=self._launch_stack,
-                    requires=dependencies.get(stack_name),
-                )
+                stacks[stack_name]
             except KeyError:
                 raise StackDoesNotExist(stack_name)
+            plan.add(
+                stacks[stack_name],
+                run_func=self._launch_stack,
+                requires=dependencies.get(stack_name),
+            )
+
         return plan
 
     def _get_dependencies(self):

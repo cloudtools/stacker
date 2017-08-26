@@ -136,6 +136,7 @@ class Context(object):
                 force=stack_def.name in self.force_stacks,
                 locked=stack_def.locked,
                 enabled=stack_def.enabled,
+                protected=stack_def.protected,
             )
             stacks.append(stack)
         return stacks

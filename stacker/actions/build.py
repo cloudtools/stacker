@@ -276,7 +276,6 @@ class Action(BaseAction):
                 run_func=self._launch_stack,
                 requires=dependencies.get(stack_name),
             )
-
         return plan
 
     def _get_dependencies(self):

@@ -10,7 +10,8 @@ import boto3
 from ....actions.diff import DictValue
 
 from ....providers.base import Template
-from ....providers.aws.interactive import (
+
+from ....providers.aws.default import (
     Provider,
     requires_replacement,
     ask_for_approval,
@@ -165,9 +166,9 @@ class TestInteractiveProviderMethods(unittest.TestCase):
         self.assertEqual(summarize_params_diff(only_removed_params_diff),
                          "Parameters Removed: ParamD\n")
 
-    @patch("stacker.providers.aws.interactive.format_params_diff")
+    @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval(self, patched_format):
-        get_input_path = "stacker.providers.aws.interactive.get_raw_input"
+        get_input_path = "stacker.providers.aws.default.get_raw_input"
         with patch(get_input_path, return_value="y"):
             self.assertIsNone(ask_for_approval([], [], None))
 
@@ -185,9 +186,9 @@ class TestInteractiveProviderMethods(unittest.TestCase):
 
         self.assertEqual(patched_format.call_count, 0)
 
-    @patch("stacker.providers.aws.interactive.format_params_diff")
+    @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval_with_params_diff(self, patched_format):
-        get_input_path = "stacker.providers.aws.interactive.get_raw_input"
+        get_input_path = "stacker.providers.aws.default.get_raw_input"
         params_diff = [
             DictValue('ParamA', None, 'new-param-value'),
             DictValue('ParamB', 'param-b-old-value', 'param-b-new-value-delta')
@@ -303,17 +304,18 @@ class TestInteractiveProviderMethods(unittest.TestCase):
 class TestInteractiveProvider(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
-        self.provider = Provider(region=region)
+        self.provider = Provider(region=region, interactive=True)
         self.stubber = Stubber(self.provider.cloudformation)
 
     def test_successful_init(self):
         region = "us-east-1"
         replacements = True
-        p = Provider(region=region, replacements_only=replacements)
+        p = Provider(region=region, interactive=True,
+                     replacements_only=replacements)
         self.assertEqual(p.region, region)
         self.assertEqual(p.replacements_only, replacements)
 
-    @patch("stacker.providers.aws.interactive.ask_for_approval")
+    @patch("stacker.providers.aws.default.ask_for_approval")
     def test_update_stack_execute_success(self, patched_approval):
         self.stubber.add_response(
             "create_change_set",
@@ -345,32 +347,3 @@ class TestInteractiveProvider(unittest.TestCase):
                                             include_verbose=True)
 
         self.assertEqual(patched_approval.call_count, 1)
-
-    @patch("stacker.providers.aws.interactive.ask_for_approval")
-    def test_update_stack_diff_success(self, patched_approval):
-        self.stubber.add_response(
-            "create_change_set",
-            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
-        )
-        changes = []
-        changes.append(generate_change())
-
-        self.stubber.add_response(
-            "describe_change_set",
-            generate_change_set_response(
-                status="CREATE_COMPLETE", execution_status="AVAILABLE",
-                changes=changes,
-            )
-        )
-
-        self.stubber.add_response("delete_change_set", {})
-
-        with self.stubber:
-            self.provider.update_stack(
-                fqn="my-fake-stack",
-                template=Template(url="http://fake.template.url.com/"),
-                old_parameters=[],
-                parameters=[], tags=[], diff=True
-            )
-
-        self.assertEqual(patched_approval.call_count, 0)

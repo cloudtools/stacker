@@ -72,7 +72,9 @@ class FunctionalTests(Blueprint):
                         Effect="Allow",
                         Resource=[changeset_scope],
                         Action=[
-                            awacs.cloudformation.DescribeChangeSet]),
+                            awacs.cloudformation.DescribeChangeSet,
+                            awacs.cloudformation.ExecuteChangeSet,
+                        ]),
                     Statement(
                         Effect="Deny",
                         Resource=[Ref("AWS::StackId")],

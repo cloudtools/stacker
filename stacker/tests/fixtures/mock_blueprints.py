@@ -157,8 +157,6 @@ class VPC(Blueprint):
 
     def create_template(self):
         self.template.add_resource(WaitConditionHandle("VPC"))
-        self.template.add_output(Output(
-            "OfficeNetwork", Value="203.0.113.0/24"))
 
 
 class Bastion(Blueprint):

@@ -12,7 +12,10 @@ from stacker.actions.build import (
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context
 from stacker.config import Config
-from stacker.exceptions import StackDidNotChange
+from stacker.exceptions import (
+    StackDidNotChange,
+    StackDoesNotExist,
+)
 from stacker.providers.base import BaseProvider
 from stacker.status import (
     COMPLETE,
@@ -239,6 +242,23 @@ class TestBuildAction(unittest.TestCase):
         for t in test_scenarios:
             mock_stack.enabled = t.enabled
             self.assertEqual(build.should_submit(mock_stack), t.result)
+
+    def test_Raises_StackDoesNotExist_from_lookup_non_included_stack(self):
+        # This test is testing the specific scenario listed in PR 466
+        # Because the issue only threw a KeyError when a stack was missing
+        # in the `--stacks` flag at runtime of a `stacker build` run
+        # but needed for an output lookup in the stack specified
+        mock_provider = mock.MagicMock()
+        context = Context(config=Config({
+            "namespace": "namespace",
+            "stacks": [
+                {"name": "bastion",
+                 "variables": {"test": "${output vpc::something}"}
+                 }]
+        }))
+        build_action = build.Action(context, provider=mock_provider)
+        with self.assertRaises(StackDoesNotExist):
+            build_action._generate_plan()
 
 
 class TestFunctions(unittest.TestCase):

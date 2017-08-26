@@ -1,4 +1,5 @@
 import difflib
+import json
 import unittest
 
 
@@ -17,17 +18,18 @@ def diff(a, b):
 class BlueprintTestCase(unittest.TestCase):
     OUTPUT_PATH = "tests/fixtures/blueprints"
 
-    def assertEqualsDiff(self, a, b):  # noqa: N802
-        self.assertEquals(a, b, diff(a, b))
-
     def assertRenderedBlueprint(self, blueprint):  # noqa: N802
         expected_output = "%s/%s.json" % (self.OUTPUT_PATH, blueprint.name)
-        rendered = blueprint.template.to_json()
 
-        with open(expected_output + "-result", "w") as fd:
-            fd.write(rendered)
+        rendered_dict = blueprint.template.to_dict()
+        rendered_text = json.dumps(rendered_dict, indent=4, sort_keys=True)
 
         with open(expected_output) as fd:
-            expected = fd.read()
+            expected_dict = json.loads(fd.read())
+            expected_text = json.dumps(expected_dict, indent=4, sort_keys=True)
 
-        self.assertEqualsDiff(rendered, expected)
+        with open(expected_output + "-result", "w") as fd:
+            fd.write(rendered_text)
+
+        self.assertEquals(rendered_dict, expected_dict,
+                          diff(rendered_text, expected_text))

@@ -37,6 +37,16 @@ def random_string(length=12):
         [random.choice(string.ascii_letters) for _ in range(length)])
 
 
+def generate_describe_stacks_stack(stack_name,
+                                   creation_time=None,
+                                   stack_status="CREATE_COMPLETE"):
+    return {
+        "StackName": stack_name,
+        "CreationTime": creation_time or datetime(2015, 1, 1),
+        "StackStatus": stack_status,
+    }
+
+
 def generate_resource_change(replacement=True):
     resource_change = {
         "Action": "Modify",
@@ -301,6 +311,53 @@ class TestMethods(unittest.TestCase):
                 )
 
 
+class TestProviderDefaultMode(unittest.TestCase):
+    def setUp(self):
+        region = "us-east-1"
+        self.provider = Provider(region=region)
+        self.stubber = Stubber(self.provider.cloudformation)
+
+    def test_get_stack_stack_does_not_exist(self):
+        stack_name = "MockStack"
+        self.stubber.add_client_error(
+            "describe_stacks",
+            service_error_code="ValidationError",
+            service_message="Stack with id %s does not exist" % stack_name,
+            expected_params={"StackName": stack_name}
+        )
+
+        with self.assertRaises(exceptions.StackDoesNotExist):
+            with self.stubber:
+                self.provider.get_stack(stack_name)
+
+    def test_get_stack_stack_exists(self):
+        stack_name = "MockStack"
+        stack_response = {
+            "Stacks": [generate_describe_stacks_stack(stack_name)]
+        }
+        self.stubber.add_response(
+            "describe_stacks",
+            stack_response,
+            expected_params={"StackName": stack_name}
+        )
+
+        with self.stubber:
+            response = self.provider.get_stack(stack_name)
+
+        self.assertEqual(response["StackName"], stack_name)
+
+    def test_select_update_method(self):
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=False),
+            self.provider.default_update_stack
+        )
+
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=True),
+            self.provider.interactive_update_stack
+        )
+
+
 class TestProviderInteractiveMode(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
@@ -347,3 +404,14 @@ class TestProviderInteractiveMode(unittest.TestCase):
                                             include_verbose=True)
 
         self.assertEqual(patched_approval.call_count, 1)
+
+    def test_select_update_method(self):
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=False),
+            self.provider.interactive_update_stack
+        )
+
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=True),
+            self.provider.interactive_update_stack
+        )

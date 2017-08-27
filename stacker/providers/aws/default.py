@@ -540,6 +540,21 @@ class Provider(BaseProvider):
             else:
                 raise
 
+    def select_update_method(self, force_interactive):
+        """Select the correct update method when updating a stack.
+
+        Args:
+            force_interactive (str): Whether or not to force interactive mode
+                no matter what mode the provider is in.
+
+        Returns:
+            function: The correct object method to use when updating.
+        """
+        if self.interactive or force_interactive:
+            return self.interactive_update_stack
+        else:
+            return self.default_update_stack
+
     def update_stack(self, fqn, template, old_parameters, parameters, tags,
                      force_interactive=False, **kwargs):
         """Update a Cloudformation stack.
@@ -673,14 +688,7 @@ class Provider(BaseProvider):
 
         Returns [ template, parameters ]
         """
-        try:
-            stacks = retry_on_throttling(
-                self.cloudformation.describe_stacks,
-                kwargs=dict(StackName=stack_name))
-        except botocore.exceptions.ClientError as e:
-            if "does not exist" not in e.message:
-                raise
-            raise exceptions.StackDoesNotExist(stack_name)
+        stack = self.get_stack(stack_name)
 
         try:
             template = retry_on_throttling(
@@ -691,7 +699,6 @@ class Provider(BaseProvider):
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
-        stack = stacks['Stacks'][0]
         parameters = self.params_as_dict(stack.get('Parameters', []))
 
         return [json.dumps(template), parameters]

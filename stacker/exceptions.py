@@ -206,3 +206,15 @@ class StackUpdateBadStatus(Exception):
         message = ("Stack: \"%s\" cannot be updated nor re-created from state "
                    "%s: %s" % (stack_name, stack_status, reason))
         super(StackUpdateBadStatus, self).__init__(message, *args, **kwargs)
+
+
+class PlanFailed(Exception):
+
+    def __init__(self, failed_stacks, *args, **kwargs):
+        self.failed_stacks = failed_stacks
+
+        stack_names = ', '.join(stack.name for stack in failed_stacks)
+        message = ("The following stacks failed their plans: %s\n"
+                   % (stack_names,))
+
+        super(PlanFailed, self).__init__(message, *args, **kwargs)

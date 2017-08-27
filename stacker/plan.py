@@ -13,6 +13,7 @@ from .actions.base import stack_template_key_name
 from .exceptions import (
     CancelExecution,
     ImproperlyConfigured,
+    PlanFailed
 )
 from .logger import LOOP_LOGGER_TYPE
 from .status import (
@@ -287,10 +288,7 @@ class Plan(OrderedDict):
                     self._check_point()
 
                 attempts += 1
-                if self._single_run():
-                    if self.list_failed():
-                        raise CancelExecution("Some stacks failed to run")
-                else:
+                if not self._single_run():
                     self._wait_func(self.sleep_time)
 
         finally:
@@ -298,6 +296,10 @@ class Plan(OrderedDict):
                 self._terminate_watcher(watcher)
 
         self._check_point()
+
+        failed_stacks = [step[1].stack for step in self.list_failed()]
+        if failed_stacks:
+            raise PlanFailed(failed_stacks)
 
     def outline(self, level=logging.INFO, message=""):
         """Print an outline of the actions the plan is going to take.

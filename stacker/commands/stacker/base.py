@@ -159,3 +159,7 @@ class BaseCommand(object):
             "--replacements-only", action="store_true",
             help="If interactive mode is enabled, stacker will only prompt to "
                  "authorize replacements.")
+        parser.add_argument(
+            "--recreate-failed", action="store_true",
+            help="Destroy and re-create stacks that are stuck in a failed "
+                 "state from an initial deployment when updating.")

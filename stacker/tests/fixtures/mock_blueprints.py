@@ -7,7 +7,7 @@ import awacs.s3
 import awacs.cloudformation
 import awacs.iam
 
-from troposphere.cloudformation import WaitConditionHandle
+from troposphere.cloudformation import WaitCondition, WaitConditionHandle
 
 from stacker.blueprints.base import Blueprint
 from stacker.blueprints.variables.types import (
@@ -138,6 +138,28 @@ class Dummy2(Blueprint):
         self.template.add_resource(WaitConditionHandle("Dummy"))
         self.template.add_output(Output("DummyId", Value="dummy-1234"))
         self.template.add_resource(WaitConditionHandle("Dummy2"))
+
+
+class Broken(Blueprint):
+    """
+    This blueprint deliberately fails validation, so that it can be used to
+    test re-creation of a failed stack
+    """
+    VARIABLES = {
+        "StringVariable": {
+            "type": str,
+            "default": ""}
+    }
+
+    def create_template(self):
+        t = self.template
+        t.add_resource(WaitConditionHandle("BrokenDummy"))
+        t.add_resource(WaitCondition(
+            "BrokenWaitCondition",
+            Handle=Ref("BrokenDummy"),
+            Timeout=2 ** 32,
+            Count=0))
+        t.add_output(Output("DummyId", Value="dummy-1234"))
 
 
 class VPC(Blueprint):

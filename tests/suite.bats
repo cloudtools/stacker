@@ -409,3 +409,128 @@ EOF
   assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (submitted for destruction)"
   assert_has_line "${STACKER_NAMESPACE}-mystack: complete (stack destroyed)"
 }
+
+@test "stacker build - recreate failed stack, non-interactive mode" {
+  needs_aws
+
+  bad_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed
+    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+
+EOF
+  }
+
+  good_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(good_config)
+  }
+
+  stacker destroy --force <(good_config)
+
+  # Create the initial stack. This must fail.
+  stacker build <(bad_config)
+  assert "$status" -eq 1
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (rolling back new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: failed (rolled back new stack)"
+
+  # Updating the stack should prompt to re-create it.
+  stacker build --recreate-failed <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (destroying stack for re-creation)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: complete (creating new stack)"
+
+  # Confirm the stack is really updated
+  stacker build <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: skipped (nochange)"
+
+  # Cleanup
+  stacker destroy --force <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (submitted for destruction)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: complete (stack destroyed)"
+}
+
+
+@test "stacker build - recreate failed stack, interactive mode" {
+  needs_aws
+
+  bad_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed-interactive
+    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+
+EOF
+  }
+
+  good_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed-interactive
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(good_config)
+  }
+
+  stacker destroy --force <(good_config)
+
+  # Create the initial stack. This must fail.
+  stacker build <(bad_config)
+  assert "$status" -eq 1
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (rolling back new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: failed (rolled back new stack)"
+
+  # Updating the stack should prompt to re-create it.
+  stacker build -i <(good_config) <<< $'y\n'
+  assert "$status" -eq 0
+  assert_has_line "Using interactive AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (destroying stack for re-creation)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: complete (creating new stack)"
+
+  # Confirm the stack is really updated
+  stacker build -i <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "Using interactive AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: skipped (nochange)"
+
+  # Cleanup
+  stacker destroy --force <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (submitted for destruction)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: complete (stack destroyed)"
+}

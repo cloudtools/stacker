@@ -10,7 +10,8 @@ import boto3
 from ....actions.diff import DictValue
 
 from ....providers.base import Template
-from ....providers.aws.interactive import (
+
+from ....providers.aws.default import (
     Provider,
     requires_replacement,
     ask_for_approval,
@@ -34,6 +35,16 @@ def random_string(length=12):
 
     return ''.join(
         [random.choice(string.ascii_letters) for _ in range(length)])
+
+
+def generate_describe_stacks_stack(stack_name,
+                                   creation_time=None,
+                                   stack_status="CREATE_COMPLETE"):
+    return {
+        "StackName": stack_name,
+        "CreationTime": creation_time or datetime(2015, 1, 1),
+        "StackStatus": stack_status,
+    }
 
 
 def generate_resource_change(replacement=True):
@@ -116,7 +127,7 @@ def generate_change(action="Modify", resource_type="EC2::Instance",
     }
 
 
-class TestInteractiveProviderMethods(unittest.TestCase):
+class TestMethods(unittest.TestCase):
     def setUp(self):
         self.cfn = boto3.client("cloudformation")
         self.stubber = Stubber(self.cfn)
@@ -165,9 +176,9 @@ class TestInteractiveProviderMethods(unittest.TestCase):
         self.assertEqual(summarize_params_diff(only_removed_params_diff),
                          "Parameters Removed: ParamD\n")
 
-    @patch("stacker.providers.aws.interactive.format_params_diff")
+    @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval(self, patched_format):
-        get_input_path = "stacker.providers.aws.interactive.get_raw_input"
+        get_input_path = "stacker.providers.aws.default.get_raw_input"
         with patch(get_input_path, return_value="y"):
             self.assertIsNone(ask_for_approval([], [], None))
 
@@ -185,9 +196,9 @@ class TestInteractiveProviderMethods(unittest.TestCase):
 
         self.assertEqual(patched_format.call_count, 0)
 
-    @patch("stacker.providers.aws.interactive.format_params_diff")
+    @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval_with_params_diff(self, patched_format):
-        get_input_path = "stacker.providers.aws.interactive.get_raw_input"
+        get_input_path = "stacker.providers.aws.default.get_raw_input"
         params_diff = [
             DictValue('ParamA', None, 'new-param-value'),
             DictValue('ParamB', 'param-b-old-value', 'param-b-new-value-delta')
@@ -300,20 +311,68 @@ class TestInteractiveProviderMethods(unittest.TestCase):
                 )
 
 
-class TestInteractiveProvider(unittest.TestCase):
+class TestProviderDefaultMode(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
         self.provider = Provider(region=region)
         self.stubber = Stubber(self.provider.cloudformation)
 
+    def test_get_stack_stack_does_not_exist(self):
+        stack_name = "MockStack"
+        self.stubber.add_client_error(
+            "describe_stacks",
+            service_error_code="ValidationError",
+            service_message="Stack with id %s does not exist" % stack_name,
+            expected_params={"StackName": stack_name}
+        )
+
+        with self.assertRaises(exceptions.StackDoesNotExist):
+            with self.stubber:
+                self.provider.get_stack(stack_name)
+
+    def test_get_stack_stack_exists(self):
+        stack_name = "MockStack"
+        stack_response = {
+            "Stacks": [generate_describe_stacks_stack(stack_name)]
+        }
+        self.stubber.add_response(
+            "describe_stacks",
+            stack_response,
+            expected_params={"StackName": stack_name}
+        )
+
+        with self.stubber:
+            response = self.provider.get_stack(stack_name)
+
+        self.assertEqual(response["StackName"], stack_name)
+
+    def test_select_update_method(self):
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=False),
+            self.provider.default_update_stack
+        )
+
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=True),
+            self.provider.interactive_update_stack
+        )
+
+
+class TestProviderInteractiveMode(unittest.TestCase):
+    def setUp(self):
+        region = "us-east-1"
+        self.provider = Provider(region=region, interactive=True)
+        self.stubber = Stubber(self.provider.cloudformation)
+
     def test_successful_init(self):
         region = "us-east-1"
         replacements = True
-        p = Provider(region=region, replacements_only=replacements)
+        p = Provider(region=region, interactive=True,
+                     replacements_only=replacements)
         self.assertEqual(p.region, region)
         self.assertEqual(p.replacements_only, replacements)
 
-    @patch("stacker.providers.aws.interactive.ask_for_approval")
+    @patch("stacker.providers.aws.default.ask_for_approval")
     def test_update_stack_execute_success(self, patched_approval):
         self.stubber.add_response(
             "create_change_set",
@@ -346,31 +405,13 @@ class TestInteractiveProvider(unittest.TestCase):
 
         self.assertEqual(patched_approval.call_count, 1)
 
-    @patch("stacker.providers.aws.interactive.ask_for_approval")
-    def test_update_stack_diff_success(self, patched_approval):
-        self.stubber.add_response(
-            "create_change_set",
-            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
-        )
-        changes = []
-        changes.append(generate_change())
-
-        self.stubber.add_response(
-            "describe_change_set",
-            generate_change_set_response(
-                status="CREATE_COMPLETE", execution_status="AVAILABLE",
-                changes=changes,
-            )
+    def test_select_update_method(self):
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=False),
+            self.provider.interactive_update_stack
         )
 
-        self.stubber.add_response("delete_change_set", {})
-
-        with self.stubber:
-            self.provider.update_stack(
-                fqn="my-fake-stack",
-                template=Template(url="http://fake.template.url.com/"),
-                old_parameters=[],
-                parameters=[], tags=[], diff=True
-            )
-
-        self.assertEqual(patched_approval.call_count, 0)
+        self.assertEquals(
+            self.provider.select_update_method(force_interactive=True),
+            self.provider.interactive_update_stack
+        )

@@ -1,4 +1,4 @@
-from troposphere import Output, Sub, Ref
+from troposphere import GetAtt, Output, Sub, Ref
 from troposphere import iam
 
 from awacs.aws import Policy, Statement
@@ -97,7 +97,18 @@ class FunctionalTests(Blueprint):
                 Policies=[
                     stacker_policy]))
 
+        key = t.add_resource(
+            iam.AccessKey(
+                "FunctionalTestKey",
+                Serial=1,
+                UserName=Ref(user)))
+
         t.add_output(Output("User", Value=Ref(user)))
+        t.add_output(Output("AccessKeyId", Value=Ref(key)))
+        t.add_output(
+            Output(
+                "SecretAccessKey",
+                Value=GetAtt("FunctionalTestKey", "SecretAccessKey")))
 
 
 class Dummy(Blueprint):

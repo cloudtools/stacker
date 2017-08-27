@@ -180,6 +180,7 @@ class TestBuildAction(unittest.TestCase):
             # simulate that we're still in progress
             mock_provider.is_stack_in_progress.return_value = True
             mock_provider.is_stack_completed.return_value = False
+            mock_provider.is_stack_rolling_back.return_value = False
             status = step.run()
             step.set_status(status)
             # status should still be SUBMITTED since we're waiting for it to

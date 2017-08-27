@@ -195,3 +195,14 @@ class UnableToExecuteChangeSet(Exception):
                    "%s" % (change_set_id, stack_name, execution_status))
 
         super(UnableToExecuteChangeSet, self).__init__(message)
+
+
+class StackUpdateBadStatus(Exception):
+
+    def __init__(self, stack_name, stack_status, reason, *args, **kwargs):
+        self.stack_name = stack_name
+        self.stack_status = stack_status
+
+        message = ("Stack: \"%s\" cannot be updated nor re-created from state "
+                   "%s: %s" % (stack_name, stack_status, reason))
+        super(StackUpdateBadStatus, self).__init__(message, *args, **kwargs)

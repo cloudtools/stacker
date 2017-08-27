@@ -1,6 +1,7 @@
 import logging
 
 from .base import BaseAction
+
 from ..providers.base import Template
 from .. import util
 from ..exceptions import (
@@ -16,6 +17,7 @@ from ..status import (
     DidNotChangeStatus,
     SubmittedStatus,
     CompleteStatus,
+    FailedStatus,
     SUBMITTED
 )
 
@@ -217,17 +219,41 @@ class Action(BaseAction):
             provider_stack = None
 
         old_status = kwargs.get("status")
+        recreate = False
         if provider_stack and old_status == SUBMITTED:
             logger.debug(
                 "Stack %s provider status: %s",
                 stack.fqn,
                 self.provider.get_stack_status(provider_stack),
             )
-            if self.provider.is_stack_completed(provider_stack):
-                submit_reason = getattr(old_status, "reason", None)
-                return CompleteStatus(submit_reason)
+
+            if self.provider.is_stack_rolling_back(provider_stack):
+                if 'rolling back' in old_status.reason:
+                    return old_status
+
+                logger.debug("Stack %s entered a roll back", stack.fqn)
+                if 'updating' in old_status.reason:
+                    reason = 'rolling back update'
+                else:
+                    reason = 'rolling back new stack'
+
+                return SubmittedStatus(reason)
             elif self.provider.is_stack_in_progress(provider_stack):
                 logger.debug("Stack %s in progress.", stack.fqn)
+                return old_status
+            elif self.provider.is_stack_destroyed(provider_stack):
+                logger.debug("Stack %s finished deleting", stack.fqn)
+                recreate = True
+                # Continue with creation afterwards
+            elif self.provider.is_stack_failed(provider_stack):
+                reason = old_status.reason
+                if 'rolling' in reason:
+                    reason = reason.replace('rolling', 'rolled')
+
+                return FailedStatus(reason)
+            elif self.provider.is_stack_completed(provider_stack):
+                return CompleteStatus(old_status.reason)
+            else:
                 return old_status
 
         logger.debug("Resolving stack %s", stack.fqn)
@@ -238,26 +264,34 @@ class Action(BaseAction):
         tags = build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
 
-        new_status = None
-        if not provider_stack:
-            new_status = SubmittedStatus("creating new stack")
+        if recreate:
+            logger.debug("Re-creating stack: %s", stack.fqn)
+            self.provider.create_stack(stack.fqn, template, parameters,
+                                       tags)
+            return SubmittedStatus("re-creating stack")
+        elif not provider_stack:
             logger.debug("Creating new stack: %s", stack.fqn)
             self.provider.create_stack(stack.fqn, template, parameters,
                                        tags)
-        else:
-            if not should_update(stack):
-                return NotUpdatedStatus()
-            try:
-                new_status = SubmittedStatus("updating existing stack")
+            return SubmittedStatus("creating new stack")
+        elif not should_update(stack):
+            return NotUpdatedStatus()
+
+        try:
+            if self.provider.prepare_stack_for_update(stack.fqn, tags):
                 existing_params = provider_stack.get('Parameters', [])
                 self.provider.update_stack(stack.fqn, template,
                                            existing_params, parameters, tags,
                                            force_interactive=stack.protected)
-                logger.debug("Updating existing stack: %s", stack.fqn)
-            except StackDidNotChange:
-                return DidNotChangeStatus()
 
-        return new_status
+                logger.debug("Updating existing stack: %s", stack.fqn)
+                return SubmittedStatus("updating existing stack")
+            else:
+                logger.debug("Destroying stack for recreation: %s",
+                             stack.fqn)
+                return SubmittedStatus("destroying stack for re-creation")
+        except StackDidNotChange:
+            return DidNotChangeStatus()
 
     def _template(self, blueprint):
         """Generates a suitable template based on whether or not an S3 bucket

@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import urlparse
+import sys
 
 import botocore.exceptions
 
@@ -362,30 +363,63 @@ def create_change_set(cfn_client, fqn, template, parameters, tags,
     return changes, change_set_id
 
 
+def check_tags_present(actual, expected):
+    actual_set = set((item["Key"], item["Value"]) for item in actual)
+    expected_set = set((item["Key"], item["Value"]) for item in expected)
+
+    return actual_set >= expected_set
+
+
 class Provider(BaseProvider):
 
     """AWS CloudFormation Provider"""
 
     DELETED_STATUS = "DELETE_COMPLETE"
+
     IN_PROGRESS_STATUSES = (
         "CREATE_IN_PROGRESS",
-        "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS",
         "UPDATE_IN_PROGRESS",
         "DELETE_IN_PROGRESS",
+        "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS",
     )
+
+    ROLLING_BACK_STATUSES = (
+        "ROLLBACK_IN_PROGRESS",
+        "UPDATE_ROLLBACK_IN_PROGRESS"
+    )
+
+    FAILED_STATUSES = (
+        "CREATE_FAILED",
+        "ROLLBACK_FAILED",
+        "ROLLBACK_COMPLETE",
+        "DELETE_FAILED",
+        "UPDATE_ROLLBACK_FAILED",
+        "UPDATE_ROLLBACK_COMPLETE",
+    )
+
     COMPLETE_STATUSES = (
         "CREATE_COMPLETE",
+        "DELETE_COMPLETE",
         "UPDATE_COMPLETE",
+        "UPDATE_ROLLBACK_COMPLETE",
+    )
+
+    RECREATION_STATUSES = (
+        "CREATE_FAILED",
+        "ROLLBACK_FAILED",
+        "ROLLBACK_COMPLETE",
     )
 
     def __init__(self, region, interactive=False, replacements_only=False,
-                 **kwargs):
+                 recreate_failed=False, **kwargs):
         self.region = region
         self._outputs = {}
         self._cloudformation = None
         self.interactive = interactive
         # replacements only is only used in interactive mode
         self.replacements_only = interactive and replacements_only
+        self.recreate_failed = interactive or recreate_failed
+
         # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
         # see: https://github.com/remind101/stacker/issues/196
         self._pid = os.getpid()
@@ -422,6 +456,15 @@ class Provider(BaseProvider):
 
     def is_stack_destroyed(self, stack, **kwargs):
         return self.get_stack_status(stack) == self.DELETED_STATUS
+
+    def is_stack_recreatable(self, stack, **kwargs):
+        return self.get_stack_status(stack) in self.RECREATION_STATUSES
+
+    def is_stack_rolling_back(self, stack, **kwargs):
+        return self.get_stack_status(stack) in self.ROLLING_BACK_STATUSES
+
+    def is_stack_failed(self, stack, **kwargs):
+        return self.get_stack_status(stack) in self.FAILED_STATUSES
 
     def tail_stack(self, stack, retries=0, **kwargs):
         def log_func(e):
@@ -555,6 +598,73 @@ class Provider(BaseProvider):
         else:
             return self.default_update_stack
 
+    def prepare_stack_for_update(self, fqn, tags):
+        """Prepare a stack for updating
+
+        It may involve deleting the stack if is has failed it's initial
+        creation. The deletion is only allowed if:
+          - The stack contains all the tags configured in the current context;
+          - The stack is in one of the statuses considered safe to re-create
+          - ``recreate_failed`` is enabled, due to either being explicitly
+            enabled by the user, or because interactive mode is on.
+
+        Args:
+            fqn (str): fully-qualified name of the stack to work on
+            tags (list): list of expected tags that must be present in the
+                stack if it must be re-created
+
+        Returns:
+            bool: True if the stack can be updated, False if it must be
+                re-created
+        """
+
+        stack = self.get_stack(fqn)
+
+        if self.is_stack_destroyed(stack):
+            return False
+        elif self.is_stack_completed(stack):
+            return True
+
+        stack_name = self.get_stack_name(stack)
+        stack_status = self.get_stack_status(stack)
+
+        if self.is_stack_in_progress(stack):
+            raise exceptions.StackUpdateBadStatus(
+                stack_name, stack_status,
+                'Update already in-progress')
+
+        if not self.is_stack_recreatable(stack):
+            raise exceptions.StackUpdateBadStatus(
+                stack_name, stack_status,
+                'Invalid status')
+
+        if not self.recreate_failed:
+            raise exceptions.StackUpdateBadStatus(
+                stack_name, stack_status,
+                'Re-creation disallowed by user option')
+
+        stack_tags = self.get_stack_tags(stack)
+        if not check_tags_present(stack_tags, tags):
+            raise exceptions.StackUpdateBadStatus(
+                stack_name, stack_status,
+                'Tags differ from current configuration, possibly not created '
+                'with stacker')
+
+        if self.interactive:
+            sys.stdout.write(
+                'The \"%s\" stack is in a failed state (%s).\n'
+                'It cannot be updated, but it can be deleted and re-created.\n'
+                'All its current resources will IRREVERSIBLY DESTROYED.\n'
+                'Proceed carefully!\n\n' % (stack_name, stack_status))
+            sys.stdout.flush()
+
+            ask_for_approval(include_verbose=False)
+
+        logger.warn('Destroying stack \"%s\" for re-creation', stack_name)
+        self.destroy_stack(stack)
+
+        return False
+
     def update_stack(self, fqn, template, old_parameters, parameters, tags,
                      force_interactive=False, **kwargs):
         """Update a Cloudformation stack.
@@ -674,6 +784,9 @@ class Provider(BaseProvider):
 
     def get_stack_name(self, stack, **kwargs):
         return stack['StackName']
+
+    def get_stack_tags(self, stack, **kwargs):
+        return stack['Tags']
 
     def get_outputs(self, stack_name, *args, **kwargs):
         if stack_name not in self._outputs:

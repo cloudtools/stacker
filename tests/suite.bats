@@ -106,7 +106,7 @@ EOF
   # Create the new stacks.
   stacker build <(config)
   assert "$status" -eq 0
-  assert_has_line "Using Default AWS Provider"
+  assert_has_line "Using default AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-vpc: pending"
   assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
   assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
@@ -114,7 +114,7 @@ EOF
   # Perform a noop update to the stacks, in interactive mode.
   stacker build -i <(config)
   assert "$status" -eq 0
-  assert_has_line "Using Interactive AWS Provider"
+  assert_has_line "Using interactive AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-vpc: pending"
   assert_has_line "${STACKER_NAMESPACE}-vpc: skipped (nochange)"
 
@@ -149,7 +149,7 @@ EOF
   # Create the new stacks.
   stacker build <(config)
   assert "$status" -eq 0
-  assert_has_line "Using Default AWS Provider"
+  assert_has_line "Using default AWS provider mode"
 
   for stack in vpc bastion; do
     assert_has_line -E "${STACKER_NAMESPACE}-${stack}:\s.*pending"
@@ -328,7 +328,7 @@ EOF
   # Create the new stacks.
   stacker build <(config)
   assert "$status" -eq 0
-  assert_has_line "Using Default AWS Provider"
+  assert_has_line "Using default AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: pending"
   assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: submitted (creating new stack)"
   assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: complete (creating new stack)"
@@ -336,7 +336,7 @@ EOF
   # Perform a additional resouce addition in replacements-only mode, should not crash.  This is testing issue #463.
   stacker build -i --replacements-only <(config2)
   assert "$status" -eq 0
-  assert_has_line "Using Interactive AWS Provider"
+  assert_has_line "Using interactive AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: pending"
   assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: complete (updating existing stack)"
 

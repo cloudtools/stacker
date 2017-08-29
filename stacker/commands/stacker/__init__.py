@@ -7,10 +7,7 @@ from .diff import Diff
 from .base import BaseCommand
 from ...config import render_parse_load as load_config
 from ...context import Context
-from ...providers.aws import (
-    default,
-    interactive,
-)
+from ...providers.aws import default
 from ... import __version__
 
 logger = logging.getLogger(__name__)
@@ -24,14 +21,15 @@ class Stacker(BaseCommand):
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)
         if options.interactive:
-            logger.info('Using Interactive AWS Provider')
-            options.provider = interactive.Provider(
-                region=options.region,
-                replacements_only=options.replacements_only,
-            )
+            logger.info("Using interactive AWS provider mode.")
         else:
-            logger.info('Using Default AWS Provider')
-            options.provider = default.Provider(region=options.region)
+            logger.info("Using default AWS provider mode")
+
+        options.provider = default.Provider(
+            region=options.region,
+            interactive=options.interactive,
+            replacements_only=options.replacements_only
+        )
 
         config = load_config(
             options.config.read(),

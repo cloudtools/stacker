@@ -581,10 +581,8 @@ class Provider(BaseProvider):
             logger.debug("    template_url: %s", template.url)
         else:
             logger.debug("    no template url, uploading template directly.")
-        if self.interactive or force_interactive:
-            update_method = self.interactive_update_stack
-        else:
-            update_method = self.default_update_stack
+        update_method = self.select_update_method(force_interactive)
+
         return update_method(fqn, template, old_parameters, parameters, tags,
                              **kwargs)
 

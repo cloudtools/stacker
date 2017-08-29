@@ -377,7 +377,8 @@ EOF
   }
 
   # First create the stack
-  PROTECTED="false" stacker build --interactive <(config)
+  export PROTECTED="false"
+  stacker build --interactive <(config)
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-mystack: pending"
@@ -385,22 +386,27 @@ EOF
   assert_has_line "${STACKER_NAMESPACE}-mystack: complete (creating new stack)"
 
   # Perform a additional resouce addition in interactive mode, non-protected stack
-  echo "y" | stacker build --interactive <(config2)
+  unset PROTECTED
+  stacker build --interactive <(config2) < <(echo "y")
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-mystack: pending"
   assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (updating existing stack)"
   assert_has_line "${STACKER_NAMESPACE}-mystack: complete (updating existing stack)"
+  assert_has_line "Add Dummy2"
 
   # Perform another update, this time without interactive, but with a protected stack
-  echo "y" | PROTECTED="true" stacker build <(config)
+  export PROTECTED="true"
+  stacker build <(config) < <(echo "y")
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-mystack: pending"
   assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (updating existing stack)"
   assert_has_line "${STACKER_NAMESPACE}-mystack: complete (updating existing stack)"
+  assert_has_line "Remove Dummy2"
 
   # Cleanup
+  unset PROTECTED
   stacker destroy --force <(config2)
   assert "$status" -eq 0
   assert_has_line "${STACKER_NAMESPACE}-mystack: pending"

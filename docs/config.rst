@@ -261,6 +261,10 @@ A stack has the following keys:
   (optional) If set to false, the stack is disabled, and will not be
   built or updated. This can allow you to disable stacks in different
   environments.
+**protected:**
+  (optional) When running an update in non-interactive mode, if a stack has
+  *protected* set to *true* and would get changed, stacker will switch to
+  interactive mode for that stack, allowing you to approve/skip the change.
 **requires:**
   (optional) a list of other stacks this stack requires. This is for explicit
   dependencies - you do not need to set this if you refer to another stack in

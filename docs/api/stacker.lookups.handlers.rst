@@ -4,10 +4,34 @@ stacker.lookups.handlers package
 Submodules
 ----------
 
+stacker.lookups.handlers.ami module
+-----------------------------------
+
+.. automodule:: stacker.lookups.handlers.ami
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 stacker.lookups.handlers.default module
 ---------------------------------------
 
 .. automodule:: stacker.lookups.handlers.default
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.lookups.handlers.dynamodb module
+----------------------------------------
+
+.. automodule:: stacker.lookups.handlers.dynamodb
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stacker.lookups.handlers.envvar module
+--------------------------------------
+
+.. automodule:: stacker.lookups.handlers.envvar
     :members:
     :undoc-members:
     :show-inheritance:

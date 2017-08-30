@@ -216,6 +216,8 @@ class Stack(Model):
 
     enabled = BooleanType(default=True)
 
+    protected = BooleanType(default=False)
+
     variables = DictType(AnyType, serialize_when_none=False)
 
     parameters = DictType(AnyType, serialize_when_none=False)

@@ -283,10 +283,12 @@ stacks:
   enabled: true
   locked: false
   name: vpc
+  protected: false
 - class_path: blueprints.Bastion
   enabled: true
   locked: false
   name: bastion
+  protected: false
   requires:
   - vpc
 """)

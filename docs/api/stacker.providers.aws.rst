@@ -12,14 +12,6 @@ stacker.providers.aws.default module
     :undoc-members:
     :show-inheritance:
 
-stacker.providers.aws.interactive module
-----------------------------------------
-
-.. automodule:: stacker.providers.aws.interactive
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

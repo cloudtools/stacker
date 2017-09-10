@@ -203,7 +203,8 @@ class TestBuildAction(unittest.TestCase):
 class TestLaunchStack(TestBuildAction):
     def setUp(self):
         self.context = self._get_context()
-        self.provider = Provider(None, interactive=False, recreate_failed=True)
+        self.provider = Provider(None, interactive=False,
+                                 recreate_failed=False)
         self.build_action = build.Action(self.context, provider=self.provider)
 
         self.stack = mock.MagicMock()
@@ -286,6 +287,8 @@ class TestLaunchStack(TestBuildAction):
                       "rolled back new stack")
 
     def test_launch_stack_recreate(self):
+        self.provider.recreate_failed = True
+
         # initial status should be PENDING
         self.assertEqual(self.step.status, PENDING)
 

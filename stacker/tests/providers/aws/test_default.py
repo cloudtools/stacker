@@ -429,7 +429,7 @@ class TestProviderDefaultMode(unittest.TestCase):
             with self.stubber:
                 self.provider.prepare_stack_for_update(stack_name, [])
 
-        self.assertIn('invalid status', raised.exception.message.lower())
+        self.assertIn('Unsupported state', raised.exception.message)
 
     def test_prepare_stack_for_update_disallowed(self):
         stack_name = "MockStack"
@@ -449,7 +449,9 @@ class TestProviderDefaultMode(unittest.TestCase):
             with self.stubber:
                 self.provider.prepare_stack_for_update(stack_name, [])
 
-        self.assertIn('disallowed', raised.exception.message)
+        self.assertIn('re-creation is disabled', raised.exception.message)
+        # Ensure we point out to the user how to enable re-creation
+        self.assertIn('--recreate-failed', raised.exception.message)
 
     def test_prepare_stack_for_update_bad_tags(self):
         stack_name = "MockStack"

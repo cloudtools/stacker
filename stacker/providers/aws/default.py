@@ -652,12 +652,14 @@ class Provider(BaseProvider):
         if not self.is_stack_recreatable(stack):
             raise exceptions.StackUpdateBadStatus(
                 stack_name, stack_status,
-                'Invalid status')
+                'Unsupported state for re-creation')
 
         if not self.recreate_failed:
             raise exceptions.StackUpdateBadStatus(
                 stack_name, stack_status,
-                'Re-creation disallowed by user option')
+                'Stack re-creation is disabled. Run stacker again with the '
+                '--recreate-failed option to force it to be deleted and '
+                'created from scratch.')
 
         stack_tags = self.get_stack_tags(stack)
         if not check_tags_contain(stack_tags, tags):

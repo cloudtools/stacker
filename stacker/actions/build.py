@@ -290,8 +290,6 @@ class Action(BaseAction):
                 logger.debug("Updating existing stack: %s", stack.fqn)
                 return SubmittedStatus("updating existing stack")
             else:
-                logger.debug("Destroying stack for recreation: %s",
-                             stack.fqn)
                 return SubmittedStatus("destroying stack for re-creation")
         except StackDidNotChange:
             return DidNotChangeStatus()

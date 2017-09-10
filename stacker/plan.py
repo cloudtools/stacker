@@ -212,9 +212,10 @@ class Plan(OrderedDict):
             failed = False
             for required_stack in step.requires:
                 if self[required_stack].failed:
-                    logger.debug(
-                        'Failing stack \"%s\" due to failed dependency '
-                        '\"%s\"', step_name, required_stack)
+                    logger.warn(
+                        'Stack \"%s\" cannot be updated, as dependency \"%s\" '
+                        'has failed',
+                        step_name, required_stack)
                     step.set_status(FailedStatus("dependency has failed"))
                     failed = True
                     break

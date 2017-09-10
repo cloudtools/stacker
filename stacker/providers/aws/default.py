@@ -363,7 +363,20 @@ def create_change_set(cfn_client, fqn, template, parameters, tags,
     return changes, change_set_id
 
 
-def check_tags_present(actual, expected):
+def check_tags_contain(actual, expected):
+    """Check if a set of AWS resource tags is contained in another
+
+    Every tag key in `expected` must be present in `actual`, and have the same
+    value. Extra keys in `actual` but not in `expected` are ignored.
+
+    Args:
+        actual (list): Set of tags to be verified, usually from the description
+            of a resource. Each item must be a `dict` containing `Key` and
+            `Value` items.
+        expected (list): Set of tags that must be present in `actual` (in the
+            same format).
+    """
+
     actual_set = set((item["Key"], item["Value"]) for item in actual)
     expected_set = set((item["Key"], item["Value"]) for item in expected)
 
@@ -644,7 +657,7 @@ class Provider(BaseProvider):
                 'Re-creation disallowed by user option')
 
         stack_tags = self.get_stack_tags(stack)
-        if not check_tags_present(stack_tags, tags):
+        if not check_tags_contain(stack_tags, tags):
             raise exceptions.StackUpdateBadStatus(
                 stack_name, stack_status,
                 'Tags differ from current configuration, possibly not created '

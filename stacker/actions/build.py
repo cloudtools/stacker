@@ -245,6 +245,9 @@ class Action(BaseAction):
                 logger.debug("Stack %s finished deleting", stack.fqn)
                 recreate = True
                 # Continue with creation afterwards
+            # Failure must be checked *before* completion, as both will be true
+            # when completing a rollback, and we don't want to consider it as
+            # a successful update.
             elif self.provider.is_stack_failed(provider_stack):
                 reason = old_status.reason
                 if 'rolling' in reason:

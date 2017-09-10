@@ -407,6 +407,9 @@ class Provider(BaseProvider):
         "ROLLBACK_COMPLETE",
         "DELETE_FAILED",
         "UPDATE_ROLLBACK_FAILED",
+        # Note: UPDATE_ROLLBACK_COMPLETE is in both the FAILED and COMPLETE
+        # sets, because we need to wait for it when a rollback is triggered,
+        # but still mark the stack as failed.
         "UPDATE_ROLLBACK_COMPLETE",
     )
 

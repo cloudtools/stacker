@@ -15,6 +15,7 @@ from stacker.util import (
     camel_to_snake,
     handle_hooks,
     merge_map,
+    yaml_to_ordered_dict,
     retry_with_backoff,
     get_client_region,
     get_s3_endpoint,
@@ -99,6 +100,18 @@ class TestUtil(unittest.TestCase):
         for t in tests:
             self.assertEqual(merge_map(t[0], t[1]), t[2])
 
+    def test_yaml_to_ordered_dict(self):
+        raw_config = """
+        pre_build:
+          hook2:
+            path: foo.bar
+          hook1:
+            path: foo1.bar1
+        """
+        config = yaml_to_ordered_dict(raw_config)
+        self.assertEqual(config['pre_build'].keys()[0], 'hook2')
+        self.assertEqual(config['pre_build']['hook2']['path'], 'foo.bar')
+
     def test_get_client_region(self):
         regions = ["us-east-1", "us-west-1", "eu-west-1", "sa-east-1"]
         for region in regions:
@@ -132,7 +145,7 @@ class TestUtil(unittest.TestCase):
         with mock.patch.object(SourceProcessor,
                                'create_cache_directories',
                                new=mock_create_cache_directories):
-            sp = SourceProcessor()
+            sp = SourceProcessor(sources={})
 
             self.assertEqual(
                 sp.sanitize_git_path('git@github.com:foo/bar.git'),

@@ -19,7 +19,7 @@ from schematics.types import (
 import yaml
 
 from ..lookups import register_lookup_handler
-from ..util import SourceProcessor
+from ..util import merge_map, yaml_to_ordered_dict, SourceProcessor
 from .. import exceptions
 
 # register translators (yaml constructors)
@@ -43,17 +43,9 @@ def render_parse_load(raw_config, environment=None, validate=True):
 
     """
 
-    rendered = render(raw_config, environment)
+    pre_rendered = render(raw_config, environment)
 
-    # Stage any remote package sources and merge into their defined
-    # configurations (if any)
-    pre_config = yaml.safe_load(rendered)
-    if pre_config.get('package_sources'):
-        processor = SourceProcessor(config=pre_config)
-        processor.get_package_sources()
-        # Call the render again as the package_sources may have merged in
-        # additional environment lookups
-        rendered = render(str(processor.config), environment)
+    rendered = process_remote_sources(pre_rendered, environment)
 
     config = parse(rendered)
 
@@ -118,21 +110,19 @@ def parse(raw_config):
 
     # Convert any applicable dictionaries back into lists
     config_dict = yaml.safe_load(raw_config)
-    if config_dict.get('stacks') and isinstance(config_dict['stacks'], dict):
-        stack_list = []
-        for key, value in config_dict['stacks'].iteritems():
-            tmp_dict = value
-            tmp_dict['name'] = key
-            stack_list.append(tmp_dict)
-        config_dict['stacks'] = stack_list
-    for stage in ['pre', 'post']:
-        for i in ['%s_build' % stage, '%s_destroy' % stage]:
-            if config_dict.get(i) and isinstance(config_dict[i], dict):
-                hook_list = []
-                for key, value in config_dict[i].iteritems():
-                    tmp_dict = value
-                    hook_list.append(tmp_dict)
-                config_dict[i] = hook_list
+    for i in ['stacks',
+              'pre_build',
+              'post_build',
+              'pre_destroy',
+              'post_destroy']:
+        if config_dict.get(i) and isinstance(config_dict[i], dict):
+            tmp_list = []
+            for key, value in yaml_to_ordered_dict(raw_config)[i].iteritems():
+                tmp_dict = dict(value)
+                if i == 'stacks':
+                    tmp_dict['name'] = key
+                tmp_list.append(tmp_dict)
+            config_dict[i] = tmp_list
 
     # We have to enable non-strict mode, because people may be including top
     # level keys for re-use with stacks (e.g. including something like
@@ -189,6 +179,40 @@ def dump(config):
         default_flow_style=False,
         encoding='utf-8',
         allow_unicode=True)
+
+
+def process_remote_sources(raw_config, environment=None):
+    """Stage remote package sources and merge in remote configs.
+
+    Args:
+        raw_config (str): the raw stacker configuration string.
+        environment (dict, optional): any environment values that should be
+            passed to the config
+
+    Returns:
+        str: the raw stacker configuration string
+
+    """
+
+    config = yaml.safe_load(raw_config)
+    if config.get('package_sources'):
+        processor = SourceProcessor(
+            sources=config['package_sources'],
+            stacker_cache_dir=config.get('stacker_cache_dir')
+        )
+        processor.get_package_sources()
+        if processor.configs_to_merge:
+            for i in processor.configs_to_merge:
+                logger.debug("Merging in remote config \"%s\"", i)
+                remote_config = yaml.safe_load(open(i))
+                config = merge_map(remote_config, config)
+            # Call the render again as the package_sources may have merged in
+            # additional environment lookups
+            if not environment:
+                environment = {}
+            return render(str(config), environment)
+
+    return raw_config
 
 
 def not_empty_list(value):

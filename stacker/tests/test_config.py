@@ -6,7 +6,8 @@ from stacker.config import (
     load,
     render,
     parse,
-    dump
+    dump,
+    process_remote_sources
 )
 from stacker.config import Config, Stack
 from stacker.environment import parse_environment
@@ -368,6 +369,15 @@ stacks:
         config = Config({"sys_path": "/foo/bar"})
         load(config)
         self.assertIn("/foo/bar", sys.path)
+
+    def test_process_empty_remote_sources(self):
+        config = """
+        namespace: prod
+        stacks:
+          - name: vpc
+            class_path: blueprints.VPC
+        """
+        self.assertEqual(config, process_remote_sources(config))
 
     def test_lookup_with_sys_path(self):
         config = Config({

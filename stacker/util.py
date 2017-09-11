@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import yaml
+from collections import OrderedDict
 from git import Repo
 
 import botocore.exceptions
@@ -283,6 +284,32 @@ def merge_map(a, b):
     return a
 
 
+def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
+    """Provides yaml.load alternative with preserved dictionary order.
+
+    Args:
+        stream (string): YAML string to load.
+        loader (:class:`yaml.loader`): PyYAML loader class. Defaults to safe
+            load.
+
+    Returns:
+        OrderedDict: Parsed YAML.
+    """
+    class OrderedLoader(loader):
+        """Subclass of Python yaml class."""
+        pass
+
+    def construct_mapping(loader, node):
+        """Override parent method to use OrderedDict."""
+        loader.flatten_mapping(node)
+        return OrderedDict(loader.construct_pairs(node))
+
+    OrderedLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        construct_mapping)
+    return yaml.load(stream, OrderedLoader)
+
+
 def uppercase_first_letter(s):
     """Return string "s" with first character upper case."""
     return s[0].upper() + s[1:]
@@ -477,19 +504,22 @@ class SourceProcessor():
     """Makes remote python package sources available in the running python
        environment."""
 
-    def __init__(self, config={}):
+    def __init__(self, sources, stacker_cache_dir=None):
         """
-        Processes a config's list of package sources
+        Processes a config's defined package sources.
 
         Args:
-            config (dict): Stacker config dictionary
+            sources (dict): Package sources from Stacker config dictionary
+            stacker_cache_dir (string): Path where remote sources will be
+                cached.
         """
-        stacker_cache_dir = (config.get('stacker_cache_dir') or
-                             os.path.expanduser("~/.stacker"))
+        if stacker_cache_dir is None:
+            stacker_cache_dir = os.path.expanduser("~/.stacker")
         package_cache_dir = os.path.join(stacker_cache_dir, 'packages')
         self.stacker_cache_dir = stacker_cache_dir
         self.package_cache_dir = package_cache_dir
-        self.config = config
+        self.sources = sources
+        self.configs_to_merge = []
         self.create_cache_directories()
 
     def create_cache_directories(self):
@@ -502,9 +532,8 @@ class SourceProcessor():
     def get_package_sources(self):
         """Makes remote python packages available for local use."""
         # Checkout git repositories specified in config
-        if (self.config.get('package_sources') and
-                self.config['package_sources'].get('git')):
-            for config in self.config['package_sources']['git']:
+        if self.sources.get('git'):
+            for config in self.sources['git']:
                 self.fetch_git_package(config=config)
 
     def fetch_git_package(self, config):
@@ -540,20 +569,16 @@ class SourceProcessor():
                                               path)
                 logger.debug("Appending \"%s\" to python sys.path",
                              path_to_append)
-                sys.path.append(os.path.join(self.package_cache_dir,
-                                             dir_name,
-                                             path))
+                sys.path.append(path_to_append)
         else:
             sys.path.append(cached_dir_path)
 
         # If the configuration defines a set of remote config yamls to
-        # include, merge them into the main config
+        # include, add them to the list for merging
         if config.get('configs'):
             for config_filename in config['configs']:
-                remote_config = yaml.safe_load(
-                    open(os.path.join(cached_dir_path, config_filename))
-                )
-                self.config = merge_map(remote_config, self.config)
+                self.configs_to_merge.append(os.path.join(cached_dir_path,
+                                                          config_filename))
 
     def git_ls_remote(self, uri, ref):
         """Determines the latest commit id for a given ref.

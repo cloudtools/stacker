@@ -145,6 +145,27 @@ In this example, the configuration in ``vpc.yaml`` will be merged into the
 running current configuration, with the current configuration's values taking
 priority over the values in ``vpc.yaml``.
 
+Dictionary Stack Names & Hook Paths
+:::::::::::::::::::::::::::::::::::
+To allow remote configs to be selectively overriden, stack names & hook
+paths can optionally be defined as dictionaries, e.g.::
+
+  pre_build:
+    my_route53_hook:
+      path: stacker.hooks.route53.create_domain:
+      required: true
+      args:
+        domain: mydomain.com
+  stacks:
+    vpc-example:
+      class_path: stacker_blueprints.vpc.VPC
+      locked: false
+      enabled: true
+    bastion-example:
+      class_path: stacker_blueprints.bastion.Bastion
+      locked: false
+      enabled: true
+
 Pre & Post Hooks
 ----------------
 
@@ -178,22 +199,6 @@ the build action::
       required: true
       args:
         domain: mydomain.com
-
-Dictionary Hook Paths
-~~~~~~~~~~~~~~~~~~~~~~
-
-Hooks can also be defined as a dictionary (as long as their execution order
-isn't important)::
-
-  pre_build:
-    my_route53_hook:
-      path: stacker.hooks.route53.create_domain:
-      required: true
-      args:
-        domain: mydomain.com
-
-This is useful when working with `Remote Configs`_ to allow the merging of
-remote and local configuration values.
 
 Tags
 ----
@@ -327,24 +332,6 @@ Here's an example from stacker_blueprints_, used to create a VPC::
           - 10.128.16.0/22
           - 10.128.20.0/22
         CidrBlock: 10.128.0.0/16
-
-Dictionary Stack Names
-~~~~~~~~~~~~~~~~~~~~~~
-
-The *stacks* top level keyword can also be defined as a dictionary::
-
-  stacks:
-    vpc-example:
-      class_path: stacker_blueprints.vpc.VPC
-      locked: false
-      enabled: true
-    bastion-example:
-      class_path: stacker_blueprints.bastion.Bastion
-      locked: false
-      enabled: true
-
-This is useful when working with `Remote Configs`_ to allow the merging of
-remote and local configuration values.
 
 Variables
 ==========

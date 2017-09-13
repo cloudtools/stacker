@@ -6,7 +6,7 @@ import hashlib
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 import botocore
-
+from functools import partial
 import formic
 from troposphere.awslambda import Code
 from stacker.session_cache import get_session
@@ -118,22 +118,12 @@ def _find_files(root, includes, excludes, walk):
     """
 
     root = os.path.abspath(root)
-    if walk is True:
-        file_set = formic.FileSet(directory=root, include=includes,
-                                  exclude=excludes, walk=_walk)
-    else:
-        file_set = formic.FileSet(directory=root, include=includes,
-                                  exclude=excludes)
+    file_set = formic.FileSet(directory=root, include=includes,
+                              exclude=excludes,
+                              walk=partial(os.walk, followlinks=walk))
 
     for filename in file_set.qualified_files(absolute=False):
         yield filename
-
-
-def _walk(directory):
-    """Generate the file names in a directory tree by walking the tree,
-    including following symlinks.
-    """
-    return os.walk(directory, followlinks=True)
 
 
 def _zip_from_file_patterns(root, includes, excludes, walk):
@@ -384,7 +374,7 @@ def upload_lambda_functions(context, provider, **kwargs):
             use by the provider.
         prefix (str, optional): S3 key prefix to prepend to the uploaded
             zip name.
-        followsymlinks (bool, optional): Will determine if symlinks should
+        follow_symlinks (bool, optional): Will determine if symlinks should
             be followed and included with the zip artfiact. Default: False
         functions (dict):
             Configurations of desired payloads to build. Keys correspond to
@@ -436,7 +426,7 @@ def upload_lambda_functions(context, provider, **kwargs):
                 data_key: lambda
                 args:
                   bucket: custom-bucket
-                  followsymlinks: True
+                  follow_symlinks: True
                   prefix: cloudformation-custom-resources/
                   functions:
                     MyFunction:
@@ -490,16 +480,10 @@ def upload_lambda_functions(context, provider, **kwargs):
     )
 
     # Check if we should walk / follow symlinks
-    followsymlinks = kwargs.get('followsymlinks')
-    if followsymlinks is False or followsymlinks is True:
-        logger.info("lambda: Keyword Argument followsymlinks is set to: %s"
-                    , followsymlinks)
-        walk = followsymlinks
-
-    else:
-        logger.info("lambda: followsymlinks Aruguement not set to `True`, "
-                    "Symlinks not being followed for this run")
-        walk = False
+    follow_symlinks = kwargs.get('follow_symlinks', False)
+    if not isinstance(follow_symlinks, bool):
+        raise ValueError('follow_symlinks option must be a boolean')
+    walk = follow_symlinks
 
     # Always use the global client for s3
     session = get_session(bucket_region)

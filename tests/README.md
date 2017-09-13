@@ -18,9 +18,10 @@ This directory contains the functional testing suite for stacker. It exercises a
   ```console
   $ ./stacker.yaml.sh | stacker build -
   ```
-4. In the AWS console, generate a new IAM access key pair for the user and set it in your shell:
+4. Grab the generated key pair for the user and set it in your shell:
 
   ```console
+  $ ./stacker.yaml.sh | stacker info -
   $ export AWS_ACCESS_KEY_ID=access-key
   $ export AWS_SECRET_ACCESS_KEY=secret-access-key
   ```

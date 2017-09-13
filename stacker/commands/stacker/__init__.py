@@ -28,7 +28,8 @@ class Stacker(BaseCommand):
         options.provider = default.Provider(
             region=options.region,
             interactive=options.interactive,
-            replacements_only=options.replacements_only
+            replacements_only=options.replacements_only,
+            recreate_failed=options.recreate_failed
         )
 
         config = load_config(

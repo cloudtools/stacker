@@ -1,4 +1,4 @@
-from troposphere import Output, Sub, Ref
+from troposphere import GetAtt, Output, Sub, Ref
 from troposphere import iam
 
 from awacs.aws import Policy, Statement
@@ -7,7 +7,7 @@ import awacs.s3
 import awacs.cloudformation
 import awacs.iam
 
-from troposphere.cloudformation import WaitConditionHandle
+from troposphere.cloudformation import WaitCondition, WaitConditionHandle
 
 from stacker.blueprints.base import Blueprint
 from stacker.blueprints.variables.types import (
@@ -97,7 +97,18 @@ class FunctionalTests(Blueprint):
                 Policies=[
                     stacker_policy]))
 
+        key = t.add_resource(
+            iam.AccessKey(
+                "FunctionalTestKey",
+                Serial=1,
+                UserName=Ref(user)))
+
         t.add_output(Output("User", Value=Ref(user)))
+        t.add_output(Output("AccessKeyId", Value=Ref(key)))
+        t.add_output(
+            Output(
+                "SecretAccessKey",
+                Value=GetAtt("FunctionalTestKey", "SecretAccessKey")))
 
 
 class Dummy(Blueprint):
@@ -127,6 +138,29 @@ class Dummy2(Blueprint):
         self.template.add_resource(WaitConditionHandle("Dummy"))
         self.template.add_output(Output("DummyId", Value="dummy-1234"))
         self.template.add_resource(WaitConditionHandle("Dummy2"))
+
+
+class Broken(Blueprint):
+    """
+    This blueprint deliberately fails validation, so that it can be used to
+    test re-creation of a failed stack
+    """
+    VARIABLES = {
+        "StringVariable": {
+            "type": str,
+            "default": ""}
+    }
+
+    def create_template(self):
+        t = self.template
+        t.add_resource(WaitConditionHandle("BrokenDummy"))
+        t.add_resource(WaitCondition(
+            "BrokenWaitCondition",
+            Handle=Ref("BrokenDummy"),
+            # Timeout is made deliberately large so CF rejects it
+            Timeout=2 ** 32,
+            Count=0))
+        t.add_output(Output("DummyId", Value="dummy-1234"))
 
 
 class VPC(Blueprint):

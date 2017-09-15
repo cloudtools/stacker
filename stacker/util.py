@@ -513,7 +513,7 @@ class SourceProcessor():
             stacker_cache_dir (string): Path where remote sources will be
                 cached.
         """
-        if stacker_cache_dir is None:
+        if not stacker_cache_dir:
             stacker_cache_dir = os.path.expanduser("~/.stacker")
         package_cache_dir = os.path.join(stacker_cache_dir, 'packages')
         self.stacker_cache_dir = stacker_cache_dir
@@ -532,9 +532,8 @@ class SourceProcessor():
     def get_package_sources(self):
         """Makes remote python packages available for local use."""
         # Checkout git repositories specified in config
-        if self.sources.get('git'):
-            for config in self.sources['git']:
-                self.fetch_git_package(config=config)
+        for config in self.sources.get('git', []):
+            self.fetch_git_package(config=config)
 
     def fetch_git_package(self, config):
         """Makes a remote git repository available for local use

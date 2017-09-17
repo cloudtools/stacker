@@ -91,7 +91,7 @@ See the `CloudFormation Limits Reference`_.
 .. _`CloudFormation Limits Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html
 
 Module Paths
-----------------
+------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to
 load modules from outside the default ``sys.path`` (e.g., to include modules
 inside the same repo as config files).
@@ -99,8 +99,24 @@ inside the same repo as config files).
 Adding a path (e.g. ``./``) to the **sys_path** top level key word will allow
 modules from that path location to be used.
 
+Service Role
+------------
+
+By default stacker doesn't specify a service role when executing changes to
+CloudFormation stacks. If you would prefer that it do so, you can set
+``service_role`` to be the ARN of the service that stacker should use when
+executing CloudFormation changes.
+
+This is the equivalent of setting ``RoleARN`` on a call to the following
+CloudFormation api calls: ``CreateStack``, ``UpdateStack``,
+``CreateChangeSet``.
+
+See the AWS documentation for `AWS CloudFormation Service Roles`_.
+
+.. _`AWS CloudFormation Service Roles`: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html?icmpid=docs_cfn_console
+
 Remote Packages
-----------------
+---------------
 The **package_sources** top level keyword can be used to define remote git
 sources for blueprints (e.g., retrieving ``stacker_blueprints`` on github at
 tag ``v1.0.2``).
@@ -168,7 +184,7 @@ Tags
 ----
 
 CloudFormation supports arbitrary key-value pair tags. All stack-level, including automatically created tags, are
-propagated to resources that AWS CloudFormation supports. See `AWS Cloudformation Resource Tags Type`_ for more details.
+propagated to resources that AWS CloudFormation supports. See `AWS CloudFormation Resource Tags Type`_ for more details.
 If no tags are specified, the `stacker_namespace` tag is applied to your stack with the value of `namespace` as the
 tag value.
 

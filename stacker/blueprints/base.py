@@ -292,13 +292,14 @@ class Blueprint(object):
 
     """
 
-    def __init__(self, name, context, mappings=None):
+    def __init__(self, name, context, mappings=None, description=None):
         self.name = name
         self.context = context
         self.mappings = mappings
         self.outputs = {}
         self.reset_template()
         self.resolved_variables = None
+        self.description = description
 
         if hasattr(self, "PARAMETERS") or hasattr(self, "LOCAL_PARAMETERS"):
             raise AttributeError("DEPRECATION WARNING: Blueprint %s uses "
@@ -461,6 +462,8 @@ class Blueprint(object):
         """Render the Blueprint to a CloudFormation template"""
         self.import_mappings()
         self.create_template()
+        if self.description:
+            self.set_template_description(self.description)
         self.setup_parameters()
         rendered = self.template.to_json()
         version = hashlib.md5(rendered).hexdigest()[:8]
@@ -482,6 +485,16 @@ class Blueprint(object):
         variables = self.get_variables()
 
         return parse_user_data(variables, raw_user_data, self.name)
+
+    def set_template_description(self, description):
+        """Adds a description to the Template
+
+        Args:
+            description (str): A description to be added to the resulting
+                template.
+
+        """
+        self.template.add_description(description)
 
     @property
     def rendered(self):

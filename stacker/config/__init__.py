@@ -210,6 +210,8 @@ class Stack(Model):
 
     class_path = StringType(required=True)
 
+    description = StringType(serialize_when_none=False)
+
     requires = ListType(StringType, serialize_when_none=False)
 
     locked = BooleanType(default=False)

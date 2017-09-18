@@ -247,6 +247,9 @@ A stack has the following keys:
   will be prepended to this)
 **class_path:**
   The python class path to the Blueprint to be used.
+**description:**
+  A short description to apply to the stack. This overwrites any description
+  provided in the Blueprint. See: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 **variables:**
   A dictionary of Variables_ to pass into the Blueprint when rendering the
   CloudFormation template. Variables_ can be any valid YAML data

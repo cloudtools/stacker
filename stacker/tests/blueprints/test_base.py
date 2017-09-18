@@ -99,6 +99,21 @@ class TestVariables(unittest.TestCase):
         with self.assertRaises(UnresolvedVariables):
             blueprint.get_variables()
 
+    def test_set_description(self):
+        class TestBlueprint(Blueprint):
+            VARIABLES = {
+                "Param1": {"default": "default", "type": str},
+            }
+
+            def create_template(self):
+                return
+
+        description = "my blueprint description"
+        blueprint = TestBlueprint(name="test", context=MagicMock(),
+                                  description=description)
+        blueprint.render_template()
+        self.assertEquals(description, blueprint.template.description)
+
     def test_validate_variable_type_cfntype(self):
         var_name = "testVar"
         var_type = CFNString

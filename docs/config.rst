@@ -104,7 +104,7 @@ Service Role
 
 By default stacker doesn't specify a service role when executing changes to
 CloudFormation stacks. If you would prefer that it do so, you can set
-``service_role`` to be the ARN of the service that stacker should use when
+**service_role** to be the ARN of the service that stacker should use when
 executing CloudFormation changes.
 
 This is the equivalent of setting ``RoleARN`` on a call to the following

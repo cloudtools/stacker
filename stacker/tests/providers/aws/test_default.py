@@ -1,7 +1,8 @@
-import unittest
+import copy
 from datetime import datetime
 import random
 import string
+import unittest
 
 from mock import patch
 from botocore.stub import Stubber
@@ -12,12 +13,14 @@ from ....actions.diff import DictValue
 from ....providers.base import Template
 
 from ....providers.aws.default import (
+    DEFAULT_CAPABILITIES,
     Provider,
     requires_replacement,
     ask_for_approval,
     wait_till_change_set_complete,
     create_change_set,
-    summarize_params_diff
+    summarize_params_diff,
+    generate_cloudformation_args,
 )
 
 from .... import exceptions
@@ -312,6 +315,39 @@ class TestMethods(unittest.TestCase):
                     template=Template(url="http://fake.template.url.com/"),
                     parameters=[], tags=[]
                 )
+
+    def test_generate_cloudformation_args(self):
+        stack_name = "mystack"
+        template_url = "http://fake.s3url.com/blah.json"
+        template_body = '{"fake_body": "woot"}'
+        std_args = {
+            "stack_name": stack_name, "parameters": [], "tags": [],
+            "template": Template(url=template_url)}
+        std_return = {"StackName": stack_name, "Parameters": [], "Tags": [],
+                      "Capabilities": DEFAULT_CAPABILITIES,
+                      "TemplateURL": template_url}
+        result = generate_cloudformation_args(**std_args)
+        self.assertEqual(result, std_return)
+
+        result = generate_cloudformation_args(service_role="FakeRole",
+                                              **std_args)
+        service_role_result = copy.deepcopy(std_return)
+        service_role_result["RoleARN"] = "FakeRole"
+        self.assertEqual(result, service_role_result)
+
+        result = generate_cloudformation_args(change_set_name="MyChanges",
+                                              **std_args)
+        change_set_result = copy.deepcopy(std_return)
+        change_set_result["ChangeSetName"] = "MyChanges"
+        self.assertEqual(result, change_set_result)
+
+        # If not TemplateURL is provided, use TemplateBody
+        std_args["template"] = Template(body=template_body)
+        template_body_result = copy.deepcopy(std_return)
+        del(template_body_result["TemplateURL"])
+        template_body_result["TemplateBody"] = template_body
+        result = generate_cloudformation_args(**std_args)
+        self.assertEqual(result, template_body_result)
 
 
 class TestProviderDefaultMode(unittest.TestCase):

@@ -276,6 +276,8 @@ class Config(Model):
 
     package_sources = ModelType(PackageSources, serialize_when_none=False)
 
+    service_role = StringType(serialize_when_none=False)
+
     pre_build = ListType(ModelType(Hook), serialize_when_none=False)
 
     post_build = ListType(ModelType(Hook), serialize_when_none=False)

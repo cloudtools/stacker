@@ -129,7 +129,7 @@ class TestBaseAction(unittest.TestCase):
             )
             self.assertEqual(
                 action.stack_template_url(blueprint),
-                "https://%s/%s/%s/%s-%s.json" % (
+                "https://%s/%s/stack_templates/%s/%s-%s.json" % (
                     endpoint,
                     "stacker-mynamespace",
                     "mynamespace-myblueprint",

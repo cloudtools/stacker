@@ -25,8 +25,9 @@ def stack_template_key_name(blueprint):
         string: Key name resulting from blueprint.
     """
     name = blueprint.name
-    return "%s/%s-%s.json" % (blueprint.context.get_fqn(name), name,
-                              blueprint.version)
+    return "stack_templates/%s/%s-%s.json" % (blueprint.context.get_fqn(name),
+                                              name,
+                                              blueprint.version)
 
 
 def stack_template_url(bucket_name, blueprint, endpoint):

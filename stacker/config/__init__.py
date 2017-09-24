@@ -210,6 +210,8 @@ class Stack(Model):
 
     class_path = StringType(required=True)
 
+    description = StringType(serialize_when_none=False)
+
     requires = ListType(StringType, serialize_when_none=False)
 
     locked = BooleanType(default=False)
@@ -273,6 +275,8 @@ class Config(Model):
     sys_path = StringType(serialize_when_none=False)
 
     package_sources = ModelType(PackageSources, serialize_when_none=False)
+
+    service_role = StringType(serialize_when_none=False)
 
     pre_build = ListType(ModelType(Hook), serialize_when_none=False)
 

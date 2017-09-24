@@ -218,14 +218,16 @@ A sample config for the above:
         class_path: path.to.above.Buckets
         variables:
           Buckets:
-            # resource name that will be added to CloudFormation
+            # resource name (title) that will be added to CloudFormation.
             FirstBucket:
               # name of the s3 bucket
               BucketName: my-first-bucket
             SecondBucket:
               BucketName: my-second-bucket
           SingleBucket:
-            BucketName: my-single-bucket
+            # resource name (title) that will be added to CloudFormation.
+            MySingleBucket:
+              BucketName: my-single-bucket
           Subscriptions:
             - Endpoint: one-lambda
               Protocol: lambda

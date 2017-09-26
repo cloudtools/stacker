@@ -93,7 +93,7 @@ def _calculate_hash(files, root):
     return file_hash.hexdigest()
 
 
-def _find_files(root, includes, excludes, walk):
+def _find_files(root, includes, excludes, follow_symlinks):
     """List files inside a directory based on include and exclude rules.
 
     This is a more advanced version of `glob.glob`, that accepts multiple
@@ -106,8 +106,8 @@ def _find_files(root, includes, excludes, walk):
         excludes (list[str]): exclusion patterns. Files matching those
             patterns will be excluded from the result. Exclusions take
             precedence over inclusions.
-        walk (bool): If true, symlinks will be included in the resulting
-            zip file
+        follow_symlinks (bool): If true, symlinks will be included in the
+            resulting zip file
 
     Yields:
         str: a file name relative to the root.
@@ -120,13 +120,14 @@ def _find_files(root, includes, excludes, walk):
     root = os.path.abspath(root)
     file_set = formic.FileSet(directory=root, include=includes,
                               exclude=excludes,
-                              walk=partial(os.walk, followlinks=walk))
+                              walk=partial(
+                                  os.walk, followlinks=follow_symlinks))
 
     for filename in file_set.qualified_files(absolute=False):
         yield filename
 
 
-def _zip_from_file_patterns(root, includes, excludes, walk):
+def _zip_from_file_patterns(root, includes, excludes, follow_symlinks):
     """Generates a ZIP file in-memory from file search patterns.
 
     Args:
@@ -136,8 +137,8 @@ def _zip_from_file_patterns(root, includes, excludes, walk):
         excludes (list[str]): exclusion patterns. Files matching those
             patterns will be excluded from the result. Exclusions take
             precedence over inclusions.
-        walk (bool): If true, symlinks will be included in the resulting
-            zip file
+        follow_symlinks (bool): If true, symlinks will be included in the
+            resulting zip file
 
     See Also:
         :func:`_zip_files`, :func:`_find_files`.
@@ -148,7 +149,7 @@ def _zip_from_file_patterns(root, includes, excludes, walk):
     """
     logger.info('lambda: base directory: %s', root)
 
-    files = list(_find_files(root, includes, excludes, walk))
+    files = list(_find_files(root, includes, excludes, follow_symlinks))
     if not files:
         raise RuntimeError('Empty list of files for Lambda payload. Check '
                            'your include/exclude options for errors.')
@@ -261,7 +262,7 @@ def _check_pattern_list(patterns, key, default=None):
                      'list of strings'.format(key))
 
 
-def _upload_function(s3_conn, bucket, prefix, name, options, walk):
+def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks):
     """Builds a Lambda payload from user configuration and uploads it to S3.
 
     Args:
@@ -282,8 +283,8 @@ def _upload_function(s3_conn, bucket, prefix, name, options, walk):
                     file patterns to include in the payload (optional).
                 * exclude:
                     file patterns to exclude from the payload (optional).
-        walk (bool): If true, symlinks will be included in the resulting
-            zip file
+        follow_symlinks  (bool): If true, symlinks will be included in the
+            resulting zip file
 
     Returns:
         troposphere.awslambda.Code: CloudFormation AWS Lambda Code object,
@@ -314,7 +315,8 @@ def _upload_function(s3_conn, bucket, prefix, name, options, walk):
         root = os.path.abspath(os.path.join(get_config_directory(), root))
     zip_contents, content_hash = _zip_from_file_patterns(root,
                                                          includes,
-                                                         excludes, walk)
+                                                         excludes,
+                                                         follow_symlinks)
 
     return _upload_code(s3_conn, bucket, prefix, name, zip_contents,
                         content_hash)
@@ -483,7 +485,6 @@ def upload_lambda_functions(context, provider, **kwargs):
     follow_symlinks = kwargs.get('follow_symlinks', False)
     if not isinstance(follow_symlinks, bool):
         raise ValueError('follow_symlinks option must be a boolean')
-    walk = follow_symlinks
 
     # Always use the global client for s3
     session = get_session(bucket_region)
@@ -496,6 +497,6 @@ def upload_lambda_functions(context, provider, **kwargs):
     results = {}
     for name, options in kwargs['functions'].items():
         results[name] = _upload_function(s3_client, bucket_name, prefix, name,
-                                         options, walk)
+                                         options, follow_symlinks)
 
     return results

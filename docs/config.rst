@@ -146,6 +146,42 @@ Cloned repositories will be cached between builds; the cache location defaults
 to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
 level keyword.
 
+Remote Configs
+~~~~~~~~~~~~~~
+Configuration yamls from remote configs can also be used by specifying a list
+of ``configs`` in the repo to use::
+
+    package_sources:
+      git:
+        - uri: git@github.com:acmecorp/stacker_blueprints.git
+          configs:
+            - vpc.yaml
+
+In this example, the configuration in ``vpc.yaml`` will be merged into the
+running current configuration, with the current configuration's values taking
+priority over the values in ``vpc.yaml``.
+
+Dictionary Stack Names & Hook Paths
+:::::::::::::::::::::::::::::::::::
+To allow remote configs to be selectively overriden, stack names & hook
+paths can optionally be defined as dictionaries, e.g.::
+
+  pre_build:
+    my_route53_hook:
+      path: stacker.hooks.route53.create_domain:
+      required: true
+      args:
+        domain: mydomain.com
+  stacks:
+    vpc-example:
+      class_path: stacker_blueprints.vpc.VPC
+      locked: false
+      enabled: true
+    bastion-example:
+      class_path: stacker_blueprints.bastion.Bastion
+      locked: false
+      enabled: true
+
 Pre & Post Hooks
 ----------------
 
@@ -315,7 +351,6 @@ Here's an example from stacker_blueprints_, used to create a VPC::
           - 10.128.16.0/22
           - 10.128.20.0/22
         CidrBlock: 10.128.0.0/16
-
 
 Variables
 ==========

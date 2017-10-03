@@ -8,15 +8,20 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import yaml
+import zipfile
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 from collections import OrderedDict
 from git import Repo
 
+import botocore.client
 import botocore.exceptions
+
+from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -562,9 +567,68 @@ class SourceProcessor():
 
     def get_package_sources(self):
         """Makes remote python packages available for local use."""
+        # Checkout S3 repositories specified in config
+        for config in self.sources.get('s3', []):
+            self.fetch_s3_package(config=config)
         # Checkout git repositories specified in config
         for config in self.sources.get('git', []):
             self.fetch_git_package(config=config)
+
+    def fetch_s3_package(self, config):
+        """Makes a remote S3 archive available for local use
+
+        Args:
+            config (:class:`stacker.config.GitPackageSource`): git config
+                dictionary
+
+        """
+        if config['key'].endswith('.tar.gz'):
+            archive_type = '.tar.gz'
+            dir_name = self.sanitize_uri_path(
+                "s3-%s-%s" % (config['bucket'], config['key'][:-7])
+            )
+        elif config['key'].endswith('.zip'):
+            archive_type = '.zip'
+            dir_name = self.sanitize_uri_path(
+                "s3-%s-%s" % (config['bucket'], config['key'][:-4])
+            )
+        else:
+            raise ValueError(
+                "Archive type could not be determined for S3 object \"%s\" "
+                "in bucket %s." % (config['key'], config['bucket'])
+            )
+
+        # We can skip downloading the archive if it's already been cached
+        cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
+        if not os.path.isdir(cached_dir_path):
+            tmp_dir = tempfile.mkdtemp(prefix='stacker')
+            tmp_package_path = os.path.join(tmp_dir, dir_name)
+            try:
+                tmp_archive_path = os.path.join(tmp_dir,
+                                                dir_name + archive_type)
+                s3_resource = get_session(region=None).resource('s3')
+                if config.get('requester_pays', False):
+                    extra_args = {'RequestPayer': 'requester'}
+                else:
+                    extra_args = None
+                s3_resource.Bucket(config['bucket']).download_file(
+                    config['key'],
+                    tmp_archive_path,
+                    ExtraArgs=extra_args
+                )
+                if archive_type == '.tar.gz':
+                    with tarfile.open(tmp_archive_path, 'r:gz') as tar:
+                        tar.extractall(path=tmp_package_path)
+                else:
+                    with zipfile.ZipFile(tmp_archive_path, 'r') as zip_ref:
+                        zip_ref.extractall(tmp_package_path)
+                shutil.move(tmp_package_path, self.package_cache_dir)
+            finally:
+                shutil.rmtree(tmp_dir)
+
+        # Update sys.path & merge in remote configs (if necessary)
+        self.update_paths_and_config(config=config,
+                                     pkg_dir_name=dir_name)
 
     def fetch_git_package(self, config):
         """Makes a remote git repository available for local use
@@ -590,12 +654,26 @@ class SourceProcessor():
             finally:
                 shutil.rmtree(tmp_dir)
 
-        # Cloning (if necessary) is complete. Now add the appropriate
-        # directory (or directories) to sys.path
+        # Update sys.path & merge in remote configs (if necessary)
+        self.update_paths_and_config(config=config,
+                                     pkg_dir_name=dir_name)
+
+    def update_paths_and_config(self, config, pkg_dir_name):
+        """Handle remote source defined sys.paths & configs
+
+        Args:
+            config (:class:`stacker.config.GitPackageSource`): git config
+                dictionary
+            pkg_dir_name (string): directory name of the stacker archive
+
+        """
+        cached_dir_path = os.path.join(self.package_cache_dir, pkg_dir_name)
+
+        # Add the appropriate directory (or directories) to sys.path
         if config.get('paths'):
             for path in config['paths']:
                 path_to_append = os.path.join(self.package_cache_dir,
-                                              dir_name,
+                                              pkg_dir_name,
                                               path)
                 logger.debug("Appending \"%s\" to python sys.path",
                              path_to_append)
@@ -687,6 +765,19 @@ class SourceProcessor():
             )
         return ref
 
+    def sanitize_uri_path(self, uri):
+        """Takes a URI and converts it to a directory safe path
+
+        Args:
+            uri (string): URI (e.g. http://example.com/cats)
+
+        Returns:
+            str: Directory name for the supplied uri
+        """
+        for i in ['@', '/', ':']:
+            uri = uri.replace(i, '_')
+        return uri
+
     def sanitize_git_path(self, uri, ref=None):
         """Takes a git URI and ref and converts it to a directory safe path
 
@@ -702,8 +793,7 @@ class SourceProcessor():
             dir_name = uri[:-4]  # drop .git
         else:
             dir_name = uri
-        for i in ['@', '/', ':']:
-            dir_name = dir_name.replace(i, '_')
+        dir_name = self.sanitize_uri_path(dir_name)
         if ref is not None:
             dir_name += "-%s" % ref
         return dir_name

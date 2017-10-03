@@ -152,6 +152,10 @@ class TestUtil(unittest.TestCase):
                 'git_github.com_foo_bar'
             )
             self.assertEqual(
+                sp.sanitize_uri_path('http://example.com/foo/bar.gz@1'),
+                'http___example.com_foo_bar.gz_1'
+            )
+            self.assertEqual(
                 sp.sanitize_git_path('git@github.com:foo/bar.git', 'v1'),
                 'git_github.com_foo_bar-v1'
             )

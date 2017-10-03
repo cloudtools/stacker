@@ -117,7 +117,7 @@ See the AWS documentation for `AWS CloudFormation Service Roles`_.
 
 Remote Packages
 ---------------
-The **package_sources** top level keyword can be used to define remote git
+The **package_sources** top level keyword can be used to define remote
 sources for blueprints (e.g., retrieving ``stacker_blueprints`` on github at
 tag ``v1.0.2``).
 
@@ -136,13 +136,25 @@ The only required key for a git repository config is ``uri``, but ``branch``,
         - uri: git@github.com:contoso/foo.git
           commit: 12345678
 
-Use the ``paths`` option when subdirectories of the repo should be added to
-Stacker's ``sys.path``.
-
 If no specific commit or tag is specified for a repo, the remote repository
 will be checked for newer commits on every execution of Stacker.
 
-Cloned repositories will be cached between builds; the cache location defaults
+For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
+
+    package_sources:
+      s3:
+        - bucket: mystackers3bucket
+          key: archives/blueprints-v1.zip
+          paths:
+            - stacker_blueprints
+        - bucket: anothers3bucket
+          key: public/public-blueprints-v2.tar.gz
+          requester_pays: true
+
+Use the ``paths`` option when subdirectories of the repo/archive should be
+added to Stacker's ``sys.path``.
+
+Cloned repos/archives will be cached between builds; the cache location defaults
 to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
 level keyword.
 

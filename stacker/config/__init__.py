@@ -242,8 +242,18 @@ class GitPackageSource(Model):
     configs = ListType(StringType, serialize_when_none=False)
 
 
+class S3PackageSource(Model):
+    bucket = StringType(required=True)
+
+    key = StringType(required=True)
+
+    requester_pays = BooleanType(serialize_when_none=False)
+
+
 class PackageSources(Model):
     git = ListType(ModelType(GitPackageSource))
+
+    s3 = ListType(ModelType(S3PackageSource))
 
 
 class Hook(Model):

@@ -389,3 +389,12 @@ class TestLambdaHooks(unittest.TestCase):
 
         for args, result in tests:
             self.assertEqual(select_bucket_region(*args), result)
+
+    @mock_s3
+    def test_follow_symlink_nonbool(self):
+        msg = "follow_symlinks option must be a boolean"
+        with ShouldRaise(ValueError(msg)):
+            self.run_hook(follow_symlinks="raiseValueError", functions={
+                'MyFunction': {
+                }
+            })

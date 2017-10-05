@@ -114,17 +114,18 @@ def parse(raw_config):
     # values to either lists or OrderedDicts.
     # Eventually we should probably just make them OrderedDicts only.
     config_dict = yaml_to_ordered_dict(raw_config)
-    for top_level_key in ['stacks', 'pre_build', 'post_build', 'pre_destroy',
-                          'post_destroy']:
-        top_level_value = config_dict.get(top_level_key)
-        if isinstance(top_level_value, dict):
-            tmp_list = []
-            for key, value in top_level_value.iteritems():
-                tmp_dict = copy.deepcopy(value)
-                if top_level_key == 'stacks':
-                    tmp_dict['name'] = key
-                tmp_list.append(tmp_dict)
-            config_dict[top_level_key] = tmp_list
+    if config_dict:
+        for top_level_key in ['stacks', 'pre_build', 'post_build',
+                              'pre_destroy', 'post_destroy']:
+            top_level_value = config_dict.get(top_level_key)
+            if isinstance(top_level_value, dict):
+                tmp_list = []
+                for key, value in top_level_value.iteritems():
+                    tmp_dict = copy.deepcopy(value)
+                    if top_level_key == 'stacks':
+                        tmp_dict['name'] = key
+                    tmp_list.append(tmp_dict)
+                config_dict[top_level_key] = tmp_list
 
     # We have to enable non-strict mode, because people may be including top
     # level keys for re-use with stacks (e.g. including something like
@@ -197,7 +198,7 @@ def process_remote_sources(raw_config, environment=None):
     """
 
     config = yaml.safe_load(raw_config)
-    if config.get('package_sources'):
+    if config and config.get('package_sources'):
         processor = SourceProcessor(
             sources=config['package_sources'],
             stacker_cache_dir=config.get('stacker_cache_dir')

@@ -20,6 +20,10 @@ from stacker.util import (
     get_client_region,
     get_s3_endpoint,
     s3_bucket_location_constraint,
+    Extractor,
+    TarExtractor,
+    TarGzipExtractor,
+    ZipExtractor,
     SourceProcessor
 )
 
@@ -140,6 +144,12 @@ class TestUtil(unittest.TestCase):
                 s3_bucket_location_constraint(region),
                 result
             )
+
+    def test_extractors(self):
+        self.assertEqual(Extractor('test.zip').archive, 'test.zip')
+        self.assertEqual(TarExtractor().extension(), '.tar')
+        self.assertEqual(TarGzipExtractor().extension(), '.tar.gz')
+        self.assertEqual(ZipExtractor().extension(), '.zip')
 
     def test_SourceProcessor_helpers(self):
         with mock.patch.object(SourceProcessor,

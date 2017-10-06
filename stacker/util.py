@@ -536,6 +536,61 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
             raise
 
 
+class Extractor(object):  # pylint: disable=too-few-public-methods
+    """Base class for extractors."""
+
+    def __init__(self, archive=None):
+        """
+        Setup up extractor object with the archive path.
+
+        Args:
+            archive (string): Archive path
+        """
+        self.archive = archive
+
+
+class TarExtractor(Extractor):
+    """Extracts tar archives."""
+
+    def extract(self, destination):
+        """Extract the archive."""
+        with tarfile.open(self.archive, 'r:') as tar:
+            tar.extractall(path=destination)
+
+    @staticmethod
+    def extension():
+        """Return archive extension."""
+        return '.tar'
+
+
+class TarGzipExtractor(Extractor):
+    """Extracts compressed tar archives."""
+
+    def extract(self, destination):
+        """Extract the archive."""
+        with tarfile.open(self.archive, 'r:gz') as tar:
+            tar.extractall(path=destination)
+
+    @staticmethod
+    def extension():
+        """Return archive extension."""
+        return '.tar.gz'
+
+
+class ZipExtractor(Extractor):
+    """Extracts zip archives."""
+
+    def extract(self, destination):
+        """Extract the archive."""
+        with zipfile.ZipFile(self.archive, 'r') as zip_ref:
+            zip_ref.extractall(destination)
+
+    @staticmethod
+    def extension():
+        """Return archive extension."""
+        return '.zip'
+
+
 class SourceProcessor():
     """Makes remote python package sources available in the running python
        environment."""
@@ -578,21 +633,23 @@ class SourceProcessor():
         """Makes a remote S3 archive available for local use
 
         Args:
-            config (:class:`stacker.config.GitPackageSource`): git config
-                dictionary
+            config (dict): git config dictionary
 
         """
-        if config['key'].endswith('.tar.gz'):
-            archive_type = '.tar.gz'
-            dir_name = self.sanitize_uri_path(
-                "s3-%s-%s" % (config['bucket'], config['key'][:-7])
-            )
-        elif config['key'].endswith('.zip'):
-            archive_type = '.zip'
-            dir_name = self.sanitize_uri_path(
-                "s3-%s-%s" % (config['bucket'], config['key'][:-4])
-            )
-        else:
+        extractor_map = {'.tar.gz': TarGzipExtractor,
+                         '.tar': TarExtractor,
+                         '.zip': ZipExtractor}
+        extractor = None
+        for suffix, klass in extractor_map.iteritems():
+            if config['key'].endswith(suffix):
+                extractor = klass()
+                dir_name = self.sanitize_uri_path(
+                    "s3-%s-%s" % (config['bucket'],
+                                  config['key'][:-len(suffix)])
+                )
+                break
+
+        if extractor is None:
             raise ValueError(
                 "Archive type could not be determined for S3 object \"%s\" "
                 "in bucket %s." % (config['key'], config['bucket'])
@@ -601,11 +658,19 @@ class SourceProcessor():
         # We can skip downloading the archive if it's already been cached
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
         if not os.path.isdir(cached_dir_path):
+            logger.debug("Remote package s3://%s/%s does not appear to have "
+                         "been previously downloaded - starting download and "
+                         "extraction to %s",
+                         config['bucket'],
+                         config['key'],
+                         cached_dir_path)
             tmp_dir = tempfile.mkdtemp(prefix='stacker')
             tmp_package_path = os.path.join(tmp_dir, dir_name)
             try:
-                tmp_archive_path = os.path.join(tmp_dir,
-                                                dir_name + archive_type)
+                extractor.archive = os.path.join(
+                    tmp_dir,
+                    dir_name + extractor.extension()
+                )
                 s3_resource = get_session(region=None).resource('s3')
                 if config.get('requester_pays', False):
                     extra_args = {'RequestPayer': 'requester'}
@@ -613,18 +678,20 @@ class SourceProcessor():
                     extra_args = None
                 s3_resource.Bucket(config['bucket']).download_file(
                     config['key'],
-                    tmp_archive_path,
+                    extractor.archive,
                     ExtraArgs=extra_args
                 )
-                if archive_type == '.tar.gz':
-                    with tarfile.open(tmp_archive_path, 'r:gz') as tar:
-                        tar.extractall(path=tmp_package_path)
-                else:
-                    with zipfile.ZipFile(tmp_archive_path, 'r') as zip_ref:
-                        zip_ref.extractall(tmp_package_path)
+                extractor.extract(tmp_package_path)
                 shutil.move(tmp_package_path, self.package_cache_dir)
             finally:
                 shutil.rmtree(tmp_dir)
+        else:
+            logger.debug("Remote package s3://%s/%s appears to have "
+                         "been previously downloaded to %s -- bypassing "
+                         "download",
+                         config['bucket'],
+                         config['key'],
+                         cached_dir_path)
 
         # Update sys.path & merge in remote configs (if necessary)
         self.update_paths_and_config(config=config,
@@ -634,8 +701,7 @@ class SourceProcessor():
         """Makes a remote git repository available for local use
 
         Args:
-            config (:class:`stacker.config.GitPackageSource`): git config
-                dictionary
+            config (dict): git config dictionary
 
         """
         ref = self.determine_git_ref(config)
@@ -644,6 +710,10 @@ class SourceProcessor():
 
         # We can skip cloning the repo if it's already been cached
         if not os.path.isdir(cached_dir_path):
+            logger.debug("Remote repo %s does not appear to have been "
+                         "previously downloaded - starting clone to %s",
+                         config['uri'],
+                         cached_dir_path)
             tmp_dir = tempfile.mkdtemp(prefix='stacker')
             try:
                 tmp_repo_path = os.path.join(tmp_dir, dir_name)
@@ -653,6 +723,11 @@ class SourceProcessor():
                 shutil.move(tmp_repo_path, self.package_cache_dir)
             finally:
                 shutil.rmtree(tmp_dir)
+        else:
+            logger.debug("Remote repo %s appears to have been previously "
+                         "cloned to %s -- bypassing download",
+                         config['uri'],
+                         cached_dir_path)
 
         # Update sys.path & merge in remote configs (if necessary)
         self.update_paths_and_config(config=config,
@@ -662,8 +737,7 @@ class SourceProcessor():
         """Handle remote source defined sys.paths & configs
 
         Args:
-            config (:class:`stacker.config.GitPackageSource`): git config
-                dictionary
+            config (dict): git config dictionary
             pkg_dir_name (string): directory name of the stacker archive
 
         """
@@ -733,8 +807,7 @@ class SourceProcessor():
            for 'git checkout'.
 
         Args:
-            config (:class:`stacker.config.GitPackageSource`): git config
-                dictionary
+            config (dict): git config dictionary
 
         Returns:
             str: A commit id or tag name

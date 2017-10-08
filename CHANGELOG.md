@@ -1,3 +1,27 @@
+## 1.1.0 (2017-10-08)
+
+- `--max-zones` removed from CLI [GH-427]
+- Ami lookup: add region specification [GH-433]
+- DynamoDB Lookup [GH-434]
+- Environment file is optional now [GH-436]
+- New functional test suite [GH-439]
+- Structure config object using Schematics [GH-443]
+- S3 endpoint fallback [GH-445]
+- Stack specific tags [GH-450]
+- Allow disabling of stacker bucket (direct CF updates) [GH-451]
+- Uniform deprecation warnings [GH-452]
+- Remote configuration support [GH-458]
+- TroposphereType updates [GH-462]
+- Fix replacements-only issue [GH-464]
+- testutil enhancments to blueprint testing [GH-467]
+- Removal of Interactive Provider (now combined w/ default provider) [GH-469]
+- protected stacks [GH-472]
+- MUCH Better handling of stack rollbacks & recreations [GH-473]
+- follow\_symlinks argument for aws lambda hook [GH-474]
+- Enable service\_role for cloudformation operations [GH-476]
+- Allow setting stack description from config [GH-477]
+- Move S3 templates into sub-directories [GH-478]
+
 ## 1.0.4 (2017-07-07)
 
 - Fix issue w/ tail being required (but not existing) on diff/info/etc [GH-429]

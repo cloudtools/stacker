@@ -377,7 +377,7 @@ def upload_lambda_functions(context, provider, **kwargs):
         prefix (str, optional): S3 key prefix to prepend to the uploaded
             zip name.
         follow_symlinks (bool, optional): Will determine if symlinks should
-            be followed and included with the zip artfiact. Default: False
+            be followed and included with the zip artifact. Default: False
         functions (dict):
             Configurations of desired payloads to build. Keys correspond to
             function names, used to derive key names for the payload. Each
@@ -428,7 +428,7 @@ def upload_lambda_functions(context, provider, **kwargs):
                 data_key: lambda
                 args:
                   bucket: custom-bucket
-                  follow_symlinks: True
+                  follow_symlinks: true
                   prefix: cloudformation-custom-resources/
                   functions:
                     MyFunction:

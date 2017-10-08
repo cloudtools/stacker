@@ -389,3 +389,100 @@ class TestLambdaHooks(unittest.TestCase):
 
         for args, result in tests:
             self.assertEqual(select_bucket_region(*args), result)
+
+    @mock_s3
+    def test_follow_symlink_nonbool(self):
+        msg = "follow_symlinks option must be a boolean"
+        with ShouldRaise(ValueError(msg)):
+            self.run_hook(follow_symlinks="raiseValueError", functions={
+                'MyFunction': {
+                }
+            })
+
+    @mock_s3
+    def test_follow_symlink_true(self):
+        # Testing if symlinks are followed
+        with self.temp_directory_with_files() as d1:
+            root1 = d1.path
+            with self.temp_directory_with_files() as d2:
+                root2 = d2.path
+                os.symlink(root1 + "/f1", root2 + "/f3")
+                results = self.run_hook(follow_symlinks=True, functions={
+                    'MyFunction': {
+                        'path': root2}
+                })
+            self.assertIsNotNone(results)
+
+            code = results.get('MyFunction')
+            self.assertIsInstance(code, Code)
+            self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, [
+                'f1/f1.py',
+                'f1/__init__.py',
+                'f1/f1.pyc',
+                'f1/test/__init__.py',
+                'f1/test/f1.py',
+                'f1/test/f1.pyc',
+                'f1/test2/test.txt',
+                'f2/f2.js',
+                'f3/__init__.py',
+                'f3/f1.py',
+                'f3/f1.pyc',
+                'f3/test/__init__.py',
+                'f3/test/f1.py',
+                'f3/test/f1.pyc',
+                'f3/test2/test.txt'
+            ])
+
+    @mock_s3
+    def test_follow_symlink_false(self):
+        # testing if syminks are present and not folllowed
+        with self.temp_directory_with_files() as d1:
+            root1 = d1.path
+            with self.temp_directory_with_files() as d2:
+                root2 = d2.path
+                os.symlink(root1 + "/f1", root2 + "/f3")
+                results = self.run_hook(follow_symlinks=False, functions={
+                    'MyFunction': {
+                        'path': root2}
+                })
+            self.assertIsNotNone(results)
+
+            code = results.get('MyFunction')
+            self.assertIsInstance(code, Code)
+            self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, [
+                'f1/f1.py',
+                'f1/__init__.py',
+                'f1/f1.pyc',
+                'f1/test/__init__.py',
+                'f1/test/f1.py',
+                'f1/test/f1.pyc',
+                'f1/test2/test.txt',
+                'f2/f2.js',
+            ])
+
+    @mock_s3
+    def test_follow_symlink_omitted(self):
+        # same as test_follow_symlink_false, but default behaivor
+        with self.temp_directory_with_files() as d1:
+            root1 = d1.path
+            with self.temp_directory_with_files() as d2:
+                root2 = d2.path
+                os.symlink(root1 + "/f1", root2 + "/f3")
+                results = self.run_hook(functions={
+                    'MyFunction': {
+                        'path': root2}
+                })
+            self.assertIsNotNone(results)
+
+            code = results.get('MyFunction')
+            self.assertIsInstance(code, Code)
+            self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, [
+                'f1/f1.py',
+                'f1/__init__.py',
+                'f1/f1.pyc',
+                'f1/test/__init__.py',
+                'f1/test/f1.py',
+                'f1/test/f1.pyc',
+                'f1/test2/test.txt',
+                'f2/f2.js',
+            ])

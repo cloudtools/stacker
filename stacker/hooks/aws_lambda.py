@@ -6,7 +6,7 @@ import hashlib
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 import botocore
-
+from functools import partial
 import formic
 from troposphere.awslambda import Code
 from stacker.session_cache import get_session
@@ -93,7 +93,7 @@ def _calculate_hash(files, root):
     return file_hash.hexdigest()
 
 
-def _find_files(root, includes, excludes):
+def _find_files(root, includes, excludes, follow_symlinks):
     """List files inside a directory based on include and exclude rules.
 
     This is a more advanced version of `glob.glob`, that accepts multiple
@@ -103,9 +103,11 @@ def _find_files(root, includes, excludes):
         root (str): base directory to list files from.
         includes (list[str]): inclusion patterns. Only files matching those
             patterns will be included in the result.
-        includes (list[str]): exclusion patterns. Files matching those
+        excludes (list[str]): exclusion patterns. Files matching those
             patterns will be excluded from the result. Exclusions take
             precedence over inclusions.
+        follow_symlinks (bool): If true, symlinks will be included in the
+            resulting zip file
 
     Yields:
         str: a file name relative to the root.
@@ -117,21 +119,26 @@ def _find_files(root, includes, excludes):
 
     root = os.path.abspath(root)
     file_set = formic.FileSet(directory=root, include=includes,
-                              exclude=excludes)
+                              exclude=excludes,
+                              walk=partial(
+                                  os.walk, followlinks=follow_symlinks))
+
     for filename in file_set.qualified_files(absolute=False):
         yield filename
 
 
-def _zip_from_file_patterns(root, includes, excludes):
+def _zip_from_file_patterns(root, includes, excludes, follow_symlinks):
     """Generates a ZIP file in-memory from file search patterns.
 
     Args:
         root (str): base directory to list files from.
         includes (list[str]): inclusion patterns. Only files  matching those
             patterns will be included in the result.
-        includes (list[str]): exclusion patterns. Files matching those
+        excludes (list[str]): exclusion patterns. Files matching those
             patterns will be excluded from the result. Exclusions take
             precedence over inclusions.
+        follow_symlinks (bool): If true, symlinks will be included in the
+            resulting zip file
 
     See Also:
         :func:`_zip_files`, :func:`_find_files`.
@@ -142,7 +149,7 @@ def _zip_from_file_patterns(root, includes, excludes):
     """
     logger.info('lambda: base directory: %s', root)
 
-    files = list(_find_files(root, includes, excludes))
+    files = list(_find_files(root, includes, excludes, follow_symlinks))
     if not files:
         raise RuntimeError('Empty list of files for Lambda payload. Check '
                            'your include/exclude options for errors.')
@@ -255,7 +262,7 @@ def _check_pattern_list(patterns, key, default=None):
                      'list of strings'.format(key))
 
 
-def _upload_function(s3_conn, bucket, prefix, name, options):
+def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks):
     """Builds a Lambda payload from user configuration and uploads it to S3.
 
     Args:
@@ -276,6 +283,8 @@ def _upload_function(s3_conn, bucket, prefix, name, options):
                     file patterns to include in the payload (optional).
                 * exclude:
                     file patterns to exclude from the payload (optional).
+        follow_symlinks  (bool): If true, symlinks will be included in the
+            resulting zip file
 
     Returns:
         troposphere.awslambda.Code: CloudFormation AWS Lambda Code object,
@@ -306,7 +315,8 @@ def _upload_function(s3_conn, bucket, prefix, name, options):
         root = os.path.abspath(os.path.join(get_config_directory(), root))
     zip_contents, content_hash = _zip_from_file_patterns(root,
                                                          includes,
-                                                         excludes)
+                                                         excludes,
+                                                         follow_symlinks)
 
     return _upload_code(s3_conn, bucket, prefix, name, zip_contents,
                         content_hash)
@@ -366,6 +376,8 @@ def upload_lambda_functions(context, provider, **kwargs):
             use by the provider.
         prefix (str, optional): S3 key prefix to prepend to the uploaded
             zip name.
+        follow_symlinks (bool, optional): Will determine if symlinks should
+            be followed and included with the zip artifact. Default: False
         functions (dict):
             Configurations of desired payloads to build. Keys correspond to
             function names, used to derive key names for the payload. Each
@@ -416,6 +428,7 @@ def upload_lambda_functions(context, provider, **kwargs):
                 data_key: lambda
                 args:
                   bucket: custom-bucket
+                  follow_symlinks: true
                   prefix: cloudformation-custom-resources/
                   functions:
                     MyFunction:
@@ -468,6 +481,11 @@ def upload_lambda_functions(context, provider, **kwargs):
         provider.region
     )
 
+    # Check if we should walk / follow symlinks
+    follow_symlinks = kwargs.get('follow_symlinks', False)
+    if not isinstance(follow_symlinks, bool):
+        raise ValueError('follow_symlinks option must be a boolean')
+
     # Always use the global client for s3
     session = get_session(bucket_region)
     s3_client = session.client('s3')
@@ -479,6 +497,6 @@ def upload_lambda_functions(context, provider, **kwargs):
     results = {}
     for name, options in kwargs['functions'].items():
         results[name] = _upload_function(s3_client, bucket_name, prefix, name,
-                                         options)
+                                         options, follow_symlinks)
 
     return results

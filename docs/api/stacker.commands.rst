@@ -1,5 +1,5 @@
-stacker.commands package
-========================
+stacker\.commands package
+=========================
 
 Subpackages
 -----------

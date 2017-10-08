@@ -1,5 +1,5 @@
-stacker.blueprints package
-==========================
+stacker\.blueprints package
+===========================
 
 Subpackages
 -----------
@@ -11,16 +11,16 @@ Subpackages
 Submodules
 ----------
 
-stacker.blueprints.base module
-------------------------------
+stacker\.blueprints\.base module
+--------------------------------
 
 .. automodule:: stacker.blueprints.base
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.blueprints.testutil module
-----------------------------------
+stacker\.blueprints\.testutil module
+------------------------------------
 
 .. automodule:: stacker.blueprints.testutil
     :members:

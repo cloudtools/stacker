@@ -1,11 +1,11 @@
-stacker.blueprints.variables package
-====================================
+stacker\.blueprints\.variables package
+======================================
 
 Submodules
 ----------
 
-stacker.blueprints.variables.types module
------------------------------------------
+stacker\.blueprints\.variables\.types module
+--------------------------------------------
 
 .. automodule:: stacker.blueprints.variables.types
     :members:

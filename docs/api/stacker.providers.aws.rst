@@ -1,11 +1,11 @@
-stacker.providers.aws package
-=============================
+stacker\.providers\.aws package
+===============================
 
 Submodules
 ----------
 
-stacker.providers.aws.default module
-------------------------------------
+stacker\.providers\.aws\.default module
+---------------------------------------
 
 .. automodule:: stacker.providers.aws.default
     :members:

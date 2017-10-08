@@ -1,5 +1,5 @@
-stacker.config package
-======================
+stacker\.config package
+=======================
 
 Subpackages
 -----------

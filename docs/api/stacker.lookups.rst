@@ -1,5 +1,5 @@
-stacker.lookups package
-=======================
+stacker\.lookups package
+========================
 
 Subpackages
 -----------
@@ -11,8 +11,8 @@ Subpackages
 Submodules
 ----------
 
-stacker.lookups.registry module
--------------------------------
+stacker\.lookups\.registry module
+---------------------------------
 
 .. automodule:: stacker.lookups.registry
     :members:

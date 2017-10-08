@@ -1,43 +1,43 @@
-stacker.actions package
-=======================
+stacker\.actions package
+========================
 
 Submodules
 ----------
 
-stacker.actions.base module
----------------------------
+stacker\.actions\.base module
+-----------------------------
 
 .. automodule:: stacker.actions.base
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.actions.build module
-----------------------------
+stacker\.actions\.build module
+------------------------------
 
 .. automodule:: stacker.actions.build
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.actions.destroy module
-------------------------------
+stacker\.actions\.destroy module
+--------------------------------
 
 .. automodule:: stacker.actions.destroy
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.actions.diff module
----------------------------
+stacker\.actions\.diff module
+-----------------------------
 
 .. automodule:: stacker.actions.diff
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.actions.info module
----------------------------
+stacker\.actions\.info module
+-----------------------------
 
 .. automodule:: stacker.actions.info
     :members:

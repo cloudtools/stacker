@@ -1,51 +1,51 @@
-stacker.hooks package
-=====================
+stacker\.hooks package
+======================
 
 Submodules
 ----------
 
-stacker.hooks.aws_lambda module
--------------------------------
+stacker\.hooks\.aws\_lambda module
+----------------------------------
 
 .. automodule:: stacker.hooks.aws_lambda
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.hooks.ecs module
-------------------------
+stacker\.hooks\.ecs module
+--------------------------
 
 .. automodule:: stacker.hooks.ecs
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.hooks.iam module
-------------------------
+stacker\.hooks\.iam module
+--------------------------
 
 .. automodule:: stacker.hooks.iam
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.hooks.keypair module
-----------------------------
+stacker\.hooks\.keypair module
+------------------------------
 
 .. automodule:: stacker.hooks.keypair
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.hooks.route53 module
-----------------------------
+stacker\.hooks\.route53 module
+------------------------------
 
 .. automodule:: stacker.hooks.route53
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.hooks.utils module
---------------------------
+stacker\.hooks\.utils module
+----------------------------
 
 .. automodule:: stacker.hooks.utils
     :members:

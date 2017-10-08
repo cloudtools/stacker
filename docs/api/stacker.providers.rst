@@ -1,5 +1,5 @@
-stacker.providers package
-=========================
+stacker\.providers package
+==========================
 
 Subpackages
 -----------
@@ -11,8 +11,8 @@ Subpackages
 Submodules
 ----------
 
-stacker.providers.base module
------------------------------
+stacker\.providers\.base module
+-------------------------------
 
 .. automodule:: stacker.providers.base
     :members:

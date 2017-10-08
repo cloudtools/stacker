@@ -14,84 +14,85 @@ Subpackages
     stacker.logger
     stacker.lookups
     stacker.providers
+    stacker.tests
 
 Submodules
 ----------
 
-stacker.context module
-----------------------
+stacker\.context module
+-----------------------
 
 .. automodule:: stacker.context
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.environment module
---------------------------
+stacker\.environment module
+---------------------------
 
 .. automodule:: stacker.environment
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.exceptions module
--------------------------
+stacker\.exceptions module
+--------------------------
 
 .. automodule:: stacker.exceptions
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.plan module
--------------------
+stacker\.plan module
+--------------------
 
 .. automodule:: stacker.plan
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.session_cache module
-----------------------------
+stacker\.session\_cache module
+------------------------------
 
 .. automodule:: stacker.session_cache
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.stack module
---------------------
+stacker\.stack module
+---------------------
 
 .. automodule:: stacker.stack
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.status module
----------------------
+stacker\.status module
+----------------------
 
 .. automodule:: stacker.status
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.tokenize_userdata module
---------------------------------
+stacker\.tokenize\_userdata module
+----------------------------------
 
 .. automodule:: stacker.tokenize_userdata
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.util module
--------------------
+stacker\.util module
+--------------------
 
 .. automodule:: stacker.util
     :members:
     :undoc-members:
     :show-inheritance:
 
-stacker.variables module
-------------------------
+stacker\.variables module
+-------------------------
 
 .. automodule:: stacker.variables
     :members:

@@ -1,11 +1,11 @@
-stacker.config.translators package
-==================================
+stacker\.config\.translators package
+====================================
 
 Submodules
 ----------
 
-stacker.config.translators.kms module
--------------------------------------
+stacker\.config\.translators\.kms module
+----------------------------------------
 
 .. automodule:: stacker.config.translators.kms
     :members:

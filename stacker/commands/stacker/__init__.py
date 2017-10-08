@@ -25,16 +25,18 @@ class Stacker(BaseCommand):
         else:
             logger.info("Using default AWS provider mode")
 
-        options.provider = default.Provider(
-            region=options.region,
-            interactive=options.interactive,
-            replacements_only=options.replacements_only
-        )
-
         config = load_config(
             options.config.read(),
             environment=options.environment,
             validate=True)
+
+        options.provider = default.Provider(
+            region=options.region,
+            interactive=options.interactive,
+            replacements_only=options.replacements_only,
+            recreate_failed=options.recreate_failed,
+            service_role=config.service_role,
+        )
 
         options.context = Context(
             environment=options.environment,

@@ -13,15 +13,18 @@ from .actions.base import stack_template_key_name
 from .exceptions import (
     CancelExecution,
     ImproperlyConfigured,
+    PlanFailed
 )
 from .logger import LOOP_LOGGER_TYPE
 from .status import (
+    FailedStatus,
     SkippedStatus,
     Status,
     PENDING,
     SUBMITTED,
     COMPLETE,
-    SKIPPED
+    SKIPPED,
+    FAILED
 )
 
 logger = logging.getLogger(__name__)
@@ -61,9 +64,13 @@ class Step(object):
         return self.status == SKIPPED
 
     @property
+    def failed(self):
+        return self.status == FAILED
+
+    @property
     def done(self):
         """Returns True if the step is finished (either COMPLETE or SKIPPED)"""
-        return self.completed or self.skipped
+        return self.completed or self.skipped or self.failed
 
     @property
     def submitted(self):
@@ -97,6 +104,10 @@ class Step(object):
     def submit(self):
         """A shortcut for set_status(SUBMITTED)"""
         self.set_status(SUBMITTED)
+
+    def fail(self):
+        """A shortcut for set_status(FAILED)"""
+        self.set_status(FAILED)
 
 
 class Plan(OrderedDict):
@@ -175,12 +186,13 @@ class Plan(OrderedDict):
         """A shortcut for list_status(SKIPPED)"""
         return self.list_status(SKIPPED)
 
+    def list_failed(self):
+        """A shortcut for list_status(SKIPPED)"""
+        return self.list_status(FAILED)
+
     def list_pending(self):
-        """Pending is any task that isn't COMPLETE or SKIPPED. """
-        return [step for step in self.iteritems() if (
-            step[1].status != COMPLETE and
-            step[1].status != SKIPPED
-        )]
+        """Pending is any task that isn't COMPLETE or SKIPPED or FAILED. """
+        return [step for step in self.iteritems() if not step[1].done]
 
     @property
     def check_point_interval(self):
@@ -197,10 +209,23 @@ class Plan(OrderedDict):
         """Executes a single run through the plan, touching each step."""
         for step_name, step in self.list_pending():
             waiting_on = []
+            failed = False
             for required_stack in step.requires:
+                if self[required_stack].failed:
+                    logger.warn(
+                        'Stack \"%s\" cannot be updated, as dependency \"%s\" '
+                        'has failed',
+                        step_name, required_stack)
+                    step.set_status(FailedStatus("dependency has failed"))
+                    failed = True
+                    break
+
                 if not self[required_stack].completed and \
                         not self[required_stack].skipped:
                     waiting_on.append(required_stack)
+
+            if failed:
+                continue
 
             if waiting_on:
                 logger.debug(
@@ -266,11 +291,16 @@ class Plan(OrderedDict):
                 attempts += 1
                 if not self._single_run():
                     self._wait_func(self.sleep_time)
+
         finally:
             for watcher in self._watchers.values():
                 self._terminate_watcher(watcher)
 
         self._check_point()
+
+        failed_stacks = [step[1].stack for step in self.list_failed()]
+        if failed_stacks:
+            raise PlanFailed(failed_stacks)
 
     def outline(self, level=logging.INFO, message=""):
         """Print an outline of the actions the plan is going to take.

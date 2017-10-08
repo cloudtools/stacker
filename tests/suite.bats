@@ -409,3 +409,230 @@ EOF
   assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (submitted for destruction)"
   assert_has_line "${STACKER_NAMESPACE}-mystack: complete (stack destroyed)"
 }
+
+@test "stacker build - recreate failed stack, non-interactive mode" {
+  needs_aws
+
+  bad_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed
+    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+
+EOF
+  }
+
+  good_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(good_config)
+  }
+
+  stacker destroy --force <(good_config)
+
+  # Create the initial stack. This must fail.
+  stacker build <(bad_config)
+  assert "$status" -eq 1
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (rolling back new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: failed (rolled back new stack)"
+
+  # Updating the stack should prompt to re-create it.
+  stacker build --recreate-failed <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (destroying stack for re-creation)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: complete (creating new stack)"
+
+  # Confirm the stack is really updated
+  stacker build <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: skipped (nochange)"
+
+  # Cleanup
+  stacker destroy --force <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (submitted for destruction)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: complete (stack destroyed)"
+}
+
+
+@test "stacker build - recreate failed stack, interactive mode" {
+  needs_aws
+
+  bad_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed-interactive
+    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+
+EOF
+  }
+
+  good_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: recreate-failed-interactive
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(good_config)
+  }
+
+  stacker destroy --force <(good_config)
+
+  # Create the initial stack. This must fail.
+  stacker build <(bad_config)
+  assert "$status" -eq 1
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (rolling back new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: failed (rolled back new stack)"
+
+  # Updating the stack should prompt to re-create it.
+  stacker build -i <(good_config) <<< $'y\n'
+  assert "$status" -eq 0
+  assert_has_line "Using interactive AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (destroying stack for re-creation)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: complete (creating new stack)"
+
+  # Confirm the stack is really updated
+  stacker build -i <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "Using interactive AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: skipped (nochange)"
+
+  # Cleanup
+  stacker destroy --force <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: pending"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (submitted for destruction)"
+  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: complete (stack destroyed)"
+}
+
+@test "stacker build - handle rollbacks during updates" {
+  needs_aws
+
+  bad_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: update-rollback
+    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+
+EOF
+  }
+
+  good_config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: update-rollback
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+
+EOF
+  }
+
+  good_config2() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: update-rollback
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(good_config)
+  }
+
+  stacker destroy --force <(good_config)
+
+  # Create the initial stack
+  stacker build <(good_config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: pending"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: complete (creating new stack)"
+
+  # Do a bad update and watch the rollback
+  stacker build <(bad_config)
+  assert "$status" -eq 1
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: pending"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (updating existing stack)"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (rolling back update)"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: failed (rolled back update)"
+
+  # Do a good update so we know we've correctly waited for rollback
+  stacker build <(good_config2)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: pending"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (updating existing stack)"
+  assert_has_line "${STACKER_NAMESPACE}-update-rollback: complete (updating existing stack)"
+}
+
+
+@test "stacker build - handle rollbacks in dependent stacks" {
+  needs_aws
+
+  config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: dependent-rollback-parent
+    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+
+  - name: dependent-rollback-child
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    requires: [dependent-rollback-parent]
+
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(config)
+  }
+
+  stacker destroy --force <(config)
+
+  # Verify both stacks fail during creation
+  stacker build <(config)
+  assert "$status" -eq 1
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: pending"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-child:  pending"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: submitted (rolling back new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: failed (rolled back new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-child:  failed (dependency has failed)"
+  assert_has_line "The following stacks failed: dependent-rollback-parent, dependent-rollback-child"
+}

@@ -12,16 +12,16 @@ from stacker.actions.build import (
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context
 from stacker.config import Config
-from stacker.exceptions import (
-    StackDidNotChange,
-    StackDoesNotExist,
-)
+from stacker.exceptions import StackDidNotChange, StackDoesNotExist
 from stacker.providers.base import BaseProvider
+from stacker.providers.aws.default import Provider
 from stacker.status import (
+    NotSubmittedStatus,
     COMPLETE,
     PENDING,
     SKIPPED,
-    SUBMITTED
+    SUBMITTED,
+    FAILED
 )
 
 
@@ -152,67 +152,6 @@ class TestBuildAction(unittest.TestCase):
             build_action.run(outline=False)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
 
-    def test_launch_stack_step_statuses(self):
-        mock_provider = mock.MagicMock()
-        mock_stack = mock.MagicMock()
-
-        context = self._get_context()
-        build_action = build.Action(context, provider=mock_provider)
-        plan = build_action._generate_plan()
-        _, step = plan.list_pending()[0]
-        step.stack = mock.MagicMock()
-        step.stack.locked = False
-
-        # mock provider shouldn't return a stack at first since it hasn't been
-        # launched
-        mock_provider.get_stack.return_value = None
-        with mock.patch.object(build_action, "s3_stack_push"):
-            # initial status should be PENDING
-            self.assertEqual(step.status, PENDING)
-            # initial run should return SUBMITTED since we've passed off to CF
-            status = step.run()
-            step.set_status(status)
-            self.assertEqual(status, SUBMITTED)
-            self.assertEqual(status.reason, "creating new stack")
-
-            # provider should now return the CF stack since it exists
-            mock_provider.get_stack.return_value = mock_stack
-            # simulate that we're still in progress
-            mock_provider.is_stack_in_progress.return_value = True
-            mock_provider.is_stack_completed.return_value = False
-            status = step.run()
-            step.set_status(status)
-            # status should still be SUBMITTED since we're waiting for it to
-            # complete
-            self.assertEqual(status, SUBMITTED)
-            self.assertEqual(status.reason, "creating new stack")
-            # simulate completed stack
-            mock_provider.is_stack_completed.return_value = True
-            mock_provider.is_stack_in_progress.return_value = False
-            status = step.run()
-            step.set_status(status)
-            self.assertEqual(status, COMPLETE)
-            self.assertEqual(status.reason, "creating new stack")
-
-            # simulate stack should be skipped
-            mock_provider.is_stack_completed.return_value = False
-            mock_provider.is_stack_in_progress.return_value = False
-            mock_provider.update_stack.side_effect = StackDidNotChange
-            status = step.run()
-            step.set_status(status)
-            self.assertEqual(status, SKIPPED)
-            self.assertEqual(status.reason, "nochange")
-
-            # simulate an update is required
-            mock_provider.reset_mock()
-            mock_provider.update_stack.side_effect = None
-            step.set_status(PENDING)
-            status = step.run()
-            step.set_status(status)
-            self.assertEqual(status, SUBMITTED)
-            self.assertEqual(status.reason, "updating existing stack")
-            self.assertEqual(mock_provider.update_stack.call_count, 1)
-
     def test_should_update(self):
         test_scenario = namedtuple("test_scenario",
                                    ["locked", "force", "result"])
@@ -259,6 +198,164 @@ class TestBuildAction(unittest.TestCase):
         build_action = build.Action(context, provider=mock_provider)
         with self.assertRaises(StackDoesNotExist):
             build_action._generate_plan()
+
+
+class TestLaunchStack(TestBuildAction):
+    def setUp(self):
+        self.context = self._get_context()
+        self.provider = Provider(None, interactive=False,
+                                 recreate_failed=False)
+        self.build_action = build.Action(self.context, provider=self.provider)
+
+        self.stack = mock.MagicMock()
+        self.stack.name = 'vpc'
+        self.stack.fqn = 'vpc'
+        self.stack.locked = False
+        self.stack_status = None
+
+        plan = self.build_action._generate_plan()
+        _, self.step = plan.list_pending()[0]
+        self.step.stack = self.stack
+
+        def patch_object(*args, **kwargs):
+            m = mock.patch.object(*args, **kwargs)
+            self.addCleanup(m.stop)
+            m.start()
+
+        def get_stack(name, *args, **kwargs):
+            if name != self.stack.name or not self.stack_status:
+                raise StackDoesNotExist(name)
+
+            return {'StackName': self.stack.name,
+                    'StackStatus': self.stack_status,
+                    'Tags': []}
+
+        patch_object(self.provider, 'get_stack', side_effect=get_stack)
+        patch_object(self.provider, 'update_stack')
+        patch_object(self.provider, 'create_stack')
+        patch_object(self.provider, 'destroy_stack')
+
+        patch_object(self.build_action, "s3_stack_push")
+
+    def _advance(self, new_provider_status, expected_status, expected_reason):
+        self.stack_status = new_provider_status
+        status = self.step.run()
+        self.step.set_status(status)
+        self.assertEqual(status, expected_status)
+        self.assertEqual(status.reason, expected_reason)
+
+    def test_launch_stack_disabled(self):
+        self.assertEqual(self.step.status, PENDING)
+
+        self.stack.enabled = False
+        self._advance(None, NotSubmittedStatus(), "disabled")
+
+    def test_launch_stack_create(self):
+        # initial status should be PENDING
+        self.assertEqual(self.step.status, PENDING)
+
+        # initial run should return SUBMITTED since we've passed off to CF
+        self._advance(None, SUBMITTED, "creating new stack")
+
+        # status should stay as SUBMITTED when the stack becomes available
+        self._advance('CREATE_IN_PROGRESS', SUBMITTED, "creating new stack")
+
+        # status should become COMPLETE once the stack finishes
+        self._advance('CREATE_COMPLETE', COMPLETE, "creating new stack")
+
+    def test_launch_stack_create_rollback(self):
+        # initial status should be PENDING
+        self.assertEqual(self.step.status, PENDING)
+
+        # initial run should return SUBMITTED since we've passed off to CF
+        self._advance(None, SUBMITTED, "creating new stack")
+
+        # provider should now return the CF stack since it exists
+        self._advance("CREATE_IN_PROGRESS", SUBMITTED,
+                      "creating new stack")
+
+        # rollback should be noticed
+        self._advance("ROLLBACK_IN_PROGRESS", SUBMITTED,
+                      "rolling back new stack")
+
+        # rollback should not be added twice to the reason
+        self._advance("ROLLBACK_IN_PROGRESS", SUBMITTED,
+                      "rolling back new stack")
+
+        # rollback should finish with failure
+        self._advance("ROLLBACK_COMPLETE", FAILED,
+                      "rolled back new stack")
+
+    def test_launch_stack_recreate(self):
+        self.provider.recreate_failed = True
+
+        # initial status should be PENDING
+        self.assertEqual(self.step.status, PENDING)
+
+        # first action with an existing failed stack should be deleting it
+        self._advance("ROLLBACK_COMPLETE", SUBMITTED,
+                      "destroying stack for re-creation")
+
+        # status should stay as submitted during deletion
+        self._advance("DELETE_IN_PROGRESS", SUBMITTED,
+                      "destroying stack for re-creation")
+
+        # deletion being complete must trigger re-creation
+        self._advance("DELETE_COMPLETE", SUBMITTED,
+                      "re-creating stack")
+
+        # re-creation should continue as SUBMITTED
+        self._advance("CREATE_IN_PROGRESS", SUBMITTED,
+                      "re-creating stack")
+
+        # re-creation should finish with success
+        self._advance("CREATE_COMPLETE", COMPLETE,
+                      "re-creating stack")
+
+    def test_launch_stack_update_skipped(self):
+        # initial status should be PENDING
+        self.assertEqual(self.step.status, PENDING)
+
+        # start the upgrade, that will be skipped
+        self.provider.update_stack.side_effect = StackDidNotChange
+        self._advance("CREATE_COMPLETE", SKIPPED,
+                      "nochange")
+
+    def test_launch_stack_update_rollback(self):
+        # initial status should be PENDING
+        self.assertEqual(self.step.status, PENDING)
+
+        # initial run should return SUBMITTED since we've passed off to CF
+        self._advance("CREATE_COMPLETE", SUBMITTED,
+                      "updating existing stack")
+
+        # update should continue as SUBMITTED
+        self._advance("UPDATE_IN_PROGRESS", SUBMITTED,
+                      "updating existing stack")
+
+        # rollback should be noticed
+        self._advance("UPDATE_ROLLBACK_IN_PROGRESS", SUBMITTED,
+                      "rolling back update")
+
+        # rollback should finish with failure
+        self._advance("UPDATE_ROLLBACK_COMPLETE", FAILED,
+                      "rolled back update")
+
+    def test_launch_stack_update_success(self):
+        # initial status should be PENDING
+        self.assertEqual(self.step.status, PENDING)
+
+        # initial run should return SUBMITTED since we've passed off to CF
+        self._advance("CREATE_COMPLETE", SUBMITTED,
+                      "updating existing stack")
+
+        # update should continue as SUBMITTED
+        self._advance("UPDATE_IN_PROGRESS", SUBMITTED,
+                      "updating existing stack")
+
+        # update should finish with sucess
+        self._advance("UPDATE_COMPLETE", COMPLETE,
+                      "updating existing stack")
 
 
 class TestFunctions(unittest.TestCase):

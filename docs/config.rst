@@ -91,7 +91,7 @@ See the `CloudFormation Limits Reference`_.
 .. _`CloudFormation Limits Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html
 
 Module Paths
-----------------
+------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to
 load modules from outside the default ``sys.path`` (e.g., to include modules
 inside the same repo as config files).
@@ -99,8 +99,24 @@ inside the same repo as config files).
 Adding a path (e.g. ``./``) to the **sys_path** top level key word will allow
 modules from that path location to be used.
 
+Service Role
+------------
+
+By default stacker doesn't specify a service role when executing changes to
+CloudFormation stacks. If you would prefer that it do so, you can set
+**service_role** to be the ARN of the service that stacker should use when
+executing CloudFormation changes.
+
+This is the equivalent of setting ``RoleARN`` on a call to the following
+CloudFormation api calls: ``CreateStack``, ``UpdateStack``,
+``CreateChangeSet``.
+
+See the AWS documentation for `AWS CloudFormation Service Roles`_.
+
+.. _`AWS CloudFormation Service Roles`: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html?icmpid=docs_cfn_console
+
 Remote Packages
-----------------
+---------------
 The **package_sources** top level keyword can be used to define remote git
 sources for blueprints (e.g., retrieving ``stacker_blueprints`` on github at
 tag ``v1.0.2``).
@@ -129,6 +145,42 @@ will be checked for newer commits on every execution of Stacker.
 Cloned repositories will be cached between builds; the cache location defaults
 to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
 level keyword.
+
+Remote Configs
+~~~~~~~~~~~~~~
+Configuration yamls from remote configs can also be used by specifying a list
+of ``configs`` in the repo to use::
+
+    package_sources:
+      git:
+        - uri: git@github.com:acmecorp/stacker_blueprints.git
+          configs:
+            - vpc.yaml
+
+In this example, the configuration in ``vpc.yaml`` will be merged into the
+running current configuration, with the current configuration's values taking
+priority over the values in ``vpc.yaml``.
+
+Dictionary Stack Names & Hook Paths
+:::::::::::::::::::::::::::::::::::
+To allow remote configs to be selectively overriden, stack names & hook
+paths can optionally be defined as dictionaries, e.g.::
+
+  pre_build:
+    my_route53_hook:
+      path: stacker.hooks.route53.create_domain:
+      required: true
+      args:
+        domain: mydomain.com
+  stacks:
+    vpc-example:
+      class_path: stacker_blueprints.vpc.VPC
+      locked: false
+      enabled: true
+    bastion-example:
+      class_path: stacker_blueprints.bastion.Bastion
+      locked: false
+      enabled: true
 
 Pre & Post Hooks
 ----------------
@@ -168,7 +220,7 @@ Tags
 ----
 
 CloudFormation supports arbitrary key-value pair tags. All stack-level, including automatically created tags, are
-propagated to resources that AWS CloudFormation supports. See `AWS Cloudformation Resource Tags Type`_ for more details.
+propagated to resources that AWS CloudFormation supports. See `AWS CloudFormation Resource Tags Type`_ for more details.
 If no tags are specified, the `stacker_namespace` tag is applied to your stack with the value of `namespace` as the
 tag value.
 
@@ -247,6 +299,9 @@ A stack has the following keys:
   will be prepended to this)
 **class_path:**
   The python class path to the Blueprint to be used.
+**description:**
+  A short description to apply to the stack. This overwrites any description
+  provided in the Blueprint. See: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 **variables:**
   A dictionary of Variables_ to pass into the Blueprint when rendering the
   CloudFormation template. Variables_ can be any valid YAML data
@@ -296,7 +351,6 @@ Here's an example from stacker_blueprints_, used to create a VPC::
           - 10.128.16.0/22
           - 10.128.20.0/22
         CidrBlock: 10.128.0.0/16
-
 
 Variables
 ==========

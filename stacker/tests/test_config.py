@@ -6,7 +6,8 @@ from stacker.config import (
     load,
     render,
     parse,
-    dump
+    dump,
+    process_remote_sources
 )
 from stacker.config import Config, Stack
 from stacker.environment import parse_environment
@@ -171,7 +172,7 @@ stacks: []
         config.validate()
 
     def test_parse(self):
-        config = parse("""
+        config_with_lists = """
         namespace: prod
         stacker_bucket: stacker-prod
         pre_build:
@@ -218,52 +219,116 @@ stacks: []
           requires: ['vpc']
           variables:
             VpcId: ${output vpc::VpcId}
-        """)
+        """
+        config_with_dicts = """
+        namespace: prod
+        stacker_bucket: stacker-prod
+        pre_build:
+          prebuild_createdomain:
+            path: stacker.hooks.route53.create_domain
+            required: true
+            args:
+              domain: mydomain.com
+        post_build:
+          postbuild_createdomain:
+            path: stacker.hooks.route53.create_domain
+            required: true
+            args:
+              domain: mydomain.com
+        pre_destroy:
+          predestroy_createdomain:
+            path: stacker.hooks.route53.create_domain
+            required: true
+            args:
+              domain: mydomain.com
+        post_destroy:
+          postdestroy_createdomain:
+            path: stacker.hooks.route53.create_domain
+            required: true
+            args:
+              domain: mydomain.com
+        package_sources:
+          git:
+            - uri: git@github.com:acmecorp/stacker_blueprints.git
+            - uri: git@github.com:remind101/stacker_blueprints.git
+              tag: 1.0.0
+              paths:
+                - stacker_blueprints
+            - uri: git@github.com:contoso/webapp.git
+              branch: staging
+            - uri: git@github.com:contoso/foo.git
+              commit: 12345678
+        tags:
+          environment: production
+        stacks:
+          vpc:
+            class_path: blueprints.VPC
+            variables:
+              PrivateSubnets:
+              - 10.0.0.0/24
+          bastion:
+            class_path: blueprints.Bastion
+            requires: ['vpc']
+            variables:
+              VpcId: ${output vpc::VpcId}
+        """
 
-        config.validate()
+        for raw_config in [config_with_lists, config_with_dicts]:
+            config = parse(raw_config)
 
-        self.assertEqual(config.namespace, "prod")
-        self.assertEqual(config.stacker_bucket, "stacker-prod")
+            config.validate()
 
-        for hooks in [config.pre_build, config.post_build,
-                      config.pre_destroy, config.post_destroy]:
+            self.assertEqual(config.namespace, "prod")
+            self.assertEqual(config.stacker_bucket, "stacker-prod")
+
+            for hooks in [config.pre_build, config.post_build,
+                          config.pre_destroy, config.post_destroy]:
+                self.assertEqual(
+                    hooks[0].path, "stacker.hooks.route53.create_domain")
+                self.assertEqual(
+                    hooks[0].required, True)
+                self.assertEqual(
+                    hooks[0].args, {"domain": "mydomain.com"})
+
             self.assertEqual(
-                hooks[0].path, "stacker.hooks.route53.create_domain")
+                config.package_sources.git[0].uri,
+                "git@github.com:acmecorp/stacker_blueprints.git")
             self.assertEqual(
-                hooks[0].required, True)
+                config.package_sources.git[1].uri,
+                "git@github.com:remind101/stacker_blueprints.git")
             self.assertEqual(
-                hooks[0].args, {"domain": "mydomain.com"})
+                config.package_sources.git[1].tag,
+                "1.0.0")
+            self.assertEqual(
+                config.package_sources.git[1].paths,
+                ["stacker_blueprints"])
+            self.assertEqual(
+                config.package_sources.git[2].branch,
+                "staging")
 
-        self.assertEqual(
-            config.package_sources.git[0].uri,
-            "git@github.com:acmecorp/stacker_blueprints.git")
-        self.assertEqual(
-            config.package_sources.git[1].uri,
-            "git@github.com:remind101/stacker_blueprints.git")
-        self.assertEqual(
-            config.package_sources.git[1].tag,
-            "1.0.0")
-        self.assertEqual(
-            config.package_sources.git[1].paths,
-            ["stacker_blueprints"])
-        self.assertEqual(
-            config.package_sources.git[2].branch,
-            "staging")
+            self.assertEqual(config.tags, {"environment": "production"})
 
-        self.assertEqual(config.tags, {"environment": "production"})
+            self.assertEqual(len(config.stacks), 2)
 
-        self.assertEqual(len(config.stacks), 2)
-        vpc = config.stacks[0]
-        self.assertEqual(vpc.name, "vpc")
-        self.assertEqual(vpc.class_path, "blueprints.VPC")
-        self.assertEqual(vpc.requires, None)
-        self.assertEqual(vpc.variables, {"PrivateSubnets": ["10.0.0.0/24"]})
+            vpc_index = next(
+                i for (i, d) in enumerate(config.stacks) if d.name == "vpc"
+            )
+            vpc = config.stacks[vpc_index]
+            self.assertEqual(vpc.name, "vpc")
+            self.assertEqual(vpc.class_path, "blueprints.VPC")
+            self.assertEqual(vpc.requires, None)
+            self.assertEqual(vpc.variables,
+                             {"PrivateSubnets": ["10.0.0.0/24"]})
 
-        bastion = config.stacks[1]
-        self.assertEqual(bastion.name, "bastion")
-        self.assertEqual(bastion.class_path, "blueprints.Bastion")
-        self.assertEqual(bastion.requires, ["vpc"])
-        self.assertEqual(bastion.variables, {"VpcId": "${output vpc::VpcId}"})
+            bastion_index = next(
+                i for (i, d) in enumerate(config.stacks) if d.name == "bastion"
+            )
+            bastion = config.stacks[bastion_index]
+            self.assertEqual(bastion.name, "bastion")
+            self.assertEqual(bastion.class_path, "blueprints.Bastion")
+            self.assertEqual(bastion.requires, ["vpc"])
+            self.assertEqual(bastion.variables,
+                             {"VpcId": "${output vpc::VpcId}"})
 
     def test_dump_complex(self):
         config = Config({
@@ -304,6 +369,15 @@ stacks:
         config = Config({"sys_path": "/foo/bar"})
         load(config)
         self.assertIn("/foo/bar", sys.path)
+
+    def test_process_empty_remote_sources(self):
+        config = """
+        namespace: prod
+        stacks:
+          - name: vpc
+            class_path: blueprints.VPC
+        """
+        self.assertEqual(config, process_remote_sources(config))
 
     def test_lookup_with_sys_path(self):
         config = Config({

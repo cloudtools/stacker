@@ -12,13 +12,20 @@ that stack to be finished before updating/creating).
 
 It also provides the *--dump* flag for testing out blueprints before
 pushing them up into CloudFormation.
+Even then, some errors might only be noticed after first submitting a stack,
+at which point it can no longer be updated by Stacker.
+When that situation is detected in interactive mode, you will be prompted to
+delete and re-create the stack, so that you don't need to do it manually in the
+AWS console.
+If that behavior is also desired in non-interactive mode, enable the
+*--recreate-failed* flag.
 
 ::
 
   # stacker build -h
   usage: stacker build [-h] [-e ENV=VALUE] [-r REGION] [-v] [-i]
-                       [--replacements-only] [-o] [--force STACKNAME]
-                       [--stacks STACKNAME] [-t] [-d DUMP]
+                       [--replacements-only] [--recreate-failed] [-o]
+                       [--force STACKNAME] [--stacks STACKNAME] [-t] [-d DUMP]
                        [environment] config
 
   Launches or updates CloudFormation stacks based on the given config. Stacker
@@ -31,7 +38,7 @@ pushing them up into CloudFormation.
                           The values in the environment file can be used in the
                           stack config as if it were a string.Template type:
                           https://docs.python.org/2/library/string.html
-                          #template-strings. Must define at least a "namespace".
+                          #template-strings.
     config                The config file where stack configuration is located.
                           Must be in yaml format. If `-` is provided, then the
                           config will be read from stdin.
@@ -55,6 +62,8 @@ pushing them up into CloudFormation.
                           only" as well.
     --replacements-only   If interactive mode is enabled, stacker will only
                           prompt to authorize replacements.
+    --recreate-failed     Destroy and re-create stacks that are stuck in a
+                          failed state from an initial deployment when updating.
     -o, --outline         Print an outline of what steps will be taken to build
                           the stacks
     --force STACKNAME     If a stackname is provided to --force, it will be

@@ -30,6 +30,11 @@ class SkippedStatus(Status):
         super(SkippedStatus, self).__init__("skipped", 3, reason)
 
 
+class FailedStatus(Status):
+    def __init__(self, reason=None):
+        super(FailedStatus, self).__init__("failed", 4, reason)
+
+
 class NotSubmittedStatus(SkippedStatus):
     reason = "disabled"
 
@@ -50,3 +55,4 @@ PENDING = PendingStatus()
 SUBMITTED = SubmittedStatus()
 COMPLETE = CompleteStatus()
 SKIPPED = SkippedStatus()
+FAILED = FailedStatus()

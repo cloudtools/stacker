@@ -1,3 +1,4 @@
+import copy
 import sys
 import logging
 
@@ -19,7 +20,7 @@ from schematics.types import (
 import yaml
 
 from ..lookups import register_lookup_handler
-from ..util import SourceProcessor
+from ..util import merge_map, yaml_to_ordered_dict, SourceProcessor
 from .. import exceptions
 
 # register translators (yaml constructors)
@@ -43,7 +44,9 @@ def render_parse_load(raw_config, environment=None, validate=True):
 
     """
 
-    rendered = render(raw_config, environment)
+    pre_rendered = render(raw_config, environment)
+
+    rendered = process_remote_sources(pre_rendered, environment)
 
     config = parse(rendered)
 
@@ -106,6 +109,24 @@ def parse(raw_config):
 
     """
 
+    # Convert any applicable dictionaries back into lists
+    # This is necessary due to the move from lists for these top level config
+    # values to either lists or OrderedDicts.
+    # Eventually we should probably just make them OrderedDicts only.
+    config_dict = yaml_to_ordered_dict(raw_config)
+    if config_dict:
+        for top_level_key in ['stacks', 'pre_build', 'post_build',
+                              'pre_destroy', 'post_destroy']:
+            top_level_value = config_dict.get(top_level_key)
+            if isinstance(top_level_value, dict):
+                tmp_list = []
+                for key, value in top_level_value.iteritems():
+                    tmp_dict = copy.deepcopy(value)
+                    if top_level_key == 'stacks':
+                        tmp_dict['name'] = key
+                    tmp_list.append(tmp_dict)
+                config_dict[top_level_key] = tmp_list
+
     # We have to enable non-strict mode, because people may be including top
     # level keys for re-use with stacks (e.g. including something like
     # `common_variables: &common_variables`).
@@ -118,7 +139,7 @@ def parse(raw_config):
     # should consider enabling this in the future.
     strict = False
 
-    return Config(yaml.safe_load(raw_config), strict=strict)
+    return Config(config_dict, strict=strict)
 
 
 def load(config):
@@ -140,12 +161,6 @@ def load(config):
     if config.lookups:
         for key, handler in config.lookups.iteritems():
             register_lookup_handler(key, handler)
-    sources = config.package_sources
-    if sources is not None:
-        processor = SourceProcessor(
-            stacker_cache_dir=config.stacker_cache_dir
-        )
-        processor.get_package_sources(sources=sources)
 
     return config
 
@@ -169,6 +184,40 @@ def dump(config):
         allow_unicode=True)
 
 
+def process_remote_sources(raw_config, environment=None):
+    """Stage remote package sources and merge in remote configs.
+
+    Args:
+        raw_config (str): the raw stacker configuration string.
+        environment (dict, optional): any environment values that should be
+            passed to the config
+
+    Returns:
+        str: the raw stacker configuration string
+
+    """
+
+    config = yaml.safe_load(raw_config)
+    if config and config.get('package_sources'):
+        processor = SourceProcessor(
+            sources=config['package_sources'],
+            stacker_cache_dir=config.get('stacker_cache_dir')
+        )
+        processor.get_package_sources()
+        if processor.configs_to_merge:
+            for i in processor.configs_to_merge:
+                logger.debug("Merging in remote config \"%s\"", i)
+                remote_config = yaml.safe_load(open(i))
+                config = merge_map(remote_config, config)
+            # Call the render again as the package_sources may have merged in
+            # additional environment lookups
+            if not environment:
+                environment = {}
+            return render(str(config), environment)
+
+    return raw_config
+
+
 def not_empty_list(value):
     if not value or len(value) < 1:
         raise ValidationError("Should have more than one element.")
@@ -190,6 +239,8 @@ class GitPackageSource(Model):
 
     paths = ListType(StringType, serialize_when_none=False)
 
+    configs = ListType(StringType, serialize_when_none=False)
+
 
 class PackageSources(Model):
     git = ListType(ModelType(GitPackageSource))
@@ -209,6 +260,8 @@ class Stack(Model):
     name = StringType(required=True)
 
     class_path = StringType(required=True)
+
+    description = StringType(serialize_when_none=False)
 
     requires = ListType(StringType, serialize_when_none=False)
 
@@ -273,6 +326,8 @@ class Config(Model):
     sys_path = StringType(serialize_when_none=False)
 
     package_sources = ModelType(PackageSources, serialize_when_none=False)
+
+    service_role = StringType(serialize_when_none=False)
 
     pre_build = ListType(ModelType(Hook), serialize_when_none=False)
 

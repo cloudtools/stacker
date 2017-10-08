@@ -113,6 +113,7 @@ class Stack(object):
                 name=self.name,
                 context=self.context,
                 mappings=self.mappings,
+                description=self.definition.description,
             )
         return self._blueprint
 

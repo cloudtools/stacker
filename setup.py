@@ -6,10 +6,10 @@ VERSION = "1.1.0"
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "troposphere~=1.9.2",
+    "troposphere~=2.0.0",
     "boto3>=1.3.1,<1.5.0",
-    "PyYAML~=3.11",
-    "awacs~=0.7.0",
+    "PyYAML~=3.12",
+    "awacs~=0.7.1",
     "colorama~=0.3.7",
     "formic~=0.9b",
     "gitpython~=2.0",

@@ -1,3 +1,8 @@
+## 1.1.1 (2017-10-11)
+
+This release is mostly about updating the dependencies for stacker to newer
+versions, since that was missed in the last release.
+
 ## 1.1.0 (2017-10-08)
 
 - `--max-zones` removed from CLI [GH-427]

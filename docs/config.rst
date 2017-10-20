@@ -236,10 +236,10 @@ the build action::
 Tags
 ----
 
-Verious resources in AWS support arbitrary key-value pair tags. You can set
+Various resources in AWS support arbitrary key-value pair tags. You can set
 the `tags` Top Level Keyword to populate tags on all Resources that support
-that feature. The S3 bucket created by stacker for CFN uploads and all
-Cloudformation stack-level resouces, including automatically created tags,
+that feature. The S3 bucket created by stacker for CloudFormation uploads and
+all CloudFormation stack-level resources, including automatically created tags,
 are propagated to resources that AWS CloudFormation supports. See
 `AWS CloudFormation Resource Tags Type`_ for more details.
 

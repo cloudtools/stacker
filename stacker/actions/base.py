@@ -86,7 +86,8 @@ class BaseAction(object):
 
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
-        ensure_s3_bucket(self.s3_conn, self.bucket_name, self.bucket_region)
+        ensure_s3_bucket(self.s3_conn, self.bucket_name, self.bucket_region,
+                         self.context)
 
     def stack_template_url(self, blueprint):
         return stack_template_url(

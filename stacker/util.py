@@ -16,6 +16,8 @@ import collections
 from collections import OrderedDict
 
 import botocore.client
+from git import Repo
+import stacker.actions.build
 import botocore.exceptions
 import dateutil
 import yaml
@@ -503,7 +505,7 @@ def s3_bucket_location_constraint(region):
     return region
 
 
-def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
+def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
     """Ensure an s3 bucket exists, if it does not then create it.
 
     Args:
@@ -512,6 +514,9 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
         bucket_name (str): The bucket being checked/created.
         bucket_region (str, optional): The region to create the bucket in. If
             not provided, will be determined by s3_client's region.
+        context (:class:`stacker.context.Context`): context instance, used to
+            get tags from the stacker run
+
     """
     try:
         s3_client.head_bucket(Bucket=bucket_name)
@@ -526,7 +531,10 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
                 create_args["CreateBucketConfiguration"] = {
                     "LocationConstraint": location_constraint
                 }
+            tagset = stacker.actions.build.build_stack_tags(context)
             s3_client.create_bucket(**create_args)
+            s3_client.put_bucket_tagging(Bucket=bucket_name,
+                                         Tagging={'TagSet': tagset})
         elif e.response['Error']['Message'] == "Forbidden":
             logger.exception("Access denied for bucket %s.  Did " +
                              "you remember to use a globally unique name?",

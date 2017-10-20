@@ -515,11 +515,18 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
         bucket_region (str, optional): The region to create the bucket in. If
             not provided, will be determined by s3_client's region.
         context (:class:`stacker.context.Context`): context instance, used to
-            get tags from the stacker run
+            set tags on the S3 bucket created from the stacker config
 
     """
     try:
+        # Checking is bucket exists
         s3_client.head_bucket(Bucket=bucket_name)
+        # pulling tags from context
+        tagset = stacker.actions.build.build_stack_tags(context)
+        # setting tags on every run - must have permission to perform
+        # the s3:PutBucketTagging action
+        s3_client.put_bucket_tagging(Bucket=bucket_name,
+                                     Tagging={'TagSet': tagset})
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Message'] == "Not Found":
             logger.debug("Creating bucket %s.", bucket_name)
@@ -531,8 +538,11 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
                 create_args["CreateBucketConfiguration"] = {
                     "LocationConstraint": location_constraint
                 }
+            # pulling tags from context
             tagset = stacker.actions.build.build_stack_tags(context)
             s3_client.create_bucket(**create_args)
+            # setting tags on every run - must have permission to perform
+            # the s3:PutBucketTagging action
             s3_client.put_bucket_tagging(Bucket=bucket_name,
                                          Tagging={'TagSet': tagset})
         elif e.response['Error']['Message'] == "Forbidden":

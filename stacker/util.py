@@ -514,8 +514,8 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
         bucket_name (str): The bucket being checked/created.
         bucket_region (str, optional): The region to create the bucket in. If
             not provided, will be determined by s3_client's region.
-        context (:class:`stacker.context.Context`): context instance, used to
-            set tags on the S3 bucket created from the stacker config
+        context (:class:`stacker.context.Context`): The stacker context, used
+            set the S3 bucket tags from the stacker config
 
     """
     try:

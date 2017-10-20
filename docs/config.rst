@@ -236,12 +236,18 @@ the build action::
 Tags
 ----
 
-CloudFormation supports arbitrary key-value pair tags. All stack-level, including automatically created tags, are
-propagated to resources that AWS CloudFormation supports. See `AWS CloudFormation Resource Tags Type`_ for more details.
-If no tags are specified, the `stacker_namespace` tag is applied to your stack with the value of `namespace` as the
-tag value.
+Verious resources in AWS support arbitrary key-value pair tags. You can set
+the `tags` Top Level Keyword to populate tags on all Resources that support
+that feature. The S3 bucket created by stacker for CFN uploads and all
+Cloudformation stack-level resouces, including automatically created tags,
+are propagated to resources that AWS CloudFormation supports. See
+`AWS CloudFormation Resource Tags Type`_ for more details.
 
-If you prefer to apply a custom set of tags, specify the top-level keyword `tags` as a map. Example::
+If no tags are specified, the `stacker_namespace` tag is applied to your stack
+with the value of `namespace` as the tag value.
+
+If you prefer to apply a custom set of tags, specify the top-level keyword
+`tags` as a map. Example::
 
   tags:
     "hello": world
@@ -252,6 +258,8 @@ If you prefer to have no tags applied to your stacks (versus the default tags th
 map for the top-level keyword::
 
   tags: {}
+
+Tags are updated on every stacker run
 
 .. _`AWS CloudFormation Resource Tags Type`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-resource-tags.html
 

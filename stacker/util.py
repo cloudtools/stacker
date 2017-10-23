@@ -594,6 +594,7 @@ class ZipExtractor(Extractor):
 class SourceProcessor():
     """Makes remote python package sources available in the running python
        environment."""
+    CACHE_DATE_FORMAT = '%Y-%m-%d-%H-%M-%S'
 
     def __init__(self, sources, stacker_cache_dir=None):
         """
@@ -655,7 +656,27 @@ class SourceProcessor():
                 "in bucket %s." % (config['key'], config['bucket'])
             )
 
+        session = get_session(region=None)
+        extra_s3_args = {}
+        if config.get('requester_pays', False):
+            extra_s3_args['RequestPayer'] = 'requester'
+
         # We can skip downloading the archive if it's already been cached
+        if config.get('use_latest', True):
+            try:
+                modified_date = session.client('s3').head_object(
+                    Bucket=config['bucket'],
+                    Key=config['key'],
+                    **extra_s3_args
+                )['LastModified']
+            except botocore.exceptions.ClientError as client_error:
+                logger.error("Error checking modified date of "
+                             "s3://%s/%s : %s",
+                             config['bucket'],
+                             config['key'],
+                             client_error)
+                sys.exit(1)
+            dir_name += "-%s" % modified_date.strftime(self.CACHE_DATE_FORMAT)
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
         if not os.path.isdir(cached_dir_path):
             logger.debug("Remote package s3://%s/%s does not appear to have "
@@ -671,15 +692,10 @@ class SourceProcessor():
                     tmp_dir,
                     dir_name + extractor.extension()
                 )
-                s3_resource = get_session(region=None).resource('s3')
-                if config.get('requester_pays', False):
-                    extra_args = {'RequestPayer': 'requester'}
-                else:
-                    extra_args = None
-                s3_resource.Bucket(config['bucket']).download_file(
+                session.resource('s3').Bucket(config['bucket']).download_file(
                     config['key'],
                     extractor.archive,
-                    ExtraArgs=extra_args
+                    ExtraArgs=extra_s3_args
                 )
                 extractor.extract(tmp_package_path)
                 shutil.move(tmp_package_path, self.package_cache_dir)

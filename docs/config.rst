@@ -150,6 +150,11 @@ For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
         - bucket: anothers3bucket
           key: public/public-blueprints-v2.tar.gz
           requester_pays: true
+        - bucket: yetanothers3bucket
+          key: sallys-blueprints-v1.tar.gz
+          # use_latest defaults to true - will update local copy if the
+          # last modified date on S3 changes
+          use_latest: false
 
 Use the ``paths`` option when subdirectories of the repo/archive should be
 added to Stacker's ``sys.path``.

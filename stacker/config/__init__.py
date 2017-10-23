@@ -247,6 +247,8 @@ class S3PackageSource(Model):
 
     key = StringType(required=True)
 
+    use_latest = BooleanType(serialize_when_none=False)
+
     requester_pays = BooleanType(serialize_when_none=False)
 
 

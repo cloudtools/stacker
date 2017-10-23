@@ -42,6 +42,17 @@ class TestBaseAction(unittest.TestCase):
                 "Bucket": ANY,
             }
         )
+        stubber.add_response(
+            "put_bucket_tagging",
+            service_response={},
+            expected_params={
+                "Bucket": ANY,
+                "Tagging": {
+                    "TagSet": [
+                        {"Key": "stacker_namespace",
+                         "Value": u"mynamespace"}]}
+            }
+        )
         with stubber:
             action.ensure_cfn_bucket()
 
@@ -63,6 +74,17 @@ class TestBaseAction(unittest.TestCase):
             service_response={},
             expected_params={
                 "Bucket": ANY,
+            }
+        )
+        stubber.add_response(
+            "put_bucket_tagging",
+            service_response={},
+            expected_params={
+                "Bucket": ANY,
+                "Tagging": {
+                    "TagSet": [
+                        {"Key": "stacker_namespace",
+                         "Value": u"mynamespace"}]}
             }
         )
         with stubber:
@@ -89,6 +111,17 @@ class TestBaseAction(unittest.TestCase):
                 "CreateBucketConfiguration": {
                     "LocationConstraint": "us-west-1",
                 }
+            }
+        )
+        stubber.add_response(
+            "put_bucket_tagging",
+            service_response={},
+            expected_params={
+                "Bucket": ANY,
+                "Tagging": {
+                    "TagSet": [
+                        {"Key": "stacker_namespace",
+                         "Value": u"mynamespace"}]}
             }
         )
         with stubber:

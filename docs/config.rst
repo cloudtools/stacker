@@ -90,6 +90,33 @@ See the `CloudFormation Limits Reference`_.
 
 .. _`CloudFormation Limits Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html
 
+
+S3 Bucket tags
+----
+
+Various resources in AWS support arbitrary key-value pair tags. You can set
+the `bucket_tags` Top Level Keyword to populate tags on all S3 buckets Staker
+attempts to create for CloudFormation template uploads, inclduing the S3 bucket
+created by the aws_lambda pre-hook.
+
+If bucket_tags is not set in your Configuration, stacker will fallback to the
+method used to determine tags in your config by the `tags` top level keyword.
+The `bucket_tags` keyword takes precedence over `tags` when applying. Example::
+
+  bucket_tags:
+    "hello": world
+    "my_tag:with_colons_in_key": ${dynamic_tag_value_from_my_env}
+    simple_tag: simple value
+
+If you prefer to have no tags applied to your stacks (versus the default tags
+that stacker applies), specify an empty map for the top-level keyword::
+
+  bucket_tags: {}
+
+Tags updates get applied on every stacker run
+
+.. _`AWS CloudFormation Resource Tags Type`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-resource-tags.html
+
 Module Paths
 ------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to
@@ -237,29 +264,31 @@ Tags
 ----
 
 Various resources in AWS support arbitrary key-value pair tags. You can set
-the `tags` Top Level Keyword to populate tags on all Resources that support
-that feature. The S3 bucket created by stacker for CloudFormation uploads and
-all CloudFormation stack-level resources, including automatically created tags,
-are propagated to resources that AWS CloudFormation supports. See
-`AWS CloudFormation Resource Tags Type`_ for more details.
+the `tags` Top Level Keyword to populate tags on all Resources that Staker
+attempts to create via CloudFormation. All CloudFormation stack-level resources,
+including automatically created tags, are propagated to resources that AWS
+CloudFormation supports. See `AWS CloudFormation Resource Tags Type`_ for
+more details.
 
 If no tags are specified, the `stacker_namespace` tag is applied to your stack
 with the value of `namespace` as the tag value.
 
 If you prefer to apply a custom set of tags, specify the top-level keyword
-`tags` as a map. Example::
+`tags` as a map. The `stacker_namespace` tag will be automaticly added as well
+to help identify resources created by Stacker. Example::
 
   tags:
     "hello": world
     "my_tag:with_colons_in_key": ${dynamic_tag_value_from_my_env}
     simple_tag: simple value
 
+
 If you prefer to have no tags applied to your stacks (versus the default tags that stacker applies), specify an empty
 map for the top-level keyword::
 
   tags: {}
 
-Tags are updated on every stacker run
+Tags updates get applied on every stacker run
 
 .. _`AWS CloudFormation Resource Tags Type`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-resource-tags.html
 

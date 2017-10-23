@@ -17,7 +17,6 @@ from collections import OrderedDict
 
 import botocore.client
 from git import Repo
-import stacker.actions.build
 import botocore.exceptions
 import dateutil
 import yaml
@@ -521,8 +520,8 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
     try:
         # Checking is bucket exists
         s3_client.head_bucket(Bucket=bucket_name)
-        # pulling tags from context
-        tagset = stacker.actions.build.build_stack_tags(context)
+        # pulling tags from s3_bucket_tags function
+        tagset = _s3_bucket_tags(context)
         # setting tags on every run - must have permission to perform
         # the s3:PutBucketTagging action
         s3_client.put_bucket_tagging(Bucket=bucket_name,
@@ -538,8 +537,8 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
                 create_args["CreateBucketConfiguration"] = {
                     "LocationConstraint": location_constraint
                 }
-            # pulling tags from context
-            tagset = stacker.actions.build.build_stack_tags(context)
+            # pulling tags from s3_bucket_tags function
+            tagset = _s3_bucket_tags(context)
             s3_client.create_bucket(**create_args)
             # setting tags on every run - must have permission to perform
             # the s3:PutBucketTagging action
@@ -554,6 +553,19 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
             logger.exception("Error creating bucket %s. Error %s",
                              bucket_name, e.response)
             raise
+
+def _s3_bucket_tags(context):
+    """Returns the tags to be applied for a S3 bucket.
+
+    Args:
+        context (:class:`stacker.context.Context`): The stacker context, used
+            set the S3 bucket tags from the stacker config
+
+    Returns:
+        List of dictionaries containing tags to apply to that bucket.
+    """
+    return [
+        {'Key': t[0], 'Value': t[1]} for t in context.s3_bucket_tags.items()]
 
 
 class Extractor(object):
@@ -625,10 +637,9 @@ class ZipExtractor(Extractor):
         return '.zip'
 
 
-class SourceProcessor(object):
-    """Makes remote python package sources available in current environment."""
-
-    ISO8601_FORMAT = '%Y%m%dT%H%M%SZ'
+class SourceProcessor():
+    """Makes remote python package sources available in the running python
+       environment."""
 
     def __init__(self, sources, stacker_cache_dir=None):
         """

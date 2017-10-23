@@ -351,6 +351,8 @@ class Config(Model):
 
     tags = DictType(StringType, serialize_when_none=False)
 
+    bucket_tags = DictType(StringType, serialize_when_none=False)
+
     mappings = DictType(
         DictType(DictType(StringType)), serialize_when_none=False)
 

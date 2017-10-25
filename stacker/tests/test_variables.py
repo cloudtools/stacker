@@ -49,6 +49,15 @@ class TestVariables(unittest.TestCase):
         var.resolve(self.context, self.provider)
         self.assertTrue(var.resolved)
         self.assertEqual(var.value, "resolved")
+        self.assertEqual(len(var.lookups), 0)
+
+    def test_variable_resolve_default_lookup_empty(self):
+        var = Variable("Param1", "${default fakeStack::}")
+        self.assertEqual(len(var.lookups), 1)
+        var.resolve(self.context, self.provider)
+        self.assertTrue(var.resolved)
+        self.assertEqual(var.value, "")
+        self.assertEqual(len(var.lookups), 0)
 
     def test_variable_replace_multiple_lookups_string(self):
         var = Variable(

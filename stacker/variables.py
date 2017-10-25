@@ -111,7 +111,10 @@ class Variable(object):
         `_resolved_value` takes precedence over `_value`.
 
         """
-        return self._resolved_value or self._value
+        if self._resolved_value is not None:
+            return self._resolved_value
+        else:
+            return self._value
 
     @property
     def resolved(self):

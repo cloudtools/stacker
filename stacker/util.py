@@ -1,5 +1,4 @@
 import copy
-import collections
 import uuid
 import importlib
 import logging
@@ -11,15 +10,17 @@ import sys
 import tarfile
 import tempfile
 import time
-import yaml
 import zipfile
-from yaml.constructor import ConstructorError
-from yaml.nodes import MappingNode
+
+import collections
 from collections import OrderedDict
-from git import Repo
 
 import botocore.client
 import botocore.exceptions
+import yaml
+from git import Repo
+from yaml.constructor import ConstructorError
+from yaml.nodes import MappingNode
 
 from stacker.session_cache import get_session
 

@@ -14,6 +14,8 @@ from stacker.environment import parse_environment
 from stacker import exceptions
 from stacker.lookups.registry import LOOKUP_HANDLERS
 
+from yaml.constructor import ConstructorError
+
 config = """a: $a
 b: $b
 c: $c"""
@@ -97,7 +99,7 @@ class TestConfig(unittest.TestCase):
         error = ex.exception.errors['stacks'][0]
         self.assertEquals(
             error.__str__(),
-            "Duplicate stack bastion found at index 1.")
+            "Duplicate stack bastion found at index 0.")
 
     def test_dump_unicode(self):
         config = Config()
@@ -397,6 +399,29 @@ stacks:
             conf, environment={"namespace": "prod"}, validate=False)
         config.validate()
         self.assertEquals(config.namespace, "prod")
+
+    def test_raise_constructor_error_on_duplicate_key(self):
+        yaml_config = """
+        namespace: prod
+        stacks:
+          - name: vpc
+            class_path: blueprints.VPC
+            class_path: blueprints.Fake
+        """
+        with self.assertRaises(ConstructorError):
+            parse(yaml_config)
+
+    def test_raise_construct_error_on_duplicate_stack_name(self):
+        yaml_config = """
+        namespace: prod
+        stacks:
+          my_vpc:
+            class_path: blueprints.VPC1
+          my_vpc:
+            class_path: blueprints.VPC2
+        """
+        with self.assertRaises(ConstructorError):
+            parse(yaml_config)
 
 
 if __name__ == '__main__':

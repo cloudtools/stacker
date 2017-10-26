@@ -11,6 +11,8 @@ import sys
 import tempfile
 import time
 import yaml
+from yaml.constructor import ConstructorError
+from yaml.nodes import MappingNode
 from collections import OrderedDict
 from git import Repo
 
@@ -295,19 +297,48 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
     Returns:
         OrderedDict: Parsed YAML.
     """
-    class OrderedLoader(loader):
-        """Subclass of Python yaml class."""
-        pass
+    class OrderedUniqueLoader(loader):
+        """
+        Subclasses the given pyYAML `loader` class.
 
-    def construct_mapping(loader, node):
-        """Override parent method to use OrderedDict."""
-        loader.flatten_mapping(node)
-        return OrderedDict(loader.construct_pairs(node))
+        Validates all sibling keys to insure no duplicates.
 
-    OrderedLoader.add_constructor(
-        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-        construct_mapping)
-    return yaml.load(stream, OrderedLoader)
+        Returns an OrderedDict instead of a Dict.
+        """
+
+        def _validate_mapping(self, node, deep=False):
+            if not isinstance(node, MappingNode):
+                raise ConstructorError(
+                    None, None,
+                    "expected a mapping node, but found %s" % node.id,
+                    node.start_mark)
+            mapping = {}
+            for key_node, value_node in node.value:
+                key = self.construct_object(key_node, deep=deep)
+                try:
+                    hash(key)
+                except TypeError, exc:
+                    raise ConstructorError(
+                        "while constructing a mapping", node.start_mark,
+                        "found unhashable key (%s)" % exc, key_node.start_mark
+                    )
+                # check for duplicate keys
+                if key in mapping:
+                    raise ConstructorError(
+                        "while constructing a mapping", node.start_mark,
+                        "found duplicate key", key_node.start_mark
+                    )
+                value = self.construct_object(value_node, deep=deep)
+                mapping[key] = value
+            return mapping
+
+        def construct_mapping(self, node, deep=False):
+            """Override parent method to use OrderedDict."""
+            if isinstance(node, MappingNode):
+                self.flatten_mapping(node)
+            return OrderedDict(self._validate_mapping(node, deep=deep))
+
+    return yaml.load(stream, OrderedUniqueLoader)
 
 
 def uppercase_first_letter(s):

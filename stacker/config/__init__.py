@@ -355,10 +355,11 @@ class Config(Model):
 
     def validate_stacks(self, data, value):
         if value:
-            names = set()
-            for i, stack in enumerate(value):
-                if stack.name in names:
-                    raise ValidationError(
-                        "Duplicate stack %s found at index %d."
-                        % (stack.name, i))
-                names.add(stack.name)
+            stack_names = [stack.name for stack in value]
+            if len(set(stack_names)) != len(stack_names):
+                # only loop / enumerate if there is an issue.
+                for i, stack_name in enumerate(stack_names):
+                    if stack_names.count(stack_name) != 1:
+                        raise ValidationError(
+                            "Duplicate stack %s found at index %d."
+                            % (stack_name, i))

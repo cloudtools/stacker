@@ -13,7 +13,8 @@ install_requires = [
     "colorama~=0.3.7",
     "formic~=0.9b",
     "gitpython~=2.0",
-    "schematics~=2.0.1"
+    "schematics~=2.0.1",
+    "python-dateutil~=2.0"
 ]
 
 tests_require = [

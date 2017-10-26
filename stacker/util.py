@@ -17,6 +17,7 @@ from collections import OrderedDict
 
 import botocore.client
 import botocore.exceptions
+import dateutil
 import yaml
 from git import Repo
 from yaml.constructor import ConstructorError
@@ -537,17 +538,31 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
             raise
 
 
-class Extractor(object):  # pylint: disable=too-few-public-methods
+class Extractor(object):
     """Base class for extractors."""
 
     def __init__(self, archive=None):
         """
-        Setup up extractor object with the archive path.
+        Create extractor object with the archive path.
 
         Args:
             archive (string): Archive path
         """
         self.archive = archive
+
+    def set_archive(self, dir_name):
+        """
+        Update archive filename to match directory name & extension.
+
+        Args:
+            dir_name (string): Archive directory name
+        """
+        self.archive = dir_name + self.extension()
+
+    @staticmethod
+    def extension():
+        """Serve as placeholder; override this in subclasses."""
+        return ''
 
 
 class TarExtractor(Extractor):
@@ -592,14 +607,14 @@ class ZipExtractor(Extractor):
         return '.zip'
 
 
-class SourceProcessor():
-    """Makes remote python package sources available in the running python
-       environment."""
-    CACHE_DATE_FORMAT = '%Y-%m-%d-%H-%M-%S'
+class SourceProcessor(object):
+    """Makes remote python package sources available in current environment."""
+
+    ISO8601_FORMAT = '%Y%m%dT%H%M%SZ'
 
     def __init__(self, sources, stacker_cache_dir=None):
         """
-        Processes a config's defined package sources.
+        Process a config's defined package sources.
 
         Args:
             sources (dict): Package sources from Stacker config dictionary
@@ -616,14 +631,14 @@ class SourceProcessor():
         self.create_cache_directories()
 
     def create_cache_directories(self):
-        """Ensures that SourceProcessor cache directories exist."""
+        """Ensure that SourceProcessor cache directories exist."""
         if not os.path.isdir(self.package_cache_dir):
             if not os.path.isdir(self.stacker_cache_dir):
                 os.mkdir(self.stacker_cache_dir)
             os.mkdir(self.package_cache_dir)
 
     def get_package_sources(self):
-        """Makes remote python packages available for local use."""
+        """Make remote python packages available for local use."""
         # Checkout S3 repositories specified in config
         for config in self.sources.get('s3', []):
             self.fetch_s3_package(config=config)
@@ -632,7 +647,7 @@ class SourceProcessor():
             self.fetch_git_package(config=config)
 
     def fetch_s3_package(self, config):
-        """Makes a remote S3 archive available for local use
+        """Make a remote S3 archive available for local use.
 
         Args:
             config (dict): git config dictionary
@@ -665,11 +680,13 @@ class SourceProcessor():
         # We can skip downloading the archive if it's already been cached
         if config.get('use_latest', True):
             try:
+                # LastModified should always be returned in UTC, but it doesn't
+                # hurt to explicitly convert it to UTC again just in case
                 modified_date = session.client('s3').head_object(
                     Bucket=config['bucket'],
                     Key=config['key'],
                     **extra_s3_args
-                )['LastModified']
+                )['LastModified'].astimezone(dateutil.tz.tzutc())
             except botocore.exceptions.ClientError as client_error:
                 logger.error("Error checking modified date of "
                              "s3://%s/%s : %s",
@@ -677,7 +694,7 @@ class SourceProcessor():
                              config['key'],
                              client_error)
                 sys.exit(1)
-            dir_name += "-%s" % modified_date.strftime(self.CACHE_DATE_FORMAT)
+            dir_name += "-%s" % modified_date.strftime(self.ISO8601_FORMAT)
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
         if not os.path.isdir(cached_dir_path):
             logger.debug("Remote package s3://%s/%s does not appear to have "
@@ -689,10 +706,7 @@ class SourceProcessor():
             tmp_dir = tempfile.mkdtemp(prefix='stacker')
             tmp_package_path = os.path.join(tmp_dir, dir_name)
             try:
-                extractor.archive = os.path.join(
-                    tmp_dir,
-                    dir_name + extractor.extension()
-                )
+                extractor.set_archive(os.path.join(tmp_dir, dir_name))
                 session.resource('s3').Bucket(config['bucket']).download_file(
                     config['key'],
                     extractor.archive,
@@ -715,7 +729,7 @@ class SourceProcessor():
                                      pkg_dir_name=dir_name)
 
     def fetch_git_package(self, config):
-        """Makes a remote git repository available for local use
+        """Make a remote git repository available for local use.
 
         Args:
             config (dict): git config dictionary
@@ -751,7 +765,7 @@ class SourceProcessor():
                                      pkg_dir_name=dir_name)
 
     def update_paths_and_config(self, config, pkg_dir_name):
-        """Handle remote source defined sys.paths & configs
+        """Handle remote source defined sys.paths & configs.
 
         Args:
             config (dict): git config dictionary
@@ -780,7 +794,7 @@ class SourceProcessor():
                                                           config_filename))
 
     def git_ls_remote(self, uri, ref):
-        """Determines the latest commit id for a given ref.
+        """Determine the latest commit id for a given ref.
 
         Args:
             uri (string): git URI
@@ -788,6 +802,7 @@ class SourceProcessor():
 
         Returns:
             str: A commit id
+
         """
         logger.debug("Invoking git to retrieve commit id for repo %s...", uri)
         lsremote_output = subprocess.check_output(['git',
@@ -802,8 +817,7 @@ class SourceProcessor():
             raise ValueError("Ref \"%s\" not found for repo %d." % (ref, uri))
 
     def determine_git_ls_remote_ref(self, config):
-        """Takes a dict describing a git repo and determines the ref to be used
-           with the "git ls-remote" command
+        """Determine the ref to be used with the "git ls-remote" command.
 
         Args:
             config (:class:`stacker.config.GitPackageSource`): git config
@@ -811,6 +825,7 @@ class SourceProcessor():
 
         Returns:
             str: A branch reference or "HEAD"
+
         """
         if config.get('branch'):
             ref = "refs/heads/%s" % config['branch']
@@ -820,14 +835,14 @@ class SourceProcessor():
         return ref
 
     def determine_git_ref(self, config):
-        """Takes a dict describing a git repo and determines the ref to be used
-           for 'git checkout'.
+        """Determine the ref to be used for 'git checkout'.
 
         Args:
             config (dict): git config dictionary
 
         Returns:
             str: A commit id or tag name
+
         """
         # First ensure redundant config keys aren't specified (which could
         # cause confusion as to which take precedence)
@@ -856,20 +871,21 @@ class SourceProcessor():
         return ref
 
     def sanitize_uri_path(self, uri):
-        """Takes a URI and converts it to a directory safe path
+        """Take a URI and converts it to a directory safe path.
 
         Args:
             uri (string): URI (e.g. http://example.com/cats)
 
         Returns:
             str: Directory name for the supplied uri
+
         """
         for i in ['@', '/', ':']:
             uri = uri.replace(i, '_')
         return uri
 
     def sanitize_git_path(self, uri, ref=None):
-        """Takes a git URI and ref and converts it to a directory safe path
+        """Take a git URI and ref and converts it to a directory safe path.
 
         Args:
             uri (string): git URI
@@ -878,6 +894,7 @@ class SourceProcessor():
 
         Returns:
             str: Directory name for the supplied uri
+
         """
         if uri.endswith('.git'):
             dir_name = uri[:-4]  # drop .git

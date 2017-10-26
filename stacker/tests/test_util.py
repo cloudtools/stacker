@@ -150,6 +150,9 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(TarExtractor().extension(), '.tar')
         self.assertEqual(TarGzipExtractor().extension(), '.tar.gz')
         self.assertEqual(ZipExtractor().extension(), '.zip')
+        for i in [TarExtractor(), ZipExtractor(), ZipExtractor()]:
+            i.set_archive('/tmp/foo')
+            self.assertEqual(i.archive.endswith(i.extension()), True)
 
     def test_SourceProcessor_helpers(self):
         with mock.patch.object(SourceProcessor,

@@ -1,7 +1,11 @@
-import unittest
+import os.path
+import shutil
+import tempfile
 
+import unittest
 import mock
 
+from stacker.actions.base import stack_template_key_name
 from stacker.context import Context
 from stacker.context import Config
 from stacker.exceptions import ImproperlyConfigured, FailedVariableLookup
@@ -324,6 +328,46 @@ class TestPlan(unittest.TestCase):
 
         with self.assertRaises(FailedVariableLookup):
             plan.dump("test", context=self.context)
+
+    def test_dump_create_dirs(self):
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            plan = Plan(description="Test", sleep_time=0)
+            previous_stack = None
+            template_paths = []
+
+            for i in range(5):
+                overrides = {
+                    "variables": {
+                        "PublicSubnets": "1",
+                        "SshKeyName": "1",
+                        "PrivateSubnets": "1",
+                        "Random": "${noop something}",
+                    },
+                }
+                if previous_stack:
+                    overrides["requires"] = [previous_stack.fqn]
+                stack = Stack(
+                    definition=generate_definition("vpc", i, **overrides),
+                    context=self.context,
+                )
+                previous_stack = stack
+                plan.add(
+                    stack=stack,
+                    run_func=self._run_func,
+                    requires=stack.requires,
+                )
+
+                template_path = os.path.join(
+                    tmp_dir, stack_template_key_name(stack.blueprint))
+                template_paths.append(template_path)
+
+            plan.dump(tmp_dir, context=self.context)
+
+            for template_path in template_paths:
+                self.assertTrue(os.path.isfile(template_path))
+        finally:
+            shutil.rmtree(tmp_dir)
 
     def test_plan_checkpoint_interval(self):
         plan = Plan(description="Test", logger_type=BASIC_LOGGER_TYPE)

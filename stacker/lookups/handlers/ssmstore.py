@@ -41,14 +41,7 @@ def handler(value, **kwargs):
         region, value = value.split("@", 1)
 
     client = get_session(region).client("ssm")
-    response = client.get_parameters(
-        Names=[
-            value,
-        ],
-        WithDecryption=True
+    response = client.get_parameter(
+        Name=value, WithDecryption=True
     )
-    if 'Parameters' in response:
-        return response['Parameters'][0]['Value']
-
-    raise ValueError('SSMKey "{}" does not exist in region {}'.format(value,
-                                                                      region))
+    return response['Parameter']['Value']

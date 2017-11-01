@@ -89,7 +89,7 @@ class TestLookupExtraction(unittest.TestCase):
         _input = "vpc::PublicSubnets"
         value = "${%s %s}" % (_type, _input)
         lookups = extract_lookups_from_string(value)
-        l = lookups.pop()
-        assert l.type == _type
-        assert l.input == _input
-        assert l.raw == "%s %s" % (_type, _input)
+        lookup = lookups.pop()
+        assert lookup.type == _type
+        assert lookup.input == _input
+        assert lookup.raw == "%s %s" % (_type, _input)

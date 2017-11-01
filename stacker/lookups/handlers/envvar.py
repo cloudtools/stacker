@@ -30,5 +30,5 @@ def handler(value, **kwargs):
 
     try:
         return os.environ[value]
-    except:
+    except KeyError:
         raise ValueError('EnvVar "{}" does not exist'.format(value))

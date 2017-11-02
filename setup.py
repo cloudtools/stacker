@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 src_dir = os.path.dirname(__file__)
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         author_email="loki77@gmail.com",
         license="New BSD license",
         url="https://github.com/remind101/stacker",
-        description="Opinionated AWS CloudFormation Stack manager",
+        description="AWS CloudFormation Stack manager",
         long_description=read("README.rst"),
         packages=find_packages(),
         scripts=scripts,

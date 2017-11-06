@@ -198,6 +198,15 @@ stacks: []
             args:
               domain: mydomain.com
         package_sources:
+          s3:
+            - bucket: acmecorpbucket
+              key: public/acmecorp-blueprints-v1.zip
+            - bucket: examplecorpbucket
+              key: public/examplecorp-blueprints-v2.tar.gz
+              requester_pays: true
+            - bucket: anotherexamplebucket
+              key: example-blueprints-v3.tar.gz
+              use_latest: false
           git:
             - uri: git@github.com:acmecorp/stacker_blueprints.git
             - uri: git@github.com:remind101/stacker_blueprints.git
@@ -250,6 +259,15 @@ stacks: []
             args:
               domain: mydomain.com
         package_sources:
+          s3:
+            - bucket: acmecorpbucket
+              key: public/acmecorp-blueprints-v1.zip
+            - bucket: examplecorpbucket
+              key: public/examplecorp-blueprints-v2.tar.gz
+              requester_pays: true
+            - bucket: anotherexamplebucket
+              key: example-blueprints-v3.tar.gz
+              use_latest: false
           git:
             - uri: git@github.com:acmecorp/stacker_blueprints.git
             - uri: git@github.com:remind101/stacker_blueprints.git
@@ -291,6 +309,25 @@ stacks: []
                     hooks[0].required, True)
                 self.assertEqual(
                     hooks[0].args, {"domain": "mydomain.com"})
+
+            self.assertEqual(
+                config.package_sources.s3[0].bucket,
+                "acmecorpbucket")
+            self.assertEqual(
+                config.package_sources.s3[0].key,
+                "public/acmecorp-blueprints-v1.zip")
+            self.assertEqual(
+                config.package_sources.s3[1].bucket,
+                "examplecorpbucket")
+            self.assertEqual(
+                config.package_sources.s3[1].key,
+                "public/examplecorp-blueprints-v2.tar.gz")
+            self.assertEqual(
+                config.package_sources.s3[1].requester_pays,
+                True)
+            self.assertEqual(
+                config.package_sources.s3[2].use_latest,
+                False)
 
             self.assertEqual(
                 config.package_sources.git[0].uri,

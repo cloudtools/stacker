@@ -355,6 +355,11 @@ class Plan(OrderedDict):
             blueprint = step.stack.blueprint
             filename = stack_template_key_name(blueprint)
             path = os.path.join(directory, filename)
+
+            blueprint_dir = os.path.dirname(path)
+            if not os.path.exists(blueprint_dir):
+                os.makedirs(blueprint_dir)
+
             logger.info("Writing stack \"%s\" -> %s", step_name, path)
             with open(path, "w") as f:
                 f.write(blueprint.rendered)

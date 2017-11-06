@@ -660,6 +660,11 @@ class SourceProcessor(object):
         for suffix, klass in extractor_map.iteritems():
             if config['key'].endswith(suffix):
                 extractor = klass()
+                logger.debug("Using extractor %s for S3 object \"%s\" in "
+                             "bucket %s.",
+                             klass.__name__,
+                             config['key'],
+                             config['bucket'])
                 dir_name = self.sanitize_uri_path(
                     "s3-%s-%s" % (config['bucket'],
                                   config['key'][:-len(suffix)])
@@ -707,12 +712,23 @@ class SourceProcessor(object):
             tmp_package_path = os.path.join(tmp_dir, dir_name)
             try:
                 extractor.set_archive(os.path.join(tmp_dir, dir_name))
+                logger.debug("Starting remote package download from S3 to %s "
+                             "with extra S3 options \"%s\"",
+                             extractor.archive,
+                             str(extra_s3_args))
                 session.resource('s3').Bucket(config['bucket']).download_file(
                     config['key'],
                     extractor.archive,
                     ExtraArgs=extra_s3_args
                 )
+                logger.debug("Download complete; extracting downloaded "
+                             "package to %s",
+                             tmp_package_path)
                 extractor.extract(tmp_package_path)
+                logger.debug("Moving extracted package directory %s to the "
+                             "Stacker cache at %s",
+                             dir_name,
+                             self.package_cache_dir)
                 shutil.move(tmp_package_path, self.package_cache_dir)
             finally:
                 shutil.rmtree(tmp_dir)

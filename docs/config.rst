@@ -113,9 +113,8 @@ that stacker applies), specify an empty map for the top-level keyword::
 
   bucket_tags: {}
 
-Tags updates get applied on every stacker run
+S3 Bucket Tags updates get applied on every stacker run
 
-.. _`AWS CloudFormation Resource Tags Type`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-resource-tags.html
 
 Module Paths
 ------------
@@ -274,8 +273,7 @@ If no tags are specified, the `stacker_namespace` tag is applied to your stack
 with the value of `namespace` as the tag value.
 
 If you prefer to apply a custom set of tags, specify the top-level keyword
-`tags` as a map. The `stacker_namespace` tag will be automaticly added as well
-to help identify resources created by Stacker. Example::
+`tags` as a map. Example::
 
   tags:
     "hello": world

@@ -97,9 +97,6 @@ class Context(object):
     def tags(self):
         tags = self.config.tags
         if tags is not None:
-            if "stacker_namespace" in tags:
-                return tags
-            tags["stacker_namespace"] = self.namespace
             return tags
         if self.namespace:
             return {"stacker_namespace": self.namespace}

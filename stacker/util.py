@@ -20,7 +20,6 @@ from git import Repo
 import botocore.exceptions
 import dateutil
 import yaml
-from git import Repo
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
@@ -553,6 +552,7 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
             logger.exception("Error creating bucket %s. Error %s",
                              bucket_name, e.response)
             raise
+
 
 def _s3_bucket_tags(context):
     """Returns the tags to be applied for a S3 bucket.

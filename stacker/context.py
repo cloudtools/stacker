@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_NAMESPACE_DELIMITER = "-"
+DEFAULT_TEMPLATE_INDENT = 4
 
 
 def get_fqn(base_fqn, delimiter, name=None):
@@ -63,6 +64,13 @@ class Context(object):
         if delimiter is not None:
             return delimiter
         return DEFAULT_NAMESPACE_DELIMITER
+
+    @property
+    def template_indent(self):
+        indent = self.config.template_indent
+        if indent is not None:
+            return int(indent)
+        return DEFAULT_TEMPLATE_INDENT
 
     @property
     def bucket_name(self):

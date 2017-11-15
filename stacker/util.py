@@ -306,6 +306,25 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
         Returns an OrderedDict instead of a Dict.
         """
 
+        # keys which require no duplicate siblings.
+        NO_DUPE_SIBLINGS = ["stacks", "class_path"]
+        # keys which require no duplicate children keys.
+        NO_DUPE_CHILDREN = ["stacks"]
+
+        def _error_mapping_on_dupe(self, node, node_name):
+            """check mapping node for dupe children keys."""
+            if isinstance(node, MappingNode):
+                mapping = {}
+                for n in node.value:
+                    a = n[0]
+                    b = mapping.get(a.value, None)
+                    if b:
+                        msg = "{} mapping cannot have duplicate keys {} {}"
+                        raise ConstructorError(
+                            msg.format(node_name, b.start_mark, a.start_mark)
+                        )
+                    mapping[a.value] = a
+
         def _validate_mapping(self, node, deep=False):
             if not isinstance(node, MappingNode):
                 raise ConstructorError(
@@ -322,12 +341,15 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
                         "while constructing a mapping", node.start_mark,
                         "found unhashable key (%s)" % exc, key_node.start_mark
                     )
-                # check for duplicate keys
-                if key in mapping:
+                # prevent duplicate sibling keys for certain "keywords".
+                if key in mapping and key in self.NO_DUPE_SIBLINGS:
+                    msg = "{} key cannot have duplicate siblings {} {}"
                     raise ConstructorError(
-                        "while constructing a mapping", node.start_mark,
-                        "found duplicate key", key_node.start_mark
+                        msg.format(key, node.start_mark, key_node.start_mark)
                     )
+                if key in self.NO_DUPE_CHILDREN:
+                    # prevent duplicate children keys for this mapping.
+                    self._error_mapping_on_dupe(value_node, key_node.value)
                 value = self.construct_object(value_node, deep=deep)
                 mapping[key] = value
             return mapping

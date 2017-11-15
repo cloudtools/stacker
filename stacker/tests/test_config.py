@@ -400,7 +400,24 @@ stacks:
         config.validate()
         self.assertEquals(config.namespace, "prod")
 
-    def test_raise_constructor_error_on_duplicate_key(self):
+    def test_allow_most_keys_to_be_duplicates_for_overrides(self):
+        yaml_config = """
+        namespace: prod
+        stacks:
+          - name: vpc
+            class_path: blueprints.VPC
+            variables:
+              CIDR: 192.168.1.0/24
+              CIDR: 192.168.2.0/24
+        """
+        doc = parse(yaml_config)
+        self.assertEqual(
+            doc["stacks"][0]["variables"]["CIDR"], "192.168.2.0/24"
+        )
+
+    def test_raise_constructor_error_on_keyword_duplicate_key(self):
+        """Some keys should never have a duplicate sibling. For example we
+        treat `class_path` as a special "keyword" and disallow dupes."""
         yaml_config = """
         namespace: prod
         stacks:
@@ -411,7 +428,9 @@ stacks:
         with self.assertRaises(ConstructorError):
             parse(yaml_config)
 
-    def test_raise_construct_error_on_duplicate_stack_name(self):
+    def test_raise_construct_error_on_duplicate_stack_name_dict(self):
+        """Some mappings should never have a duplicate children. For example we
+        treat `stacks` as a special mapping and disallow dupe children keys."""
         yaml_config = """
         namespace: prod
         stacks:

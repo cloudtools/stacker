@@ -1,3 +1,14 @@
+## 1.1.2 (2017-11-01)
+
+This is a minor update to help deal with some of the issues between `stacker`
+and `stacker_blueprints` both having dependencies on `troposphere`. It loosens
+the dependencies, allowing stacker to work with any reasonably new version
+of troposphere (anything greater than `1.9.0`). `stacker_blueprints` will
+likely require newer versions of troposphere, as new types are introduced to
+the blueprints, but it's unlikely we'll change the `troposphere` version string
+for stacker, since it relies on only the most basic parts of the `troposphere`
+API.
+
 ## 1.1.1 (2017-10-11)
 
 This release is mostly about updating the dependencies for stacker to newer

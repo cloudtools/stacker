@@ -414,6 +414,21 @@ stacks:
         self.assertEqual(
             doc["stacks"][0]["variables"]["CIDR"], "192.168.2.0/24"
         )
+        yaml_config = """
+        default_variables: &default_variables
+          CIDR: 192.168.1.0/24
+        namespace: prod
+        stacks:
+          - name: vpc
+            class_path: blueprints.VPC
+            variables:
+              << : *default_variables
+              CIDR: 192.168.2.0/24
+        """
+        doc = parse(yaml_config)
+        self.assertEqual(
+            doc["stacks"][0]["variables"]["CIDR"], "192.168.2.0/24"
+        )
 
     def test_raise_constructor_error_on_keyword_duplicate_key(self):
         """Some keys should never have a duplicate sibling. For example we

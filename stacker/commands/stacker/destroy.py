@@ -26,7 +26,7 @@ class Destroy(BaseCommand):
                                  "then stacker will work on all stacks in the "
                                  "config file.")
         parser.add_argument("-t", "--tail", action="store_true",
-                            help="Tail the CloudFormation logs while working"
+                            help="Tail the CloudFormation logs while working "
                                  "with stacks")
 
     def run(self, options, **kwargs):

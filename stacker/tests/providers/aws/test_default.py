@@ -266,6 +266,12 @@ class TestMethods(unittest.TestCase):
             )
         )
 
+        self.stubber.add_response(
+            "delete_change_set",
+            {},
+            expected_params={"ChangeSetName": "CHANGESETID"}
+        )
+
         with self.stubber:
             with self.assertRaises(exceptions.StackDidNotChange):
                 create_change_set(

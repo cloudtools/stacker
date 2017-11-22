@@ -330,10 +330,18 @@ def create_change_set(cfn_client, fqn, template, parameters, tags,
         status_reason = response["StatusReason"]
         if "didn't contain changes" in response["StatusReason"]:
             logger.debug(
-                "Stack %s did not change, not updating.",
+                "Stack %s did not change, not updating and removing "
+                "changeset.",
                 fqn,
             )
-            raise exceptions.StackDidNotChange
+            cfn_client.delete_change_set(ChangeSetName=change_set_id)
+            raise exceptions.StackDidNotChange()
+        logger.warn(
+            "Got strange status, '%s' for changeset '%s'. Not deleting for "
+            "further investigation - you will need to delete the changeset "
+            "manually.",
+            status, change_set_id
+        )
         raise exceptions.UnhandledChangeSetStatus(
             fqn, change_set_id, status, status_reason
         )

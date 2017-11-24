@@ -86,6 +86,7 @@ class FunctionalTests(Blueprint):
                         Action=[
                             awacs.cloudformation.GetTemplate,
                             awacs.cloudformation.CreateChangeSet,
+                            awacs.cloudformation.DeleteChangeSet,
                             awacs.cloudformation.DeleteStack,
                             awacs.cloudformation.CreateStack,
                             awacs.cloudformation.UpdateStack,

@@ -147,9 +147,9 @@ class TestBaseAction(unittest.TestCase):
     def test_stack_template_url(self):
         test_cases = (
             ("us-east-1", "s3.amazonaws.com"),
-            ("us-west-1", "s3-us-west-1.amazonaws.com"),
-            ("eu-west-1", "s3-eu-west-1.amazonaws.com"),
-            ("sa-east-1", "s3-sa-east-1.amazonaws.com"),
+            ("us-west-1", "s3.us-west-1.amazonaws.com"),
+            ("eu-west-1", "s3.eu-west-1.amazonaws.com"),
+            ("sa-east-1", "s3.sa-east-1.amazonaws.com"),
         )
         context = mock_context("mynamespace")
         blueprint = TestBlueprint(name="myblueprint", context=context)

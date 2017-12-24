@@ -125,9 +125,9 @@ class TestUtil(unittest.TestCase):
     def test_get_s3_endpoint(self):
         endpoint_map = {
             "us-east-1": "https://s3.amazonaws.com",
-            "us-west-1": "https://s3-us-west-1.amazonaws.com",
-            "eu-west-1": "https://s3-eu-west-1.amazonaws.com",
-            "sa-east-1": "https://s3-sa-east-1.amazonaws.com",
+            "us-west-1": "https://s3.us-west-1.amazonaws.com",
+            "eu-west-1": "https://s3.eu-west-1.amazonaws.com",
+            "sa-east-1": "https://s3.sa-east-1.amazonaws.com",
         }
 
         for region in endpoint_map:

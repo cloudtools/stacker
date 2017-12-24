@@ -18,6 +18,11 @@ stacker
    :target: https://landscape.io/github/remind101/stacker/master
    :alt: Code Health
 
+.. image:: https://codecov.io/gh/remind101/stacker/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/remind101/stacker
+   :alt: codecov
+
+
 For full documentation, please see the readthedocs_ site.
 
 About

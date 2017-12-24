@@ -16,9 +16,12 @@ import collections
 from collections import OrderedDict
 
 import botocore.client
-from git import Repo
 import botocore.exceptions
+
 import dateutil
+
+from git import Repo
+
 import yaml
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode

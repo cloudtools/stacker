@@ -541,15 +541,10 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
             set the S3 bucket tags from the stacker config
 
     """
+    tagset = _s3_bucket_tags(context)
     try:
-        # Checking is bucket exists
+        logger.debug("Checking that bucket '%s' exists.", bucket_name)
         s3_client.head_bucket(Bucket=bucket_name)
-        # pulling tags from s3_bucket_tags function
-        tagset = _s3_bucket_tags(context)
-        # setting tags on every run - must have permission to perform
-        # the s3:PutBucketTagging action
-        s3_client.put_bucket_tagging(Bucket=bucket_name,
-                                     Tagging={'TagSet': tagset})
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Message'] == "Not Found":
             logger.debug("Creating bucket %s.", bucket_name)
@@ -562,12 +557,7 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
                     "LocationConstraint": location_constraint
                 }
             # pulling tags from s3_bucket_tags function
-            tagset = _s3_bucket_tags(context)
             s3_client.create_bucket(**create_args)
-            # setting tags on every run - must have permission to perform
-            # the s3:PutBucketTagging action
-            s3_client.put_bucket_tagging(Bucket=bucket_name,
-                                         Tagging={'TagSet': tagset})
         elif e.response['Error']['Message'] == "Forbidden":
             logger.exception("Access denied for bucket %s.  Did " +
                              "you remember to use a globally unique name?",
@@ -577,6 +567,15 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
             logger.exception("Error creating bucket %s. Error %s",
                              bucket_name, e.response)
             raise
+
+    logger.debug(
+        "Setting tags on bucket '%s': %s", bucket_name, context.s3_bucket_tags
+    )
+
+    # setting tags on every run - must have permission to perform
+    # the s3:PutBucketTagging action
+    s3_client.put_bucket_tagging(Bucket=bucket_name,
+                                 Tagging={'TagSet': tagset})
 
 
 def _s3_bucket_tags(context):

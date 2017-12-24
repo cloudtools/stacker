@@ -663,6 +663,8 @@ class SourceProcessor():
     """Makes remote python package sources available in the running python
        environment."""
 
+    ISO8601_FORMAT = '%Y%m%dT%H%M%SZ'
+
     def __init__(self, sources, stacker_cache_dir=None):
         """
         Process a config's defined package sources.

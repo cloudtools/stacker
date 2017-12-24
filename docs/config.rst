@@ -92,7 +92,7 @@ See the `CloudFormation Limits Reference`_.
 
 
 S3 Bucket tags
-----
+--------------
 
 Various resources in AWS support arbitrary key-value pair tags. You can set
 the `bucket_tags` Top Level Keyword to populate tags on all S3 buckets Staker
@@ -163,7 +163,7 @@ The only required key for a git repository config is ``uri``, but ``branch``,
           commit: 12345678
 
 If no specific commit or tag is specified for a repo, the remote repository
-will be checked for newer commits on every execution of Stacker.
+will be checked for newer commits on every execution of stacker.
 
 For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
 
@@ -183,7 +183,7 @@ For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
           use_latest: false
 
 Use the ``paths`` option when subdirectories of the repo/archive should be
-added to Stacker's ``sys.path``.
+added to stacker's ``sys.path``.
 
 Cloned repos/archives will be cached between builds; the cache location defaults
 to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
@@ -263,7 +263,7 @@ Tags
 ----
 
 Various resources in AWS support arbitrary key-value pair tags. You can set
-the `tags` Top Level Keyword to populate tags on all Resources that Staker
+the `tags` Top Level Keyword to populate tags on all Resources that stacker
 attempts to create via CloudFormation. All CloudFormation stack-level resources,
 including automatically created tags, are propagated to resources that AWS
 CloudFormation supports. See `AWS CloudFormation Resource Tags Type`_ for

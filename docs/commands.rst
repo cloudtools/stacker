@@ -71,7 +71,7 @@ If that behavior is also desired in non-interactive mode, enable the
     --stacks STACKNAME    Only work on the stacks given. Can be specified more
                           than once. If not specified then stacker will work on
                           all stacks in the config file.
-    -t, --tail            Tail the CloudFormation logs while workingwith stacks
+    -t, --tail            Tail the CloudFormation logs while working with stacks
     -d DUMP, --dump DUMP  Dump the rendered Cloudformation templates to a
                           directory
 
@@ -128,7 +128,7 @@ already been destroyed).
     --stacks STACKNAME    Only work on the stacks given. Can be specified more
                           than once. If not specified then stacker will work on
                           all stacks in the config file.
-    -t, --tail            Tail the CloudFormation logs while workingwith stacks
+    -t, --tail            Tail the CloudFormation logs while working with stacks
 
 Info
 ----

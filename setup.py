@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.1.2"
+VERSION = "1.1.3"
 
 src_dir = os.path.dirname(__file__)
 
@@ -31,6 +31,7 @@ setup_requires = [
 scripts = [
     "scripts/compare_env",
     "scripts/docker-stacker",
+    "scripts/stacker.cmd",
     "scripts/stacker"
 ]
 

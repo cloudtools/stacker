@@ -74,6 +74,7 @@ class FunctionalTests(Blueprint):
                         Action=[
                             awacs.cloudformation.DescribeChangeSet,
                             awacs.cloudformation.ExecuteChangeSet,
+                            awacs.cloudformation.DeleteChangeSet,
                         ]),
                     Statement(
                         Effect="Deny",
@@ -86,6 +87,7 @@ class FunctionalTests(Blueprint):
                         Action=[
                             awacs.cloudformation.GetTemplate,
                             awacs.cloudformation.CreateChangeSet,
+                            awacs.cloudformation.DeleteChangeSet,
                             awacs.cloudformation.DeleteStack,
                             awacs.cloudformation.CreateStack,
                             awacs.cloudformation.UpdateStack,

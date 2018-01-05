@@ -3,6 +3,7 @@ import hashlib
 import logging
 import string
 from stacker.util import read_value_from_path
+from stacker.variables import Variable
 
 from troposphere import (
     Parameter,
@@ -468,6 +469,31 @@ class Blueprint(object):
         rendered = self.template.to_json(indent=self.context.template_indent)
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
+
+    def to_json(self, variables=None):
+        """Render the blueprint and return the template in json form.
+
+        Args:
+            variables (dict):
+                Optional dictionary providing/overriding variable values.
+
+        Returns:
+            str: the rendered CFN JSON template
+        """
+
+        variables_to_resolve = []
+        if variables:
+            for key, value in variables.iteritems():
+                variables_to_resolve.append(Variable(key, value))
+        for k in self.get_parameter_definitions():
+            if not variables or k not in variables:
+                # The provided value for a CFN parameter has no effect in this
+                # context (generating the CFN template), so any string can be
+                # provided for its value - just needs to be something
+                variables_to_resolve.append(Variable(k, 'unused_value'))
+        self.resolve_variables(variables_to_resolve)
+
+        return self.render_template()[1]
 
     def read_user_data(self, user_data_path):
         """Reads and parses a user_data file.

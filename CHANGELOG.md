@@ -1,3 +1,17 @@
+## 1.1.3 (2017-12-23)
+
+Bugfix release- primarily to deal with a bug that's been around since the
+introduction of interactive mode/changesets. The bug primarily deals with the
+fact that we weren't deleting Changesets that were not submitted. This didn't
+affect anyone for the longest time, but recently people have started to hit
+limits on the # of changesets in an account. The current thinking is that the
+limits weren't enforced before, and only recently has been enforced.
+
+- Add S3 remote package sources [GH-487]
+- Make blueprint dump always create intermediate directories [GH-499]
+- Allow duplicate keys for most config mappings except `stacks` [GH-507]
+- Remove un-submitted changesets [GH-513]
+
 ## 1.1.2 (2017-11-01)
 
 This is a minor update to help deal with some of the issues between `stacker`

@@ -617,7 +617,8 @@ class Provider(BaseProvider):
         retry_on_throttling(self.cloudformation.delete_stack, kwargs=args)
         return True
 
-    def create_stack(self, fqn, template, parameters, tags, **kwargs):
+    def create_stack(self, fqn, template, parameters, tags,
+                     force_change_set=False, **kwargs):
         """Create a new Cloudformation stack.
 
         Args:
@@ -628,6 +629,7 @@ class Provider(BaseProvider):
                 parameter list to be applied to the Cloudformation stack.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
+            force_change_set (bool): Whether or not to force change set use.
         """
 
         logger.debug("Attempting to create stack %s:.", fqn)
@@ -638,42 +640,55 @@ class Provider(BaseProvider):
         else:
             logger.debug("    no template url, uploading template "
                          "directly.")
-        args = generate_cloudformation_args(
-            fqn, parameters, tags, template,
-            service_role=self.service_role,
-        )
-
-        try:
-            retry_on_throttling(
-                self.cloudformation.create_stack,
-                kwargs=args
+        if force_change_set:
+            logger.debug("Creating stack with change sets.")
+            _changes, change_set_id = create_change_set(
+                self.cloudformation, fqn, template, parameters, tags,
+                'CREATE', service_role=self.service_role, **kwargs
             )
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Message'] == ('TemplateURL must reference '
-                                                  'a valid S3 object to which '
-                                                  'you have access.'):
-                s3_fallback(fqn, template, parameters, tags,
-                            self.cloudformation.create_stack,
-                            self.service_role)
-            else:
-                raise
 
-    def select_update_method(self, force_interactive, force_change_set,
-                             change_set_type):
+            retry_on_throttling(
+                self.cloudformation.execute_change_set,
+                kwargs={
+                    'ChangeSetName': change_set_id,
+                },
+            )
+        else:
+            args = generate_cloudformation_args(
+                fqn, parameters, tags, template,
+                service_role=self.service_role,
+            )
+
+            try:
+                retry_on_throttling(
+                    self.cloudformation.create_stack,
+                    kwargs=args
+                )
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error']['Message'] == ('TemplateURL must '
+                                                      'reference a valid S3 '
+                                                      'object to which you '
+                                                      'have access.'):
+                    s3_fallback(fqn, template, parameters, tags,
+                                self.cloudformation.create_stack,
+                                self.service_role)
+                else:
+                    raise
+
+    def select_update_method(self, force_interactive, force_change_set):
         """Select the correct update method when updating a stack.
 
         Args:
             force_interactive (str): Whether or not to force interactive mode
                 no matter what mode the provider is in.
             force_change_set (bool): Whether or not to force change set use.
-            change_set_type (str): The type of change set operation.
 
         Returns:
             function: The correct object method to use when updating.
         """
         if self.interactive or force_interactive:
             return self.interactive_update_stack
-        elif change_set_type == 'CREATE' or force_change_set:
+        elif force_change_set:
             return self.noninteractive_changeset_update
         else:
             return self.default_update_stack
@@ -748,8 +763,8 @@ class Provider(BaseProvider):
         return False
 
     def update_stack(self, fqn, template, old_parameters, parameters, tags,
-                     force_interactive=False, change_set_type='UPDATE',
-                     force_change_set=False, **kwargs):
+                     force_interactive=False, force_change_set=False,
+                     **kwargs):
         """Update a Cloudformation stack.
 
         Args:
@@ -766,9 +781,6 @@ class Provider(BaseProvider):
                 should be interactive. If set to True, interactive mode will
                 be used no matter if the provider is in interactive mode or
                 not. False will follow the behavior of the provider.
-            change_set_type (str): The type of change set operation. To
-                create a change set for a new stack, specify CREATE. To create
-                a change set for an existing stack, specify UPDATE.
             force_change_set (bool): A flag that indicates whether the update
                 must be executed with a change set.
         """
@@ -780,14 +792,13 @@ class Provider(BaseProvider):
         else:
             logger.debug("    no template url, uploading template directly.")
         update_method = self.select_update_method(force_interactive,
-                                                  force_change_set,
-                                                  change_set_type)
+                                                  force_change_set)
 
         return update_method(fqn, template, old_parameters, parameters, tags,
-                             change_set_type, **kwargs)
+                             **kwargs)
 
     def interactive_update_stack(self, fqn, template, old_parameters,
-                                 parameters, tags, change_set_type, **kwargs):
+                                 parameters, tags, **kwargs):
         """Update a Cloudformation stack in interactive mode.
 
         Args:
@@ -800,14 +811,11 @@ class Provider(BaseProvider):
                 parameter list to be applied to the Cloudformation stack.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
-            change_set_type (str): The type of change set operation. To
-                create a change set for a new stack, specify CREATE. To create
-                a change set for an existing stack, specify UPDATE.
         """
         logger.debug("Using interactive provider mode for %s.", fqn)
         changes, change_set_id = create_change_set(
             self.cloudformation, fqn, template, parameters, tags,
-            change_set_type, service_role=self.service_role, **kwargs
+            'UPDATE', service_role=self.service_role, **kwargs
         )
         params_diff = diff_parameters(
             self.params_as_dict(old_parameters),
@@ -835,8 +843,7 @@ class Provider(BaseProvider):
         )
 
     def noninteractive_changeset_update(self, fqn, template, old_parameters,
-                                        parameters, tags, change_set_type,
-                                        **kwargs):
+                                        parameters, tags, **kwargs):
         """Update a Cloudformation stack using a change set.
 
         This is required for stacks with a defined Transform (i.e. SAM), as the
@@ -852,15 +859,12 @@ class Provider(BaseProvider):
                 parameter list to be applied to the Cloudformation stack.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
-            change_set_type (str): The type of change set operation. To
-                create a change set for a new stack, specify CREATE. To create
-                a change set for an existing stack, specify UPDATE.
         """
         logger.debug("Using noninterative changeset provider mode "
                      "for %s.", fqn)
         _changes, change_set_id = create_change_set(
             self.cloudformation, fqn, template, parameters, tags,
-            change_set_type, service_role=self.service_role, **kwargs
+            'UPDATE', service_role=self.service_role, **kwargs
         )
 
         retry_on_throttling(
@@ -871,7 +875,7 @@ class Provider(BaseProvider):
         )
 
     def default_update_stack(self, fqn, template, old_parameters, parameters,
-                             tags, change_set_type, **kwargs):
+                             tags, **kwargs):
         """Update a Cloudformation stack in default mode.
 
         Args:
@@ -884,9 +888,6 @@ class Provider(BaseProvider):
                 parameter list to be applied to the Cloudformation stack.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
-            change_set_type (str): The type of change set operation. To
-                create a change set for a new stack, specify CREATE. To create
-                a change set for an existing stack, specify UPDATE.
         """
 
         logger.debug("Using default provider mode for %s.", fqn)

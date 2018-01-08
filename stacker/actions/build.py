@@ -275,16 +275,8 @@ class Action(BaseAction):
             return SubmittedStatus("re-creating stack")
         elif not provider_stack:
             logger.debug("Creating new stack: %s", stack.fqn)
-            if force_change_set:
-                logger.debug("Stack template contains a Transform; creating "
-                             "with change sets")
-                self.provider.update_stack(stack.fqn, template,
-                                           [], parameters, tags,
-                                           force_interactive=stack.protected,
-                                           change_set_type='CREATE')
-            else:
-                self.provider.create_stack(stack.fqn, template, parameters,
-                                           tags)
+            self.provider.create_stack(stack.fqn, template, parameters, tags,
+                                       force_change_set)
             return SubmittedStatus("creating new stack")
         elif not should_update(stack):
             return NotUpdatedStatus()

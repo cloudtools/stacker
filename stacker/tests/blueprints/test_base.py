@@ -38,7 +38,7 @@ from stacker.exceptions import (
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
 
-from ..factories import mock_lookup
+from ..factories import mock_lookup, mock_context
 
 
 def mock_lookup_handler(value, provider=None, context=None, fqn=False,
@@ -91,7 +91,7 @@ class TestBlueprintRendering(unittest.TestCase):
     "Resources": {}
 }"""
         self.assertEqual(
-            TestBlueprint(name="test", context=MagicMock()).to_json(),
+            TestBlueprint(name="test", context=mock_context()).to_json(),
             expected_json,
         )
 
@@ -149,7 +149,8 @@ class TestVariables(unittest.TestCase):
                 return
 
         description = "my blueprint description"
-        blueprint = TestBlueprint(name="test", context=MagicMock(),
+        context = mock_context()
+        blueprint = TestBlueprint(name="test", context=context,
                                   description=description)
         blueprint.render_template()
         self.assertEquals(description, blueprint.template.description)

@@ -266,6 +266,7 @@ class Action(BaseAction):
         template = self._template(stack.blueprint)
         tags = build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
+        force_change_set = stack.blueprint.template.transform is not None
 
         if recreate:
             logger.debug("Re-creating stack: %s", stack.fqn)
@@ -274,8 +275,8 @@ class Action(BaseAction):
             return SubmittedStatus("re-creating stack")
         elif not provider_stack:
             logger.debug("Creating new stack: %s", stack.fqn)
-            self.provider.create_stack(stack.fqn, template, parameters,
-                                       tags)
+            self.provider.create_stack(stack.fqn, template, parameters, tags,
+                                       force_change_set)
             return SubmittedStatus("creating new stack")
         elif not should_update(stack):
             return NotUpdatedStatus()
@@ -283,9 +284,15 @@ class Action(BaseAction):
         try:
             if self.provider.prepare_stack_for_update(stack.fqn, tags):
                 existing_params = provider_stack.get('Parameters', [])
-                self.provider.update_stack(stack.fqn, template,
-                                           existing_params, parameters, tags,
-                                           force_interactive=stack.protected)
+                self.provider.update_stack(
+                    stack.fqn,
+                    template,
+                    existing_params,
+                    parameters,
+                    tags,
+                    force_interactive=stack.protected,
+                    force_change_set=force_change_set
+                )
 
                 logger.debug("Updating existing stack: %s", stack.fqn)
                 return SubmittedStatus("updating existing stack")

@@ -392,15 +392,22 @@ class TestProviderDefaultMode(unittest.TestCase):
         self.assertEqual(response["StackName"], stack_name)
 
     def test_select_update_method(self):
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=False),
-            self.provider.default_update_stack
-        )
-
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=True),
-            self.provider.interactive_update_stack
-        )
+        for i in [[{'force_interactive': True,
+                    'force_change_set': False},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': False,
+                    'force_change_set': False},
+                   self.provider.default_update_stack],
+                  [{'force_interactive': False,
+                    'force_change_set': True},
+                   self.provider.noninteractive_changeset_update],
+                  [{'force_interactive': True,
+                    'force_change_set': True},
+                   self.provider.interactive_update_stack]]:
+            self.assertEquals(
+                self.provider.select_update_method(**i[0]),
+                i[1]
+            )
 
     def test_prepare_stack_for_update_missing(self):
         stack_name = "MockStack"
@@ -597,12 +604,19 @@ class TestProviderInteractiveMode(unittest.TestCase):
         self.assertEqual(patched_approval.call_count, 1)
 
     def test_select_update_method(self):
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=False),
-            self.provider.interactive_update_stack
-        )
-
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=True),
-            self.provider.interactive_update_stack
-        )
+        for i in [[{'force_interactive': False,
+                    'force_change_set': False},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': True,
+                    'force_change_set': False},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': False,
+                    'force_change_set': True},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': True,
+                    'force_change_set': True},
+                   self.provider.interactive_update_stack]]:
+            self.assertEquals(
+                self.provider.select_update_method(**i[0]),
+                i[1]
+            )

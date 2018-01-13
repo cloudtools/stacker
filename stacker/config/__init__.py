@@ -351,6 +351,8 @@ class Config(Model):
 
     tags = DictType(StringType, serialize_when_none=False)
 
+    template_indent = StringType(serialize_when_none=False)
+
     mappings = DictType(
         DictType(DictType(StringType)), serialize_when_none=False)
 

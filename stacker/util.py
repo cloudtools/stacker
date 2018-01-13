@@ -17,9 +17,12 @@ from collections import OrderedDict
 
 import botocore.client
 import botocore.exceptions
+
 import dateutil
-import yaml
+
 from git import Repo
+
+import yaml
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
@@ -525,7 +528,7 @@ def s3_bucket_location_constraint(region):
     return region
 
 
-def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
+def ensure_s3_bucket(s3_client, bucket_name, bucket_region, context):
     """Ensure an s3 bucket exists, if it does not then create it.
 
     Args:
@@ -534,8 +537,13 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
         bucket_name (str): The bucket being checked/created.
         bucket_region (str, optional): The region to create the bucket in. If
             not provided, will be determined by s3_client's region.
+        context (:class:`stacker.context.Context`): The stacker context, used
+            set the S3 bucket tags from the stacker config
+
     """
+    tagset = _s3_bucket_tags(context)
     try:
+        logger.debug("Checking that bucket '%s' exists.", bucket_name)
         s3_client.head_bucket(Bucket=bucket_name)
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Message'] == "Not Found":
@@ -548,6 +556,7 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
                 create_args["CreateBucketConfiguration"] = {
                     "LocationConstraint": location_constraint
                 }
+            # pulling tags from s3_bucket_tags function
             s3_client.create_bucket(**create_args)
         elif e.response['Error']['Message'] == "Forbidden":
             logger.exception("Access denied for bucket %s.  Did " +
@@ -558,6 +567,29 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
             logger.exception("Error creating bucket %s. Error %s",
                              bucket_name, e.response)
             raise
+
+    logger.debug(
+        "Setting tags on bucket '%s': %s", bucket_name, context.s3_bucket_tags
+    )
+
+    # setting tags on every run - must have permission to perform
+    # the s3:PutBucketTagging action
+    s3_client.put_bucket_tagging(Bucket=bucket_name,
+                                 Tagging={'TagSet': tagset})
+
+
+def _s3_bucket_tags(context):
+    """Returns the tags to be applied for a S3 bucket.
+
+    Args:
+        context (:class:`stacker.context.Context`): The stacker context, used
+            set the S3 bucket tags from the stacker config
+
+    Returns:
+        List of dictionaries containing tags to apply to that bucket.
+    """
+    return [
+        {'Key': t[0], 'Value': t[1]} for t in context.s3_bucket_tags.items()]
 
 
 class Extractor(object):
@@ -629,8 +661,9 @@ class ZipExtractor(Extractor):
         return '.zip'
 
 
-class SourceProcessor(object):
-    """Makes remote python package sources available in current environment."""
+class SourceProcessor():
+    """Makes remote python package sources available in the running python
+       environment."""
 
     ISO8601_FORMAT = '%Y%m%dT%H%M%SZ'
 

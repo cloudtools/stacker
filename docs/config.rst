@@ -90,6 +90,32 @@ See the `CloudFormation Limits Reference`_.
 
 .. _`CloudFormation Limits Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html
 
+
+S3 Bucket tags
+--------------
+
+Various resources in AWS support arbitrary key-value pair tags. You can set
+the `bucket_tags` Top Level Keyword to populate tags on all S3 buckets Staker
+attempts to create for CloudFormation template uploads, inclduing the S3 bucket
+created by the aws_lambda pre-hook.
+
+If bucket_tags is not set in your Configuration, stacker will fallback to the
+method used to determine tags in your config by the `tags` top level keyword.
+The `bucket_tags` keyword takes precedence over `tags` when applying. Example::
+
+  bucket_tags:
+    "hello": world
+    "my_tag:with_colons_in_key": ${dynamic_tag_value_from_my_env}
+    simple_tag: simple value
+
+If you prefer to have no tags applied to your stacks (versus the default tags
+that stacker applies), specify an empty map for the top-level keyword::
+
+  bucket_tags: {}
+
+S3 Bucket Tags updates get applied on every stacker run
+
+
 Module Paths
 ------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to
@@ -137,7 +163,7 @@ The only required key for a git repository config is ``uri``, but ``branch``,
           commit: 12345678
 
 If no specific commit or tag is specified for a repo, the remote repository
-will be checked for newer commits on every execution of Stacker.
+will be checked for newer commits on every execution of stacker.
 
 For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
 
@@ -157,7 +183,7 @@ For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
           use_latest: false
 
 Use the ``paths`` option when subdirectories of the repo/archive should be
-added to Stacker's ``sys.path``.
+added to stacker's ``sys.path``.
 
 Cloned repos/archives will be cached between builds; the cache location defaults
 to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
@@ -236,22 +262,31 @@ the build action::
 Tags
 ----
 
-CloudFormation supports arbitrary key-value pair tags. All stack-level, including automatically created tags, are
-propagated to resources that AWS CloudFormation supports. See `AWS CloudFormation Resource Tags Type`_ for more details.
-If no tags are specified, the `stacker_namespace` tag is applied to your stack with the value of `namespace` as the
-tag value.
+Various resources in AWS support arbitrary key-value pair tags. You can set
+the `tags` Top Level Keyword to populate tags on all Resources that stacker
+attempts to create via CloudFormation. All CloudFormation stack-level resources,
+including automatically created tags, are propagated to resources that AWS
+CloudFormation supports. See `AWS CloudFormation Resource Tags Type`_ for
+more details.
 
-If you prefer to apply a custom set of tags, specify the top-level keyword `tags` as a map. Example::
+If no tags are specified, the `stacker_namespace` tag is applied to your stack
+with the value of `namespace` as the tag value.
+
+If you prefer to apply a custom set of tags, specify the top-level keyword
+`tags` as a map. Example::
 
   tags:
     "hello": world
     "my_tag:with_colons_in_key": ${dynamic_tag_value_from_my_env}
     simple_tag: simple value
 
+
 If you prefer to have no tags applied to your stacks (versus the default tags that stacker applies), specify an empty
 map for the top-level keyword::
 
   tags: {}
+
+Tags updates get applied on every stacker run
 
 .. _`AWS CloudFormation Resource Tags Type`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-resource-tags.html
 

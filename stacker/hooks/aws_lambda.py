@@ -490,7 +490,7 @@ def upload_lambda_functions(context, provider, **kwargs):
     session = get_session(bucket_region)
     s3_client = session.client('s3')
 
-    ensure_s3_bucket(s3_client, bucket_name, bucket_region)
+    ensure_s3_bucket(s3_client, bucket_name, bucket_region, context)
 
     prefix = kwargs.get('prefix', '')
 

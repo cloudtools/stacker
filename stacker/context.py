@@ -103,6 +103,19 @@ class Context(object):
         return {}
 
     @property
+    def s3_bucket_tags(self):
+        s3_bucket_tags = self.config.bucket_tags
+        if s3_bucket_tags is not None:
+            return s3_bucket_tags
+        else:
+            s3_bucket_tags = self.config.tags
+            if s3_bucket_tags is not None:
+                return s3_bucket_tags
+            if self.namespace:
+                return {"stacker_namespace": self.namespace}
+            return {}
+
+    @property
     def _base_fqn(self):
         return self.namespace.replace(".", "-").lower()
 

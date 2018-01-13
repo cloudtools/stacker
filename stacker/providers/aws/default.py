@@ -641,7 +641,8 @@ class Provider(BaseProvider):
             logger.debug("    no template url, uploading template "
                          "directly.")
         if force_change_set:
-            logger.debug("Creating stack with change sets.")
+            logger.debug("force_change_set set to True, creating stack with "
+                         "changeset.")
             _changes, change_set_id = create_change_set(
                 self.cloudformation, fqn, template, parameters, tags,
                 'CREATE', service_role=self.service_role, **kwargs

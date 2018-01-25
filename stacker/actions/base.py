@@ -1,10 +1,9 @@
-import copy
 import logging
-import sys
+
+from ..plan2 import Step, build_plan
 
 import botocore.exceptions
 from stacker.session_cache import get_session
-from stacker.exceptions import PlanFailed
 
 from stacker.util import (
     ensure_s3_bucket,
@@ -12,6 +11,40 @@ from stacker.util import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def plan(description, action, stacks,
+         targets=None, tail=None,
+         reverse=False):
+    """A simple helper that builds a graph based plan from a set of stacks.
+
+    Args:
+        description (str): a description of the plan.
+        action (func): a function to call for each stack.
+        stacks (list): a list of :class:`stacker.stack.Stack` objects to build.
+        targets (list): an optional list of targets to filter the graph to.
+        tail (func): an optional function to call to tail the stack progress.
+        reverse (bool): if True, execute the graph in reverse (useful for
+            destroy actions).
+
+    Returns:
+        :class:`plan.Plan`: The resulting plan object
+    """
+
+    steps = [
+        Step(stack, fn=action, watch_func=tail)
+        for stack in stacks]
+
+    plan = build_plan(
+        description=description,
+        steps=steps,
+        targets=targets,
+        reverse=reverse)
+
+    for step in steps:
+        step.status_changed_func = plan._check_point
+
+    return plan
 
 
 def stack_template_key_name(blueprint):
@@ -126,13 +159,9 @@ class BaseAction(object):
         return template_url
 
     def execute(self, *args, **kwargs):
-        try:
-            self.pre_run(*args, **kwargs)
-            self.run(*args, **kwargs)
-            self.post_run(*args, **kwargs)
-        except PlanFailed as e:
-            logger.error(e.message)
-            sys.exit(1)
+        self.pre_run(*args, **kwargs)
+        self.run(*args, **kwargs)
+        self.post_run(*args, **kwargs)
 
     def pre_run(self, *args, **kwargs):
         pass
@@ -142,60 +171,3 @@ class BaseAction(object):
 
     def post_run(self, *args, **kwargs):
         pass
-
-    def _get_all_stack_names(self, dependencies):
-        """Get all stack names specified in dependencies.
-
-        Args:
-            - dependencies (dict): a dictionary where each key should be the
-                fully qualified name of a stack whose value is an array of
-                fully qualified stack names that the stack depends on.
-
-        Returns:
-            set: set of all stack names
-
-        """
-        return set(
-            dependencies.keys() +
-            [item for items in dependencies.values() for item in items]
-        )
-
-    def get_stack_execution_order(self, dependencies):
-        """Return the order in which the stacks should be executed.
-
-        Args:
-            - dependencies (dict): a dictionary where each key should be the
-                fully qualified name of a stack whose value is an array of
-                fully qualified stack names that the stack depends on. This is
-                used to generate the order in which the stacks should be
-                executed.
-
-        Returns:
-            array: An array of stack names in the order which they should be
-                executed.
-
-        """
-        # copy the dependencies since we pop items out of it to get the
-        # execution order, we don't want to mutate the one passed in
-        dependencies = copy.deepcopy(dependencies)
-        pending_steps = []
-        executed_steps = []
-        stack_names = self._get_all_stack_names(dependencies)
-        for stack_name in stack_names:
-            requirements = dependencies.get(stack_name, None)
-            if not requirements:
-                dependencies.pop(stack_name, None)
-                pending_steps.append(stack_name)
-
-        while dependencies:
-            for step in pending_steps:
-                for stack_name, requirements in dependencies.items():
-                    if step in requirements:
-                        requirements.remove(step)
-
-                    if not requirements:
-                        dependencies.pop(stack_name)
-                        pending_steps.append(stack_name)
-                pending_steps.remove(step)
-                executed_steps.append(step)
-        return executed_steps + pending_steps

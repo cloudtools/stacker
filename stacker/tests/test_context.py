@@ -21,13 +21,6 @@ class TestContext(unittest.TestCase):
         self.assertEqual(context.mappings, {})
         self.assertEqual(context.stack_names, ["stack"])
 
-    def test_context_get_stacks_specific_stacks(self):
-        context = Context(
-            config=self.config,
-            stack_names=["stack2"],
-        )
-        self.assertEqual(len(context.get_stacks()), 1)
-
     def test_context_get_stacks(self):
         context = Context(config=self.config)
         self.assertEqual(len(context.get_stacks()), 2)

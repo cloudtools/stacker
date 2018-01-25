@@ -119,10 +119,7 @@ class Context(object):
         return self.config.mappings or {}
 
     def _get_stack_definitions(self):
-        if not self.stack_names:
-            return self.config.stacks
-        return [s for s in self.config.stacks if s.name in
-                self.stack_names]
+        return self.config.stacks
 
     def get_stacks(self):
         """Get the stacks for the current action.

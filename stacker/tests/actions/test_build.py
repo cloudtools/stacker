@@ -10,8 +10,7 @@ from stacker.actions.build import (
     _handle_missing_parameters,
 )
 from stacker.blueprints.variables.types import CFNString
-from stacker.context import Context
-from stacker.config import Config
+from stacker.context import Context, Config
 from stacker.exceptions import StackDidNotChange, StackDoesNotExist
 from stacker.providers.base import BaseProvider
 from stacker.providers.aws.default import Provider
@@ -62,12 +61,14 @@ class TestBuildAction(unittest.TestCase):
             "stacks": [
                 {"name": "vpc"},
                 {"name": "bastion",
-                 "variables": {"test": "${output vpc::something}"}},
+                    "variables": {
+                        "test": "${output vpc::something}"}},
                 {"name": "db",
-                 "variables": {"test": "${output vpc::something}",
-                               "else": "${output bastion::something}"}},
+                    "variables": {
+                        "test": "${output vpc::something}",
+                        "else": "${output bastion::something}"}},
                 {"name": "other", "variables": {}}
-            ]
+            ],
         })
         return Context(config=config, **kwargs)
 
@@ -103,37 +104,17 @@ class TestBuildAction(unittest.TestCase):
         result = _handle_missing_parameters(def_params, required, stack)
         self.assertEqual(result, def_params.items())
 
-    def test_get_dependencies(self):
-        context = self._get_context()
-        build_action = build.Action(context)
-        dependencies = build_action._get_dependencies()
-        self.assertEqual(
-            dependencies[context.get_fqn("bastion")],
-            set([context.get_fqn("vpc")]),
-        )
-        self.assertEqual(
-            dependencies[context.get_fqn("db")],
-            set([context.get_fqn(s) for s in ["vpc", "bastion"]]),
-        )
-        self.assertFalse(dependencies[context.get_fqn("other")])
-
-    def test_get_stack_execution_order(self):
-        context = self._get_context()
-        build_action = build.Action(context)
-        dependencies = build_action._get_dependencies()
-        execution_order = build_action.get_stack_execution_order(dependencies)
-        self.assertEqual(
-            execution_order,
-            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
-        )
-
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context)
         plan = build_action._generate_plan()
         self.assertEqual(
-            plan.keys(),
-            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
+            {
+                'namespace-db': set(['namespace-bastion', 'namespace-vpc']),
+                'namespace-bastion': set(['namespace-vpc']),
+                'namespace-other': set([]),
+                'namespace-vpc': set([])},
+            plan.graph.to_dict()
         )
 
     def test_dont_execute_plan_when_outline_specified(self):
@@ -182,23 +163,6 @@ class TestBuildAction(unittest.TestCase):
             mock_stack.enabled = t.enabled
             self.assertEqual(build.should_submit(mock_stack), t.result)
 
-    def test_Raises_StackDoesNotExist_from_lookup_non_included_stack(self):
-        # This test is testing the specific scenario listed in PR 466
-        # Because the issue only threw a KeyError when a stack was missing
-        # in the `--stacks` flag at runtime of a `stacker build` run
-        # but needed for an output lookup in the stack specified
-        mock_provider = mock.MagicMock()
-        context = Context(config=Config({
-            "namespace": "namespace",
-            "stacks": [
-                {"name": "bastion",
-                 "variables": {"test": "${output vpc::something}"}
-                 }]
-        }))
-        build_action = build.Action(context, provider=mock_provider)
-        with self.assertRaises(StackDoesNotExist):
-            build_action._generate_plan()
-
 
 class TestLaunchStack(TestBuildAction):
     def setUp(self):
@@ -215,7 +179,7 @@ class TestLaunchStack(TestBuildAction):
         self.stack_status = None
 
         plan = self.build_action._generate_plan()
-        _, self.step = plan.list_pending()[0]
+        self.step = plan.steps[0]
         self.step.stack = self.stack
 
         def patch_object(*args, **kwargs):
@@ -240,8 +204,7 @@ class TestLaunchStack(TestBuildAction):
 
     def _advance(self, new_provider_status, expected_status, expected_reason):
         self.stack_status = new_provider_status
-        status = self.step.run()
-        self.step.set_status(status)
+        status = self.step._run_once()
         self.assertEqual(status, expected_status)
         self.assertEqual(status.reason, expected_reason)
 

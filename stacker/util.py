@@ -942,3 +942,19 @@ class SourceProcessor(object):
         if ref is not None:
             dir_name += "-%s" % ref
         return dir_name
+
+
+def stack_template_key_name(blueprint):
+    """Given a blueprint, produce an appropriate key name.
+
+    Args:
+        blueprint (:class:`stacker.blueprints.base.Blueprint`): The blueprint
+            object to create the key from.
+
+    Returns:
+        string: Key name resulting from blueprint.
+    """
+    name = blueprint.name
+    return "stack_templates/%s/%s-%s.json" % (blueprint.context.get_fqn(name),
+                                              name,
+                                              blueprint.version)

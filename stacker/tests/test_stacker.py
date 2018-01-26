@@ -78,23 +78,6 @@ class TestStacker(unittest.TestCase):
         stacks = args.context.get_stacks()
         self.assertEqual(len(stacks), 2)
 
-    def test_stacker_build_context_single_stack_specified(self):
-        # Added the below test that is similar to the
-        # test_stacker_build_context_stack_names_specified test because
-        # someone could break stacks lookup flags but still get back 2 stacks
-        # with the assertEquil to 2. Now we also check for assertEquil to 1
-        stacker = Stacker()
-        args = stacker.parse_args(
-            ["build",
-             "-r", "us-west-2",
-             "stacker/tests/fixtures/basic.env",
-             "stacker/tests/fixtures/vpc-bastion-db-web.yaml",
-             "--stacks", "vpc"]
-        )
-        stacker.configure(args)
-        stacks = args.context.get_stacks()
-        self.assertEqual(len(stacks), 1)
-
     def test_stacker_build_fail_when_parameters_in_stack_def(self):
         stacker = Stacker()
         args = stacker.parse_args(

@@ -101,3 +101,4 @@ Before you submit a pull request, check that it meets these guidelines:
 2. If the pull request adds functionality, the docs should be updated. (See `Write Documentation` above for guidelines)
 3. The pull request should work for Python 2.7 and for PyPy. Check
    https://circleci.com/gh/remind101/stacker and make sure that the tests pass for all supported Python versions.
+4. Please update the `Upcoming/Master` section of [CHANGELOG.md](the CHANGELOG) with a small bullet point about the change.

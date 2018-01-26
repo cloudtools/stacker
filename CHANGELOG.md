@@ -1,3 +1,12 @@
+## Upcoming/Master
+
+
+## 1.1.4 (2018-01-26)
+
+- Add `blueprint.to_json` for standalone rendering [GH-459]
+- Add global config for troposphere template indent [GH-505]
+- Add serverless transform/CREATE changeset types [GH-517]
+
 ## 1.1.3 (2017-12-23)
 
 Bugfix release- primarily to deal with a bug that's been around since the

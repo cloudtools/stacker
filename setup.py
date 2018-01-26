@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.1.3"
+VERSION = "1.1.4"
 
 src_dir = os.path.dirname(__file__)
 

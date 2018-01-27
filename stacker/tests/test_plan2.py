@@ -1,7 +1,12 @@
+import os
+import shutil
+import tempfile
+
 import unittest
 import mock
 
 from stacker.context import Context, Config
+from stacker.actions.base import stack_template_key_name
 from stacker.lookups.registry import (
     register_lookup_handler,
     unregister_lookup_handler,
@@ -196,3 +201,41 @@ class TestPlan(unittest.TestCase):
                    "as a dependency of 'namespace-app.1': graph is "
                    "not acyclic")
         self.assertEqual(expected.exception.message, message)
+
+    @mock.patch("stacker.plan.os")
+    @mock.patch("stacker.plan.open", mock.mock_open(), create=True)
+    def test_dump(self, *args):
+        requires = None
+        steps = []
+
+        for i in range(5):
+            overrides = {
+                "variables": {
+                    "PublicSubnets": "1",
+                    "SshKeyName": "1",
+                    "PrivateSubnets": "1",
+                    "Random": "${noop something}",
+                },
+                "requires": requires,
+            }
+
+            stack = Stack(
+                definition=generate_definition('vpc', i, **overrides),
+                context=self.context)
+            requires = [stack.fqn]
+
+            steps += [Step(stack, None)]
+
+        plan = build_plan(description="Test", steps=steps)
+
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            plan.dump(tmp_dir, context=self.context)
+
+            for step in plan.steps:
+                template_path = os.path.join(
+                    tmp_dir,
+                    stack_template_key_name(step.stack.blueprint))
+                self.assertTrue(os.path.isfile(template_path))
+        finally:
+            shutil.rmtree(tmp_dir)

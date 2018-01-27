@@ -1,8 +1,9 @@
+import os
 import logging
 import time
 import uuid
 
-
+from .actions.base import stack_template_key_name
 from .exceptions import (
     GraphError,
 )
@@ -242,6 +243,33 @@ class Plan(object):
 
         if message:
             logger.log(level, message)
+
+    def dump(self, directory, context, provider=None):
+        logger.info("Dumping \"%s\"...", self.description)
+        directory = os.path.expanduser(directory)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        def walk_func(step):
+            step.stack.resolve(
+                context=context,
+                provider=provider,
+            )
+            blueprint = step.stack.blueprint
+            filename = stack_template_key_name(blueprint)
+            path = os.path.join(directory, filename)
+
+            blueprint_dir = os.path.dirname(path)
+            if not os.path.exists(blueprint_dir):
+                os.makedirs(blueprint_dir)
+
+            logger.info("Writing stack \"%s\" -> %s", step.name, path)
+            with open(path, "w") as f:
+                f.write(blueprint.rendered)
+
+            return True
+
+        return self.graph.walk(walk_func)
 
     def execute(self, **kwargs):
         return self.walk(**kwargs)

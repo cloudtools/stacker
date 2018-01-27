@@ -36,6 +36,7 @@ class Action(BaseAction):
         return plan(
             description="Destroy stacks",
             action=self._destroy_stack,
+            tail=self.provider.tail_stack if tail else None,
             stacks=self.context.get_stacks(),
             stack_names=self.context.stack_names,
             reverse=True)

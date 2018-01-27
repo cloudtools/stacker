@@ -2,6 +2,7 @@ import os
 import logging
 import time
 import uuid
+import multiprocessing
 
 from .actions.base import stack_template_key_name
 from .exceptions import (
@@ -33,11 +34,12 @@ class Step(object):
             with this step
     """
 
-    def __init__(self, stack, fn=None):
+    def __init__(self, stack, fn=None, watch_func=None):
         self.stack = stack
         self.status = PENDING
         self.last_updated = time.time()
         self.fn = fn
+        self.watch_func = watch_func
 
     def __repr__(self):
         return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
@@ -49,9 +51,22 @@ class Step(object):
 
         log_status(self.name, self.status)
 
-        while not self.done:
-            status = self.fn(self.stack, status=self.status)
-            self.set_status(status)
+        watcher = None
+        if self.watch_func:
+            watcher = multiprocessing.Process(
+                target=self.watch_func,
+                args=(self.stack,)
+            )
+            watcher.start()
+
+        try:
+            while not self.done:
+                status = self.fn(self.stack, status=self.status)
+                self.set_status(status)
+        finally:
+            if watcher and watcher.is_alive():
+                watcher.terminate()
+                watcher.join()
         return self.ok
 
     @property

@@ -319,6 +319,7 @@ class Action(BaseAction):
         return plan(
             description="Create/Update stacks",
             action=self._launch_stack,
+            tail=self.provider.tail_stack if tail else None,
             stacks=self.context.get_stacks(),
             stack_names=self.context.stack_names)
 

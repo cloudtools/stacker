@@ -59,13 +59,17 @@ class Step(object):
                 self.status_changed_func()
 
             while not self.done:
-                status = self.fn(self.stack, status=self.status)
-                self.set_status(status)
+                self._run_once()
         finally:
             if watcher and watcher.is_alive():
                 watcher.terminate()
                 watcher.join()
         return self.ok
+
+    def _run_once(self):
+        status = self.fn(self.stack, status=self.status)
+        self.set_status(status)
+        return status
 
     @property
     def name(self):

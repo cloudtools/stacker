@@ -13,8 +13,13 @@ def plan(description=None, action=None,
         Step(stack, fn=action, watch_func=tail)
         for stack in stacks]
 
-    return build_plan(
+    plan = build_plan(
         description=description,
         steps=steps,
         step_names=stack_names,
         reverse=reverse)
+
+    for step in steps:
+        step.status_changed_func = plan._check_point
+
+    return plan

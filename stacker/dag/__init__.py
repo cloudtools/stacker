@@ -150,21 +150,20 @@ class DAG(object):
         dependencies.
         """
 
-        graph = self.graph
-        dag = DAG()
+        filtered_dag = DAG()
 
         # Add only the nodes we need.
         for node in nodes:
-            dag.add_node_if_not_exists(node)
+            filtered_dag.add_node_if_not_exists(node)
             for edge in self.all_downstreams(node):
-                dag.add_node_if_not_exists(edge)
+                filtered_dag.add_node_if_not_exists(edge)
 
         # Now, rebuild the graph for each node that's present.
-        for node, edges in graph.items():
-            if node in dag.graph:
-                dag.graph[node] = edges
+        for node, edges in self.graph.items():
+            if node in filtered_dag.graph:
+                filtered_dag.graph[node] = edges
 
-        return dag
+        return filtered_dag
 
     def all_leaves(self):
         """ Return a list of all leaves (nodes with no downstreams) """

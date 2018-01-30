@@ -269,7 +269,7 @@ class Plan(object):
         graph (:class:`Graph`): a graph of steps.
     """
 
-    def __init__(self, description=None, graph=None):
+    def __init__(self, description, graph):
         self.id = uuid.uuid4()
         self.description = description
         self.graph = graph

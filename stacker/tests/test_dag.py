@@ -120,7 +120,7 @@ def test_walk_failed():
 
 @with_setup(start_with_graph)
 def test_ind_nodes():
-    assert dag.ind_nodes(dag.graph) == ['a']
+    assert dag.ind_nodes() == ['a']
 
 
 @with_setup(blank_setup)
@@ -145,7 +145,7 @@ def test_failed_validation():
 
 @with_setup(start_with_graph)
 def test_downstream():
-    assert set(dag.downstream('a', dag.graph)) == set(['b', 'c'])
+    assert set(dag.downstream('a')) == set(['b', 'c'])
 
 
 @with_setup(start_with_graph)
@@ -162,9 +162,9 @@ def test_all_downstreams_pass_graph():
                     'b': ['d'],
                     'c': ['d'],
                     'd': []})
-    assert dag.all_downstreams('a', dag2.graph) == ['c', 'd']
-    assert dag.all_downstreams('b', dag2.graph) == ['d']
-    assert dag.all_downstreams('d', dag2.graph) == []
+    assert dag2.all_downstreams('a') == ['c', 'd']
+    assert dag2.all_downstreams('b') == ['d']
+    assert dag2.all_downstreams('d') == []
 
 
 @with_setup(start_with_graph)

@@ -86,3 +86,37 @@ class TestDestroyAction(unittest.TestCase):
         # if we have processed the step and then can't find the stack, it means
         # we successfully deleted it
         self.assertEqual(status, COMPLETE)
+
+    def test_destroy_stack_step_statuses(self):
+        mock_provider = mock.MagicMock()
+        stacks_dict = self.context.get_stacks_dict()
+
+        def get_stack(stack_name):
+            return stacks_dict.get(stack_name)
+
+        plan = self.action._generate_plan()
+        step = plan.steps[0]
+        # we need the AWS provider to generate the plan, but swap it for
+        # the mock one to make the test easier
+        self.action.provider = mock_provider
+
+        # simulate stack doesn't exist and we haven't submitted anything for
+        # deletion
+        mock_provider.get_stack.side_effect = StackDoesNotExist("mock")
+        status = step.run()
+        self.assertEqual(status, SKIPPED)
+
+        # simulate stack getting successfully deleted
+        mock_provider.get_stack.side_effect = get_stack
+        mock_provider.is_stack_destroyed.return_value = False
+        mock_provider.is_stack_in_progress.return_value = False
+        status = step._run_once()
+        self.assertEqual(status, SUBMITTED)
+        mock_provider.is_stack_destroyed.return_value = False
+        mock_provider.is_stack_in_progress.return_value = True
+        status = step._run_once()
+        self.assertEqual(status, SUBMITTED)
+        mock_provider.is_stack_destroyed.return_value = True
+        mock_provider.is_stack_in_progress.return_value = False
+        status = step._run_once()
+        self.assertEqual(status, COMPLETE)

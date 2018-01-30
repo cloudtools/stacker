@@ -223,7 +223,7 @@ class GraphError(Exception):
     """Raised when the graph is invalid (e.g. acyclic dependencies)
     """
 
-    def __init__(self, exception, stack=None, dependency=None):
+    def __init__(self, exception, stack, dependency):
         self.stack = stack
         self.dependency = dependency
         self.exception = exception

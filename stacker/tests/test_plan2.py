@@ -33,7 +33,7 @@ class TestStep(unittest.TestCase):
 
     def setUp(self):
         stack = mock.MagicMock()
-        self.step = Step(stack=stack)
+        self.step = Step(stack=stack, fn=None)
 
     def test_status(self):
         self.assertFalse(self.step.submitted)
@@ -65,7 +65,8 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
             context=self.context)
 
-        plan = build_plan(description="Test", steps=[Step(vpc), Step(bastion)])
+        plan = build_plan(description="Test", steps=[
+            Step(vpc, fn=None), Step(bastion, fn=None)])
 
         self.assertEqual(plan.graph.dag.graph, {
             'namespace-bastion.1': set(['namespace-vpc.1']),
@@ -111,7 +112,7 @@ class TestPlan(unittest.TestCase):
         plan = build_plan(
             description="Test",
             steps=[Step(vpc, fn), Step(db, fn), Step(app, fn)],
-            step_names=['db.1'])
+            targets=['db.1'])
         plan.execute()
 
         self.assertEquals(calls, [

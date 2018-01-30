@@ -27,9 +27,15 @@ class Step(object):
     Args:
         stack (:class:`stacker.stack.Stack`): the stack associated
             with this step
+        fn (func): the function to run to execute the step. This function will
+            be ran multiple times until the step is "done".
+        watch_func (func): an optional function that will be called to "tail"
+            the step action.
+        status_changed_func (func): an optional function that will be called
+            when the step changes status.
     """
 
-    def __init__(self, stack, fn=None, watch_func=None,
+    def __init__(self, stack, fn, watch_func=None,
                  status_changed_func=None):
         self.stack = stack
         self.status = PENDING
@@ -141,8 +147,20 @@ class Step(object):
         self.set_status(SUBMITTED)
 
 
-def build_plan(description=None, steps=None,
-               step_names=None, reverse=False):
+def build_plan(description, steps,
+               targets=None, reverse=False):
+    """Builds a plan from a list of steps.
+    Args:
+        description (str): an arbitrary string to
+            describe the plan.
+        steps (list): a list of :class:`Step` objects to execute.
+        targets (list): an optional list of step names to filter the graph to.
+            If provided, only these steps, and their transitive dependencies
+            will be executed. If no targets are specified, every node in the
+            graph will be executed.
+        reverse (bool): If provided, the graph will be walked in reverse order
+            (dependencies last).
+    """
     graph = build_graph(steps)
 
     # If we want to execute the plan in reverse (e.g. Destroy), transpose the
@@ -151,11 +169,11 @@ def build_plan(description=None, steps=None,
         graph = graph.transposed()
 
     # If we only want to build a specific target, filter the graph.
-    if step_names:
+    if targets:
         nodes = []
-        for step_name in step_names:
+        for target in targets:
             for step in steps:
-                if step.short_name == step_name:
+                if step.short_name == target:
                     nodes.append(step.name)
         graph = graph.filtered(nodes)
 
@@ -181,7 +199,27 @@ def build_graph(steps):
 
 
 class Graph(object):
-    """Graph represents a graph of steps."""
+    """Graph represents a graph of steps.
+
+    The :class:`Graph` helps organize the steps needed to execute a particular
+    action for a set of :class:`stacker.stack.Stack` objects. When initialized
+    with a set of steps, it will first build a Directed Acyclic Graph from the
+    steps and their dependencies.
+
+    Example:
+
+    >>> dag = DAG()
+    >>> a = Step("a", fn=build)
+    >>> b = Step("b", fn=build)
+    >>> dag.add_step(a)
+    >>> dag.add_step(b)
+    >>> dag.connect(a, b)
+
+    Args:
+        steps (list): an optional list of :class:`Step` objects to execute.
+        dag (:class:`stacker.dag.DAG`): an optional :class:`stacker.dag.DAG`
+            object. If one is not provided, a new one will be initialized.
+    """
 
     def __init__(self, steps=None, dag=None):
         self.steps = steps or {}
@@ -222,11 +260,7 @@ class Graph(object):
 
 
 class Plan(object):
-    """A collection of :class:`Step` objects to execute.
-    The :class:`Plan` helps organize the steps needed to execute a particular
-    action for a set of :class:`stacker.stack.Stack` objects. When initialized
-    with a set of steps, it will first build a Directed Acyclic Graph from the
-    steps and their dependencies.
+    """A convenience class for working on a Graph.
     Args:
         description (str): description of the plan.
         graph (:class:`Graph`): a graph of steps.

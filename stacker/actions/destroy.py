@@ -37,7 +37,7 @@ class Action(BaseAction):
             action=self._destroy_stack,
             tail=self.provider.tail_stack if tail else None,
             stacks=self.context.get_stacks(),
-            stack_names=self.context.stack_names,
+            targets=self.context.stack_names,
             reverse=True)
 
     def _destroy_stack(self, stack, **kwargs):

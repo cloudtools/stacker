@@ -320,7 +320,7 @@ class Action(BaseAction):
             action=self._launch_stack,
             tail=self.provider.tail_stack if tail else None,
             stacks=self.context.get_stacks(),
-            stack_names=self.context.stack_names)
+            targets=self.context.stack_names)
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""

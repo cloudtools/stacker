@@ -235,7 +235,7 @@ class Action(build.Action):
             description="Diff stacks",
             action=self._diff_stack,
             stacks=self.context.get_stacks(),
-            stack_names=self.context.stack_names)
+            targets=self.context.stack_names)
 
     def run(self, *args, **kwargs):
         plan = self._generate_plan()

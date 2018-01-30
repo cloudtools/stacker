@@ -13,11 +13,19 @@ from stacker.util import (
 logger = logging.getLogger(__name__)
 
 
-def plan(description=None, action=None,
-         tail=None,
-         stacks=None, stack_names=None,
+def plan(description, action, stacks,
+         targets=None, tail=None,
          reverse=False):
-    """A simple helper that builds a graph based plan from a set of stacks."""
+    """A simple helper that builds a graph based plan from a set of stacks.
+    Args:
+        description (str): a description of the plan.
+        action (func): a function to call for each stack.
+        stacks (list): a list of :class:`stacker.stack.Stack` objects to build.
+        targets (list): an optional list of targets to filter the graph to.
+        tail (func): an optional function to call to tail the stack progress.
+        reverse (bool): if True, execute the graph in reverse (useful for
+            destroy actions).
+    """
 
     steps = [
         Step(stack, fn=action, watch_func=tail)
@@ -26,7 +34,7 @@ def plan(description=None, action=None,
     plan = build_plan(
         description=description,
         steps=steps,
-        step_names=stack_names,
+        targets=targets,
         reverse=reverse)
 
     for step in steps:

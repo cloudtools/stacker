@@ -258,6 +258,9 @@ class Graph(object):
         nodes = self.dag.topological_sort()
         return [self.steps[step_name] for step_name in nodes]
 
+    def to_dict(self):
+        return self.dag.graph
+
 
 class Plan(object):
     """A convenience class for working on a Graph.

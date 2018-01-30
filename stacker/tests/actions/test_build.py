@@ -114,7 +114,7 @@ class TestBuildAction(unittest.TestCase):
                 'namespace-bastion': set(['namespace-vpc']),
                 'namespace-other': set([]),
                 'namespace-vpc': set([])},
-            plan.graph.dag.graph
+            plan.graph.to_dict()
         )
 
     def test_dont_execute_plan_when_outline_specified(self):

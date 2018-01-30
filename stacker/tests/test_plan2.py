@@ -57,7 +57,7 @@ class TestPlan(unittest.TestCase):
     def tearDown(self):
         unregister_lookup_handler("noop")
 
-    def test_pan(self):
+    def test_plan(self):
         vpc = Stack(
             definition=generate_definition('vpc', 1),
             context=self.context)
@@ -68,7 +68,7 @@ class TestPlan(unittest.TestCase):
         plan = build_plan(description="Test", steps=[
             Step(vpc, fn=None), Step(bastion, fn=None)])
 
-        self.assertEqual(plan.graph.dag.graph, {
+        self.assertEqual(plan.graph.to_dict(), {
             'namespace-bastion.1': set(['namespace-vpc.1']),
             'namespace-vpc.1': set([])})
 

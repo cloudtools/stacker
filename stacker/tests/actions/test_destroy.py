@@ -58,7 +58,7 @@ class TestDestroyAction(unittest.TestCase):
                 'namespace-db': set(
                     [
                         'namespace-other'])},
-            plan.graph.dag.graph,
+            plan.graph.to_dict()
         )
 
     def test_only_execute_plan_when_forced(self):

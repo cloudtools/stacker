@@ -1,3 +1,4 @@
+import collections
 import logging
 from copy import copy, deepcopy
 from collections import deque
@@ -180,8 +181,8 @@ class DAG(object):
         for new_node in graph_dict.iterkeys():
             self.add_node(new_node)
         for ind_node, dep_nodes in graph_dict.iteritems():
-            if not isinstance(dep_nodes, list):
-                raise TypeError('dict values must be lists')
+            if not isinstance(dep_nodes, collections.Iterable):
+                raise TypeError('%s: dict values must be lists' % ind_node)
             for dep_node in dep_nodes:
                 self.add_edge(ind_node, dep_node)
 
@@ -243,4 +244,7 @@ class DAG(object):
             raise ValueError('graph is not acyclic')
 
     def size(self):
+        return len(self)
+
+    def __len__(self):
         return len(self.graph)

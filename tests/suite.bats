@@ -629,7 +629,9 @@ EOF
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
   assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: pending"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-child:  pending"
   assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: submitted (creating new stack)"
   assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: submitted (rolling back new stack)"
   assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: failed (rolled back new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-child:  failed (dependency has failed)"
 }

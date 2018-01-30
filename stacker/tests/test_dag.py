@@ -3,7 +3,6 @@
 from nose import with_setup
 from nose.tools import nottest, raises
 from stacker.dag import DAG, DAGValidationError
-import multiprocessing
 
 dag = None
 
@@ -77,13 +76,10 @@ def test_walk():
                    'c': ['d'],
                    'd': []})
 
-    lock = multiprocessing.Lock()  # Protects nodes from concurrent access
     nodes = []
 
     def walk_func(n):
-        lock.acquire()
         nodes.append(n)
-        lock.release()
         return True
 
     ok = dag.walk(walk_func)
@@ -101,13 +97,10 @@ def test_walk_failed():
                    'c': ['d'],
                    'd': []})
 
-    lock = multiprocessing.Lock()  # Protects nodes from concurrent access
     nodes = []
 
     def walk_func(n):
-        lock.acquire()
         nodes.append(n)
-        lock.release()
         return False
 
     ok = dag.walk(walk_func)
@@ -115,7 +108,7 @@ def test_walk_failed():
     # Only 2 should have been hit. The rest are canceled because they depend on
     # the success of d.
     assert ok == False  # noqa: E712
-    assert nodes == ['d']
+    assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']
 
 
 @with_setup(start_with_graph)

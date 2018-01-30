@@ -12,6 +12,7 @@ from .exceptions import (
 )
 from .dag import DAG, DAGValidationError
 from .status import (
+    FailedStatus,
     PENDING,
     SUBMITTED,
     COMPLETE,
@@ -244,6 +245,10 @@ class Graph(object):
 
         return self.dag.walk(fn)
 
+    def downstream(self, step_name):
+        """Returns the direct dependencies of the given step"""
+        return list(self.steps[dep] for dep in self.dag.downstream(step_name))
+
     def transposed(self):
         """Returns a "transposed" version of this graph. Useful for walking in
         reverse.
@@ -333,6 +338,14 @@ class Plan(object):
         """Walks each step in the underlying graph, in topological order."""
 
         def walk_func(step):
+            # Before we execute the step, we need to ensure that it's
+            # transitive dependencies are all in an "ok" state. If not, we
+            # won't execute this step.
+            for dep in self.graph.downstream(step.name):
+                if not dep.ok:
+                    step.set_status(FailedStatus("dependency has failed"))
+                    return step.ok
+
             return step.run()
 
         return self.graph.walk(walk_func)

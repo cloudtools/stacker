@@ -21,6 +21,7 @@ from stacker.exceptions import (
 from stacker.status import (
     COMPLETE,
     SKIPPED,
+    FAILED,
 )
 from stacker.stack import Stack
 
@@ -113,7 +114,7 @@ class TestPlan(unittest.TestCase):
             description="Test",
             steps=[Step(vpc, fn), Step(db, fn), Step(app, fn)],
             targets=['db.1'])
-        plan.execute()
+        self.assertTrue(plan.execute())
 
         self.assertEquals(calls, [
             'namespace-vpc.1', 'namespace-db.1'])
@@ -163,9 +164,38 @@ class TestPlan(unittest.TestCase):
         bastion_step = Step(bastion, fn)
 
         plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
-        plan.execute()
+        self.assertTrue(plan.execute())
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
+
+    def test_execute_plan_failed(self):
+        vpc = Stack(
+            definition=generate_definition('vpc', 1),
+            context=self.context)
+        bastion = Stack(
+            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            context=self.context)
+        db = Stack(
+            definition=generate_definition('db', 1),
+            context=self.context)
+
+        calls = []
+
+        def fn(stack, status=None):
+            calls.append(stack.fqn)
+            if stack.fqn == vpc_step.name:
+                return FAILED
+            return COMPLETE
+
+        vpc_step = Step(vpc, fn)
+        bastion_step = Step(bastion, fn)
+        db_step = Step(db, fn)
+
+        plan = build_plan(description="Test", steps=[
+            vpc_step, bastion_step, db_step])
+        self.assertFalse(plan.execute())
+
+        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-db.1'])
 
     def test_build_plan_missing_dependency(self):
         bastion = Stack(

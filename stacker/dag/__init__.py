@@ -97,11 +97,13 @@ class DAG(object):
         nodes = self.topological_sort()
         # Reverse so we start with nodes that have no dependencies.
         nodes.reverse()
+
+        failed = False
         for n in nodes:
             if not walk_func(n):
-                return False
+                failed = True
 
-        return True
+        return not failed
 
     def rename_edges(self, old_task_name, new_task_name):
         """ Change references to a task in existing edges. """

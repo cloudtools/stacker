@@ -9,7 +9,7 @@ import uuid
 from colorama.ansi import Fore
 
 
-from .actions.base import stack_template_key_name
+from .util import stack_template_key_name
 from .exceptions import (
     CancelExecution,
     ImproperlyConfigured,

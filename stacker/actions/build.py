@@ -1,8 +1,7 @@
 import logging
 import sys
 
-from stacker import plan
-from .base import BaseAction
+from .base import BaseAction, plan
 
 from ..providers.base import Template
 from .. import util

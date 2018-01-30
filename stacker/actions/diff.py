@@ -4,7 +4,7 @@ import logging
 import sys
 from operator import attrgetter
 
-from stacker import plan
+from .base import plan
 from . import build
 from .. import exceptions
 from ..status import NotSubmittedStatus, NotUpdatedStatus, COMPLETE

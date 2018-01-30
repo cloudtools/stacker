@@ -5,7 +5,7 @@ import tempfile
 import unittest
 import mock
 
-from stacker.actions.base import stack_template_key_name
+from stacker.util import stack_template_key_name
 from stacker.context import Context
 from stacker.context import Config
 from stacker.exceptions import ImproperlyConfigured, FailedVariableLookup

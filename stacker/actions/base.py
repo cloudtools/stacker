@@ -1,5 +1,7 @@
 import logging
 
+from ..plan2 import Step, build_plan
+
 import botocore.exceptions
 from stacker.session_cache import get_session
 
@@ -9,6 +11,28 @@ from stacker.util import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def plan(description=None, action=None,
+         tail=None,
+         stacks=None, stack_names=None,
+         reverse=False):
+    """A simple helper that builds a graph based plan from a set of stacks."""
+
+    steps = [
+        Step(stack, fn=action, watch_func=tail)
+        for stack in stacks]
+
+    plan = build_plan(
+        description=description,
+        steps=steps,
+        step_names=stack_names,
+        reverse=reverse)
+
+    for step in steps:
+        step.status_changed_func = plan._check_point
+
+    return plan
 
 
 def stack_template_key_name(blueprint):

@@ -6,7 +6,7 @@ import unittest
 import mock
 
 from stacker.context import Context, Config
-from stacker.actions.base import stack_template_key_name
+from stacker.util import stack_template_key_name
 from stacker.lookups.registry import (
     register_lookup_handler,
     unregister_lookup_handler,

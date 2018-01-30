@@ -1,8 +1,7 @@
 import logging
 import sys
 
-from stacker import plan
-from .base import BaseAction
+from .base import BaseAction, plan
 from ..exceptions import StackDoesNotExist
 from .. import util
 from ..status import (

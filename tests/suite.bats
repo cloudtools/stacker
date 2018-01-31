@@ -190,6 +190,55 @@ EOF
   assert "$status" -eq 0
 }
 
+@test "stacker build - interactive with skipped update" {
+  needs_aws
+
+  config1() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+  - name: bastion
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    requires: [vpc]
+EOF
+  }
+
+  config2() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+  - name: bastion
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+    requires: [vpc]
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(config1)
+  }
+
+  # Create the new stacks.
+  stacker build <(config1)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line -E "${STACKER_NAMESPACE}-vpc:\s.*pending"
+  assert_has_line -E "${STACKER_NAMESPACE}-vpc:\s.*submitted \(creating new stack\)"
+  assert_has_line -E "${STACKER_NAMESPACE}-vpc:\s.*complete \(creating new stack\)"
+  assert_has_line -E "${STACKER_NAMESPACE}-bastion:\s.*pending"
+  assert_has_line -E "${STACKER_NAMESPACE}-bastion:\s.*submitted \(creating new stack\)"
+  assert_has_line -E "${STACKER_NAMESPACE}-bastion:\s.*complete \(creating new stack\)"
+
+  # Attempt an update to all stacks, but skip the vpc update.
+  stacker build -i <(config2) <<< $'n\ny\n'
+  assert "$status" -eq 0
+  assert_has_line -E "${STACKER_NAMESPACE}-vpc:\s.*skipped \(canceled execution\)"
+  assert_has_line -E "${STACKER_NAMESPACE}-bastion:\s.*submitted \(updating existing stack\)"
+}
+
 @test "stacker build - no namespace" {
   needs_aws
 

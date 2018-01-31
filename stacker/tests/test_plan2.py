@@ -16,6 +16,7 @@ from stacker.plan2 import (
     build_plan,
 )
 from stacker.exceptions import (
+    CancelExecution,
     GraphError,
 )
 from stacker.status import (
@@ -196,6 +197,31 @@ class TestPlan(unittest.TestCase):
         self.assertFalse(plan.execute())
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-db.1'])
+
+    def test_execute_plan_cancelled(self):
+        vpc = Stack(
+            definition=generate_definition('vpc', 1),
+            context=self.context)
+        bastion = Stack(
+            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            context=self.context)
+
+        calls = []
+
+        def fn(stack, status=None):
+            calls.append(stack.fqn)
+            if stack.fqn == vpc_step.name:
+                raise CancelExecution
+            return COMPLETE
+
+        vpc_step = Step(vpc, fn)
+        bastion_step = Step(bastion, fn)
+
+        plan = build_plan(description="Test", steps=[
+            vpc_step, bastion_step])
+        self.assertTrue(plan.execute())
+
+        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
     def test_build_plan_missing_dependency(self):
         bastion = Stack(

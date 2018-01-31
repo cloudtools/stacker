@@ -8,11 +8,13 @@ from colorama.ansi import Fore
 
 from .util import stack_template_key_name
 from .exceptions import (
+    CancelExecution,
     GraphError,
 )
 from .dag import DAG, DAGValidationError
 from .status import (
     FailedStatus,
+    SkippedStatus,
     PENDING,
     SUBMITTED,
     COMPLETE,
@@ -74,7 +76,10 @@ class Step(object):
         return self.ok
 
     def _run_once(self):
-        status = self.fn(self.stack, status=self.status)
+        try:
+            status = self.fn(self.stack, status=self.status)
+        except CancelExecution:
+            status = SkippedStatus(reason="canceled execution")
         self.set_status(status)
         return status
 

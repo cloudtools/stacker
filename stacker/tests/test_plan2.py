@@ -232,7 +232,7 @@ class TestPlan(unittest.TestCase):
         with self.assertRaises(GraphError) as expected:
             build_plan(description="Test", steps=[Step(bastion, None)])
         message = ("Error detected when adding 'namespace-vpc.1' "
-                   "as a dependency of 'namespace-bastion.1': node "
+                   "as a dependency of 'namespace-bastion.1': dependent node "
                    "namespace-vpc.1 does not exist")
         self.assertEqual(expected.exception.message, message)
 

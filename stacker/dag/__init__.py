@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from collections import OrderedDict
-except:
+except ImportError:
     from ordereddict import OrderedDict
 
 
@@ -23,20 +23,40 @@ class DAG(object):
         self.reset_graph()
 
     def add_node(self, node_name):
-        """ Add a node if it does not exist yet, or error out. """
+        """ Add a node if it does not exist yet, or error out.
+
+        Args:
+            node_name (str): The unique name of the node to add.
+
+        Raises:
+            KeyError: Raised if a node with the same name already exist in the
+                      graph
+        """
         graph = self.graph
         if node_name in graph:
             raise KeyError('node %s already exists' % node_name)
         graph[node_name] = set()
 
     def add_node_if_not_exists(self, node_name):
+        """ Add a node if it does not exist yet, ignoring duplicates.
+
+        Args:
+            node_name (str): The name of the node to add.
+        """
         try:
             self.add_node(node_name)
         except KeyError:
             pass
 
     def delete_node(self, node_name):
-        """ Deletes this node and all edges referencing it. """
+        """ Deletes this node and all edges referencing it.
+
+        Args:
+            node_name (str): The name of the node to delete.
+
+        Raises:
+            KeyError: Raised if the node does not exist in the graph.
+        """
         graph = self.graph
         if node_name not in graph:
             raise KeyError('node %s does not exist' % node_name)
@@ -47,18 +67,37 @@ class DAG(object):
                 edges.remove(node_name)
 
     def delete_node_if_exists(self, node_name):
+        """ Deletes this node and all edges referencing it.
+
+        Ignores any node that is not in the graph, rather than throwing an
+        exception.
+
+        Args:
+            node_name (str): The name of the node to delete.
+        """
+
         try:
             self.delete_node(node_name)
         except KeyError:
             pass
 
     def add_edge(self, ind_node, dep_node):
-        """ Add an edge (dependency) between the specified nodes. """
+        """ Add an edge (dependency) between the specified nodes.
+
+        Args:
+            ind_node (str): The independent node to add an edge to.
+            dep_node (str): The dependent node that has a dependency on the
+                            ind_node.
+
+        Raises:
+            KeyError: Either the ind_node, or dep_node do not exist.
+            DAGValidationError: Raised if the resulting graph is invalid.
+        """
         graph = self.graph
         if ind_node not in graph:
-            raise KeyError('node %s does not exist' % ind_node)
+            raise KeyError('independent node %s does not exist' % ind_node)
         if dep_node not in graph:
-            raise KeyError('node %s does not exist' % dep_node)
+            raise KeyError('dependent node %s does not exist' % dep_node)
         test_graph = deepcopy(graph)
         test_graph[ind_node].add(dep_node)
         test_dag = DAG()
@@ -70,14 +109,30 @@ class DAG(object):
             raise DAGValidationError(message)
 
     def delete_edge(self, ind_node, dep_node):
-        """ Delete an edge from the graph. """
+        """ Delete an edge from the graph.
+
+        Args:
+            ind_node (str): The independent node to delete an edge from.
+            dep_node (str): The dependent node that has a dependency on the
+                            ind_node.
+
+        Raises:
+            KeyError: Raised when the edge doesn't already exist.
+        """
         graph = self.graph
         if dep_node not in graph.get(ind_node, []):
-            raise KeyError('this edge does not exist in graph')
+            raise KeyError("No edge exists between %s and %s." % (
+                ind_node, dep_node
+                )
+            )
         graph[ind_node].remove(dep_node)
 
     def transpose(self):
-        """ Builds a new graph with the edges reversed. """
+        """ Builds a new graph with the edges reversed.
+
+        Returns:
+            :class:`stacker.dag.DAG`: The transposed graph.
+        """
         graph = self.graph
         transposed = DAG()
         for node, edges in graph.items():
@@ -93,6 +148,14 @@ class DAG(object):
         This can be used to perform a set of operations, where the next
         operation depends on the previous operation. It's important to note
         that walking happens serially, and is not paralellized.
+
+        Args:
+            walk_func (:class:`types.FunctionType`): The function to be called
+                on each node of the graph.
+
+        Returns:
+            bool: True if the function succeeded on every node, otherwise
+                  False.
         """
         nodes = self.topological_sort()
         # Reverse so we start with nodes that have no dependencies.
@@ -105,26 +168,46 @@ class DAG(object):
 
         return not failed
 
-    def rename_edges(self, old_task_name, new_task_name):
-        """ Change references to a task in existing edges. """
+    def rename_edges(self, old_node_name, new_node_name):
+        """ Change references to a node in existing edges.
+
+        Args:
+            old_node_name (str): The old name for the node.
+            new_node_name (str): The new name for the node.
+        """
         graph = self.graph
         for node, edges in graph.items():
-            if node == old_task_name:
-                graph[new_task_name] = copy(edges)
-                del graph[old_task_name]
+            if node == old_node_name:
+                graph[new_node_name] = copy(edges)
+                del graph[old_node_name]
 
             else:
-                if old_task_name in edges:
-                    edges.remove(old_task_name)
-                    edges.add(new_task_name)
+                if old_node_name in edges:
+                    edges.remove(old_node_name)
+                    edges.add(new_node_name)
 
     def predecessors(self, node):
-        """ Returns a list of all predecessors of the given node """
+        """ Returns a list of all immediate predecessors of the given node
+
+        Args:
+            node (str): The node whose predecessors you want to find.
+
+        Returns:
+            list: A list of nodes that are immediate predecessors to node.
+        """
         graph = self.graph
         return [key for key in graph if node in graph[key]]
 
     def downstream(self, node):
-        """ Returns a list of all nodes this node has edges towards. """
+        """ Returns a list of all nodes this node has edges towards.
+
+        Args:
+            node (str): The node whose downstream nodes you want to find.
+
+        Returns:
+            list: A list of nodes that are immediately downstream from the
+                  node.
+        """
         graph = self.graph
         if node not in graph:
             raise KeyError('node %s is not in graph' % node)
@@ -133,7 +216,14 @@ class DAG(object):
     def all_downstreams(self, node):
         """Returns a list of all nodes ultimately downstream
         of the given node in the dependency graph, in
-        topological order."""
+        topological order.
+
+        Args:
+             node (str): The node whose downstream nodes you want to find.
+
+        Returns:
+            list: A list of nodes that are downstream from the node.
+        """
         nodes = [node]
         nodes_seen = set()
         i = 0
@@ -151,6 +241,12 @@ class DAG(object):
     def filter(self, nodes):
         """ Returns a new DAG with only the given nodes and their
         dependencies.
+
+        Args:
+            nodes (list): The nodes you are interested in.
+
+        Returns:
+            :class:`stacker.dag.DAG`: The filtered graph.
         """
 
         filtered_dag = DAG()
@@ -169,7 +265,11 @@ class DAG(object):
         return filtered_dag
 
     def all_leaves(self):
-        """ Return a list of all leaves (nodes with no downstreams) """
+        """ Return a list of all leaves (nodes with no downstreams)
+
+        Returns:
+            list: A list of all the nodes with no downstreams.
+        """
         graph = self.graph
         return [key for key in graph if not graph[key]]
 
@@ -177,6 +277,12 @@ class DAG(object):
         """ Reset the graph and build it from the passed dictionary.
 
         The dictionary takes the form of {node_name: [directed edges]}
+
+        Args:
+            graph_dict (dict): The dictionary used to create the graph.
+
+        Raises:
+            TypeError: Raised if the value of items in the dict are not lists.
         """
 
         self.reset_graph()
@@ -193,7 +299,11 @@ class DAG(object):
         self.graph = OrderedDict()
 
     def ind_nodes(self):
-        """ Returns a list of all nodes in the graph with no dependencies. """
+        """ Returns a list of all nodes in the graph with no dependencies.
+
+        Returns:
+            list: A list of all independent nodes.
+        """
         graph = self.graph
 
         dependent_nodes = set(
@@ -214,7 +324,11 @@ class DAG(object):
     def topological_sort(self):
         """ Returns a topological ordering of the DAG.
 
-        Raises an error if this is not possible (graph is not valid).
+        Returns:
+            list: A list of topologically sorted nodes in the graph.
+
+        Raises:
+            ValueError: Raised if the graph is not acyclic.
         """
         graph = self.graph
 
@@ -231,17 +345,17 @@ class DAG(object):
             if in_degree[u] == 0:
                 queue.appendleft(u)
 
-        l = []
+        sorted_graph = []
         while queue:
             u = queue.pop()
-            l.append(u)
+            sorted_graph.append(u)
             for v in graph[u]:
                 in_degree[v] -= 1
                 if in_degree[v] == 0:
                     queue.appendleft(v)
 
-        if len(l) == len(graph):
-            return l
+        if len(sorted_graph) == len(graph):
+            return sorted_graph
         else:
             raise ValueError('graph is not acyclic')
 

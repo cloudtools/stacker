@@ -17,6 +17,7 @@ def plan(description, action, stacks,
          targets=None, tail=None,
          reverse=False):
     """A simple helper that builds a graph based plan from a set of stacks.
+
     Args:
         description (str): a description of the plan.
         action (func): a function to call for each stack.
@@ -25,6 +26,9 @@ def plan(description, action, stacks,
         tail (func): an optional function to call to tail the stack progress.
         reverse (bool): if True, execute the graph in reverse (useful for
             destroy actions).
+
+    Returns:
+        :class:`plan.Plan`: The resulting plan object
     """
 
     steps = [

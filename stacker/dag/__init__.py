@@ -198,6 +198,21 @@ class DAG(object):
         graph = self.graph
         return [key for key in graph if node in graph[key]]
 
+    def all_predecessors(self, node):
+        nodes = [node]
+        nodes_seen = set()
+        i = 0
+        while i < len(nodes):
+            predecessors = self.predecessors(nodes[i])
+            for predecessor_node in predecessors:
+                if predecessor_node not in nodes_seen:
+                    nodes_seen.add(predecessor_node)
+                    nodes.append(predecessor_node)
+            i += 1
+        return filter(
+                lambda node: node
+                in nodes_seen, self.topological_sort())
+
     def downstream(self, node):
         """ Returns a list of all nodes this node has edges towards.
 
@@ -239,8 +254,9 @@ class DAG(object):
                 in nodes_seen, self.topological_sort())
 
     def filter(self, nodes):
-        """ Returns a new DAG with only the given nodes and their
-        dependencies.
+        """ Returns a new filtered DAG that only includes nodes that are
+        connected in some way to the given nodes. This effectively returns an
+        isolated sub-graph of a larger graph.
 
         Args:
             nodes (list): The nodes you are interested in.
@@ -251,13 +267,21 @@ class DAG(object):
 
         filtered_dag = DAG()
 
-        # Add only the nodes we need.
         for node in nodes:
             filtered_dag.add_node_if_not_exists(node)
-            for edge in self.all_downstreams(node):
-                filtered_dag.add_node_if_not_exists(edge)
 
-        # Now, rebuild the graph for each node that's present.
+            # First, we walk up the graph to determine all the nodes that
+            # depend on this node.
+            for predecessor in self.all_predecessors(node):
+                filtered_dag.add_node_if_not_exists(predecessor)
+
+                # Then we walk back down the graph to determine each nodes
+                # transitive dependencies.
+                for downstream in self.all_downstreams(predecessor):
+                    filtered_dag.add_node_if_not_exists(downstream)
+
+        # Now, rebuild the edges for each node that's present in the filtered
+        # graph.
         for node, edges in self.graph.items():
             if node in filtered_dag.graph:
                 filtered_dag.graph[node] = edges

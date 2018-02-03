@@ -169,10 +169,50 @@ def test_predecessors():
 
 
 @with_setup(start_with_graph)
-def test_filter():
-    dag2 = dag.filter(['b', 'c'])
-    assert dag2.graph == {'b': set('d'),
-                          'c': set('d'),
+def test_all_predecessors():
+    assert set(dag.all_predecessors('d')) == set(['a', 'b', 'c'])
+
+    dag.from_dict({'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+    assert set(dag.all_predecessors('d')) == set(['b', 'c'])
+
+
+@with_setup(start_with_graph)
+def test_filter_single():
+    dag2 = dag.filter(['b'])
+    assert dag2.graph == {'b': set(['d']),
+                          'a': set(['c', 'b']),
+                          'c': set(['d']),
+                          'd': set()}
+
+
+@with_setup(blank_setup)
+def test_filter_multiple():
+    dag.from_dict({'e': ['d'],
+                   'a': ['b', 'c'],
+                   'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+    dag2 = dag.filter(['b', 'e'])
+    assert dag2.graph == {'b': set(['d']),
+                          'a': set(['c', 'b']),
+                          'c': set(['d']),
+                          'd': set(),
+                          'e': set(['d'])}
+
+
+@with_setup(blank_setup)
+def test_filter_with_leaves():
+    dag.from_dict({'e': ['d'],
+                   'a': ['b', 'c'],
+                   'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+    dag2 = dag.filter(['b'])
+    assert dag2.graph == {'b': set(['d']),
+                          'a': set(['c', 'b']),
+                          'c': set(['d']),
                           'd': set()}
 
 

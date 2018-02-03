@@ -98,6 +98,9 @@ class TestPlan(unittest.TestCase):
         vpc = Stack(
             definition=generate_definition('vpc', 1),
             context=self.context)
+        bastion = Stack(
+            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            context=self.context)
         db = Stack(
             definition=generate_definition('db', 1, requires=[vpc.fqn]),
             context=self.context)
@@ -113,12 +116,14 @@ class TestPlan(unittest.TestCase):
 
         plan = build_plan(
             description="Test",
-            steps=[Step(vpc, fn), Step(db, fn), Step(app, fn)],
+            steps=[
+                Step(vpc, fn), Step(db, fn),
+                Step(app, fn), Step(bastion, fn)],
             targets=['db.1'])
         self.assertTrue(plan.execute())
 
         self.assertEquals(calls, [
-            'namespace-vpc.1', 'namespace-db.1'])
+            'namespace-vpc.1', 'namespace-db.1', 'namespace-app.1'])
 
     def test_execute_plan_exception(self):
         vpc = Stack(

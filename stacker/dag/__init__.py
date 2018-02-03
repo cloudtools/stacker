@@ -359,6 +359,15 @@ class DAG(object):
         else:
             raise ValueError('graph is not acyclic')
 
+    def to_dot(self, name="dag"):
+        m = "digraph %s {\n" % name
+        for node, deps in self.graph.items():
+            for dep in deps:
+                m += "    \"%s\" -> \"%s\";\n" % (node, dep)
+        m += "}"
+
+        return m
+
     def size(self):
         return len(self)
 

@@ -37,13 +37,16 @@ class Build(BaseCommand):
         parser.add_argument("-d", "--dump", action="store", type=str,
                             help="Dump the rendered Cloudformation templates "
                                  "to a directory")
+        parser.add_argument("--dot", action="store",
+                            help="Generate a DOT graph of the dependency tree")
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context, provider=options.provider)
         action.execute(outline=options.outline,
                        tail=options.tail,
-                       dump=options.dump)
+                       dump=options.dump,
+                       dot=options.dot)
 
     def get_context_kwargs(self, options, **kwargs):
         return {"stack_names": options.stacks, "force_stacks": options.force}

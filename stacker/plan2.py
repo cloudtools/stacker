@@ -271,6 +271,9 @@ class Graph(object):
     def to_dict(self):
         return self.dag.graph
 
+    def to_dot(self):
+        return self.dag.to_dot()
+
 
 class Plan(object):
     """A convenience class for working on a Graph.
@@ -398,3 +401,6 @@ class Plan(object):
 
     def keys(self):
         return self.step_names
+
+    def to_dot(self):
+        return self.graph.to_dot()

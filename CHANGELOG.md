@@ -1,5 +1,6 @@
 ## Upcoming/Master
 
+- assertRenderedBlueprint always dumps current results [GH-528]
 
 ## 1.1.4 (2018-01-26)
 

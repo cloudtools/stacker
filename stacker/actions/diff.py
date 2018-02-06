@@ -1,12 +1,13 @@
 import difflib
 import json
 import logging
+import sys
 from operator import attrgetter
 
+from .base import plan
 from . import build
 from .. import exceptions
-from ..plan import COMPLETE, Plan
-from ..status import NotSubmittedStatus, NotUpdatedStatus
+from ..status import NotSubmittedStatus, NotUpdatedStatus, COMPLETE
 
 logger = logging.getLogger(__name__)
 
@@ -230,23 +231,18 @@ class Action(build.Action):
         return COMPLETE
 
     def _generate_plan(self):
-        plan = Plan(description="Diff stacks")
-        stacks = self.context.get_stacks_dict()
-        dependencies = self._get_dependencies()
-        for stack_name in self.get_stack_execution_order(dependencies):
-            plan.add(
-                stacks[stack_name],
-                run_func=self._diff_stack,
-                requires=dependencies.get(stack_name),
-            )
-        return plan
+        return plan(
+            description="Diff stacks",
+            action=self._diff_stack,
+            stacks=self.context.get_stacks(),
+            targets=self.context.stack_names)
 
     def run(self, *args, **kwargs):
         plan = self._generate_plan()
-        debug_plan = self._generate_plan()
-        debug_plan.outline(logging.DEBUG)
+        plan.outline(logging.DEBUG)
         logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
-        plan.execute()
+        if not plan.execute():
+            sys.exit(1)
 
     """Don't ever do anything for pre_run or post_run"""
     def pre_run(self, *args, **kwargs):

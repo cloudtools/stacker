@@ -1,30 +1,25 @@
-from collections import OrderedDict
-import hashlib
-import logging
-import multiprocessing
 import os
+import logging
 import time
 import uuid
+import multiprocessing
 
 from colorama.ansi import Fore
-
 
 from .util import stack_template_key_name
 from .exceptions import (
     CancelExecution,
-    ImproperlyConfigured,
-    PlanFailed
+    GraphError,
 )
-from .logger import LOOP_LOGGER_TYPE
+from .dag import DAG, DAGValidationError
 from .status import (
     FailedStatus,
     SkippedStatus,
-    Status,
     PENDING,
     SUBMITTED,
     COMPLETE,
     SKIPPED,
-    FAILED
+    FAILED,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,26 +27,73 @@ logger = logging.getLogger(__name__)
 
 class Step(object):
     """State machine for executing generic actions related to stacks.
-
     Args:
         stack (:class:`stacker.stack.Stack`): the stack associated
             with this step
-        run_func (func): the function to be run for the given stack
-        requires (list, optional): List of stacks this step depends on being
-            completed before running. This step will not be executed unless the
-            required stacks have either completed or skipped.
-
+        fn (func): the function to run to execute the step. This function will
+            be ran multiple times until the step is "done".
+        watch_func (func): an optional function that will be called to "tail"
+            the step action.
+        status_changed_func (func): an optional function that will be called
+            when the step changes status.
     """
 
-    def __init__(self, stack, run_func, requires=None):
+    def __init__(self, stack, fn, watch_func=None,
+                 status_changed_func=None):
         self.stack = stack
         self.status = PENDING
-        self.requires = requires or []
-        self._run_func = run_func
         self.last_updated = time.time()
+        self.fn = fn
+        self.watch_func = watch_func
+        self.status_changed_func = status_changed_func
 
     def __repr__(self):
         return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
+
+    def run(self):
+        """Runs this step until it has completed successfully, or been
+        skipped.
+        """
+
+        watcher = None
+        if self.watch_func:
+            watcher = multiprocessing.Process(
+                target=self.watch_func,
+                args=(self.stack,)
+            )
+            watcher.start()
+
+        try:
+            if self.status_changed_func:
+                self.status_changed_func()
+
+            while not self.done:
+                self._run_once()
+        finally:
+            if watcher and watcher.is_alive():
+                watcher.terminate()
+                watcher.join()
+        return self.ok
+
+    def _run_once(self):
+        try:
+            status = self.fn(self.stack, status=self.status)
+        except CancelExecution:
+            status = SkippedStatus(reason="canceled execution")
+        self.set_status(status)
+        return status
+
+    @property
+    def name(self):
+        return self.stack.fqn
+
+    @property
+    def short_name(self):
+        return self.stack.name
+
+    @property
+    def requires(self):
+        return self.stack.requires
 
     @property
     def completed(self):
@@ -65,24 +107,27 @@ class Step(object):
 
     @property
     def failed(self):
+        """Returns True if the step is in a FAILED state."""
         return self.status == FAILED
 
     @property
     def done(self):
-        """Returns True if the step is finished (either COMPLETE or SKIPPED)"""
+        """Returns True if the step is finished (either COMPLETE, SKIPPED or FAILED)
+        """
         return self.completed or self.skipped or self.failed
+
+    @property
+    def ok(self):
+        """Returns True if the step is finished (either COMPLETE or SKIPPED)"""
+        return self.completed or self.skipped
 
     @property
     def submitted(self):
         """Returns True if the step is SUBMITTED, COMPLETE, or SKIPPED."""
         return self.status >= SUBMITTED
 
-    def run(self):
-        return self._run_func(self.stack, status=self.status)
-
     def set_status(self, status):
         """Sets the current step's status.
-
         Args:
             status (:class:`Status <Status>` object): The status to set the
                 step to.
@@ -92,6 +137,8 @@ class Step(object):
                          status.name)
             self.status = status
             self.last_updated = time.time()
+            if self.status_changed_func:
+                self.status_changed_func()
 
     def complete(self):
         """A shortcut for set_status(COMPLETE)"""
@@ -105,209 +152,142 @@ class Step(object):
         """A shortcut for set_status(SUBMITTED)"""
         self.set_status(SUBMITTED)
 
-    def fail(self):
-        """A shortcut for set_status(FAILED)"""
-        self.set_status(FAILED)
 
-
-class Plan(OrderedDict):
-    """A collection of :class:`Step` objects to execute.
-
-    The :class:`Plan` helps organize the steps needed to execute a particular
-    action for a set of :class:`stacker.stack.Stack` objects. It will run the
-    steps in the order they are added to the `Plan` via the :func:`Plan.add`
-    function. If a `Step` specifies requirements, the `Plan` will wait until
-    the required stacks have completed before executing that `Step`.
-
+def build_plan(description, steps,
+               targets=None, reverse=False):
+    """Builds a plan from a list of steps.
     Args:
-        description (str): description of the plan
-        sleep_time (int, optional): the amount of time that will be passed to
-            the `wait_func`. Default: 5 seconds.
-        wait_func (func, optional): the function to be called after each pass
-            of running stacks. This defaults to :func:`time.sleep` and will
-            sleep for the given `sleep_time` before starting the next pass.
-            Default: :func:`time.sleep`
+        description (str): an arbitrary string to
+            describe the plan.
+        steps (list): a list of :class:`Step` objects to execute.
+        targets (list): an optional list of step names to filter the graph to.
+            If provided, only these steps, and their transitive dependencies
+            will be executed. If no targets are specified, every node in the
+            graph will be executed.
+        reverse (bool): If provided, the graph will be walked in reverse order
+            (dependencies last).
+    """
+    graph = build_graph(steps)
 
+    # If we want to execute the plan in reverse (e.g. Destroy), transpose the
+    # graph.
+    if reverse:
+        graph = graph.transposed()
+
+    # If we only want to build a specific target, filter the graph.
+    if targets:
+        nodes = []
+        for target in targets:
+            for step in steps:
+                if step.short_name == target:
+                    nodes.append(step.name)
+        graph = graph.filtered(nodes)
+
+    return Plan(description=description, graph=graph)
+
+
+def build_graph(steps):
+    """Builds a graph of steps.
+    Args:
+        steps (list): a list of :class:`Step` objects to execute.
     """
 
-    def __init__(self, description, sleep_time=5, wait_func=None,
-                 watch_func=None, logger_type=None, *args, **kwargs):
-        self.description = description
-        self.sleep_time = sleep_time
-        self.logger_type = logger_type
-        if wait_func is not None:
-            if not callable(wait_func):
-                raise ImproperlyConfigured(self.__class__,
-                                           "\"wait_func\" must be a callable")
-            self._wait_func = wait_func
-        else:
-            self._wait_func = time.sleep
+    graph = Graph()
 
-        self._watchers = {}
-        self._watch_func = watch_func
-        self.id = uuid.uuid4()
-        super(Plan, self).__init__(*args, **kwargs)
+    for step in steps:
+        graph.add_step(step)
 
-    def add(self, stack, run_func, requires=None):
-        """Add a new step to the plan.
+    for step in steps:
+        for dep in step.requires:
+            graph.connect(step, dep)
 
-        Args:
-            stack (:class:`stacker.stack.Stack`): The stack to add to the plan.
-            run_func (function): The function to call when the step is ran.
-            requires (list, optional): A list of other stacks that are required
-                to be complete before this step is started.
-        """
-        self[stack.fqn] = Step(
-            stack=stack,
-            run_func=run_func,
-            requires=requires,
-        )
+    return graph
 
-    def list_status(self, status):
-        """Returns a list of steps in the given status.
 
-        Args:
-            status (:class:`Status`): The status to match steps against.
+class Graph(object):
+    """Graph represents a graph of steps.
 
-        Returns:
-            list: A list of :class:`Step` objects that are in the given status.
-        """
-        return [step for step in self.iteritems() if step[1].status == status]
+    The :class:`Graph` helps organize the steps needed to execute a particular
+    action for a set of :class:`stacker.stack.Stack` objects. When initialized
+    with a set of steps, it will first build a Directed Acyclic Graph from the
+    steps and their dependencies.
 
-    def list_completed(self):
-        """A shortcut for list_status(COMPLETE)"""
-        return self.list_status(COMPLETE)
+    Example:
 
-    def list_submitted(self):
-        """A shortcut for list_status(SUBMITTED)"""
-        return self.list_status(SUBMITTED)
+    >>> dag = DAG()
+    >>> a = Step("a", fn=build)
+    >>> b = Step("b", fn=build)
+    >>> dag.add_step(a)
+    >>> dag.add_step(b)
+    >>> dag.connect(a, b)
 
-    def list_skipped(self):
-        """A shortcut for list_status(SKIPPED)"""
-        return self.list_status(SKIPPED)
+    Args:
+        steps (list): an optional list of :class:`Step` objects to execute.
+        dag (:class:`stacker.dag.DAG`): an optional :class:`stacker.dag.DAG`
+            object. If one is not provided, a new one will be initialized.
+    """
 
-    def list_failed(self):
-        """A shortcut for list_status(SKIPPED)"""
-        return self.list_status(FAILED)
+    def __init__(self, steps=None, dag=None):
+        self.steps = steps or {}
+        self.dag = dag or DAG()
 
-    def list_pending(self):
-        """Pending is any task that isn't COMPLETE or SKIPPED or FAILED. """
-        return [step for step in self.iteritems() if not step[1].done]
+    def add_step(self, step):
+        self.steps[step.name] = step
+        self.dag.add_node(step.name)
 
-    @property
-    def check_point_interval(self):
-        return 1 if self.logger_type == LOOP_LOGGER_TYPE else 10
-
-    @property
-    def completed(self):
-        """True if there are no more pending steps."""
-        if self.list_pending():
-            return False
-        return True
-
-    def _single_run(self):
-        """Executes a single run through the plan, touching each step."""
-        for step_name, step in self.list_pending():
-            waiting_on = []
-            failed = False
-            for required_stack in step.requires:
-                if self[required_stack].failed:
-                    logger.warn(
-                        'Stack \"%s\" cannot be updated, as dependency \"%s\" '
-                        'has failed',
-                        step_name, required_stack)
-                    step.set_status(FailedStatus("dependency has failed"))
-                    failed = True
-                    break
-
-                if not self[required_stack].completed and \
-                        not self[required_stack].skipped:
-                    waiting_on.append(required_stack)
-
-            if failed:
-                continue
-
-            if waiting_on:
-                logger.debug(
-                    "Stack: \"%s\" waiting on required stacks: %s",
-                    step.stack.name,
-                    ", ".join(waiting_on),
-                )
-                continue
-
-            # Kick off watchers - used for tailing the stack
-            if (
-                not step.done and
-                self._watch_func and
-                step_name not in self._watchers
-            ):
-                process = multiprocessing.Process(
-                    target=self._watch_func,
-                    args=(step.stack,)
-                )
-                self._watchers[step_name] = process
-                process.start()
-
-            try:
-                status = step.run()
-            except CancelExecution:
-                status = SkippedStatus(reason="canceled execution")
-
-            if not isinstance(status, Status):
-                raise ValueError(
-                    "Step run_func must return a valid Status object. "
-                    "(Returned type: %s)" % (type(status)))
-            step.set_status(status)
-
-            # Terminate any watchers when step completes
-            if step.done and step_name in self._watchers:
-                self._terminate_watcher(self._watchers[step_name])
-
-        return self.completed
-
-    def _terminate_watcher(self, watcher):
-        if watcher.is_alive():
-            watcher.terminate()
-            watcher.join()
-
-    def execute(self):
-        """Execute the plan.
-
-        This will run through all of the steps registered with the plan and
-        submit them in parallel based on their dependencies.
-        """
-
-        attempts = 0
-        last_md5 = self.md5
+    def connect(self, step, dep):
         try:
-            while not self.completed:
-                if (
-                    not attempts % self.check_point_interval or
-                    self.md5 != last_md5
-                ):
-                    last_md5 = self.md5
-                    self._check_point()
+            self.dag.add_edge(step.name, dep)
+        except KeyError as e:
+            raise GraphError(e, step.name, dep)
+        except DAGValidationError as e:
+            raise GraphError(e, step.name, dep)
 
-                attempts += 1
-                if not self._single_run():
-                    self._wait_func(self.sleep_time)
+    def walk(self, walk_func):
+        def fn(step_name):
+            step = self.steps[step_name]
+            return walk_func(step)
 
-        finally:
-            for watcher in self._watchers.values():
-                self._terminate_watcher(watcher)
+        return self.dag.walk(fn)
 
-        self._check_point()
+    def downstream(self, step_name):
+        """Returns the direct dependencies of the given step"""
+        return list(self.steps[dep] for dep in self.dag.downstream(step_name))
 
-        failed_stacks = [step[1].stack for step in self.list_failed()]
-        if failed_stacks:
-            raise PlanFailed(failed_stacks)
+    def transposed(self):
+        """Returns a "transposed" version of this graph. Useful for walking in
+        reverse.
+        """
+        return Graph(steps=self.steps, dag=self.dag.transpose())
+
+    def filtered(self, step_names):
+        """Returns a "filtered" version of this graph."""
+        return Graph(steps=self.steps, dag=self.dag.filter(step_names))
+
+    def topological_sort(self):
+        nodes = self.dag.topological_sort()
+        return [self.steps[step_name] for step_name in nodes]
+
+    def to_dict(self):
+        return self.dag.graph
+
+
+class Plan(object):
+    """A convenience class for working on a Graph.
+    Args:
+        description (str): description of the plan.
+        graph (:class:`Graph`): a graph of steps.
+    """
+
+    def __init__(self, description, graph):
+        self.id = uuid.uuid4()
+        self.description = description
+        self.graph = graph
 
     def outline(self, level=logging.INFO, message=""):
         """Print an outline of the actions the plan is going to take.
-
         The outline will represent the rough ordering of the steps that will be
         taken.
-
         Args:
             level (int, optional): a valid log level that should be used to log
                 the outline
@@ -316,38 +296,26 @@ class Plan(OrderedDict):
         """
         steps = 1
         logger.log(level, "Plan \"%s\":", self.description)
-        while not self.completed:
-            step_name, step = self.list_pending()[0]
+        for step in self.steps:
             logger.log(
                 level,
                 "  - step: %s: target: \"%s\", action: \"%s\"",
                 steps,
-                step_name,
-                step._run_func.__name__,
+                step.short_name,
+                step.fn.__name__,
             )
-            # Set the status to COMPLETE directly so we don't call the
-            # completion func
-            step.status = COMPLETE
             steps += 1
 
         if message:
             logger.log(level, message)
 
-        self.reset()
-
-    def reset(self):
-        for _, step in self.iteritems():
-            step.status = PENDING
-
     def dump(self, directory, context, provider=None):
-        steps = 1
         logger.info("Dumping \"%s\"...", self.description)
         directory = os.path.expanduser(directory)
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        while not self.completed:
-            step_name, step = self.list_pending()[0]
+        def walk_func(step):
             step.stack.resolve(
                 context=context,
                 provider=provider,
@@ -360,29 +328,32 @@ class Plan(OrderedDict):
             if not os.path.exists(blueprint_dir):
                 os.makedirs(blueprint_dir)
 
-            logger.info("Writing stack \"%s\" -> %s", step_name, path)
+            logger.info("Writing stack \"%s\" -> %s", step.name, path)
             with open(path, "w") as f:
                 f.write(blueprint.rendered)
 
-            step.status = COMPLETE
-            steps += 1
+            return True
 
-        self.reset()
+        return self.graph.walk(walk_func)
 
-    @property
-    def md5(self):
-        """A hash for the plan's current state.
+    def execute(self, **kwargs):
+        return self.walk(**kwargs)
 
-        This is useful if we want to determine if any of the plan's steps have
-        changed during execution.
+    def walk(self):
+        """Walks each step in the underlying graph, in topological order."""
 
-        """
-        statuses = []
-        for step_name, step in self.iteritems():
-            current = '{}{}{}'.format(step_name, step.status.name,
-                                      step.status.reason)
-            statuses.append(current)
-        return hashlib.md5(' '.join(statuses)).hexdigest()
+        def walk_func(step):
+            # Before we execute the step, we need to ensure that it's
+            # transitive dependencies are all in an "ok" state. If not, we
+            # won't execute this step.
+            for dep in self.graph.downstream(step.name):
+                if not dep.ok:
+                    step.set_status(FailedStatus("dependency has failed"))
+                    return step.ok
+
+            return step.run()
+
+        return self.graph.walk(walk_func)
 
     def _check_point(self):
         """Outputs the current status of all steps in the plan."""
@@ -394,12 +365,12 @@ class Plan(OrderedDict):
 
         longest = 0
         messages = []
-        for step_name, step in self.iteritems():
-            length = len(step_name)
+        for step in self.steps:
+            length = len(step.name)
             if length > longest:
                 longest = length
 
-            msg = "%s: %s" % (step_name, step.status.name)
+            msg = "%s: %s" % (step.name, step.status.name)
             if step.status.reason:
                 msg += " (%s)" % (step.status.reason)
 
@@ -414,3 +385,16 @@ class Plan(OrderedDict):
                 'color': color,
                 'last_updated': step.last_updated,
             })
+
+    @property
+    def steps(self):
+        steps = self.graph.topological_sort()
+        steps.reverse()
+        return steps
+
+    @property
+    def step_names(self):
+        return [step.name for step in self.steps]
+
+    def keys(self):
+        return self.step_names

@@ -1,6 +1,6 @@
 import logging
 
-from ..plan2 import Step, build_plan
+from ..plan import Step, build_plan
 
 import botocore.exceptions
 from stacker.session_cache import get_session

@@ -10,6 +10,7 @@ from .exceptions import (
     GraphError,
 )
 from .dag import DAG, DAGValidationError
+from .dag import walk_threaded as walk
 from .status import (
     FailedStatus,
     SkippedStatus,
@@ -84,6 +85,9 @@ class Step(object):
             status = self.fn(self.stack, status=self.status)
         except CancelExecution:
             status = SkippedStatus(reason="canceled execution")
+        except Exception as e:
+            logger.exception(e)
+            status = FailedStatus(reason=e.message)
         self.set_status(status)
         return status
 
@@ -233,6 +237,7 @@ class Graph(object):
     def __init__(self, steps=None, dag=None):
         self.steps = steps or {}
         self.dag = dag or DAG()
+        self.walker = walk
 
     def add_step(self, step):
         self.steps[step.name] = step
@@ -251,7 +256,7 @@ class Graph(object):
             step = self.steps[step_name]
             return walk_func(step)
 
-        return self.dag.walk(fn)
+        return self.walker(self.dag, fn)
 
     def downstream(self, step_name):
         """Returns the direct dependencies of the given step"""

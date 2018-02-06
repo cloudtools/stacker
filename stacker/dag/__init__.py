@@ -1,5 +1,6 @@
 import collections
 import logging
+import threading
 from copy import copy, deepcopy
 from collections import deque
 
@@ -364,3 +365,88 @@ class DAG(object):
 
     def __len__(self):
         return len(self.graph)
+
+
+def walk(dag, walk_func):
+    return dag.walk(walk_func)
+
+
+def walk_threaded(dag, walk_func):
+    """ Walks each node of the graph, in parallel if it can.
+    The walk_func is only called when the nodes dependencies have been
+    satisfied
+    """
+
+    # First, we'll topologically sort all of the nodes, with nodes that
+    # have no dependencies first. We do this to ensure that we don't call
+    # .join on a thread that hasn't yet been started.
+    #
+    # TODO(ejholmes): An alternative would be to ensure that Thread.join
+    # blocks if the thread has not yet been started.
+    nodes = dag.topological_sort()
+    nodes.reverse()
+
+    # This maps a node name to a thread of execution.
+    threads = {}
+
+    # Blocks until all of the given nodes have completed execution (whether
+    # successfully, or errored). Returns True if all nodes returned True.
+    def wait_for(nodes):
+        return all(threads[node].join() for node in nodes)
+
+    # For each node in the graph, we're going to allocate a thread to
+    # execute. The thread will block executing walk_func, until all of the
+    # nodes dependencies have executed successfully.
+    #
+    # If any node fails for some reason (e.g. raising an exception), any
+    # downstream nodes will be cancelled.
+    for node in nodes:
+        def fn(n, deps):
+            if deps:
+                logger.debug(
+                    "%s waiting for %s to complete",
+                    n,
+                    ", ".join(deps))
+
+            # Wait for all dependencies to complete.
+            wait_for(deps)
+
+            logger.debug("%s starting", n)
+
+            ret = walk_func(n)
+
+            if ret:
+                logger.debug("%s completed", n)
+            else:
+                logger.debug("%s failed", n)
+
+            return ret
+
+        deps = dag.all_downstreams(node)
+        threads[node] = Thread(target=fn, args=(node, deps), name=node)
+
+    # Start up all of the threads.
+    for node in nodes:
+        threads[node].start()
+
+    # Wait for all threads to complete executing.
+    return wait_for(nodes)
+
+
+class Thread(threading.Thread):
+    """Used when executing walk_func's in parallel, to provide access to the
+    return value.
+    """
+    def __init__(self, *args, **kwargs):
+        super(Thread, self).__init__(*args, **kwargs)
+        self._return = None
+
+    def run(self):
+        if self._Thread__target is not None:
+            self._return = self._Thread__target(
+                    *self._Thread__args,
+                    **self._Thread__kwargs)
+
+    def join(self, *args, **kwargs):
+        super(Thread, self).join(*args, **kwargs)
+        return self._return

@@ -193,6 +193,7 @@ class TestLaunchStack(TestBuildAction):
 
             return {'StackName': self.stack.name,
                     'StackStatus': self.stack_status,
+                    'Outputs': [],
                     'Tags': []}
 
         patch_object(self.provider, 'get_stack', side_effect=get_stack)

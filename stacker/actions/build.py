@@ -255,6 +255,7 @@ class Action(BaseAction):
 
                 return FailedStatus(reason)
             elif self.provider.is_stack_completed(provider_stack):
+                self.provider.set_outputs(stack.fqn, provider_stack)
                 return CompleteStatus(old_status.reason)
             else:
                 return old_status

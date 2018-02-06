@@ -81,7 +81,8 @@ stacks:
     class_path: stacker.tests.fixtures.mock_blueprints.VPC
 EOF
   assert ! "$status" -eq 0
-  assert_has_line "stacker.exceptions.MissingVariable: Variable \"PublicSubnets\" in blueprint \"vpc\" is missing"
+  assert_has_line "MissingVariable: Variable \"PublicSubnets\" in blueprint \"vpc\" is missing"
+  assert_has_line "${STACKER_NAMESPACE}-vpc: failed (Variable \"PublicSubnets\" in blueprint \"vpc\" is missing)"
 }
 
 @test "stacker build - simple build" {

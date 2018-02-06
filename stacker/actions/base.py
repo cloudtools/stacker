@@ -35,16 +35,11 @@ def plan(description, action, stacks,
         Step(stack, fn=action, watch_func=tail)
         for stack in stacks]
 
-    plan = build_plan(
+    return build_plan(
         description=description,
         steps=steps,
         targets=targets,
         reverse=reverse)
-
-    for step in steps:
-        step.status_changed_func = plan._check_point
-
-    return plan
 
 
 def stack_template_key_name(blueprint):

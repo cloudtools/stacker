@@ -175,6 +175,7 @@ class TestLaunchStack(TestBuildAction):
         self.stack.name = 'vpc'
         self.stack.fqn = 'vpc'
         self.stack.blueprint.rendered = '{}'
+        self.stack.blueprint.raw_template_path = None
         self.stack.locked = False
         self.stack_status = None
 

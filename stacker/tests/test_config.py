@@ -45,19 +45,20 @@ class TestConfig(unittest.TestCase):
         c = render(conf, e)
         self.assertEqual("namespace: !!str", c)
 
-    def test_config_validate_missing_stack_class_path(self):
-        config = Config({
-            "namespace": "prod",
-            "stacks": [
-                {
-                    "name": "bastion"}]})
-        with self.assertRaises(exceptions.InvalidConfig) as ex:
-            config.validate()
-
-        error = ex.exception.errors['stacks'][0]['class_path'].errors[0]
-        self.assertEquals(
-            error.__str__(),
-            "This field is required.")
+    # TODO: add test for class_path or template_path (and not both)
+    # def test_config_validate_missing_stack_class_path(self):
+    #     config = Config({
+    #         "namespace": "prod",
+    #         "stacks": [
+    #             {
+    #                 "name": "bastion"}]})
+    #     with self.assertRaises(exceptions.InvalidConfig) as ex:
+    #         config.validate()
+    #
+    #     error = ex.exception.errors['stacks'][0]['class_path'].errors[0]
+    #     self.assertEquals(
+    #         error.__str__(),
+    #         "This field is required.")
 
     def test_config_validate_no_stacks(self):
         config = Config({"namespace": "prod"})

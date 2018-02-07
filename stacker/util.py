@@ -1,6 +1,7 @@
 import copy
 import uuid
 import importlib
+import json
 import logging
 import os
 import re
@@ -491,6 +492,33 @@ def get_client_region(client):
     """
 
     return client._client_config.region_name
+
+
+def get_template_default_params(template_path):
+    """Parse a CFN template for default parameter values.
+
+    Args:
+        template_path (str): Path to the template on disk.
+
+    Returns:
+        dict: Default values from the template.
+    """
+    params = {}
+
+    template_ext = os.path.splitext(template_path)[1]
+    if template_ext in ['.json', '.template']:
+        template = json.load(open(template_path))
+    elif template_ext in ['.yaml', '.yml']:
+        template = yaml.load(open(template_path))
+    else:
+        raise KeyError("Can't determine type of template (i.e. yaml, json) "
+                       "from its extension")
+
+    if 'Parameters' in template:
+        for i in list(template['Parameters'].items()):
+            if 'Default' in i[1]:
+                params[i[0]] = i[1]['Default']
+    return params
 
 
 def get_s3_endpoint(client):

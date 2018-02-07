@@ -282,7 +282,7 @@ class Action(BaseAction):
             return NotUpdatedStatus()
 
         try:
-            if self.provider.prepare_stack_for_update(stack.fqn, tags):
+            if self.provider.prepare_stack_for_update(provider_stack, tags):
                 existing_params = provider_stack.get('Parameters', [])
                 self.provider.update_stack(
                     stack.fqn,

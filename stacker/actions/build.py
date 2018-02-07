@@ -194,25 +194,10 @@ class Action(BaseAction):
             dict: The parameters for the given stack
 
         """
-        if hasattr(stack.blueprint, 'raw_template_path') and (
-                stack.blueprint.raw_template_path):
-            params_to_merge = util.get_template_default_params(
-                stack.blueprint.raw_template_path
-            )
-            logger.debug("Default parameters in stack %s template are "
-                         "\"%s\".",
-                         stack.fqn,
-                         params_to_merge)
-            for i in stack.variables:
-                params_to_merge[i.name] = i.value
-            parameters = [[p[0], p[1]] for p in list(params_to_merge.items())]
-        else:
-            resolved = _resolve_parameters(stack.parameter_values,
-                                           stack.blueprint)
-            required_parameters = stack.required_parameter_definitions.keys()
-            parameters = _handle_missing_parameters(resolved,
-                                                    required_parameters,
-                                                    provider_stack)
+        resolved = _resolve_parameters(stack.parameter_values, stack.blueprint)
+        required_parameters = stack.required_parameter_definitions.keys()
+        parameters = _handle_missing_parameters(resolved, required_parameters,
+                                                provider_stack)
         return [
             {'ParameterKey': p[0],
              'ParameterValue': str(p[1])} for p in parameters

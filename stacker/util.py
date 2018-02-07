@@ -1,7 +1,6 @@
 import copy
 import uuid
 import importlib
-import json
 import logging
 import os
 import re
@@ -494,30 +493,45 @@ def get_client_region(client):
     return client._client_config.region_name
 
 
-def get_template_default_params(template_path):
-    """Parse a CFN template for default parameter values.
+def get_template_file_format(template_path):
+    """Determine template file format.
 
     Args:
         template_path (str): Path to the template on disk.
 
     Returns:
-        dict: Default values from the template.
+        str: 'json' or 'yaml'.
     """
-    params = {}
-
     template_ext = os.path.splitext(template_path)[1]
     if template_ext in ['.json', '.template']:
-        template = json.load(open(template_path))
+        return 'json'
     elif template_ext in ['.yaml', '.yml']:
-        template = yaml.load(open(template_path))
+        return 'yaml'
     else:
         raise KeyError("Can't determine type of template (i.e. yaml, json) "
                        "from its extension")
 
+
+def get_template_params(template_path):
+    """Parse a CFN template for defined parameters.
+
+    Args:
+        template_path (str): Path to the template on disk.
+
+    Returns:
+        dict: Template parameters.
+    """
+    params = {}
+
+    if not os.path.isfile(template_path):
+        raise EnvironmentError("Could not find CFN template at path "
+                               "%s" % template_path)
+
+    with open(template_path, 'r') as templateobj:
+        template = yaml.load(templateobj)  # imports json without issue
+
     if 'Parameters' in template:
-        for i in list(template['Parameters'].items()):
-            if 'Default' in i[1]:
-                params[i[0]] = i[1]['Default']
+        params = template['Parameters']
     return params
 
 

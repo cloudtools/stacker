@@ -368,6 +368,18 @@ class Config(Model):
             super(Config, self).validate()
         except SchematicsError as e:
             raise exceptions.InvalidConfig(e.errors)
+        # Ensure each stack has a class or template path
+        for i in list(self.stacks):
+            if i.class_path and i.template_path:
+                raise exceptions.InvalidConfig(
+                    "Stack %s has both a class and template path "
+                    "defined" % i.name
+                )
+            elif not i.class_path and not i.template_path:
+                raise exceptions.InvalidConfig(
+                    "Stack %s does not have a class or template path "
+                    "defined" % i.name
+                )
 
     def validate_stacks(self, data, value):
         if value:

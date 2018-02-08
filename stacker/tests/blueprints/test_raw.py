@@ -1,13 +1,45 @@
 """Test module for blueprint-from-raw-template module."""
+import json
 import unittest
 
 from mock import MagicMock
 
-from stacker.blueprints.raw import RawTemplateBlueprint
+from stacker.blueprints.raw import get_template_params, RawTemplateBlueprint
 from ..factories import mock_context
 
 RAW_JSON_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.json'
 RAW_YAML_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.yaml'
+
+
+class TestRawBluePrintHelpers(unittest.TestCase):
+    """Test class for functions in module."""
+
+    def test_get_template_params(self):
+        """Verify get_template_params function operation."""
+        template_dict = {
+            "AWSTemplateFormatVersion": "2010-09-09",
+            "Description": "TestTemplate",
+            "Parameters": {
+                "Param1": {
+                    "Type": "String"
+                },
+                "Param2": {
+                    "Default": "default",
+                    "Type": "CommaDelimitedList"
+                }
+            },
+            "Resources": {}
+        }
+        template_params = {
+            "Param1": {
+                "Type": "String"
+            },
+            "Param2": {
+                "Default": "default",
+                "Type": "CommaDelimitedList"
+            }
+        }
+        self.assertEqual(get_template_params(template_dict), template_params)
 
 
 class TestBlueprintRendering(unittest.TestCase):
@@ -15,21 +47,24 @@ class TestBlueprintRendering(unittest.TestCase):
 
     def test_to_json(self):
         """Verify to_json method operation."""
-        expected_json = """{
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "TestTemplate",
-    "Parameters": {
-        "Param1": {
-            "Type": "String"
-        },
-        "Param2": {
-            "Default": "default",
-            "Type": "CommaDelimitedList"
-        }
-    },
-    "Resources": {}
-}
-"""
+        expected_json = json.dumps(
+            {
+                "AWSTemplateFormatVersion": "2010-09-09",
+                "Description": "TestTemplate",
+                "Parameters": {
+                    "Param1": {
+                        "Type": "String"
+                    },
+                    "Param2": {
+                        "Default": "default",
+                        "Type": "CommaDelimitedList"
+                    }
+                },
+                "Resources": {}
+            },
+            sort_keys=True,
+            indent=4
+        )
         self.assertEqual(
             RawTemplateBlueprint(
                 name="test",

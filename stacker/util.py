@@ -493,48 +493,6 @@ def get_client_region(client):
     return client._client_config.region_name
 
 
-def get_template_file_format(template_path):
-    """Determine template file format.
-
-    Args:
-        template_path (str): Path to the template on disk.
-
-    Returns:
-        str: 'json' or 'yaml'.
-    """
-    template_ext = os.path.splitext(template_path)[1]
-    if template_ext in ['.json', '.template']:
-        return 'json'
-    elif template_ext in ['.yaml', '.yml']:
-        return 'yaml'
-    else:
-        raise KeyError("Can't determine type of template (i.e. yaml, json) "
-                       "from its extension")
-
-
-def get_template_params(template_path):
-    """Parse a CFN template for defined parameters.
-
-    Args:
-        template_path (str): Path to the template on disk.
-
-    Returns:
-        dict: Template parameters.
-    """
-    params = {}
-
-    if not os.path.isfile(template_path):
-        raise EnvironmentError("Could not find CFN template at path "
-                               "%s" % template_path)
-
-    with open(template_path, 'r') as templateobj:
-        template = yaml.load(templateobj)  # imports json without issue
-
-    if 'Parameters' in template:
-        params = template['Parameters']
-    return params
-
-
 def get_s3_endpoint(client):
     """Gets the s3 endpoint for the given :class:`boto3.client.Client` object.
 

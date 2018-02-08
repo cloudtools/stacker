@@ -11,7 +11,6 @@ import boto3
 from stacker.config import Hook, GitPackageSource
 from stacker.util import (
     cf_safe_name,
-    get_template_file_format,
     load_object_from_string,
     camel_to_snake,
     handle_hooks,
@@ -53,16 +52,6 @@ class TestUtil(unittest.TestCase):
         )
         for t in tests:
             self.assertEqual(cf_safe_name(t[0]), t[1])
-
-    def test_get_template_file_format(self):
-        tests = (
-            ("~/foo.json", "json"),
-            ("root/car.yaml", "yaml")
-        )
-        for t in tests:
-            self.assertEqual(get_template_file_format(t[0]), t[1])
-        with self.assertRaises(KeyError):
-            get_template_file_format('somepath.dll')
 
     def test_load_object_from_string(self):
         tests = (

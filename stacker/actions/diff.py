@@ -146,7 +146,8 @@ def print_stack_changes(stack_name, new_stack, old_stack, new_params,
     to_file = "new_%s" % (stack_name,)
     lines = difflib.context_diff(
         old_stack, new_stack,
-        fromfile=from_file, tofile=to_file)
+        fromfile=from_file, tofile=to_file,
+        n=7)  # ensure at least a few lines of context are displayed afterward
 
     template_changes = list(lines)
     if not template_changes:
@@ -213,20 +214,13 @@ class Action(build.Action):
             old_params = {}
 
         stack.resolve(self.context, self.provider)
-        yaml_stack = hasattr(stack.blueprint, 'raw_template_format') and (
-            stack.blueprint.raw_template_format == 'yaml')
         # generate our own template & params
-        new_template = stack.blueprint.rendered
+        new_template = stack.blueprint.to_json()
         parameters = self.build_parameters(stack)
         new_params = dict()
         for p in parameters:
             new_params[p['ParameterKey']] = p['ParameterValue']
-        if yaml_stack:
-            new_stack = self._normalize_json(
-                json.dumps(yaml.load(new_template), sort_keys=True, indent=4)
-            )
-        else:
-            new_stack = self._normalize_json(new_template)
+        new_stack = self._normalize_json(new_template)
 
         print "============== Stack: %s ==============" % (stack.name,)
         # If this is a completely new template dump our params & stack
@@ -234,20 +228,18 @@ class Action(build.Action):
             self._print_new_stack(new_stack, parameters)
         else:
             # Diff our old & new stack/parameters
-            if yaml_stack:
-                old_stack = self._normalize_json(
-                    # Double yaml.load is intentional to parse the newlines
-                    # returned from CFN
-                    # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
-                    # ->
-                    # AWSTemplateFormatVersion: "2010-09-09"
-                    # Param...
-                    json.dumps(yaml.load(yaml.load(old_template)),
-                               sort_keys=True,
-                               indent=4)
-                )
-            else:
-                old_stack = self._normalize_json(old_template)
+            old_template = yaml.load(old_template)
+            if isinstance(old_template, str):
+                # YAML templates returned from CFN need parsing again
+                # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
+                # ->
+                # AWSTemplateFormatVersion: "2010-09-09"
+                old_template = yaml.load(old_template)
+            old_stack = self._normalize_json(
+                json.dumps(old_template,
+                           sort_keys=True,
+                           indent=4)
+            )
             print_stack_changes(stack.name, new_stack, old_stack, new_params,
                                 old_params)
         return COMPLETE

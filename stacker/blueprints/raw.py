@@ -1,13 +1,30 @@
 """Blueprint representing raw template module."""
 
 import hashlib
+import json
 
 import yaml
 
 from .base import Blueprint
-from ..util import get_template_params, get_template_file_format
 
 from ..exceptions import MissingVariable, UnresolvedVariable
+
+
+def get_template_params(template):
+    """Parse a CFN template for defined parameters.
+
+    Args:
+        template (dict): Parsed CFN template.
+
+    Returns:
+        dict: Template parameters.
+
+    """
+    params = {}
+
+    if 'Parameters' in template:
+        params = template['Parameters']
+    return params
 
 
 def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
@@ -62,7 +79,21 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
                                                    mappings,
                                                    description)
         self._raw_template_path = raw_template_path
-        self._raw_template_format = get_template_file_format(raw_template_path)
+
+    def to_json(self, variables=None):
+        """Return the template in JSON.
+
+        Args:
+            variables (dict):
+                Unused in this subclass (variables won't affect the template).
+
+        Returns:
+            str: the rendered CFN JSON template
+
+        """
+        raw_template = self.render_template()[1]
+        # load -> dumps will produce json from json or yaml templates
+        return json.dumps(yaml.load(raw_template), sort_keys=True, indent=4)
 
     def render_template(self):
         """Load template and generate its md5 hash."""
@@ -71,6 +102,9 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
         version = hashlib.md5(rendered).hexdigest()[:8]
         parsed_template = yaml.load(rendered)
         if 'Transform' in parsed_template:
+            # Ensure any transforms in the raw template are reflected in the
+            # Template class. Build actions will check this to evaluate whether
+            # change set use is required
             self.template.add_transform(parsed_template['Transform'])
         if self.description:
             self.set_template_description(self.description)
@@ -85,7 +119,7 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
                 properties.
 
         """
-        return get_template_params(self.raw_template_path)
+        return get_template_params(yaml.load(self.rendered))
 
     def resolve_variables(self, provided_variables):
         """Resolve the values of the blueprint variables.
@@ -135,11 +169,6 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
             if i[1].get('Default', None) is None:
                 required[i[0]] = i[1]
         return required
-
-    @property
-    def raw_template_format(self):
-        """Return raw_template_format."""
-        return self._raw_template_format
 
     @property
     def raw_template_path(self):

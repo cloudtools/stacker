@@ -48,10 +48,10 @@ class TestDestroyAction(unittest.TestCase):
         self.assertEqual(
             {
                 'vpc': set(
-                    ['db', 'instance', 'bastion']),
+                    ['bastion']),
                 'other': set([]),
                 'bastion': set(
-                    ['instance', 'db']),
+                    ['instance']),
                 'instance': set(
                     ['db']),
                 'db': set(

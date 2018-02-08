@@ -116,7 +116,7 @@ class TestBuildAction(unittest.TestCase):
         plan = build_action._generate_plan()
         self.assertEqual(
             {
-                'db': set(['bastion', 'vpc']),
+                'db': set(['bastion']),
                 'bastion': set(['vpc']),
                 'other': set([]),
                 'vpc': set([])},

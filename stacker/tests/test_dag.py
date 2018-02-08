@@ -165,6 +165,38 @@ def test_size():
 
 
 @with_setup(blank_setup)
+def test_transitive_reduction_no_reduction():
+    dag = DAG()
+    dag.from_dict({'a': ['b', 'c'],
+                   'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+    dag.transitive_reduction()
+    assert dag.graph == {'a': set(['b', 'c']),
+                         'b': set('d'),
+                         'c': set('d'),
+                         'd': set()}
+
+
+@with_setup(blank_setup)
+def test_transitive_reduction():
+    dag = DAG()
+    # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-G.svg
+    dag.from_dict({'a': ['b', 'c', 'd', 'e'],
+                   'b': ['d'],
+                   'c': ['d', 'e'],
+                   'd': ['e'],
+                   'e': []})
+    dag.transitive_reduction()
+    # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-Gprime.svg
+    assert dag.graph == {'a': set(['b', 'c']),
+                         'b': set('d'),
+                         'c': set('d'),
+                         'd': set('e'),
+                         'e': set()}
+
+
+@with_setup(blank_setup)
 def test_threaded_walker():
     dag = DAG()
     walker = ThreadedWalker()

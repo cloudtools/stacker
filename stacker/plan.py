@@ -206,6 +206,8 @@ def build_graph(steps):
         for dep in step.requires:
             graph.connect(step, dep)
 
+    graph.transitive_reduction()
+
     return graph
 
 
@@ -247,6 +249,9 @@ class Graph(object):
             raise GraphError(e, step.name, dep)
         except DAGValidationError as e:
             raise GraphError(e, step.name, dep)
+
+    def transitive_reduction(self):
+        self.dag.transitive_reduction()
 
     def walk(self, walker, walk_func):
         def fn(step_name):

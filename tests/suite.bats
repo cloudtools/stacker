@@ -71,6 +71,105 @@ EOF
   assert_has_line "Duplicate stack vpc found"
 }
 
+@test "stacker graph - json format" {
+  config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+  - name: bastion1
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+    variables:
+      StringVariable: \${output vpc::DummyId}
+  - name: bastion2
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    variables:
+      StringVariable: \${output vpc::DummyId}
+  - name: app1
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+    variables:
+      StringVariable: \${output bastion1::DummyId}
+  - name: app2
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    variables:
+      StringVariable: \${output bastion2::DummyId}
+EOF
+  }
+
+  # Print the graph
+  stacker graph -f json <(config)
+  assert "$status" -eq 0
+  cat <<-EOF | diff -y <(echo "$output" | grep -v "Using default") -
+{
+    "steps": {
+        "app1": {
+            "deps": [
+                "bastion1"
+            ]
+        }, 
+        "app2": {
+            "deps": [
+                "bastion2"
+            ]
+        }, 
+        "bastion2": {
+            "deps": [
+                "vpc"
+            ]
+        }, 
+        "vpc": {
+            "deps": []
+        }, 
+        "bastion1": {
+            "deps": [
+                "vpc"
+            ]
+        }
+    }
+}
+EOF
+}
+
+@test "stacker graph - dot format" {
+  config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+  - name: bastion1
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+    variables:
+      StringVariable: \${output vpc::DummyId}
+  - name: bastion2
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    variables:
+      StringVariable: \${output vpc::DummyId}
+  - name: app1
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+    variables:
+      StringVariable: \${output bastion1::DummyId}
+  - name: app2
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    variables:
+      StringVariable: \${output bastion2::DummyId}
+EOF
+  }
+
+  # Print the graph
+  stacker graph -f dot <(config)
+  assert "$status" -eq 0
+  cat <<-EOF | diff -y <(echo "$output" | grep -v "Using default") -
+digraph digraph {
+  "bastion2" -> "vpc";
+  "bastion1" -> "vpc";
+  "app2" -> "bastion2";
+  "app1" -> "bastion1";
+}
+EOF
+}
+
 @test "stacker build - missing variable" {
   needs_aws
 

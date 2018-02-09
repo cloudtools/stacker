@@ -5,8 +5,6 @@ import json
 
 import yaml
 
-from .base import Blueprint
-
 from ..exceptions import MissingVariable, UnresolvedVariable
 
 
@@ -68,18 +66,19 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     return value
 
 
-class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
+class RawTemplateBlueprint(object):  # pylint: disable=abstract-method
     """Blueprint class for blueprints auto-generated from raw templates."""
 
     def __init__(self, name, context,  # pylint: disable=too-many-arguments
-                 raw_template_path, mappings=None, description=None):
-        """Add raw_template_path to base blueprint class."""
-        super(RawTemplateBlueprint, self).__init__(name,
-                                                   context,
-                                                   mappings,
-                                                   description)
-        self._raw_template_path = raw_template_path
-        self.template = None
+                 raw_template_path,
+                 mappings=None, description=None):
+        self.name = name
+        self.context = context
+        self.mappings = mappings
+        self.resolved_variables = None
+        self.raw_template_path = raw_template_path
+        self._rendered = None
+        self._version = None
 
     def to_json(self, variables=None):
         """Return the template in JSON.
@@ -105,10 +104,7 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
 
     def render_template(self):
         """Load template and generate its md5 hash."""
-        with open(self.raw_template_path, 'r') as template:
-            rendered = template.read()
-        version = hashlib.md5(rendered).hexdigest()[:8]
-        return (version, rendered)
+        return (self.version, self.rendered)
 
     def get_parameter_definitions(self):
         """Get the parameter definitions to submit to CloudFormation.
@@ -119,7 +115,7 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
                 properties.
 
         """
-        return get_template_params(yaml.load(self.rendered))
+        return get_template_params(self.to_dict())
 
     def resolve_variables(self, provided_variables):
         """Resolve the values of the blueprint variables.
@@ -153,7 +149,7 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
                 <parameter value>.
 
         """
-        return self.get_variables()
+        return self.resolved_variables
 
     def get_required_parameter_definitions(self):
         """Return all template parameters that do not have a default value.
@@ -171,12 +167,20 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
         return required
 
     @property
-    def raw_template_path(self):
-        """Return raw_template_path."""
-        return self._raw_template_path
-
-    @property
     def requires_change_set(self):
         """Returns true if the underlying template has transforms."""
         if "Transform" in self.to_dict():
             return True
+
+    @property
+    def rendered(self):
+        if not self._rendered:
+            with open(self.raw_template_path, 'r') as template:
+                self._rendered = template.read()
+        return self._rendered
+
+    @property
+    def version(self):
+        if not self._version:
+            self._version = hashlib.md5(self.rendered).hexdigest()[:8]
+        return self._version

@@ -77,13 +77,13 @@ class Action(BaseAction):
                 provider=self.provider,
                 context=self.context)
 
-    def run(self, force, tail=False, *args, **kwargs):
+    def run(self, force, semaphore=None, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)
         if force:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them
             plan.outline(logging.DEBUG)
-            if not plan.execute():
+            if not plan.execute(semaphore=semaphore):
                 sys.exit(1)
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "

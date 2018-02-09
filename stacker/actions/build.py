@@ -335,7 +335,8 @@ class Action(BaseAction):
             outline
         )
 
-    def run(self, outline=False, tail=False, dump=False, *args, **kwargs):
+    def run(self, semaphore=None, outline=False,
+            tail=False, dump=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
         This is the main entry point for the Builder.
@@ -345,7 +346,7 @@ class Action(BaseAction):
         if not outline and not dump:
             plan.outline(logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
-            if not plan.execute():
+            if not plan.execute(semaphore=semaphore):
                 sys.exit(1)
         else:
             if outline:

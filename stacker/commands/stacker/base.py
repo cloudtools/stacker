@@ -1,8 +1,14 @@
 import argparse
 from collections import Mapping
+from threading import BoundedSemaphore
 import logging
 
 from ...environment import parse_environment
+
+
+def build_semaphore(concurrency):
+    if concurrency > 0:
+        return BoundedSemaphore(concurrency)
 
 
 class KeyValueAction(argparse.Action):

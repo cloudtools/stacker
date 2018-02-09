@@ -347,8 +347,18 @@ class Plan(object):
     def execute(self, **kwargs):
         return self.walk(**kwargs)
 
-    def walk(self):
-        """Walks each step in the underlying graph, in topological order."""
+    def walk(self, semaphore=None):
+        """Walks each step in the underlying graph, in topological order.
+
+        Args:
+            semaphore (threading.Semaphore, optional): a semaphore object which
+                can be used to control how many steps are executed in parallel.
+                By default, there is not limit to the amount of parallelism,
+                other than what the graph topology allows.
+        """
+
+        if not semaphore:
+            semaphore = UnlimitedSemaphore()
 
         def walk_func(step):
             # Before we execute the step, we need to ensure that it's
@@ -359,7 +369,11 @@ class Plan(object):
                     step.set_status(FailedStatus("dependency has failed"))
                     return step.ok
 
-            return step.run()
+            semaphore.acquire()
+            try:
+                return step.run()
+            finally:
+                semaphore.release()
 
         return self.graph.walk(walk_func)
 
@@ -375,3 +389,15 @@ class Plan(object):
 
     def keys(self):
         return self.step_names
+
+
+class UnlimitedSemaphore(object):
+    """UnlimitedSemaphore implements the same interface as threading.Semaphore,
+    but acquire's always succeed.
+    """
+
+    def acquire(self, *args):
+        pass
+
+    def release(self):
+        pass

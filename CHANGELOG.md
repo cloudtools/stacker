@@ -2,6 +2,7 @@
 
 - assertRenderedBlueprint always dumps current results [GH-528]
 - stacker now builds a DAG internally [GH-523]
+- an unecessary DescribeStacks network call was removed [GH-529]
 
 ## 1.1.4 (2018-01-26)
 

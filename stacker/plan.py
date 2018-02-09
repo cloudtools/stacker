@@ -9,6 +9,7 @@ from .exceptions import (
     CancelExecution,
     GraphError,
 )
+from .ui import ui
 from .dag import DAG, DAGValidationError
 from .dag import walk_threaded as walk
 from .status import (
@@ -34,7 +35,7 @@ def log_step(step):
     if step.status.reason:
         msg += " (%s)" % (step.status.reason)
     color_code = COLOR_CODES.get(step.status.code, 37)
-    logger.info(msg, extra={"color": color_code})
+    ui.info(msg, extra={"color": color_code})
 
 
 class Step(object):

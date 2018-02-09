@@ -11,6 +11,7 @@ import botocore.exceptions
 from ..base import BaseProvider
 from ... import exceptions
 from ...util import retry_with_backoff
+from ...ui import ui
 from stacker.session_cache import get_session
 
 from ...actions.diff import (
@@ -137,11 +138,6 @@ def requires_replacement(changeset):
             "Replacement", False) == "True"]
 
 
-def get_raw_input(message):
-    """ Just a wrapper for raw_input for testing purposes. """
-    return raw_input(message)
-
-
 def ask_for_approval(full_changeset=None, params_diff=None,
                      include_verbose=False):
     """Prompt the user for approval to execute a change set.
@@ -160,7 +156,7 @@ def ask_for_approval(full_changeset=None, params_diff=None,
     if include_verbose:
         approval_options.append('v')
 
-    approve = get_raw_input("Execute the above changes? [{}] ".format(
+    approve = ui.ask("Execute the above changes? [{}] ".format(
         '/'.join(approval_options)))
 
     if include_verbose and approve == "v":
@@ -829,13 +825,17 @@ class Provider(BaseProvider):
             changes = requires_replacement(changes)
 
         if changes or params_diff:
-            output_summary(fqn, action, changes, params_diff,
-                           replacements_only=self.replacements_only)
-            ask_for_approval(
-                full_changeset=full_changeset,
-                params_diff=params_diff,
-                include_verbose=True,
-            )
+            ui.lock()
+            try:
+                output_summary(fqn, action, changes, params_diff,
+                               replacements_only=self.replacements_only)
+                ask_for_approval(
+                    full_changeset=full_changeset,
+                    params_diff=params_diff,
+                    include_verbose=True,
+                )
+            finally:
+                ui.unlock()
 
         retry_on_throttling(
             self.cloudformation.execute_change_set,

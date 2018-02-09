@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from ..plan import Step, build_plan
 
@@ -91,10 +92,11 @@ class BaseAction(object):
             the necessary actions.
     """
 
-    def __init__(self, context, provider=None):
+    def __init__(self, context, provider=None, cancel=None):
         self.context = context
         self.provider = provider
         self.bucket_name = context.bucket_name
+        self.cancel = cancel or threading.Event()
         self._conn = None
 
     @property

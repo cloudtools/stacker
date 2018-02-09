@@ -5,7 +5,7 @@ any manual requirements they specify or output values they rely on from other
 stacks.
 
 """
-from .base import BaseCommand, build_semaphore
+from .base import BaseCommand, build_semaphore, cancel
 from ...actions import destroy
 
 
@@ -38,7 +38,9 @@ class Destroy(BaseCommand):
     def run(self, options, **kwargs):
         super(Destroy, self).run(options, **kwargs)
         semaphore = build_semaphore(options.max_parallel)
-        action = destroy.Action(options.context, provider=options.provider)
+        action = destroy.Action(options.context,
+                                provider=options.provider,
+                                cancel=cancel())
         action.execute(semaphore=semaphore,
                        force=options.force,
                        tail=options.tail)

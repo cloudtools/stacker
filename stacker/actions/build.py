@@ -18,7 +18,8 @@ from ..status import (
     SubmittedStatus,
     CompleteStatus,
     FailedStatus,
-    SUBMITTED
+    SUBMITTED,
+    INTERRUPTED
 )
 
 
@@ -210,6 +211,9 @@ class Action(BaseAction):
         it is already updating or creating.
 
         """
+        if self.cancel.wait(0):
+            return INTERRUPTED
+
         if not should_submit(stack):
             return NotSubmittedStatus()
 

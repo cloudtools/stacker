@@ -8,6 +8,7 @@ from ..status import (
     CompleteStatus,
     SubmittedStatus,
     SUBMITTED,
+    INTERRUPTED
 )
 
 from ..status import StackDoesNotExist as StackDoesNotExistStatus
@@ -41,6 +42,9 @@ class Action(BaseAction):
             reverse=True)
 
     def _destroy_stack(self, stack, **kwargs):
+        if self.cancel.wait(0):
+            return INTERRUPTED
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:

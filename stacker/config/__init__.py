@@ -291,6 +291,25 @@ class Stack(Model):
 
     tags = DictType(StringType, serialize_when_none=False)
 
+    def validate_class_path(self, data, value):
+        if value and data["template_path"]:
+            raise ValidationError(
+                "template_path cannot be present when "
+                "class_path is provided.")
+        self.validate_stack_source(data)
+
+    def validate_template_path(self, data, value):
+        if value and data["class_path"]:
+            raise ValidationError(
+                "class_path cannot be present when "
+                "template_path is provided.")
+        self.validate_stack_source(data)
+
+    def validate_stack_source(self, data):
+        if not (data["class_path"] or data["template_path"]):
+            raise ValidationError(
+                "class_path or template_path is required.")
+
     def validate_parameters(self, data, value):
         if value:
             stack_name = data['name']
@@ -368,18 +387,6 @@ class Config(Model):
             super(Config, self).validate()
         except SchematicsError as e:
             raise exceptions.InvalidConfig(e.errors)
-        # Ensure each stack has a class or template path
-        for i in list(self.stacks):
-            if i.class_path and i.template_path:
-                raise exceptions.InvalidConfig(
-                    "Stack %s has both a class and template path "
-                    "defined" % i.name
-                )
-            elif not i.class_path and not i.template_path:
-                raise exceptions.InvalidConfig(
-                    "Stack %s does not have a class or template path "
-                    "defined" % i.name
-                )
 
     def validate_stacks(self, data, value):
         if value:

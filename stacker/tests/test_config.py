@@ -51,8 +51,17 @@ class TestConfig(unittest.TestCase):
             "stacks": [
                 {
                     "name": "bastion"}]})
-        with self.assertRaises(exceptions.InvalidConfig):
+        with self.assertRaises(exceptions.InvalidConfig) as ex:
             config.validate()
+
+        stack_errors = ex.exception.errors['stacks'][0]
+        print stack_errors
+        self.assertEquals(
+            stack_errors['template_path'][0].__str__(),
+            "class_path or template_path is required.")
+        self.assertEquals(
+            stack_errors['class_path'][0].__str__(),
+            "class_path or template_path is required.")
 
     def test_config_validate_stack_class_and_template_paths(self):
         config = Config({
@@ -62,8 +71,16 @@ class TestConfig(unittest.TestCase):
                     "name": "bastion",
                     "class_path": "foo",
                     "template_path": "bar"}]})
-        with self.assertRaises(exceptions.InvalidConfig):
+        with self.assertRaises(exceptions.InvalidConfig) as ex:
             config.validate()
+
+        stack_errors = ex.exception.errors['stacks'][0]
+        self.assertEquals(
+            stack_errors['template_path'][0].__str__(),
+            "class_path cannot be present when template_path is provided.")
+        self.assertEquals(
+            stack_errors['class_path'][0].__str__(),
+            "template_path cannot be present when class_path is provided.")
 
     def test_config_validate_no_stacks(self):
         config = Config({"namespace": "prod"})

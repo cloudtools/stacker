@@ -694,7 +694,7 @@ class Provider(BaseProvider):
         else:
             return self.default_update_stack
 
-    def prepare_stack_for_update(self, fqn, tags):
+    def prepare_stack_for_update(self, stack, tags):
         """Prepare a stack for updating
 
         It may involve deleting the stack if is has failed it's initial
@@ -705,7 +705,7 @@ class Provider(BaseProvider):
             enabled by the user, or because interactive mode is on.
 
         Args:
-            fqn (str): fully-qualified name of the stack to work on
+            stack (dict): a stack object returned from get_stack
             tags (list): list of expected tags that must be present in the
                 stack if it must be re-created
 
@@ -713,8 +713,6 @@ class Provider(BaseProvider):
             bool: True if the stack can be updated, False if it must be
                 re-created
         """
-
-        stack = self.get_stack(fqn)
 
         if self.is_stack_destroyed(stack):
             return False

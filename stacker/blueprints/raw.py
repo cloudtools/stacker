@@ -79,6 +79,7 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
                                                    mappings,
                                                    description)
         self._raw_template_path = raw_template_path
+        self.template = None
 
     def to_json(self, variables=None):
         """Return the template in JSON.
@@ -91,23 +92,22 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
             str: the rendered CFN JSON template
 
         """
-        raw_template = self.render_template()[1]
         # load -> dumps will produce json from json or yaml templates
-        return json.dumps(yaml.load(raw_template), sort_keys=True, indent=4)
+        return json.dumps(self.to_dict(), sort_keys=True, indent=4)
+
+    def to_dict(self):
+        """Return the template as a python dictionary.
+
+        Returns:
+            dict: the loaded template as a python dictionary
+        """
+        return yaml.load(self.rendered)
 
     def render_template(self):
         """Load template and generate its md5 hash."""
         with open(self.raw_template_path, 'r') as template:
             rendered = template.read()
         version = hashlib.md5(rendered).hexdigest()[:8]
-        parsed_template = yaml.load(rendered)
-        if 'Transform' in parsed_template:
-            # Ensure any transforms in the raw template are reflected in the
-            # Template class. Build actions will check this to evaluate whether
-            # change set use is required
-            self.template.add_transform(parsed_template['Transform'])
-        if self.description:
-            self.set_template_description(self.description)
         return (version, rendered)
 
     def get_parameter_definitions(self):
@@ -174,3 +174,9 @@ class RawTemplateBlueprint(Blueprint):  # pylint: disable=abstract-method
     def raw_template_path(self):
         """Return raw_template_path."""
         return self._raw_template_path
+
+    @property
+    def requires_change_set(self):
+        """Returns true if the underlying template has transforms."""
+        if "Transform" in self.to_dict():
+            return True

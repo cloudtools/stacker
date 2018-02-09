@@ -266,7 +266,7 @@ class Action(BaseAction):
         template = self._template(stack.blueprint)
         tags = build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
-        force_change_set = stack.blueprint.template.transform is not None
+        force_change_set = stack.blueprint.requires_change_set
 
         if recreate:
             logger.debug("Re-creating stack: %s", stack.fqn)

@@ -523,6 +523,11 @@ class Blueprint(object):
         self.template.add_description(description)
 
     @property
+    def requires_change_set(self):
+        """Returns true if the underlying template has transforms."""
+        return self.template.transform is not None
+
+    @property
     def rendered(self):
         if not self._rendered:
             self._version, self._rendered = self.render_template()

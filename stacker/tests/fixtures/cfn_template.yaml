@@ -6,4 +6,9 @@ Parameters:
   Param2:
     Default: default
     Type: CommaDelimitedList
-Resources: {}
+Resources:
+  Dummy:
+    Type: AWS::CloudFormation::WaitConditionHandle
+Outputs:
+  DummyId:
+    Value: dummy-1234

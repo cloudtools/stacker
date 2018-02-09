@@ -60,7 +60,16 @@ class TestBlueprintRendering(unittest.TestCase):
                         "Type": "CommaDelimitedList"
                     }
                 },
-                "Resources": {}
+                "Resources": {
+                    "Dummy": {
+                        "Type": "AWS::CloudFormation::WaitConditionHandle"
+                    }
+                },
+                "Outputs": {
+                    "DummyId": {
+                        "Value": "dummy-1234"
+                    }
+                }
             },
             sort_keys=True,
             indent=4

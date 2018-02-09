@@ -66,12 +66,12 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     return value
 
 
-class RawTemplateBlueprint(object):  # pylint: disable=abstract-method
+class RawTemplateBlueprint(object):
     """Blueprint class for blueprints auto-generated from raw templates."""
 
-    def __init__(self, name, context,  # pylint: disable=too-many-arguments
-                 raw_template_path,
-                 mappings=None, description=None):
+    def __init__(self, name, context, raw_template_path, mappings=None, # noqa pylint: disable=too-many-arguments
+                 description=None):  # pylint: disable=unused-argument
+        """Initialize RawTemplateBlueprint object."""
         self.name = name
         self.context = context
         self.mappings = mappings
@@ -80,7 +80,7 @@ class RawTemplateBlueprint(object):  # pylint: disable=abstract-method
         self._rendered = None
         self._version = None
 
-    def to_json(self, variables=None):
+    def to_json(self, variables=None):  # pylint: disable=unused-argument
         """Return the template in JSON.
 
         Args:
@@ -99,6 +99,7 @@ class RawTemplateBlueprint(object):  # pylint: disable=abstract-method
 
         Returns:
             dict: the loaded template as a python dictionary
+
         """
         return yaml.load(self.rendered)
 
@@ -151,7 +152,7 @@ class RawTemplateBlueprint(object):  # pylint: disable=abstract-method
         """
         return self.resolved_variables
 
-    def get_required_parameter_definitions(self):
+    def get_required_parameter_definitions(self):  # noqa pylint: disable=invalid-name
         """Return all template parameters that do not have a default value.
 
         Returns:
@@ -168,12 +169,12 @@ class RawTemplateBlueprint(object):  # pylint: disable=abstract-method
 
     @property
     def requires_change_set(self):
-        """Returns true if the underlying template has transforms."""
-        if "Transform" in self.to_dict():
-            return True
+        """Return True if the underlying template has transforms."""
+        return bool("Transform" in self.to_dict())
 
     @property
     def rendered(self):
+        """Return (generating first if needed) rendered template."""
         if not self._rendered:
             with open(self.raw_template_path, 'r') as template:
                 self._rendered = template.read()
@@ -181,6 +182,7 @@ class RawTemplateBlueprint(object):  # pylint: disable=abstract-method
 
     @property
     def version(self):
+        """Return (generating first if needed) version hash."""
         if not self._version:
             self._version = hashlib.md5(self.rendered).hexdigest()[:8]
         return self._version

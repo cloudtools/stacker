@@ -1,8 +1,8 @@
 import sys
 import logging
 
-DEBUG_FORMAT = ("[%(asctime)s] %(levelname)s %(name)s:%(lineno)d"
-                "(%(funcName)s): %(message)s")
+DEBUG_FORMAT = ("[%(asctime)s] %(levelname)s %(threadName)s "
+                "%(name)s:%(lineno)d(%(funcName)s): %(message)s")
 INFO_FORMAT = ("[%(asctime)s] %(message)s")
 COLOR_FORMAT = ("[%(asctime)s] \033[%(color)sm%(message)s\033[39m")
 

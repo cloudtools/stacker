@@ -1,6 +1,7 @@
 import logging
 import threading
 
+from ..dag import walk, ThreadedWalker
 from ..plan import Step, build_plan
 
 import botocore.exceptions
@@ -12,6 +13,27 @@ from stacker.util import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def build_walker(concurrency):
+    """This will return a function suitable for passing to
+    :class:`stacker.plan.Plan` for walking the graph.
+
+    If concurrency is 1 (no parallelism) this will return a simple topological
+    walker that doesn't use any multithreading.
+
+    If concurrency is 0, this will return a walker that will walk the graph as
+    fast as the graph topology allows.
+
+    If concurrency is greater than 1, it will return a walker that will only
+    execute a maximum of concurrency steps at any given time.
+
+    Returns:
+        func: returns a function to walk a :class:`stacker.dag.DAG`.
+    """
+    if concurrency == 1:
+        return walk
+    return ThreadedWalker(concurrency).walk
 
 
 def plan(description, action, stacks,

@@ -6,7 +6,7 @@ from operator import attrgetter
 
 import yaml
 
-from .base import plan
+from .base import plan, build_walker
 from . import build
 from .. import exceptions
 from ..status import NotSubmittedStatus, NotUpdatedStatus, COMPLETE
@@ -251,11 +251,12 @@ class Action(build.Action):
             stacks=self.context.get_stacks(),
             targets=self.context.stack_names)
 
-    def run(self, *args, **kwargs):
+    def run(self, concurrency=0, *args, **kwargs):
         plan = self._generate_plan()
         plan.outline(logging.DEBUG)
         logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
-        if not plan.execute():
+        walker = build_walker(concurrency)
+        if not plan.execute(walker):
             sys.exit(1)
 
     """Don't ever do anything for pre_run or post_run"""

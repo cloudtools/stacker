@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from .base import BaseAction, plan
+from .base import BaseAction, plan, build_walker
 
 from ..providers.base import Template
 from .. import util
@@ -340,7 +340,7 @@ class Action(BaseAction):
             outline
         )
 
-    def run(self, semaphore=None, outline=False,
+    def run(self, concurrency=0, outline=False,
             tail=False, dump=False, *args, **kwargs):
         """Kicks off the build/update of the stacks in the stack_definitions.
 
@@ -351,7 +351,8 @@ class Action(BaseAction):
         if not outline and not dump:
             plan.outline(logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
-            if not plan.execute(semaphore=semaphore):
+            walker = build_walker(concurrency)
+            if not plan.execute(walker):
                 sys.exit(1)
         else:
             if outline:

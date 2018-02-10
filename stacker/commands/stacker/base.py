@@ -2,7 +2,6 @@ import argparse
 import threading
 import signal
 from collections import Mapping
-from threading import BoundedSemaphore
 import logging
 
 from ...environment import parse_environment
@@ -20,11 +19,6 @@ def cancel():
     signal.signal(signal.SIGINT, cancel_execution)
     signal.signal(signal.SIGTERM, cancel_execution)
     return cancel
-
-
-def build_semaphore(concurrency):
-    if concurrency > 0:
-        return BoundedSemaphore(concurrency)
 
 
 class KeyValueAction(argparse.Action):

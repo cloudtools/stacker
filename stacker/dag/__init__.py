@@ -371,66 +371,16 @@ def walk(dag, walk_func):
     return dag.walk(walk_func)
 
 
-def walk_threaded(dag, walk_func):
-    """ Walks each node of the graph, in parallel if it can.
-    The walk_func is only called when the nodes dependencies have been
-    satisfied
+class UnlimitedSemaphore(object):
+    """UnlimitedSemaphore implements the same interface as threading.Semaphore,
+    but acquire's always succeed.
     """
 
-    # First, we'll topologically sort all of the nodes, with nodes that
-    # have no dependencies first. We do this to ensure that we don't call
-    # .join on a thread that hasn't yet been started.
-    #
-    # TODO(ejholmes): An alternative would be to ensure that Thread.join
-    # blocks if the thread has not yet been started.
-    nodes = dag.topological_sort()
-    nodes.reverse()
+    def acquire(self, *args):
+        pass
 
-    # This maps a node name to a thread of execution.
-    threads = {}
-
-    # Blocks until all of the given nodes have completed execution (whether
-    # successfully, or errored). Returns True if all nodes returned True.
-    def wait_for(nodes):
-        return all(threads[node].join() for node in nodes)
-
-    # For each node in the graph, we're going to allocate a thread to
-    # execute. The thread will block executing walk_func, until all of the
-    # nodes dependencies have executed successfully.
-    #
-    # If any node fails for some reason (e.g. raising an exception), any
-    # downstream nodes will be cancelled.
-    for node in nodes:
-        def fn(n, deps):
-            if deps:
-                logger.debug(
-                    "%s waiting for %s to complete",
-                    n,
-                    ", ".join(deps))
-
-            # Wait for all dependencies to complete.
-            wait_for(deps)
-
-            logger.debug("%s starting", n)
-
-            ret = walk_func(n)
-
-            if ret:
-                logger.debug("%s completed", n)
-            else:
-                logger.debug("%s failed", n)
-
-            return ret
-
-        deps = dag.all_downstreams(node)
-        threads[node] = Thread(target=fn, args=(node, deps), name=node)
-
-    # Start up all of the threads.
-    for node in nodes:
-        threads[node].start()
-
-    # Wait for all threads to complete executing.
-    return wait_for(nodes)
+    def release(self):
+        pass
 
 
 class Thread(threading.Thread):
@@ -450,3 +400,83 @@ class Thread(threading.Thread):
     def join(self, *args, **kwargs):
         super(Thread, self).join(*args, **kwargs)
         return self._return
+
+
+class ThreadedWalker(object):
+    """A DAG walker that walks the graph as quickly as the graph topology
+    allows, using threads.
+
+    Args:
+        semaphore (threading.Semaphore, optional): a semaphore object which
+            can be used to control how many steps are executed in parallel.
+            By default, there is not limit to the amount of parallelism,
+            other than what the graph topology allows.
+    """
+
+    def __init__(self, semaphore=None):
+        self.semaphore = semaphore or UnlimitedSemaphore()
+
+    def walk(self, dag, walk_func):
+        """ Walks each node of the graph, in parallel if it can.
+        The walk_func is only called when the nodes dependencies have been
+        satisfied
+        """
+
+        # First, we'll topologically sort all of the nodes, with nodes that
+        # have no dependencies first. We do this to ensure that we don't call
+        # .join on a thread that hasn't yet been started.
+        #
+        # TODO(ejholmes): An alternative would be to ensure that Thread.join
+        # blocks if the thread has not yet been started.
+        nodes = dag.topological_sort()
+        nodes.reverse()
+
+        # This maps a node name to a thread of execution.
+        threads = {}
+
+        # Blocks until all of the given nodes have completed execution (whether
+        # successfully, or errored). Returns True if all nodes returned True.
+        def wait_for(nodes):
+            return all(threads[node].join() for node in nodes)
+
+        # For each node in the graph, we're going to allocate a thread to
+        # execute. The thread will block executing walk_func, until all of the
+        # nodes dependencies have executed successfully.
+        #
+        # If any node fails for some reason (e.g. raising an exception), any
+        # downstream nodes will be cancelled.
+        for node in nodes:
+            def fn(n, deps):
+                if deps:
+                    logger.debug(
+                        "%s waiting for %s to complete",
+                        n,
+                        ", ".join(deps))
+
+                # Wait for all dependencies to complete.
+                wait_for(deps)
+
+                logger.debug("%s starting", n)
+
+                self.semaphore.acquire()
+                try:
+                    ret = walk_func(n)
+                finally:
+                    self.semaphore.release()
+
+                if ret:
+                    logger.debug("%s completed", n)
+                else:
+                    logger.debug("%s failed", n)
+
+                return ret
+
+            deps = dag.all_downstreams(node)
+            threads[node] = Thread(target=fn, args=(node, deps), name=node)
+
+        # Start up all of the threads.
+        for node in nodes:
+            threads[node].start()
+
+        # Wait for all threads to complete executing.
+        return wait_for(nodes)

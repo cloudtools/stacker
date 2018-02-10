@@ -10,8 +10,7 @@ from .exceptions import (
     GraphError,
 )
 from .ui import ui
-from .dag import DAG, DAGValidationError
-from .dag import walk_threaded as walk
+from .dag import DAG, DAGValidationError, walk
 from .status import (
     FailedStatus,
     SkippedStatus,
@@ -238,7 +237,6 @@ class Graph(object):
     def __init__(self, steps=None, dag=None):
         self.steps = steps or {}
         self.dag = dag or DAG()
-        self.walker = walk
 
     def add_step(self, step):
         self.steps[step.name] = step
@@ -252,12 +250,12 @@ class Graph(object):
         except DAGValidationError as e:
             raise GraphError(e, step.name, dep)
 
-    def walk(self, walk_func):
+    def walk(self, walker, walk_func):
         def fn(step_name):
             step = self.steps[step_name]
             return walk_func(step)
 
-        return self.walker(self.dag, fn)
+        return walker(self.dag, fn)
 
     def downstream(self, step_name):
         """Returns the direct dependencies of the given step"""
@@ -343,23 +341,18 @@ class Plan(object):
 
             return True
 
-        return self.graph.walk(walk_func)
+        return self.graph.walk(walk, walk_func)
 
-    def execute(self, **kwargs):
-        return self.walk(**kwargs)
+    def execute(self, *args, **kwargs):
+        return self.walk(*args, **kwargs)
 
-    def walk(self, semaphore=None):
+    def walk(self, walker):
         """Walks each step in the underlying graph, in topological order.
 
         Args:
-            semaphore (threading.Semaphore, optional): a semaphore object which
-                can be used to control how many steps are executed in parallel.
-                By default, there is not limit to the amount of parallelism,
-                other than what the graph topology allows.
+            walker (func): a walker function to be passed to
+                :class:`stacker.dag.DAG` to walk the graph.
         """
-
-        if not semaphore:
-            semaphore = UnlimitedSemaphore()
 
         def walk_func(step):
             # Before we execute the step, we need to ensure that it's
@@ -370,13 +363,9 @@ class Plan(object):
                     step.set_status(FailedStatus("dependency has failed"))
                     return step.ok
 
-            semaphore.acquire()
-            try:
-                return step.run()
-            finally:
-                semaphore.release()
+            return step.run()
 
-        return self.graph.walk(walk_func)
+        return self.graph.walk(walker, walk_func)
 
     @property
     def steps(self):
@@ -390,15 +379,3 @@ class Plan(object):
 
     def keys(self):
         return self.step_names
-
-
-class UnlimitedSemaphore(object):
-    """UnlimitedSemaphore implements the same interface as threading.Semaphore,
-    but acquire's always succeed.
-    """
-
-    def acquire(self, *args):
-        pass
-
-    def release(self):
-        pass

@@ -2,8 +2,7 @@
 
 from nose import with_setup
 from nose.tools import nottest, raises
-from stacker.dag import DAG, DAGValidationError
-from stacker.dag import walk_threaded
+from stacker.dag import DAG, DAGValidationError, ThreadedWalker
 import threading
 
 dag = None
@@ -191,8 +190,9 @@ def test_size():
 
 
 @with_setup(blank_setup)
-def test_walk_concurrent():
+def test_threaded_walker():
     dag = DAG()
+    walker = ThreadedWalker()
 
     # b and c should be executed at the same time.
     dag.from_dict({'a': ['b', 'c'],
@@ -209,6 +209,6 @@ def test_walk_concurrent():
         lock.release()
         return True
 
-    ok = walk_threaded(dag, walk_func)
+    ok = walker.walk(dag, walk_func)
     assert ok == True  # noqa: E712
     assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']

@@ -6,7 +6,7 @@ skip executing anything against the stack.
 
 """
 
-from .base import BaseCommand, build_semaphore, cancel
+from .base import BaseCommand, cancel
 from ...actions import build
 
 
@@ -46,11 +46,10 @@ class Build(BaseCommand):
 
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
-        semaphore = build_semaphore(options.max_parallel)
         action = build.Action(options.context,
                               provider=options.provider,
                               cancel=cancel())
-        action.execute(semaphore=semaphore,
+        action.execute(concurrency=options.max_parallel,
                        outline=options.outline,
                        tail=options.tail,
                        dump=options.dump)

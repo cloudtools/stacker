@@ -41,7 +41,6 @@ class Stacker(BaseCommand):
         options.context = Context(
             environment=options.environment,
             config=config,
-            logger_type=self.logger_type,
             # Allow subcommands to provide any specific kwargs to the Context
             # that it wants.
             **options.get_context_kwargs(options)

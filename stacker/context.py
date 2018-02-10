@@ -45,11 +45,9 @@ class Context(object):
     def __init__(self, environment=None,
                  stack_names=None,
                  config=None,
-                 logger_type=None,
                  force_stacks=None):
         self.environment = environment
         self.stack_names = stack_names or []
-        self.logger_type = logger_type
         self.config = config or Config()
         self.force_stacks = force_stacks or []
         self.hook_data = {}

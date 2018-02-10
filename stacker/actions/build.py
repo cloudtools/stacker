@@ -304,6 +304,7 @@ class Action(BaseAction):
             else:
                 return SubmittedStatus("destroying stack for re-creation")
         except StackDidNotChange:
+            self.provider.set_outputs(stack.fqn, provider_stack)
             return DidNotChangeStatus()
 
     def _template(self, blueprint):

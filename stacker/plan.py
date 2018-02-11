@@ -4,8 +4,6 @@ import time
 import uuid
 import multiprocessing
 
-from colorama.ansi import Fore
-
 from .util import stack_template_key_name
 from .exceptions import (
     CancelExecution,
@@ -24,6 +22,19 @@ from .status import (
 
 logger = logging.getLogger(__name__)
 
+COLOR_CODES = {
+    SUBMITTED.code: 33,  # yellow
+    COMPLETE.code: 32,   # green
+}
+
+
+def log_step(step):
+    msg = "%s: %s" % (step.name, step.status.name)
+    if step.status.reason:
+        msg += " (%s)" % (step.status.reason)
+    color_code = COLOR_CODES.get(step.status.code, 37)
+    logger.info(msg, extra={"color": color_code})
+
 
 class Step(object):
     """State machine for executing generic actions related to stacks.
@@ -34,18 +45,14 @@ class Step(object):
             be ran multiple times until the step is "done".
         watch_func (func): an optional function that will be called to "tail"
             the step action.
-        status_changed_func (func): an optional function that will be called
-            when the step changes status.
     """
 
-    def __init__(self, stack, fn, watch_func=None,
-                 status_changed_func=None):
+    def __init__(self, stack, fn, watch_func=None):
         self.stack = stack
         self.status = PENDING
         self.last_updated = time.time()
         self.fn = fn
         self.watch_func = watch_func
-        self.status_changed_func = status_changed_func
 
     def __repr__(self):
         return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
@@ -64,9 +71,6 @@ class Step(object):
             watcher.start()
 
         try:
-            if self.status_changed_func:
-                self.status_changed_func()
-
             while not self.done:
                 self._run_once()
         finally:
@@ -137,8 +141,7 @@ class Step(object):
                          status.name)
             self.status = status
             self.last_updated = time.time()
-            if self.status_changed_func:
-                self.status_changed_func()
+            log_step(self)
 
     def complete(self):
         """A shortcut for set_status(COMPLETE)"""
@@ -354,37 +357,6 @@ class Plan(object):
             return step.run()
 
         return self.graph.walk(walk_func)
-
-    def _check_point(self):
-        """Outputs the current status of all steps in the plan."""
-        status_to_color = {
-            SUBMITTED.code: Fore.YELLOW,
-            COMPLETE.code: Fore.GREEN,
-        }
-        logger.info("Plan Status:", extra={"reset": True, "loop": self.id})
-
-        longest = 0
-        messages = []
-        for step in self.steps:
-            length = len(step.name)
-            if length > longest:
-                longest = length
-
-            msg = "%s: %s" % (step.name, step.status.name)
-            if step.status.reason:
-                msg += " (%s)" % (step.status.reason)
-
-            messages.append((msg, step))
-
-        for msg, step in messages:
-            parts = msg.split(' ', 1)
-            fmt = "\t{0: <%d}{1}" % (longest + 2,)
-            color = status_to_color.get(step.status.code, Fore.WHITE)
-            logger.info(fmt.format(*parts), extra={
-                'loop': self.id,
-                'color': color,
-                'last_updated': step.last_updated,
-            })
 
     @property
     def steps(self):

@@ -4,6 +4,9 @@
 - stacker now builds a DAG internally [GH-523]
 - an unecessary DescribeStacks network call was removed [GH-529]
 - support stack json/yaml templates [GH-530]
+- logging output has been simplified and no longer uses ANSI escape sequences to clear the screen [GH-532]
+- logging output is now colorized in `--interactive` mode if the terminal has a TTY [GH-532]
+
 
 ## 1.1.4 (2018-01-26)
 

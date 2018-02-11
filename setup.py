@@ -10,7 +10,6 @@ install_requires = [
     "boto3>=1.3.1,<1.5.0",
     "PyYAML~=3.12",
     "awacs>=0.6.0",
-    "colorama~=0.3.7",
     "formic~=0.9b",
     "gitpython~=2.0",
     "schematics~=2.0.1",

@@ -315,7 +315,11 @@ A stack has the following keys:
   The base name for the stack (note: the namespace from the environment
   will be prepended to this)
 **class_path:**
-  The python class path to the Blueprint to be used.
+  The python class path to the Blueprint to be used. Specify this or
+  ``template_path`` for the stack.
+**template_path:**
+  Path to raw CloudFormation template (JSON or YAML). Specify this or
+  ``class_path`` for the stack.
 **description:**
   A short description to apply to the stack. This overwrites any description
   provided in the Blueprint. See: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html

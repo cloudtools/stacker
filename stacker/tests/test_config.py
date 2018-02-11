@@ -45,7 +45,7 @@ class TestConfig(unittest.TestCase):
         c = render(conf, e)
         self.assertEqual("namespace: !!str", c)
 
-    def test_config_validate_missing_stack_class_path(self):
+    def test_config_validate_missing_stack_source(self):
         config = Config({
             "namespace": "prod",
             "stacks": [
@@ -54,10 +54,33 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidConfig) as ex:
             config.validate()
 
-        error = ex.exception.errors['stacks'][0]['class_path'].errors[0]
+        stack_errors = ex.exception.errors['stacks'][0]
+        print stack_errors
         self.assertEquals(
-            error.__str__(),
-            "This field is required.")
+            stack_errors['template_path'][0].__str__(),
+            "class_path or template_path is required.")
+        self.assertEquals(
+            stack_errors['class_path'][0].__str__(),
+            "class_path or template_path is required.")
+
+    def test_config_validate_stack_class_and_template_paths(self):
+        config = Config({
+            "namespace": "prod",
+            "stacks": [
+                {
+                    "name": "bastion",
+                    "class_path": "foo",
+                    "template_path": "bar"}]})
+        with self.assertRaises(exceptions.InvalidConfig) as ex:
+            config.validate()
+
+        stack_errors = ex.exception.errors['stacks'][0]
+        self.assertEquals(
+            stack_errors['template_path'][0].__str__(),
+            "class_path cannot be present when template_path is provided.")
+        self.assertEquals(
+            stack_errors['class_path'][0].__str__(),
+            "template_path cannot be present when class_path is provided.")
 
     def test_config_validate_no_stacks(self):
         config = Config({"namespace": "prod"})

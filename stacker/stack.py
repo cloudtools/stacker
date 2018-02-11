@@ -10,6 +10,7 @@ from .lookups.handlers.output import (
     deconstruct,
 )
 
+from .blueprints.raw import RawTemplateBlueprint
 from .exceptions import FailedVariableLookup
 
 
@@ -103,17 +104,28 @@ class Stack(object):
     @property
     def blueprint(self):
         if not hasattr(self, "_blueprint"):
-            class_path = self.definition.class_path
-            blueprint_class = util.load_object_from_string(class_path)
-            if not hasattr(blueprint_class, "rendered"):
-                raise AttributeError("Stack class %s does not have a "
-                                     "\"rendered\" "
-                                     "attribute." % (class_path,))
+            kwargs = {}
+            blueprint_class = None
+            if self.definition.class_path:
+                class_path = self.definition.class_path
+                blueprint_class = util.load_object_from_string(class_path)
+                if not hasattr(blueprint_class, "rendered"):
+                    raise AttributeError("Stack class %s does not have a "
+                                         "\"rendered\" "
+                                         "attribute." % (class_path,))
+            elif self.definition.template_path:
+                blueprint_class = RawTemplateBlueprint
+                kwargs["raw_template_path"] = self.definition.template_path
+            else:
+                raise AttributeError("Stack does not have a defined class or "
+                                     "template path.")
+
             self._blueprint = blueprint_class(
                 name=self.name,
                 context=self.context,
                 mappings=self.mappings,
                 description=self.definition.description,
+                **kwargs
             )
         return self._blueprint
 

@@ -1,0 +1,23 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "TestTemplate",
+    "Parameters": {
+        "Param1": {
+            "Type": "String"
+        },
+        "Param2": {
+            "Default": "default",
+            "Type": "CommaDelimitedList"
+        }
+    },
+    "Resources": {
+      "Dummy": {
+        "Type": "AWS::CloudFormation::WaitConditionHandle"
+      }
+    },
+    "Outputs": {
+      "DummyId": {
+        "Value": "dummy-1234"
+      }
+    }
+}

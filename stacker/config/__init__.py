@@ -271,7 +271,9 @@ class Hook(Model):
 class Stack(Model):
     name = StringType(required=True)
 
-    class_path = StringType(required=True)
+    class_path = StringType(serialize_when_none=False)
+
+    template_path = StringType(serialize_when_none=False)
 
     description = StringType(serialize_when_none=False)
 
@@ -288,6 +290,25 @@ class Stack(Model):
     parameters = DictType(AnyType, serialize_when_none=False)
 
     tags = DictType(StringType, serialize_when_none=False)
+
+    def validate_class_path(self, data, value):
+        if value and data["template_path"]:
+            raise ValidationError(
+                "template_path cannot be present when "
+                "class_path is provided.")
+        self.validate_stack_source(data)
+
+    def validate_template_path(self, data, value):
+        if value and data["class_path"]:
+            raise ValidationError(
+                "class_path cannot be present when "
+                "template_path is provided.")
+        self.validate_stack_source(data)
+
+    def validate_stack_source(self, data):
+        if not (data["class_path"] or data["template_path"]):
+            raise ValidationError(
+                "class_path or template_path is required.")
 
     def validate_parameters(self, data, value):
         if value:

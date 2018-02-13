@@ -18,7 +18,7 @@ test-unit:
 	AWS_DEFAULT_REGION=us-east-1 python setup.py nosetests
 
 test-functional:
-	bats tests
+	cd tests && bats .
 
 # General testing target for most development.
 test: lint test-unit

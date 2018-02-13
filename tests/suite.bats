@@ -681,7 +681,6 @@ EOF
   stacker build <(config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: pending"
   assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
   assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
 
@@ -689,13 +688,11 @@ EOF
   stacker build -i <(config)
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: pending"
   assert_has_line "${STACKER_NAMESPACE}-vpc: skipped (nochange)"
 
   # Cleanup
   stacker destroy --force <(config)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-vpc: pending"
   assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (submitted for destruction)"
   assert_has_line "${STACKER_NAMESPACE}-vpc: complete (stack destroyed)"
 }

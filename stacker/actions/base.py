@@ -1,3 +1,4 @@
+import os
 import logging
 import threading
 
@@ -13,6 +14,15 @@ from stacker.util import (
 )
 
 logger = logging.getLogger(__name__)
+
+# After submitting a stack update/create, this controls how long we'll wait
+# between calls to DescribeStacks to check on it's status. Most stack updates
+# take at least a couple minutes, so 30 seconds is pretty reasonable and inline
+# with the suggested value in
+# https://github.com/boto/botocore/blob/1.6.1/botocore/data/cloudformation/2010-05-15/waiters-2.json#L22
+#
+# This can be controlled via an environment variable, mostly for testing.
+STACK_POLL_TIME = int(os.environ.get("STACKER_STACK_POLL_TIME", 30))
 
 
 def build_walker(concurrency):

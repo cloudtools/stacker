@@ -2,6 +2,7 @@ import logging
 import sys
 
 from .base import BaseAction, plan, build_walker
+from .base import STACK_POLL_TIME
 from ..exceptions import StackDoesNotExist
 from .. import util
 from ..status import (
@@ -42,7 +43,9 @@ class Action(BaseAction):
             reverse=True)
 
     def _destroy_stack(self, stack, **kwargs):
-        if self.cancel.wait(0):
+        old_status = kwargs.get("status")
+        wait_time = STACK_POLL_TIME if old_status == SUBMITTED else 0
+        if self.cancel.wait(wait_time):
             return INTERRUPTED
 
         try:

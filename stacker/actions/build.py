@@ -2,6 +2,7 @@ import logging
 import sys
 
 from .base import BaseAction, plan, build_walker
+from .base import STACK_POLL_TIME
 
 from ..providers.base import Template
 from .. import util
@@ -211,7 +212,9 @@ class Action(BaseAction):
         it is already updating or creating.
 
         """
-        if self.cancel.wait(0):
+        old_status = kwargs.get("status")
+        wait_time = STACK_POLL_TIME if old_status == SUBMITTED else 0
+        if self.cancel.wait(wait_time):
             return INTERRUPTED
 
         if not should_submit(stack):
@@ -222,7 +225,6 @@ class Action(BaseAction):
         except StackDoesNotExist:
             provider_stack = None
 
-        old_status = kwargs.get("status")
         recreate = False
         if provider_stack and old_status == SUBMITTED:
             logger.debug(

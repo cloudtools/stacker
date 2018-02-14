@@ -5,6 +5,11 @@ from stacker.config import Config, Stack
 from stacker.lookups import Lookup
 
 
+class MockThreadingEvent(object):
+    def wait(self, timeout=None):
+        return False
+
+
 def mock_provider(**kwargs):
     return MagicMock(**kwargs)
 

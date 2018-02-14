@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 COLOR_CODES = {
     SUBMITTED.code: 33,  # yellow
     COMPLETE.code: 32,   # green
+    FAILED.code: 31,     # red
 }
 
 

@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import time
 import zipfile
 
 import collections
@@ -26,68 +25,6 @@ from yaml.nodes import MappingNode
 from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
-
-
-def retry_with_backoff(function, args=None, kwargs=None, attempts=5,
-                       min_delay=1, max_delay=3, exc_list=None,
-                       retry_checker=None):
-    """Retries function, catching expected Exceptions.
-
-    Each retry has a delay between `min_delay` and `max_delay` seconds,
-    increasing with each attempt.
-
-    Args:
-        function (function): The function to call.
-        args (list, optional): A list of positional arguments to pass to the
-            given function.
-        kwargs (dict, optional): Keyword arguments to pass to the given
-            function.
-        attempts (int, optional): The # of times to retry the function.
-            Default: 5
-        min_delay (int, optional): The minimum time to delay retries, in
-            seconds. Default: 1
-        max_delay (int, optional): The maximum time to delay retries, in
-            seconds. Default: 5
-        exc_list (list, optional): A list of :class:`Exception` classes that
-            should be retried. Default: [:class:`Exception`,]
-        retry_checker (func, optional): An optional function that is used to
-            do a deeper analysis on the received :class:`Exception` to
-            determine if it qualifies for retry. Receives a single argument,
-            the :class:`Exception` object that was caught. Should return
-            True if it should be retried.
-
-    Returns:
-        variable: Returns whatever the given function returns.
-
-    Raises:
-        :class:`Exception`: Raises whatever exception the given function
-            raises, if unable to succeed within the given number of attempts.
-    """
-    args = args or []
-    kwargs = kwargs or {}
-    attempt = 0
-    if not exc_list:
-        exc_list = (Exception, )
-    while True:
-        attempt += 1
-        logger.debug("Calling %s, attempt %d.", function, attempt)
-        sleep_time = min(max_delay, min_delay * attempt)
-        try:
-            return function(*args, **kwargs)
-        except exc_list as e:
-            # If there is no retry checker function, or if there is and it
-            # returns True, then go ahead and retry
-            if not retry_checker or retry_checker(e):
-                if attempt == attempts:
-                    logger.error("Function %s failed after %s retries. Giving "
-                                 "up.", function.func_name, attempts)
-                    raise
-                logger.debug("Caught expected exception: %r", e)
-            # If there is a retry checker function, and it returned False,
-            # do not retry
-            else:
-                raise
-        time.sleep(sleep_time)
 
 
 def camel_to_snake(name):

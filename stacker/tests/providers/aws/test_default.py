@@ -184,7 +184,7 @@ class TestMethods(unittest.TestCase):
 
     @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval(self, patched_format):
-        get_input_path = "stacker.providers.aws.default.get_raw_input"
+        get_input_path = "stacker.ui.get_raw_input"
         with patch(get_input_path, return_value="y"):
             self.assertIsNone(ask_for_approval([], [], None))
 
@@ -204,7 +204,7 @@ class TestMethods(unittest.TestCase):
 
     @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval_with_params_diff(self, patched_format):
-        get_input_path = "stacker.providers.aws.default.get_raw_input"
+        get_input_path = "stacker.ui.get_raw_input"
         params_diff = [
             DictValue('ParamA', None, 'new-param-value'),
             DictValue('ParamB', 'param-b-old-value', 'param-b-new-value-delta')

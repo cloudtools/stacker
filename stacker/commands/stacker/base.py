@@ -1,8 +1,24 @@
 import argparse
+import threading
+import signal
 from collections import Mapping
 import logging
 
 from ...environment import parse_environment
+
+
+def cancel():
+    """Returns a threading.Event() that will get set when SIGTERM, or
+    SIGINT are triggered. This can be used to cancel execution of threads.
+    """
+    cancel = threading.Event()
+
+    def cancel_execution(signum, frame):
+        cancel.set()
+
+    signal.signal(signal.SIGINT, cancel_execution)
+    signal.signal(signal.SIGTERM, cancel_execution)
+    return cancel
 
 
 class KeyValueAction(argparse.Action):

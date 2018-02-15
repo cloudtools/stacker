@@ -1,13 +1,15 @@
 import logging
 import sys
 
-from .base import BaseAction, plan
+from .base import BaseAction, plan, build_walker
+from .base import STACK_POLL_TIME
 from ..exceptions import StackDoesNotExist
 from .. import util
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
     SUBMITTED,
+    INTERRUPTED
 )
 
 from ..status import StackDoesNotExist as StackDoesNotExistStatus
@@ -41,6 +43,11 @@ class Action(BaseAction):
             reverse=True)
 
     def _destroy_stack(self, stack, **kwargs):
+        old_status = kwargs.get("status")
+        wait_time = STACK_POLL_TIME if old_status == SUBMITTED else 0
+        if self.cancel.wait(wait_time):
+            return INTERRUPTED
+
         try:
             provider_stack = self.provider.get_stack(stack.fqn)
         except StackDoesNotExist:
@@ -77,13 +84,14 @@ class Action(BaseAction):
                 provider=self.provider,
                 context=self.context)
 
-    def run(self, force, tail=False, *args, **kwargs):
+    def run(self, force, concurrency=0, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)
         if force:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them
             plan.outline(logging.DEBUG)
-            if not plan.execute():
+            walker = build_walker(concurrency)
+            if not plan.execute(walker):
                 sys.exit(1)
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "

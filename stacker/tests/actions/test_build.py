@@ -23,6 +23,8 @@ from stacker.status import (
     FAILED
 )
 
+from ..factories import MockThreadingEvent
+
 
 def mock_stack(parameters):
     return {
@@ -106,7 +108,7 @@ class TestBuildAction(unittest.TestCase):
 
     def test_generate_plan(self):
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, cancel=MockThreadingEvent())
         plan = build_action._generate_plan()
         self.assertEqual(
             {
@@ -119,7 +121,7 @@ class TestBuildAction(unittest.TestCase):
 
     def test_dont_execute_plan_when_outline_specified(self):
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, cancel=MockThreadingEvent())
         with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=True)
@@ -127,7 +129,7 @@ class TestBuildAction(unittest.TestCase):
 
     def test_execute_plan_when_outline_not_specified(self):
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, cancel=MockThreadingEvent())
         with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=False)
@@ -169,7 +171,8 @@ class TestLaunchStack(TestBuildAction):
         self.context = self._get_context()
         self.provider = Provider(None, interactive=False,
                                  recreate_failed=False)
-        self.build_action = build.Action(self.context, provider=self.provider)
+        self.build_action = build.Action(self.context, provider=self.provider,
+                                         cancel=MockThreadingEvent())
 
         self.stack = mock.MagicMock()
         self.stack.name = 'vpc'
@@ -193,6 +196,7 @@ class TestLaunchStack(TestBuildAction):
 
             return {'StackName': self.stack.name,
                     'StackStatus': self.stack_status,
+                    'Outputs': [],
                     'Tags': []}
 
         patch_object(self.provider, 'get_stack', side_effect=get_stack)

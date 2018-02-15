@@ -12,6 +12,8 @@ from stacker.status import (
     SUBMITTED,
 )
 
+from ..factories import MockThreadingEvent
+
 
 class MockStack(object):
     """Mock our local Stacker stack and an AWS provider stack"""
@@ -36,7 +38,8 @@ class TestDestroyAction(unittest.TestCase):
             ],
         })
         self.context = Context(config=config)
-        self.action = destroy.Action(self.context, provider=mock.MagicMock())
+        self.action = destroy.Action(self.context, provider=mock.MagicMock(),
+                                     cancel=MockThreadingEvent())
 
     def test_generate_plan(self):
         plan = self.action._generate_plan()

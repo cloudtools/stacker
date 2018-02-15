@@ -1,5 +1,8 @@
+import os
 import logging
+import threading
 
+from ..dag import walk, ThreadedWalker
 from ..plan import Step, build_plan
 
 import botocore.exceptions
@@ -11,6 +14,36 @@ from stacker.util import (
 )
 
 logger = logging.getLogger(__name__)
+
+# After submitting a stack update/create, this controls how long we'll wait
+# between calls to DescribeStacks to check on it's status. Most stack updates
+# take at least a couple minutes, so 30 seconds is pretty reasonable and inline
+# with the suggested value in
+# https://github.com/boto/botocore/blob/1.6.1/botocore/data/cloudformation/2010-05-15/waiters-2.json#L22
+#
+# This can be controlled via an environment variable, mostly for testing.
+STACK_POLL_TIME = int(os.environ.get("STACKER_STACK_POLL_TIME", 30))
+
+
+def build_walker(concurrency):
+    """This will return a function suitable for passing to
+    :class:`stacker.plan.Plan` for walking the graph.
+
+    If concurrency is 1 (no parallelism) this will return a simple topological
+    walker that doesn't use any multithreading.
+
+    If concurrency is 0, this will return a walker that will walk the graph as
+    fast as the graph topology allows.
+
+    If concurrency is greater than 1, it will return a walker that will only
+    execute a maximum of concurrency steps at any given time.
+
+    Returns:
+        func: returns a function to walk a :class:`stacker.dag.DAG`.
+    """
+    if concurrency == 1:
+        return walk
+    return ThreadedWalker(concurrency).walk
 
 
 def plan(description, action, stacks,
@@ -91,10 +124,11 @@ class BaseAction(object):
             the necessary actions.
     """
 
-    def __init__(self, context, provider=None):
+    def __init__(self, context, provider=None, cancel=None):
         self.context = context
         self.provider = provider
         self.bucket_name = context.bucket_name
+        self.cancel = cancel or threading.Event()
         self._conn = None
 
     @property

@@ -9,7 +9,8 @@ from .exceptions import (
     CancelExecution,
     GraphError,
 )
-from .dag import DAG, DAGValidationError
+from .ui import ui
+from .dag import DAG, DAGValidationError, walk
 from .status import (
     FailedStatus,
     SkippedStatus,
@@ -34,7 +35,7 @@ def log_step(step):
     if step.status.reason:
         msg += " (%s)" % (step.status.reason)
     color_code = COLOR_CODES.get(step.status.code, 37)
-    logger.info(msg, extra={"color": color_code})
+    ui.info(msg, extra={"color": color_code})
 
 
 class Step(object):
@@ -85,6 +86,9 @@ class Step(object):
             status = self.fn(self.stack, status=self.status)
         except CancelExecution:
             status = SkippedStatus(reason="canceled execution")
+        except Exception as e:
+            logger.exception(e)
+            status = FailedStatus(reason=e.message)
         self.set_status(status)
         return status
 
@@ -247,12 +251,12 @@ class Graph(object):
         except DAGValidationError as e:
             raise GraphError(e, step.name, dep)
 
-    def walk(self, walk_func):
+    def walk(self, walker, walk_func):
         def fn(step_name):
             step = self.steps[step_name]
             return walk_func(step)
 
-        return self.dag.walk(fn)
+        return walker(self.dag, fn)
 
     def downstream(self, step_name):
         """Returns the direct dependencies of the given step"""
@@ -338,13 +342,18 @@ class Plan(object):
 
             return True
 
-        return self.graph.walk(walk_func)
+        return self.graph.walk(walk, walk_func)
 
-    def execute(self, **kwargs):
-        return self.walk(**kwargs)
+    def execute(self, *args, **kwargs):
+        return self.walk(*args, **kwargs)
 
-    def walk(self):
-        """Walks each step in the underlying graph, in topological order."""
+    def walk(self, walker):
+        """Walks each step in the underlying graph, in topological order.
+
+        Args:
+            walker (func): a walker function to be passed to
+                :class:`stacker.dag.DAG` to walk the graph.
+        """
 
         def walk_func(step):
             # Before we execute the step, we need to ensure that it's
@@ -357,7 +366,7 @@ class Plan(object):
 
             return step.run()
 
-        return self.graph.walk(walk_func)
+        return self.graph.walk(walker, walk_func)
 
     @property
     def steps(self):

@@ -2,7 +2,8 @@
 
 from nose import with_setup
 from nose.tools import nottest, raises
-from stacker.dag import DAG, DAGValidationError
+from stacker.dag import DAG, DAGValidationError, ThreadedWalker
+import threading
 
 dag = None
 
@@ -186,3 +187,28 @@ def test_size():
     assert dag.size() == 4
     dag.delete_node('a')
     assert dag.size() == 3
+
+
+@with_setup(blank_setup)
+def test_threaded_walker():
+    dag = DAG()
+    walker = ThreadedWalker()
+
+    # b and c should be executed at the same time.
+    dag.from_dict({'a': ['b', 'c'],
+                   'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+
+    lock = threading.Lock()  # Protects nodes from concurrent access
+    nodes = []
+
+    def walk_func(n):
+        lock.acquire()
+        nodes.append(n)
+        lock.release()
+        return True
+
+    ok = walker.walk(dag, walk_func)
+    assert ok == True  # noqa: E712
+    assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']

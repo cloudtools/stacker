@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# To make the tests run faster, we don't wait between calls to DescribeStacks
+# to check on the status of Create/Update.
+export STACKER_STACK_POLL_TIME=0
+
 if [ -z "$STACKER_NAMESPACE" ]; then
   >&2 echo "To run these tests, you must set a STACKER_NAMESPACE environment variable"
   exit 1

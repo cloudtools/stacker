@@ -6,6 +6,7 @@ import unittest
 import mock
 
 from stacker.context import Context, Config
+from stacker.dag import walk
 from stacker.util import stack_template_key_name
 from stacker.lookups.registry import (
     register_lookup_handler,
@@ -90,7 +91,7 @@ class TestPlan(unittest.TestCase):
 
         plan = build_plan(
             description="Test", steps=[Step(vpc, fn), Step(bastion, fn)])
-        plan.execute()
+        plan.execute(walk)
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
@@ -115,7 +116,7 @@ class TestPlan(unittest.TestCase):
             description="Test",
             steps=[Step(vpc, fn), Step(db, fn), Step(app, fn)],
             targets=['db.1'])
-        self.assertTrue(plan.execute())
+        self.assertTrue(plan.execute(walk))
 
         self.assertEquals(calls, [
             'namespace-vpc.1', 'namespace-db.1'])
@@ -140,10 +141,10 @@ class TestPlan(unittest.TestCase):
         bastion_step = Step(bastion, fn)
         plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
 
-        with self.assertRaises(ValueError):
-            plan.execute()
+        plan.execute(walk)
 
         self.assertEquals(calls, ['namespace-vpc.1'])
+        self.assertEquals(vpc_step.status, FAILED)
 
     def test_execute_plan_skipped(self):
         vpc = Stack(
@@ -165,7 +166,7 @@ class TestPlan(unittest.TestCase):
         bastion_step = Step(bastion, fn)
 
         plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
-        self.assertTrue(plan.execute())
+        self.assertTrue(plan.execute(walk))
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
@@ -194,9 +195,11 @@ class TestPlan(unittest.TestCase):
 
         plan = build_plan(description="Test", steps=[
             vpc_step, bastion_step, db_step])
-        self.assertFalse(plan.execute())
+        self.assertFalse(plan.execute(walk))
 
-        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-db.1'])
+        calls.sort()
+
+        self.assertEquals(calls, ['namespace-db.1', 'namespace-vpc.1'])
 
     def test_execute_plan_cancelled(self):
         vpc = Stack(
@@ -219,7 +222,7 @@ class TestPlan(unittest.TestCase):
 
         plan = build_plan(description="Test", steps=[
             vpc_step, bastion_step])
-        self.assertTrue(plan.execute())
+        self.assertTrue(plan.execute(walk))
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 

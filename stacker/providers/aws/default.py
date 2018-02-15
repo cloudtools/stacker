@@ -7,10 +7,11 @@ import urlparse
 import sys
 
 import botocore.exceptions
+from botocore.config import Config
 
 from ..base import BaseProvider
 from ... import exceptions
-from ...util import retry_with_backoff
+from ...ui import ui
 from stacker.session_cache import get_session
 
 from ...actions.diff import (
@@ -20,6 +21,23 @@ from ...actions.diff import (
 )
 
 logger = logging.getLogger(__name__)
+
+# This value controls the maximum number of times a CloudFormation API call
+# will be attempted, after being throttled. This value is used in an
+# exponential backoff algorithm to determine how long the client should wait
+# until attempting a retry:
+#
+#   base * growth_factor ^ (attempts - 1)
+#
+# A value of 10 here would cause the worst case wait time for the last retry to
+# be ~8 mins:
+#
+#   1 * 2 ^ (10 - 1) = 512 seconds
+#
+# References:
+# https://github.com/boto/botocore/blob/1.6.1/botocore/retryhandler.py#L39-L58
+# https://github.com/boto/botocore/blob/1.6.1/botocore/data/_retry.json#L97-L121
+MAX_ATTEMPTS = 10
 
 MAX_TAIL_RETRIES = 5
 DEFAULT_CAPABILITIES = ["CAPABILITY_NAMED_IAM", ]
@@ -37,48 +55,14 @@ def get_output_dict(stack):
 
     """
     outputs = {}
+    if 'Outputs' not in stack:
+        return outputs
+
     for output in stack['Outputs']:
         logger.debug("    %s %s: %s", stack['StackName'], output['OutputKey'],
                      output['OutputValue'])
         outputs[output['OutputKey']] = output['OutputValue']
     return outputs
-
-
-def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
-    """Wrap retry_with_backoff to handle AWS Cloudformation Throttling.
-
-    Args:
-        fn (function): The function to call.
-        attempts (int): Maximum # of attempts to retry the function.
-        args (list): List of positional arguments to pass to the function.
-        kwargs (dict): Dict of keyword arguments to pass to the function.
-
-    Returns:
-        passthrough: This returns the result of the function call itself.
-
-    Raises:
-        passthrough: This raises any exceptions the function call raises,
-            except for boto.exception.BotoServerError, provided it doesn't
-            retry more than attempts.
-    """
-    def _throttling_checker(exc):
-        """
-
-        Args:
-        exc (botocore.exceptions.ClientError): Expected exception type
-
-        Returns:
-             boolean: indicating whether this error is a throttling error
-        """
-        if exc.response['ResponseMetadata']['HTTPStatusCode'] == 400 and \
-                exc.response['Error']['Code'] == "Throttling":
-            logger.debug("AWS throttling calls.")
-            return True
-        return False
-
-    return retry_with_backoff(fn, args=args, kwargs=kwargs, attempts=attempts,
-                              exc_list=(botocore.exceptions.ClientError, ),
-                              retry_checker=_throttling_checker)
 
 
 def s3_fallback(fqn, template, parameters, tags, method,
@@ -104,7 +88,7 @@ def s3_fallback(fqn, template, parameters, tags, method,
         change_set_name=get_change_set_name()
     )
 
-    response = retry_on_throttling(method, kwargs=args)
+    response = method(**args)
     return response
 
 
@@ -134,11 +118,6 @@ def requires_replacement(changeset):
             "Replacement", False) == "True"]
 
 
-def get_raw_input(message):
-    """ Just a wrapper for raw_input for testing purposes. """
-    return raw_input(message)
-
-
 def ask_for_approval(full_changeset=None, params_diff=None,
                      include_verbose=False):
     """Prompt the user for approval to execute a change set.
@@ -157,7 +136,7 @@ def ask_for_approval(full_changeset=None, params_diff=None,
     if include_verbose:
         approval_options.append('v')
 
-    approve = get_raw_input("Execute the above changes? [{}] ".format(
+    approve = ui.ask("Execute the above changes? [{}] ".format(
         '/'.join(approval_options)))
 
     if include_verbose and approve == "v":
@@ -275,11 +254,8 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
     complete = False
     response = None
     for i in range(try_count):
-        response = retry_on_throttling(
-            cfn_client.describe_change_set,
-            kwargs={
-                'ChangeSetName': change_set_id,
-            },
+        response = cfn_client.describe_change_set(
+            ChangeSetName=change_set_id,
         )
         complete = response["Status"] in ("FAILED", "CREATE_COMPLETE")
         if complete:
@@ -311,10 +287,7 @@ def create_change_set(cfn_client, fqn, template, parameters, tags,
         change_set_name=get_change_set_name()
     )
     try:
-        response = retry_on_throttling(
-            cfn_client.create_change_set,
-            kwargs=args
-        )
+        response = cfn_client.create_change_set(**args)
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Message'] == ('TemplateURL must reference '
                                               'a valid S3 object to which '
@@ -500,16 +473,21 @@ class Provider(BaseProvider):
         # see https://github.com/remind101/stacker/issues/196
         pid = os.getpid()
         if pid != self._pid or not self._cloudformation:
+            config = Config(
+                retries=dict(
+                    max_attempts=MAX_ATTEMPTS
+                )
+            )
             session = get_session(self.region)
-            self._cloudformation = session.client('cloudformation')
+            self._cloudformation = session.client('cloudformation',
+                                                  config=config)
 
         return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):
         try:
-            return retry_on_throttling(
-                self.cloudformation.describe_stacks,
-                kwargs=dict(StackName=stack_name))['Stacks'][0]
+            return self.cloudformation.describe_stacks(
+                StackName=stack_name)['Stacks'][0]
         except botocore.exceptions.ClientError as e:
             if "does not exist" not in e.message:
                 raise
@@ -614,7 +592,7 @@ class Provider(BaseProvider):
         if self.service_role:
             args["RoleARN"] = self.service_role
 
-        retry_on_throttling(self.cloudformation.delete_stack, kwargs=args)
+        self.cloudformation.delete_stack(**args)
         return True
 
     def create_stack(self, fqn, template, parameters, tags,
@@ -648,11 +626,8 @@ class Provider(BaseProvider):
                 'CREATE', service_role=self.service_role, **kwargs
             )
 
-            retry_on_throttling(
-                self.cloudformation.execute_change_set,
-                kwargs={
-                    'ChangeSetName': change_set_id,
-                },
+            self.cloudformation.execute_change_set(
+                ChangeSetName=change_set_id,
             )
         else:
             args = generate_cloudformation_args(
@@ -661,10 +636,7 @@ class Provider(BaseProvider):
             )
 
             try:
-                retry_on_throttling(
-                    self.cloudformation.create_stack,
-                    kwargs=args
-                )
+                self.cloudformation.create_stack(**args)
             except botocore.exceptions.ClientError as e:
                 if e.response['Error']['Message'] == ('TemplateURL must '
                                                       'reference a valid S3 '
@@ -826,19 +798,20 @@ class Provider(BaseProvider):
             changes = requires_replacement(changes)
 
         if changes or params_diff:
-            output_summary(fqn, action, changes, params_diff,
-                           replacements_only=self.replacements_only)
-            ask_for_approval(
-                full_changeset=full_changeset,
-                params_diff=params_diff,
-                include_verbose=True,
-            )
+            ui.lock()
+            try:
+                output_summary(fqn, action, changes, params_diff,
+                               replacements_only=self.replacements_only)
+                ask_for_approval(
+                    full_changeset=full_changeset,
+                    params_diff=params_diff,
+                    include_verbose=True,
+                )
+            finally:
+                ui.unlock()
 
-        retry_on_throttling(
-            self.cloudformation.execute_change_set,
-            kwargs={
-                'ChangeSetName': change_set_id,
-            },
+        self.cloudformation.execute_change_set(
+            ChangeSetName=change_set_id,
         )
 
     def noninteractive_changeset_update(self, fqn, template, old_parameters,
@@ -866,11 +839,8 @@ class Provider(BaseProvider):
             'UPDATE', service_role=self.service_role, **kwargs
         )
 
-        retry_on_throttling(
-            self.cloudformation.execute_change_set,
-            kwargs={
-                'ChangeSetName': change_set_id,
-            },
+        self.cloudformation.execute_change_set(
+            ChangeSetName=change_set_id,
         )
 
     def default_update_stack(self, fqn, template, old_parameters, parameters,
@@ -896,10 +866,7 @@ class Provider(BaseProvider):
         )
 
         try:
-            retry_on_throttling(
-                self.cloudformation.update_stack,
-                kwargs=args
-            )
+            self.cloudformation.update_stack(**args)
         except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in e.message:
                 logger.debug(
@@ -926,8 +893,12 @@ class Provider(BaseProvider):
     def get_outputs(self, stack_name, *args, **kwargs):
         if stack_name not in self._outputs:
             stack = self.get_stack(stack_name)
-            self._outputs[stack_name] = get_output_dict(stack)
+            self.set_outputs(stack_name, stack)
         return self._outputs[stack_name]
+
+    def set_outputs(self, stack_name, stack):
+        self._outputs[stack_name] = get_output_dict(stack)
+        return
 
     def get_stack_info(self, stack_name):
         """ Get the template and parameters of the stack currently in AWS
@@ -937,9 +908,8 @@ class Provider(BaseProvider):
         stack = self.get_stack(stack_name)
 
         try:
-            template = retry_on_throttling(
-                self.cloudformation.get_template,
-                kwargs=dict(StackName=stack_name))['TemplateBody']
+            template = self.cloudformation.get_template(
+                StackName=stack_name)['TemplateBody']
         except botocore.exceptions.ClientError as e:
             if "does not exist" not in e.message:
                 raise

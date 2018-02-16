@@ -1,11 +1,10 @@
 import json
 import os
-import botocore
 import boto3
 import logging
 
 
-def get_session(region):
+def get_session(region, profile=None):
     """Creates a boto3 session with a cache
 
     Args:
@@ -15,13 +14,11 @@ def get_session(region):
         :class:`boto3.session.Session`: A boto3 session with
             credential caching
     """
-    session = botocore.session.get_session()
-    if region is not None:
-        session.set_config_variable('region',  region)
-    c = session.get_component('credential_provider')
+    session = boto3.Session(region_name=region, profile_name=profile)
+    c = session._session.get_component('credential_provider')
     provider = c.get_provider('assume-role')
     provider.cache = CredentialCache()
-    return boto3.session.Session(botocore_session=session)
+    return session
 
 
 logger = logging.getLogger(__name__)

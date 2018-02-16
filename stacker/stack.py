@@ -60,9 +60,11 @@ class Stack(object):
     """
 
     def __init__(self, definition, context, variables=None, mappings=None,
-                 locked=False, force=False, enabled=True, protected=False):
+                 locked=False, force=False, enabled=True, protected=False,
+                 profile=None):
         self.name = definition.name
-        self.fqn = context.get_fqn(self.name)
+        self.node_name = context.get_fqn(self.name)
+        self.fqn = context.get_fqn(definition.stack_name or self.name)
         self.definition = definition
         self.variables = _gather_variables(definition)
         self.mappings = mappings
@@ -70,6 +72,7 @@ class Stack(object):
         self.force = force
         self.enabled = enabled
         self.protected = protected
+        self.profile = profile
         self.context = copy.deepcopy(context)
 
     def __repr__(self):

@@ -18,9 +18,10 @@ from ..factories import MockThreadingEvent
 class MockStack(object):
     """Mock our local Stacker stack and an AWS provider stack"""
 
-    def __init__(self, name, tags=None, **kwargs):
+    def __init__(self, name, tags=None, profile=None, **kwargs):
         self.name = name
         self.fqn = name
+        self.profile = profile
         self.requires = []
 
 

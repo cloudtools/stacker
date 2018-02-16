@@ -4,6 +4,10 @@ def not_implemented(method):
 
 
 class BaseProvider(object):
+    def with_profile(profile):
+        # pylint: disable=unused-argument
+        not_implemented("with_profile")
+
     def get_stack(self, stack_name, *args, **kwargs):
         # pylint: disable=unused-argument
         not_implemented("get_stack")

@@ -94,7 +94,7 @@ class Step(object):
 
     @property
     def name(self):
-        return self.stack.fqn
+        return self.stack.node_name
 
     @property
     def short_name(self):

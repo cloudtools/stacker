@@ -32,7 +32,7 @@ COLOR_CODES = {
 
 
 def log_step(step):
-    msg = "%s: %s" % (step.name, step.status.name)
+    msg = "%s: %s" % (step, step.status.name)
     if step.status.reason:
         msg += " (%s)" % (step.status.reason)
     color_code = COLOR_CODES.get(step.status.code, 37)
@@ -59,6 +59,9 @@ class Step(object):
 
     def __repr__(self):
         return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
+
+    def __str__(self):
+        return self.stack.fqn
 
     def run(self):
         """Runs this step until it has completed successfully, or been
@@ -96,10 +99,6 @@ class Step(object):
 
     @property
     def name(self):
-        return self.stack.fqn
-
-    @property
-    def short_name(self):
         return self.stack.name
 
     @property
@@ -189,7 +188,7 @@ def build_plan(description, steps,
         nodes = []
         for target in targets:
             for step in steps:
-                if step.short_name == target:
+                if step.name == target:
                     nodes.append(step.name)
         graph = graph.filtered(nodes)
 
@@ -311,7 +310,7 @@ class Plan(object):
                 level,
                 "  - step: %s: target: \"%s\", action: \"%s\"",
                 steps,
-                step.short_name,
+                step.name,
                 step.fn.__name__,
             )
             steps += 1

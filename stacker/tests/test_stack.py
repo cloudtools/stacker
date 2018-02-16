@@ -31,16 +31,16 @@ class TestStack(unittest.TestCase):
                 "Var3": "${output fakeStack::FakeOutput},"
                         "${output fakeStack2::FakeOutput}",
             },
-            requires=[self.context.get_fqn("fakeStack")],
+            requires=["fakeStack"],
         )
         stack = Stack(definition=definition, context=self.context)
         self.assertEqual(len(stack.requires), 2)
         self.assertIn(
-            self.context.get_fqn("fakeStack"),
+            "fakeStack",
             stack.requires,
         )
         self.assertIn(
-            self.context.get_fqn("fakeStack2"),
+            "fakeStack2",
             stack.requires,
         )
 

@@ -77,8 +77,7 @@ class Stack(object):
 
     @property
     def requires(self):
-        requires = set([self.context.get_fqn(r) for r in
-                        self.definition.requires or []])
+        requires = set(self.definition.requires or [])
 
         # Add any dependencies based on output lookups
         for variable in self.variables:
@@ -96,8 +95,7 @@ class Stack(object):
                             "within lookup: %s"
                         ) % (variable.name, self.name, lookup.raw)
                         raise ValueError(message)
-                    stack_fqn = self.context.get_fqn(d.stack_name)
-                    requires.add(stack_fqn)
+                    requires.add(d.stack_name)
 
         return requires
 

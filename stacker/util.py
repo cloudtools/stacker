@@ -18,7 +18,6 @@ import botocore.client
 import botocore.exceptions
 import dateutil
 import yaml
-from git import Repo
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
@@ -710,6 +709,10 @@ class SourceProcessor(object):
             config (dict): git config dictionary
 
         """
+        # only loading git here when needed to avoid load errors on systems
+        # without git installed
+        from git import Repo
+
         ref = self.determine_git_ref(config)
         dir_name = self.sanitize_git_path(uri=config['uri'], ref=ref)
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)

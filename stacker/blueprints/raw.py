@@ -3,7 +3,7 @@
 import hashlib
 import json
 
-import yaml
+from awscli.customizations.cloudformation.yamlhelper import yaml_parse
 
 from ..exceptions import MissingVariable, UnresolvedVariable
 
@@ -101,7 +101,7 @@ class RawTemplateBlueprint(object):
             dict: the loaded template as a python dictionary
 
         """
-        return yaml.load(self.rendered)
+        return yaml_parse(self.rendered)
 
     def render_template(self):
         """Load template and generate its md5 hash."""

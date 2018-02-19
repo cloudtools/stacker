@@ -4,7 +4,7 @@ import logging
 import sys
 from operator import attrgetter
 
-import yaml
+from awscli.customizations.cloudformation.yamlhelper import yaml_parse
 
 from .base import plan, build_walker
 from . import build
@@ -228,13 +228,13 @@ class Action(build.Action):
             self._print_new_stack(new_stack, parameters)
         else:
             # Diff our old & new stack/parameters
-            old_template = yaml.load(old_template)
-            if isinstance(old_template, str):
+            old_template = yaml_parse(old_template)
+            if isinstance(old_template, (str, unicode)):
                 # YAML templates returned from CFN need parsing again
                 # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
                 # ->
                 # AWSTemplateFormatVersion: "2010-09-09"
-                old_template = yaml.load(old_template)
+                old_template = yaml_parse(old_template)
             old_stack = self._normalize_json(
                 json.dumps(old_template,
                            sort_keys=True,

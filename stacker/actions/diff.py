@@ -212,10 +212,12 @@ class Action(build.Action):
         if not build.should_update(stack):
             return NotUpdatedStatus()
 
+        provider_stack = self.provider.get_stack(stack.fqn)
+
         # get the current stack template & params from AWS
         try:
             [old_template, old_params] = self.provider.get_stack_info(
-                stack.fqn)
+                provider_stack)
         except exceptions.StackDoesNotExist:
             old_template = None
             old_params = {}
@@ -249,6 +251,9 @@ class Action(build.Action):
             )
             print_stack_changes(stack.name, new_stack, old_stack, new_params,
                                 old_params)
+
+        self.provider.set_outputs(stack.fqn, provider_stack)
+
         return COMPLETE
 
     def _generate_plan(self):

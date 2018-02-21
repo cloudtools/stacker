@@ -8,7 +8,12 @@ from .base import plan, build_walker
 from . import build
 from .. import exceptions
 from ..util import parse_cloudformation_template
-from ..status import NotSubmittedStatus, NotUpdatedStatus, COMPLETE
+from ..status import (
+    NotSubmittedStatus,
+    NotUpdatedStatus,
+    COMPLETE,
+    INTERRUPTED,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +203,9 @@ class Action(build.Action):
 
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
+        if self.cancel.wait(0):
+            return INTERRUPTED
+
         if not build.should_submit(stack):
             return NotSubmittedStatus()
 

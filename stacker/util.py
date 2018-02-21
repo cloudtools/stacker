@@ -22,6 +22,7 @@ from git import Repo
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
+from .awscli_yamlhelper import yaml_parse
 from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
@@ -495,6 +496,17 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
             logger.exception("Error creating bucket %s. Error %s",
                              bucket_name, e.response)
             raise
+
+
+def parse_cloudformation_template(template):
+    """Parse CFN template string.
+
+    Leverages the vendored aws-cli yamlhelper to handle JSON or YAML templates.
+
+    Args:
+        template (str): The template body.
+    """
+    return yaml_parse(template)
 
 
 class Extractor(object):

@@ -19,6 +19,7 @@ from stacker.util import (
     get_client_region,
     get_s3_endpoint,
     s3_bucket_location_constraint,
+    parse_cloudformation_template,
     Extractor,
     TarExtractor,
     TarGzipExtractor,
@@ -143,6 +144,45 @@ class TestUtil(unittest.TestCase):
                 s3_bucket_location_constraint(region),
                 result
             )
+
+    def test_parse_cloudformation_template(self):
+        template = """AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  Param1:
+    Type: String
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        !Join
+          - "-"
+          - - !Ref "AWS::StackName"
+            - !Ref "AWS::Region"
+Outputs:
+  DummyId:
+    Value: dummy-1234"""
+        parsed_template = {
+            'AWSTemplateFormatVersion': '2010-09-09',
+            'Outputs': {'DummyId': {'Value': 'dummy-1234'}},
+            'Parameters': {'Param1': {'Type': 'String'}},
+            'Resources': {
+                'Bucket': {'Type': 'AWS::S3::Bucket',
+                           'Properties': {
+                               'BucketName': {
+                                   u'Fn::Join': [
+                                       '-',
+                                       [{u'Ref': u'AWS::StackName'},
+                                        {u'Ref': u'AWS::Region'}]
+                                   ]
+                               }
+                           }}
+            }
+        }
+        self.assertEqual(
+            parse_cloudformation_template(template),
+            parsed_template
+        )
 
     def test_extractors(self):
         self.assertEqual(Extractor('test.zip').archive, 'test.zip')

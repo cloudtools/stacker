@@ -1,3 +1,7 @@
+## Unreleased
+
+- (bugfix) Fix parameter handling for diffs [GH-540]
+
 ## 1.2.0rc1 (2018-02-15)
 
 The biggest change in this release has to do with how we build the graph

@@ -215,11 +215,11 @@ class Action(build.Action):
 
         stack.resolve(self.context, self.provider)
         # generate our own template & params
-        new_template = stack.blueprint.to_json()
         parameters = self.build_parameters(stack)
         new_params = dict()
         for p in parameters:
             new_params[p['ParameterKey']] = p['ParameterValue']
+        new_template = stack.blueprint.rendered
         new_stack = self._normalize_json(new_template)
 
         print "============== Stack: %s ==============" % (stack.name,)

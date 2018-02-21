@@ -4,11 +4,10 @@ import logging
 import sys
 from operator import attrgetter
 
-from awscli.customizations.cloudformation.yamlhelper import yaml_parse
-
 from .base import plan, build_walker
 from . import build
 from .. import exceptions
+from ..awscli_yamlhelper import yaml_parse
 from ..status import NotSubmittedStatus, NotUpdatedStatus, COMPLETE
 
 logger = logging.getLogger(__name__)

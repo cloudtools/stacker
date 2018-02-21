@@ -3,8 +3,7 @@
 import hashlib
 import json
 
-from awscli.customizations.cloudformation.yamlhelper import yaml_parse
-
+from ..awscli_yamlhelper import yaml_parse
 from ..exceptions import MissingVariable, UnresolvedVariable
 
 

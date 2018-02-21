@@ -6,7 +6,6 @@ VERSION = "1.2.0rc1"
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "awscli>=1.11.37",
     "troposphere>=1.9.0",
     "botocore>=1.6.0",
     "boto3>=1.3.1,<1.5.0",

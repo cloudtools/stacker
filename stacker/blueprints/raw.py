@@ -3,8 +3,7 @@
 import hashlib
 import json
 
-import yaml
-
+from ..util import parse_cloudformation_template
 from ..exceptions import MissingVariable, UnresolvedVariable
 
 
@@ -101,7 +100,7 @@ class RawTemplateBlueprint(object):
             dict: the loaded template as a python dictionary
 
         """
-        return yaml.load(self.rendered)
+        return parse_cloudformation_template(self.rendered)
 
     def render_template(self):
         """Load template and generate its md5 hash."""

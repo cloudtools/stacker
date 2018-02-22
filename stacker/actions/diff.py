@@ -4,11 +4,10 @@ import logging
 import sys
 from operator import attrgetter
 
-import yaml
-
 from .base import plan, build_walker
 from . import build
 from .. import exceptions
+from ..util import parse_cloudformation_template
 from ..status import NotSubmittedStatus, NotUpdatedStatus, COMPLETE
 
 logger = logging.getLogger(__name__)
@@ -228,13 +227,13 @@ class Action(build.Action):
             self._print_new_stack(new_stack, parameters)
         else:
             # Diff our old & new stack/parameters
-            old_template = yaml.load(old_template)
-            if isinstance(old_template, str):
+            old_template = parse_cloudformation_template(old_template)
+            if isinstance(old_template, (str, unicode)):
                 # YAML templates returned from CFN need parsing again
                 # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
                 # ->
                 # AWSTemplateFormatVersion: "2010-09-09"
-                old_template = yaml.load(old_template)
+                old_template = parse_cloudformation_template(old_template)
             old_stack = self._normalize_json(
                 json.dumps(old_template,
                            sort_keys=True,

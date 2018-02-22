@@ -900,12 +900,12 @@ class Provider(BaseProvider):
         self._outputs[stack_name] = get_output_dict(stack)
         return
 
-    def get_stack_info(self, stack_name):
+    def get_stack_info(self, stack):
         """ Get the template and parameters of the stack currently in AWS
 
         Returns [ template, parameters ]
         """
-        stack = self.get_stack(stack_name)
+        stack_name = stack['StackId']
 
         try:
             template = self.cloudformation.get_template(

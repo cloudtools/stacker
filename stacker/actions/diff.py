@@ -8,7 +8,12 @@ from .base import plan, build_walker
 from . import build
 from .. import exceptions
 from ..util import parse_cloudformation_template
-from ..status import NotSubmittedStatus, NotUpdatedStatus, COMPLETE
+from ..status import (
+    NotSubmittedStatus,
+    NotUpdatedStatus,
+    COMPLETE,
+    INTERRUPTED,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -198,16 +203,21 @@ class Action(build.Action):
 
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
+        if self.cancel.wait(0):
+            return INTERRUPTED
+
         if not build.should_submit(stack):
             return NotSubmittedStatus()
 
         if not build.should_update(stack):
             return NotUpdatedStatus()
 
+        provider_stack = self.provider.get_stack(stack.fqn)
+
         # get the current stack template & params from AWS
         try:
             [old_template, old_params] = self.provider.get_stack_info(
-                stack.fqn)
+                provider_stack)
         except exceptions.StackDoesNotExist:
             old_template = None
             old_params = {}
@@ -241,6 +251,9 @@ class Action(build.Action):
             )
             print_stack_changes(stack.name, new_stack, old_stack, new_params,
                                 old_params)
+
+        self.provider.set_outputs(stack.fqn, provider_stack)
+
         return COMPLETE
 
     def _generate_plan(self):

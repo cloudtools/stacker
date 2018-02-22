@@ -214,6 +214,23 @@ class VPC(Blueprint):
         self.template.add_resource(WaitConditionHandle("VPC"))
 
 
+class DiffTester(Blueprint):
+    VARIABLES = {
+        "InstanceType": {
+            "type": CFNString,
+            "description": "NAT EC2 instance type.",
+            "default": "m3.medium"},
+        "WaitConditionCount": {
+            "type": int,
+            "description": "Number of WaitConditionHandle resources "
+                           "to add to the template"}
+    }
+
+    def create_template(self):
+        for i in range(self.get_variables()["WaitConditionCount"]):
+            self.template.add_resource(WaitConditionHandle("VPC%d" % i))
+
+
 class Bastion(Blueprint):
     VARIABLES = {
         "VpcId": {"type": EC2VPCId, "description": "Vpc Id"},

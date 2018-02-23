@@ -143,9 +143,27 @@ def diff_parameters(old_params, new_params):
     return diff
 
 
+def normalize_json(template):
+    """Normalize our template for diffing.
+
+    Args:
+        template(str): string representing the template
+
+    Returns:
+        list: json representation of the parameters
+    """
+    obj = parse_cloudformation_template(template)
+    json_str = json.dumps(obj, sort_keys=True, indent=4)
+    result = []
+    lines = json_str.split("\n")
+    for line in lines:
+        result.append(line + "\n")
+    return result
+
+
 def print_stack_changes(stack_name, new_stack, old_stack, new_params,
                         old_params):
-    """Prints out the paramters (if changed) and stack diff"""
+    """Prints out the parameters (if changed) and stack diff"""
     from_file = "old_%s" % (stack_name,)
     to_file = "new_%s" % (stack_name,)
     lines = difflib.context_diff(
@@ -156,9 +174,10 @@ def print_stack_changes(stack_name, new_stack, old_stack, new_params,
     template_changes = list(lines)
     if not template_changes:
         print "*** No changes to template ***"
-    else:
-        param_diffs = diff_parameters(old_params, new_params)
+    param_diffs = diff_parameters(old_params, new_params)
+    if param_diffs:
         print format_params_diff(param_diffs)
+    if template_changes:
         print "".join(template_changes)
 
 
@@ -173,23 +192,6 @@ class Action(build.Action):
     AWS and compare it to the generated templated based on the current
     config.
     """
-
-    def _normalize_json(self, template):
-        """Normalizes our template for diffing
-
-        Args:
-            template(str): string representing the template
-
-        Returns:
-            list: json representation of the parameters
-        """
-        obj = parse_cloudformation_template(template)
-        json_str = json.dumps(obj, sort_keys=True, indent=4)
-        result = []
-        lines = json_str.split("\n")
-        for line in lines:
-            result.append(line + "\n")
-        return result
 
     def _print_new_stack(self, stack, parameters):
         """Prints out the parameters & stack contents of a new stack"""
@@ -229,7 +231,7 @@ class Action(build.Action):
         for p in parameters:
             new_params[p['ParameterKey']] = p['ParameterValue']
         new_template = stack.blueprint.rendered
-        new_stack = self._normalize_json(new_template)
+        new_stack = normalize_json(new_template)
 
         print "============== Stack: %s ==============" % (stack.name,)
         # If this is a completely new template dump our params & stack
@@ -244,7 +246,7 @@ class Action(build.Action):
                 # ->
                 # AWSTemplateFormatVersion: "2010-09-09"
                 old_template = parse_cloudformation_template(old_template)
-            old_stack = self._normalize_json(
+            old_stack = normalize_json(
                 json.dumps(old_template,
                            sort_keys=True,
                            indent=4)

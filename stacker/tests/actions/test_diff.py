@@ -5,10 +5,9 @@ from operator import attrgetter
 from stacker.actions.diff import (
     diff_dictionaries,
     diff_parameters,
-    Action,
+    normalize_json,
     DictValue
 )
-from stacker.context import Config, Context
 
 
 class TestDictValueFormat(unittest.TestCase):
@@ -86,14 +85,11 @@ class TestDiffParameters(unittest.TestCase):
         self.assertEquals(param_diffs, [])
 
 
-class TestDiffAction(unittest.TestCase):
-    """Test diff Action class."""
+class TestDiffFunctions(unittest.TestCase):
+    """Test functions in diff."""
 
     def test_normalize_json(self):
-        """Ensure _normalize_json parses yaml correctly."""
-        diff = Action(
-            context=Context(config=Config({"namespace": "namespace"}))
-        )
+        """Ensure normalize_json parses yaml correctly."""
         with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # noqa
                                'fixtures',
                                'cfn_template.yaml'), 'r') as yamlfile:
@@ -141,4 +137,4 @@ class TestDiffAction(unittest.TestCase):
             '    }\n',
             '}\n'
         ]
-        self.assertEquals(normalized_template, diff._normalize_json(template))
+        self.assertEquals(normalized_template, normalize_json(template))

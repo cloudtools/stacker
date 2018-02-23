@@ -178,12 +178,12 @@ class Action(build.Action):
         """Normalizes our template for diffing
 
         Args:
-            template(str): json string representing the template
+            template(str): string representing the template
 
         Returns:
             list: json representation of the parameters
         """
-        obj = json.loads(template)
+        obj = parse_cloudformation_template(template)
         json_str = json.dumps(obj, sort_keys=True, indent=4)
         result = []
         lines = json_str.split("\n")

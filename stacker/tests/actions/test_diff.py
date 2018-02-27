@@ -1,9 +1,11 @@
+import os
 import unittest
 
 from operator import attrgetter
 from stacker.actions.diff import (
     diff_dictionaries,
     diff_parameters,
+    normalize_json,
     DictValue
 )
 
@@ -81,3 +83,58 @@ class TestDiffParameters(unittest.TestCase):
 
         param_diffs = diff_parameters(old_params, new_params)
         self.assertEquals(param_diffs, [])
+
+
+class TestDiffFunctions(unittest.TestCase):
+    """Test functions in diff."""
+
+    def test_normalize_json(self):
+        """Ensure normalize_json parses yaml correctly."""
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # noqa
+                               'fixtures',
+                               'cfn_template.yaml'), 'r') as yamlfile:
+            template = yamlfile.read()
+        normalized_template = [
+            '{\n',
+            '    "AWSTemplateFormatVersion": "2010-09-09", \n',
+            '    "Description": "TestTemplate", \n',
+            '    "Outputs": {\n',
+            '        "DummyId": {\n',
+            '            "Value": "dummy-1234"\n',
+            '        }\n',
+            '    }, \n',
+            '    "Parameters": {\n',
+            '        "Param1": {\n',
+            '            "Type": "String"\n',
+            '        }, \n',
+            '        "Param2": {\n',
+            '            "Default": "default", \n',
+            '            "Type": "CommaDelimitedList"\n',
+            '        }\n',
+            '    }, \n',
+            '    "Resources": {\n',
+            '        "Bucket": {\n',
+            '            "Properties": {\n',
+            '                "BucketName": {\n',
+            '                    "Fn::Join": [\n',
+            '                        "-", \n',
+            '                        [\n',
+            '                            {\n',
+            '                                "Ref": "AWS::StackName"\n',
+            '                            }, \n',
+            '                            {\n',
+            '                                "Ref": "AWS::Region"\n',
+            '                            }\n',
+            '                        ]\n',
+            '                    ]\n',
+            '                }\n',
+            '            }, \n',
+            '            "Type": "AWS::S3::Bucket"\n',
+            '        }, \n',
+            '        "Dummy": {\n',
+            '            "Type": "AWS::CloudFormation::WaitConditionHandle"\n',
+            '        }\n',
+            '    }\n',
+            '}\n'
+        ]
+        self.assertEquals(normalized_template, normalize_json(template))

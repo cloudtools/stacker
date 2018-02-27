@@ -721,7 +721,7 @@ EOF
 namespace: ${STACKER_NAMESPACE}
 stacks:
   - name: vpc
-    template_path: ../stacker/tests/fixtures/cfn_template.yaml
+    template_path: ../stacker/tests/fixtures/cfn_template.json
     variables:
       Param1: foobar
 EOF
@@ -732,7 +732,7 @@ EOF
 namespace: ${STACKER_NAMESPACE}
 stacks:
   - name: vpc
-    template_path: ../stacker/tests/fixtures/cfn_template.yaml
+    template_path: ../stacker/tests/fixtures/cfn_template.json
     variables:
       Param1: newbar
 EOF

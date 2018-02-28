@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import threading
 
@@ -7,6 +8,7 @@ from ..plan import Step, build_plan
 
 import botocore.exceptions
 from stacker.session_cache import get_session
+from stacker.exceptions import PlanFailed
 
 from stacker.util import (
     ensure_s3_bucket,
@@ -188,9 +190,13 @@ class BaseAction(object):
         return template_url
 
     def execute(self, *args, **kwargs):
-        self.pre_run(*args, **kwargs)
-        self.run(*args, **kwargs)
-        self.post_run(*args, **kwargs)
+        try:
+            self.pre_run(*args, **kwargs)
+            self.run(*args, **kwargs)
+            self.post_run(*args, **kwargs)
+        except PlanFailed as e:
+            logger.error(e.message)
+            sys.exit(1)
 
     def pre_run(self, *args, **kwargs):
         pass

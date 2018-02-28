@@ -1,6 +1,6 @@
 import collections
 import logging
-import threading
+from threading import Thread
 from copy import copy, deepcopy
 from collections import deque
 
@@ -153,21 +153,13 @@ class DAG(object):
         Args:
             walk_func (:class:`types.FunctionType`): The function to be called
                 on each node of the graph.
-
-        Returns:
-            bool: True if the function succeeded on every node, otherwise
-                  False.
         """
         nodes = self.topological_sort()
         # Reverse so we start with nodes that have no dependencies.
         nodes.reverse()
 
-        failed = False
         for n in nodes:
-            if not walk_func(n):
-                failed = True
-
-        return not failed
+            walk_func(n)
 
     def rename_edges(self, old_node_name, new_node_name):
         """ Change references to a node in existing edges.
@@ -383,25 +375,6 @@ class UnlimitedSemaphore(object):
         pass
 
 
-class Thread(threading.Thread):
-    """Used when executing walk_func's in parallel, to provide access to the
-    return value.
-    """
-    def __init__(self, *args, **kwargs):
-        super(Thread, self).__init__(*args, **kwargs)
-        self._return = None
-
-    def run(self):
-        if self._Thread__target is not None:
-            self._return = self._Thread__target(
-                    *self._Thread__args,
-                    **self._Thread__kwargs)
-
-    def join(self, *args, **kwargs):
-        super(Thread, self).join(*args, **kwargs)
-        return self._return
-
-
 class ThreadedWalker(object):
     """A DAG walker that walks the graph as quickly as the graph topology
     allows, using threads.
@@ -437,14 +410,14 @@ class ThreadedWalker(object):
         # Blocks until all of the given nodes have completed execution (whether
         # successfully, or errored). Returns True if all nodes returned True.
         def wait_for(nodes):
-            return all(threads[node].join() for node in nodes)
+            for node in nodes:
+                thread = threads[node]
+                while thread.is_alive():
+                    threads[node].join(0.5)
 
         # For each node in the graph, we're going to allocate a thread to
         # execute. The thread will block executing walk_func, until all of the
-        # nodes dependencies have executed successfully.
-        #
-        # If any node fails for some reason (e.g. raising an exception), any
-        # downstream nodes will be cancelled.
+        # nodes dependencies have executed.
         for node in nodes:
             def fn(n, deps):
                 if deps:
@@ -460,16 +433,9 @@ class ThreadedWalker(object):
 
                 self.semaphore.acquire()
                 try:
-                    ret = walk_func(n)
+                    return walk_func(n)
                 finally:
                     self.semaphore.release()
-
-                if ret:
-                    logger.debug("%s completed", n)
-                else:
-                    logger.debug("%s failed", n)
-
-                return ret
 
             deps = dag.all_downstreams(node)
             threads[node] = Thread(target=fn, args=(node, deps), name=node)
@@ -479,4 +445,4 @@ class ThreadedWalker(object):
             threads[node].start()
 
         # Wait for all threads to complete executing.
-        return wait_for(nodes)
+        wait_for(nodes)

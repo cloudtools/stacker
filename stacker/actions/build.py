@@ -1,5 +1,4 @@
 import logging
-import sys
 
 from .base import BaseAction, plan, build_walker
 from .base import STACK_POLL_TIME
@@ -354,8 +353,7 @@ class Action(BaseAction):
             plan.outline(logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
             walker = build_walker(concurrency)
-            if not plan.execute(walker):
-                sys.exit(1)
+            plan.execute(walker)
         else:
             if outline:
                 plan.outline()

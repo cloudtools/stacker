@@ -6,6 +6,13 @@ import logging
 
 from ...environment import parse_environment
 
+logger = logging.getLogger(__name__)
+
+SIGNAL_NAMES = {
+    signal.SIGINT: "SIGINT",
+    signal.SIGTERM: "SIGTERM",
+}
+
 
 def cancel():
     """Returns a threading.Event() that will get set when SIGTERM, or
@@ -14,6 +21,9 @@ def cancel():
     cancel = threading.Event()
 
     def cancel_execution(signum, frame):
+        signame = SIGNAL_NAMES.get(signum, signum)
+        logger.info("Signal %s received, quitting "
+                    "(this can take some time)...", signame)
         cancel.set()
 
     signal.signal(signal.SIGINT, cancel_execution)

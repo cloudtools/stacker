@@ -214,7 +214,7 @@ class PlanFailed(Exception):
         self.failed_stacks = failed_stacks
 
         stack_names = ', '.join(stack.name for stack in failed_stacks)
-        message = "The following stacks failed: %s\n" % (stack_names,)
+        message = "The following stacks failed: %s" % (stack_names,)
 
         super(PlanFailed, self).__init__(message, *args, **kwargs)
 

@@ -19,6 +19,7 @@ from stacker.plan import (
 from stacker.exceptions import (
     CancelExecution,
     GraphError,
+    PlanFailed,
 )
 from stacker.status import (
     COMPLETE,
@@ -116,7 +117,7 @@ class TestPlan(unittest.TestCase):
             description="Test",
             steps=[Step(vpc, fn), Step(db, fn), Step(app, fn)],
             targets=['db.1'])
-        self.assertTrue(plan.execute(walk))
+        plan.execute(walk)
 
         self.assertEquals(calls, [
             'namespace-vpc.1', 'namespace-db.1'])
@@ -141,7 +142,8 @@ class TestPlan(unittest.TestCase):
         bastion_step = Step(bastion, fn)
         plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
 
-        plan.execute(walk)
+        with self.assertRaises(PlanFailed):
+            plan.execute(walk)
 
         self.assertEquals(calls, ['namespace-vpc.1'])
         self.assertEquals(vpc_step.status, FAILED)
@@ -166,7 +168,7 @@ class TestPlan(unittest.TestCase):
         bastion_step = Step(bastion, fn)
 
         plan = build_plan(description="Test", steps=[vpc_step, bastion_step])
-        self.assertTrue(plan.execute(walk))
+        plan.execute(walk)
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
@@ -195,7 +197,8 @@ class TestPlan(unittest.TestCase):
 
         plan = build_plan(description="Test", steps=[
             vpc_step, bastion_step, db_step])
-        self.assertFalse(plan.execute(walk))
+        with self.assertRaises(PlanFailed):
+            plan.execute(walk)
 
         calls.sort()
 
@@ -222,7 +225,7 @@ class TestPlan(unittest.TestCase):
 
         plan = build_plan(description="Test", steps=[
             vpc_step, bastion_step])
-        self.assertTrue(plan.execute(walk))
+        plan.execute(walk)
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 

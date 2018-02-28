@@ -8,6 +8,7 @@ from .util import stack_template_key_name
 from .exceptions import (
     CancelExecution,
     GraphError,
+    PlanFailed,
 )
 from .ui import ui
 from .dag import DAG, DAGValidationError, walk
@@ -345,7 +346,17 @@ class Plan(object):
         return self.graph.walk(walk, walk_func)
 
     def execute(self, *args, **kwargs):
-        return self.walk(*args, **kwargs)
+        """Walks each step in the underlying graph, and raises an exception if
+        any of the steps fail.
+
+        Raises:
+            PlanFailed: Raised if any of the steps fail.
+        """
+        self.walk(*args, **kwargs)
+
+        failed_steps = [step for step in self.steps if step.status == FAILED]
+        if failed_steps:
+            raise PlanFailed(failed_steps)
 
     def walk(self, walker):
         """Walks each step in the underlying graph, in topological order.

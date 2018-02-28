@@ -83,32 +83,7 @@ def test_walk():
         nodes.append(n)
         return True
 
-    ok = dag.walk(walk_func)
-    assert ok == True  # noqa: E712
-    assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']
-
-
-@with_setup(blank_setup)
-def test_walk_failed():
-    dag = DAG()
-
-    # b and c should be executed at the same time.
-    dag.from_dict({'a': ['b', 'c'],
-                   'b': ['d'],
-                   'c': ['d'],
-                   'd': []})
-
-    nodes = []
-
-    def walk_func(n):
-        nodes.append(n)
-        return False
-
-    ok = dag.walk(walk_func)
-
-    # Only 2 should have been hit. The rest are canceled because they depend on
-    # the success of d.
-    assert ok == False  # noqa: E712
+    dag.walk(walk_func)
     assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']
 
 
@@ -209,6 +184,5 @@ def test_threaded_walker():
         lock.release()
         return True
 
-    ok = walker.walk(dag, walk_func)
-    assert ok == True  # noqa: E712
+    walker.walk(dag, walk_func)
     assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']

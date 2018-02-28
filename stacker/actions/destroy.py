@@ -1,5 +1,4 @@
 import logging
-import sys
 
 from .base import BaseAction, plan, build_walker
 from .base import STACK_POLL_TIME
@@ -91,8 +90,7 @@ class Action(BaseAction):
             # steps to COMPLETE in order to log them
             plan.outline(logging.DEBUG)
             walker = build_walker(concurrency)
-            if not plan.execute(walker):
-                sys.exit(1)
+            plan.execute(walker)
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "
                                  "flag.")

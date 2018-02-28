@@ -1,7 +1,6 @@
 import difflib
 import json
 import logging
-import sys
 from operator import attrgetter
 
 from .base import plan, build_walker
@@ -270,8 +269,7 @@ class Action(build.Action):
         plan.outline(logging.DEBUG)
         logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
         walker = build_walker(concurrency)
-        if not plan.execute(walker):
-            sys.exit(1)
+        plan.execute(walker)
 
     """Don't ever do anything for pre_run or post_run"""
     def pre_run(self, *args, **kwargs):

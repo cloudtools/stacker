@@ -1,6 +1,10 @@
-## Unreleased
+## 1.2.0rc2 (2018-02-27)
 
-- (bugfix) Fix parameter handling for diffs [GH-540]
+- Fix parameter handling for diffs [GH-540]
+- Fix an issue where SIGTERM/SIGINT weren't handled immediately [GH-543]
+- Log a line when SIGINT/SIGTERM are handled [GH-543]
+- Log failed steps at the end of plan execution [GH-543]
+- Remove upper bound on boto3 dependency [GH-542]
 
 ## 1.2.0rc1 (2018-02-15)
 

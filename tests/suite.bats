@@ -673,7 +673,7 @@ EOF
   assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: submitted (rolling back new stack)"
   assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: failed (rolled back new stack)"
   assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-child: failed (dependency has failed)"
-  assert_has_line "The following stacks failed: dependent-rollback-parent, dependent-rollback-child"
+  assert_has_line "The following stacks failed: ${STACKER_NAMESPACE}-dependent-rollback-parent, ${STACKER_NAMESPACE}-dependent-rollback-child"
 }
 
 @test "stacker build - raw template" {

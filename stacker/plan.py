@@ -2,7 +2,7 @@ import os
 import logging
 import time
 import uuid
-import multiprocessing
+import threading
 
 from .util import stack_template_key_name
 from .exceptions import (
@@ -65,11 +65,12 @@ class Step(object):
         skipped.
         """
 
+        stop_watcher = threading.Event()
         watcher = None
         if self.watch_func:
-            watcher = multiprocessing.Process(
+            watcher = threading.Thread(
                 target=self.watch_func,
-                args=(self.stack,)
+                args=(self.stack, stop_watcher)
             )
             watcher.start()
 
@@ -77,8 +78,8 @@ class Step(object):
             while not self.done:
                 self._run_once()
         finally:
-            if watcher and watcher.is_alive():
-                watcher.terminate()
+            if watcher:
+                stop_watcher.set()
                 watcher.join()
         return self.ok
 

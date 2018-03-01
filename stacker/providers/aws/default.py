@@ -514,7 +514,7 @@ class Provider(BaseProvider):
     def is_stack_failed(self, stack, **kwargs):
         return self.get_stack_status(stack) in self.FAILED_STATUSES
 
-    def tail_stack(self, stack, retries=0, **kwargs):
+    def tail_stack(self, stack, cancel, retries=0, **kwargs):
         def log_func(e):
             event_args = [e['ResourceStatus'], e['ResourceType'],
                           e.get('ResourceStatusReason', None)]
@@ -528,6 +528,7 @@ class Provider(BaseProvider):
 
         try:
             self.tail(stack.fqn,
+                      cancel=cancel,
                       log_func=log_func,
                       include_initial=False)
         except botocore.exceptions.ClientError as e:
@@ -535,7 +536,7 @@ class Provider(BaseProvider):
                 # stack might be in the process of launching, wait for a second
                 # and try again
                 time.sleep(1)
-                self.tail_stack(stack, retries=retries + 1, **kwargs)
+                self.tail_stack(stack, cancel, retries=retries + 1, **kwargs)
             else:
                 raise
 
@@ -565,7 +566,7 @@ class Provider(BaseProvider):
             time.sleep(1)
         return reversed(sum(event_list, []))
 
-    def tail(self, stack_name, log_func=_tail_print, sleep_time=5,
+    def tail(self, stack_name, cancel, log_func=_tail_print, sleep_time=5,
              include_initial=True):
         """Show and then tail the event log"""
         # First dump the full list of events in chronological order and keep
@@ -584,7 +585,8 @@ class Provider(BaseProvider):
                 if e['EventId'] not in seen:
                     log_func(e)
                     seen.add(e['EventId'])
-            time.sleep(sleep_time)
+            if cancel.wait(sleep_time):
+                return
 
     def destroy_stack(self, stack, **kwargs):
         logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))

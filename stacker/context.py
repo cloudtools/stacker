@@ -2,6 +2,7 @@ import collections
 import logging
 
 from stacker.config import Config
+from stacker import config
 from .stack import Stack
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,30 @@ class Context(object):
             or "stacker-%s" % (self.get_fqn(),)
 
     @property
+    def _bucket_stack_config(self):
+        if isinstance(self.config.stacker_bucket, config.Stack):
+            return self.config.stacker_bucket
+
+        # If the stacker_bucket is disabled, don't upload any templates to S3.
+        if not self.upload_templates_to_s3:
+            return None
+
+        # If no explicit stack is provided in the config, fallback to a default
+        # stack that creates the bucket.
+        return config.Stack({
+            "name": "stacker-bucket",
+            "class_path": "stacker.blueprints.StackerBucket",
+            "tags": self.tags,
+            "variables": {
+                "BucketName": str(self.bucket_name or "")}})
+
+    @property
+    def bucket_stack(self):
+        if self._bucket_stack_config:
+            return self._build_stack(self._bucket_stack_config)
+        return None
+
+    @property
     def upload_templates_to_s3(self):
         # Don't upload stack templates to S3 if `stacker_bucket` is explicitly
         # set to an empty string.
@@ -132,17 +157,23 @@ class Context(object):
         stacks = []
         definitions = self._get_stack_definitions()
         for stack_def in definitions:
-            stack = Stack(
-                definition=stack_def,
-                context=self,
-                mappings=self.mappings,
-                force=stack_def.name in self.force_stacks,
-                locked=stack_def.locked,
-                enabled=stack_def.enabled,
-                protected=stack_def.protected,
-            )
+            stack = self._build_stack(
+                stack_def,
+                bucket_stack=self.bucket_stack)
             stacks.append(stack)
         return stacks
+
+    def _build_stack(self, stack_def, bucket_stack=None):
+        return Stack(
+            definition=stack_def,
+            context=self,
+            mappings=self.mappings,
+            force=stack_def.name in self.force_stacks,
+            locked=stack_def.locked,
+            enabled=stack_def.enabled,
+            protected=stack_def.protected,
+            bucket_stack=bucket_stack,
+        )
 
     def get_stacks_dict(self):
         return dict((stack.fqn, stack) for stack in self.get_stacks())

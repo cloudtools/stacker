@@ -6,13 +6,14 @@ from string import Template
 from StringIO import StringIO
 
 from schematics import Model
-from schematics.exceptions import ValidationError
+from schematics.exceptions import ValidationError, ConversionError
 from schematics.exceptions import BaseError as SchematicsError
 from schematics.types import (
     ModelType,
     ListType,
     StringType,
     BooleanType,
+    MultiType,
     DictType,
     BaseType
 )
@@ -323,6 +324,21 @@ class Stack(Model):
         return value
 
 
+class StackerBucket(MultiType):
+    """A concrete type for the `stacker_bucket` field."""
+
+    def _convert(self, value, context):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            return Stack(value, context)
+        raise ConversionError("You can provide the name of a bucket, "
+                              "as a string, or explicitly provide a "
+                              "Stack object.")
+
+
 class Config(Model):
     """This is the Python representation of a stacker config file.
 
@@ -350,7 +366,7 @@ class Config(Model):
 
     namespace_delimiter = StringType(serialize_when_none=False)
 
-    stacker_bucket = StringType(serialize_when_none=False)
+    stacker_bucket = StackerBucket(serialize_when_none=False)
 
     stacker_bucket_region = StringType(serialize_when_none=False)
 

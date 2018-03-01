@@ -188,6 +188,21 @@ stacks: []
             " your config. See https://stacker.readthedocs.io/en/latest/c"
             "onfig.html#variables for additional information.")
 
+    def test_parse_stacker_bucket_as_stack(self):
+        config = parse("""
+        namespace: prod
+        stacker_bucket:
+          name: stacker-bucket
+          class_path: stacker.blueprints.StackerBucket
+        stacks:
+        - name: vpc
+          class_path: blueprints.VPC
+          parameters:
+            Foo: bar
+        """)
+
+        self.assertIsInstance(config.stacker_bucket, Stack)
+
     def test_config_build(self):
         vpc = Stack({"name": "vpc", "class_path": "blueprints.VPC"})
         config = Config({"namespace": "prod", "stacks": [vpc]})

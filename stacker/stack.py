@@ -56,11 +56,14 @@ class Stack(object):
         locked (bool, optional): Whether or not the stack is locked.
         force (bool, optional): Whether to force updates on this stack.
         enabled (bool, optional): Whether this stack is enabled
+        bucket_stack (:class:`stacker.Stack`): a stack that exports the bucket
+            that should be used to upload this stacks templates.
 
     """
 
     def __init__(self, definition, context, variables=None, mappings=None,
-                 locked=False, force=False, enabled=True, protected=False):
+                 locked=False, force=False, enabled=True, protected=False,
+                 bucket_stack=None):
         self.name = definition.name
         self.fqn = context.get_fqn(self.name)
         self.definition = definition
@@ -71,6 +74,8 @@ class Stack(object):
         self.enabled = enabled
         self.protected = protected
         self.context = copy.deepcopy(context)
+        self.bucket_stack = bucket_stack
+        self.bucket_name = None
 
     def __repr__(self):
         return self.fqn
@@ -79,6 +84,9 @@ class Stack(object):
     def requires(self):
         requires = set([self.context.get_fqn(r) for r in
                         self.definition.requires or []])
+
+        if self.bucket_stack:
+            requires.add(self.bucket_stack.fqn)
 
         # Add any dependencies based on output lookups
         for variable in self.variables:
@@ -172,5 +180,8 @@ class Stack(object):
                 the base provider
 
         """
+        if self.bucket_stack:
+            self.bucket_name = provider.get_output(
+                self.bucket_stack, "BucketId")
         resolve_variables(self.variables, context, provider)
         self.blueprint.resolve_variables(self.variables)

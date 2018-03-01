@@ -28,6 +28,7 @@ class TestDestroyAction(unittest.TestCase):
 
     def setUp(self):
         config = Config({
+            "stacker_bucket": "",
             "namespace": "namespace",
             "stacks": [
                 {"name": "vpc"},

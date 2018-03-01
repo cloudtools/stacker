@@ -59,6 +59,7 @@ class TestBuildAction(unittest.TestCase):
 
     def _get_context(self, **kwargs):
         config = Config({
+            "stacker_bucket": "",
             "namespace": "namespace",
             "stacks": [
                 {"name": "vpc"},

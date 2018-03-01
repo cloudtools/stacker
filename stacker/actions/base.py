@@ -11,7 +11,6 @@ from stacker.session_cache import get_session
 from stacker.exceptions import PlanFailed
 
 from stacker.util import (
-    ensure_s3_bucket,
     get_s3_endpoint,
 )
 
@@ -129,7 +128,6 @@ class BaseAction(object):
     def __init__(self, context, provider=None, cancel=None):
         self.context = context
         self.provider = provider
-        self.bucket_name = context.bucket_name
         self.cancel = cancel or threading.Event()
         self._conn = None
 
@@ -148,16 +146,12 @@ class BaseAction(object):
         return self.context.config.stacker_bucket_region \
                 or self.provider.region
 
-    def ensure_cfn_bucket(self):
-        """The CloudFormation bucket where templates will be stored."""
-        ensure_s3_bucket(self.s3_conn, self.bucket_name, self.bucket_region)
-
-    def stack_template_url(self, blueprint):
+    def stack_template_url(self, stack):
         return stack_template_url(
-            self.bucket_name, blueprint, get_s3_endpoint(self.s3_conn)
+            stack.bucket_name, stack.blueprint, get_s3_endpoint(self.s3_conn)
         )
 
-    def s3_stack_push(self, blueprint, force=False):
+    def s3_stack_push(self, stack, force=False):
         """Pushes the rendered blueprint's template to S3.
 
         Verifies that the template doesn't already exist in S3 before
@@ -165,12 +159,14 @@ class BaseAction(object):
 
         Returns the URL to the template in S3.
         """
+        blueprint = stack.blueprint
+
         key_name = stack_template_key_name(blueprint)
-        template_url = self.stack_template_url(blueprint)
-        self.ensure_cfn_bucket()
+        template_url = self.stack_template_url(stack)
+        bucket = stack.bucket_name
         try:
             template_exists = self.s3_conn.head_object(
-                Bucket=self.bucket_name, Key=key_name) is not None
+                Bucket=bucket, Key=key_name) is not None
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == '404':
                 template_exists = False
@@ -181,7 +177,7 @@ class BaseAction(object):
             logger.debug("Cloudformation template %s already exists.",
                          template_url)
             return template_url
-        self.s3_conn.put_object(Bucket=self.bucket_name,
+        self.s3_conn.put_object(Bucket=bucket,
                                 Key=key_name,
                                 Body=blueprint.rendered,
                                 ServerSideEncryption='AES256')

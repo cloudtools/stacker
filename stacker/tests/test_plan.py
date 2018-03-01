@@ -54,7 +54,7 @@ class TestPlan(unittest.TestCase):
 
     def setUp(self):
         self.count = 0
-        self.config = Config({"namespace": "namespace"})
+        self.config = Config({"namespace": "namespace", "stacker_bucket": ""})
         self.context = Context(config=self.config)
         register_lookup_handler("noop", lambda **kwargs: "test")
 

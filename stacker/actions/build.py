@@ -269,7 +269,7 @@ class Action(BaseAction):
         stack.resolve(self.context, self.provider)
 
         logger.debug("Launching stack %s now.", stack.fqn)
-        template = self._template(stack.blueprint)
+        template = self._template(stack)
         tags = build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
         force_change_set = stack.blueprint.requires_change_set
@@ -308,7 +308,7 @@ class Action(BaseAction):
             self.provider.set_outputs(stack.fqn, provider_stack)
             return DidNotChangeStatus()
 
-    def _template(self, blueprint):
+    def _template(self, stack):
         """Generates a suitable template based on whether or not an S3 bucket
         is set.
 
@@ -316,10 +316,10 @@ class Action(BaseAction):
         and CreateStack/UpdateStack operations will use the uploaded template.
         If not bucket is set, then the template will be inlined.
         """
-        if self.bucket_name:
-            return Template(url=self.s3_stack_push(blueprint))
+        if stack.bucket_name:
+            return Template(url=self.s3_stack_push(stack))
         else:
-            return Template(body=blueprint.rendered)
+            return Template(body=stack.blueprint.rendered)
 
     def _generate_plan(self, tail=False):
         return plan(

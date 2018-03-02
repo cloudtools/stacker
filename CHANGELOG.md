@@ -1,3 +1,19 @@
+## 1.2.0 (2018-03-01)
+
+The biggest change in this release has to do with how we build the graph
+of dependencies between stacks. This is now a true DAG.  As well, to
+speed up performance we now walk the graph in a threaded mode, allowing
+true parallelism and speeding up "wide" stack graphs considerably.
+
+- assertRenderedBlueprint always dumps current results [GH-528]
+- The `--stacks` flag now automatically builds dependencies of the given stack [GH-523]
+- an unecessary DescribeStacks network call was removed [GH-529]
+- support stack json/yaml templates [GH-530]
+- `stacker {build,destroy}` now executes stacks in parallel. Parallelism can be controled with a `-j` flag. [GH-531]
+- logging output has been simplified and no longer uses ANSI escape sequences to clear the screen [GH-532]
+- logging output is now colorized in `--interactive` mode if the terminal has a TTY [GH-532]
+- removed the upper bound on the boto3 dependency [GH-542]
+
 ## 1.2.0rc2 (2018-02-27)
 
 - Fix parameter handling for diffs [GH-540]

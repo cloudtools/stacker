@@ -71,6 +71,7 @@ class Stack(object):
         self.enabled = enabled
         self.protected = protected
         self.context = copy.deepcopy(context)
+        self.outputs = None
 
     def __repr__(self):
         return self.fqn
@@ -172,3 +173,6 @@ class Stack(object):
         """
         resolve_variables(self.variables, context, provider)
         self.blueprint.resolve_variables(self.variables)
+
+    def set_outputs(self, outputs):
+        self.outputs = outputs

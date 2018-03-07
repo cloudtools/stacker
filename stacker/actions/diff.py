@@ -253,7 +253,8 @@ class Action(build.Action):
             print_stack_changes(stack.name, new_stack, old_stack, new_params,
                                 old_params)
 
-        self.provider.set_outputs(stack.fqn, provider_stack)
+        stack.set_outputs(
+            self.provider.get_output_dict(provider_stack))
 
         return COMPLETE
 

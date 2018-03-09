@@ -11,6 +11,7 @@ import boto3
 from ....actions.diff import DictValue
 
 from ....providers.base import Template
+from ....session_cache import get_session
 
 from ....providers.aws.default import (
     DEFAULT_CAPABILITIES,
@@ -359,7 +360,9 @@ class TestMethods(unittest.TestCase):
 class TestProviderDefaultMode(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
-        self.provider = Provider(region=region, recreate_failed=False)
+        self.session = get_session(region=region)
+        self.provider = Provider(
+            self.session, region=region, recreate_failed=False)
         self.stubber = Stubber(self.provider.cloudformation)
 
     def test_get_stack_stack_does_not_exist(self):
@@ -489,16 +492,15 @@ class TestProviderDefaultMode(unittest.TestCase):
 class TestProviderInteractiveMode(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
-        self.provider = Provider(region=region, interactive=True,
-                                 recreate_failed=True)
+        self.session = get_session(region=region)
+        self.provider = Provider(
+            self.session, interactive=True, recreate_failed=True)
         self.stubber = Stubber(self.provider.cloudformation)
 
     def test_successful_init(self):
-        region = "us-east-1"
         replacements = True
-        p = Provider(region=region, interactive=True,
+        p = Provider(self.session, interactive=True,
                      replacements_only=replacements)
-        self.assertEqual(p.region, region)
         self.assertEqual(p.replacements_only, replacements)
 
     @patch("stacker.providers.aws.default.ask_for_approval")

@@ -12,7 +12,7 @@ from stacker.status import (
     SUBMITTED,
 )
 
-from ..factories import MockThreadingEvent
+from ..factories import MockThreadingEvent, MockProviderBuilder
 
 
 class MockStack(object):
@@ -21,6 +21,7 @@ class MockStack(object):
     def __init__(self, name, tags=None, **kwargs):
         self.name = name
         self.fqn = name
+        self.region = None
         self.requires = []
 
 
@@ -72,8 +73,9 @@ class TestDestroyAction(unittest.TestCase):
     def test_destroy_stack_complete_if_state_submitted(self):
         # Simulate the provider not being able to find the stack (a result of
         # it being successfully deleted)
-        self.action.provider = mock.MagicMock()
-        self.action.provider.get_stack.side_effect = StackDoesNotExist("mock")
+        provider = mock.MagicMock()
+        provider.get_stack.side_effect = StackDoesNotExist("mock")
+        self.action.provider = MockProviderBuilder(provider)
         status = self.action._destroy_stack(MockStack("vpc"), status=PENDING)
         # if we haven't processed the step (ie. has never been SUBMITTED,
         # should be skipped)
@@ -94,7 +96,7 @@ class TestDestroyAction(unittest.TestCase):
         step = plan.steps[0]
         # we need the AWS provider to generate the plan, but swap it for
         # the mock one to make the test easier
-        self.action.provider = mock_provider
+        self.action.provider = MockProviderBuilder(mock_provider)
 
         # simulate stack doesn't exist and we haven't submitted anything for
         # deletion

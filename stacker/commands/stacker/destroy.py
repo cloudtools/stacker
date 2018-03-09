@@ -38,7 +38,7 @@ class Destroy(BaseCommand):
     def run(self, options, **kwargs):
         super(Destroy, self).run(options, **kwargs)
         action = destroy.Action(options.context,
-                                provider=options.provider,
+                                provider_builder=options.provider_builder,
                                 cancel=cancel())
         action.execute(concurrency=options.max_parallel,
                        force=options.force,

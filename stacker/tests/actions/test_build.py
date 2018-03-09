@@ -5,6 +5,7 @@ import mock
 
 from stacker import exceptions
 from stacker.actions import build
+from stacker.session_cache import get_session
 from stacker.actions.build import (
     _resolve_parameters,
     _handle_missing_parameters,
@@ -23,7 +24,7 @@ from stacker.status import (
     FAILED
 )
 
-from ..factories import MockThreadingEvent
+from ..factories import MockThreadingEvent, MockProviderBuilder
 
 
 def mock_stack(parameters):
@@ -55,7 +56,10 @@ class TestProvider(BaseProvider):
 class TestBuildAction(unittest.TestCase):
     def setUp(self):
         self.context = Context(config=Config({"namespace": "namespace"}))
-        self.build_action = build.Action(self.context, provider=TestProvider())
+        self.provider = TestProvider()
+        self.build_action = build.Action(
+            self.context,
+            provider_builder=MockProviderBuilder(self.provider))
 
     def _get_context(self, **kwargs):
         config = Config({
@@ -169,12 +173,16 @@ class TestBuildAction(unittest.TestCase):
 class TestLaunchStack(TestBuildAction):
     def setUp(self):
         self.context = self._get_context()
-        self.provider = Provider(None, interactive=False,
+        self.session = get_session(region=None)
+        self.provider = Provider(self.session, interactive=False,
                                  recreate_failed=False)
-        self.build_action = build.Action(self.context, provider=self.provider,
+        provider_builder = MockProviderBuilder(self.provider)
+        self.build_action = build.Action(self.context,
+                                         provider_builder=provider_builder,
                                          cancel=MockThreadingEvent())
 
         self.stack = mock.MagicMock()
+        self.stack.region = None
         self.stack.name = 'vpc'
         self.stack.fqn = 'vpc'
         self.stack.blueprint.rendered = '{}'

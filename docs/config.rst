@@ -312,8 +312,10 @@ stack to be built.
 A stack has the following keys:
 
 **name:**
-  The base name for the stack (note: the namespace from the environment
-  will be prepended to this)
+  The logical name for this stack, which can be used in conjuction with the
+  ``output`` lookup. The value here must be unique within the config. If no
+  ``stack_name`` is provided, the value here will be used for the name of the
+  CloudFormation stack.
 **class_path:**
   The python class path to the Blueprint to be used. Specify this or
   ``template_path`` for the stack.
@@ -348,6 +350,17 @@ A stack has the following keys:
 **tags:**
   (optional) a dictionary of CloudFormation tags to apply to this stack. This
   will be combined with the global tags, but these tags will take precendence.
+**stack_name:**
+  (optional) If provided, this will be used as the name of the CloudFormation
+  stack. Unlike ``name``, the value doesn't need to be unique within the config,
+  since you could have multiple stacks with the same name, but in different
+  regions or accounts. (note: the namespace from the environment will be
+  prepended to this)
+**region**:
+  (optional): If provided, specifies the name of the region that the
+  CloudFormation stack should reside in. If not provided, the default region
+  will be used (``AWS_DEFAULT_REGION``, ``~/.aws/config`` or the ``--region``
+  flag).
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 

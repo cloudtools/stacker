@@ -63,6 +63,7 @@ class Stack(object):
                  locked=False, force=False, enabled=True, protected=False):
         self.name = definition.name
         self.fqn = context.get_fqn(definition.stack_name or self.name)
+        self.region = definition.region
         self.definition = definition
         self.variables = _gather_variables(definition)
         self.mappings = mappings

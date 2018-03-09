@@ -36,7 +36,7 @@ class Action(BaseAction):
         return plan(
             description="Destroy stacks",
             action=self._destroy_stack,
-            tail=self.provider.tail_stack if tail else None,
+            tail=self._tail_stack if tail else None,
             stacks=self.context.get_stacks(),
             targets=self.context.stack_names,
             reverse=True)
@@ -47,8 +47,10 @@ class Action(BaseAction):
         if self.cancel.wait(wait_time):
             return INTERRUPTED
 
+        provider = self.build_provider(stack)
+
         try:
-            provider_stack = self.provider.get_stack(stack.fqn)
+            provider_stack = provider.get_stack(stack.fqn)
         except StackDoesNotExist:
             logger.debug("Stack %s does not exist.", stack.fqn)
             # Once the stack has been destroyed, it doesn't exist. If the
@@ -61,16 +63,16 @@ class Action(BaseAction):
 
         logger.debug(
             "Stack %s provider status: %s",
-            self.provider.get_stack_name(provider_stack),
-            self.provider.get_stack_status(provider_stack),
+            provider.get_stack_name(provider_stack),
+            provider.get_stack_status(provider_stack),
         )
-        if self.provider.is_stack_destroyed(provider_stack):
+        if provider.is_stack_destroyed(provider_stack):
             return DestroyedStatus
-        elif self.provider.is_stack_in_progress(provider_stack):
+        elif provider.is_stack_in_progress(provider_stack):
             return DestroyingStatus
         else:
             logger.debug("Destroying stack: %s", stack.fqn)
-            self.provider.destroy_stack(provider_stack)
+            provider.destroy_stack(provider_stack)
         return DestroyingStatus
 
     def pre_run(self, outline=False, *args, **kwargs):

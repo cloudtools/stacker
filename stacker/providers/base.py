@@ -3,6 +3,11 @@ def not_implemented(method):
                               "method." % method)
 
 
+class BaseProviderBuilder(object):
+    def build(self, region=None):
+        not_implemented("build")
+
+
 class BaseProvider(object):
     def get_stack(self, stack_name, *args, **kwargs):
         # pylint: disable=unused-argument

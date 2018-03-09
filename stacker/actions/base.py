@@ -121,14 +121,14 @@ class BaseAction(object):
     Args:
         context (:class:`stacker.context.Context`): The stacker context for
             the current run.
-        provider (:class:`stacker.providers.base.BaseProvider`, optional):
-            The provider that will be interacted with in order to perform
-            the necessary actions.
+        provider_builder (:class:`stacker.providers.base.BaseProviderBuilder`,
+            optional): An object that will build a provider that will be
+            interacted with in order to perform the necessary actions.
     """
 
-    def __init__(self, context, provider=None, cancel=None):
+    def __init__(self, context, provider_builder=None, cancel=None):
         self.context = context
-        self.provider = provider
+        self.provider_builder = provider_builder
         self.bucket_name = context.bucket_name
         self.cancel = cancel or threading.Event()
         self._conn = None
@@ -146,7 +146,7 @@ class BaseAction(object):
     @property
     def bucket_region(self):
         return self.context.config.stacker_bucket_region \
-                or self.provider.region
+                or self.provider_builder.region
 
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
@@ -206,3 +206,18 @@ class BaseAction(object):
 
     def post_run(self, *args, **kwargs):
         pass
+
+    def build_provider(self, stack):
+        """Builds a :class:`stacker.providers.base.Provider` suitable for
+        operating on the given :class:`stacker.Stack`."""
+        return self.provider_builder.build(region=stack.region)
+
+    @property
+    def provider(self):
+        """Some actions need a generic provider using the default region (e.g.
+        hooks)."""
+        return self.provider_builder.build()
+
+    def _tail_stack(self, stack, cancel, retries=0, **kwargs):
+        provider = self.build_provider(stack)
+        return provider.tail_stack(stack, cancel, retries, **kwargs)

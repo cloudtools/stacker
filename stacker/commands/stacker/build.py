@@ -47,7 +47,7 @@ class Build(BaseCommand):
     def run(self, options, **kwargs):
         super(Build, self).run(options, **kwargs)
         action = build.Action(options.context,
-                              provider=options.provider,
+                              provider_builder=options.provider_builder,
                               cancel=cancel())
         action.execute(concurrency=options.max_parallel,
                        outline=options.outline,

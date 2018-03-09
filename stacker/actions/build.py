@@ -221,8 +221,10 @@ class Action(BaseAction):
         if not should_submit(stack):
             return NotSubmittedStatus()
 
+        provider = self.build_provider(stack)
+
         try:
-            provider_stack = self.provider.get_stack(stack.fqn)
+            provider_stack = provider.get_stack(stack.fqn)
         except StackDoesNotExist:
             provider_stack = None
 
@@ -231,10 +233,10 @@ class Action(BaseAction):
             logger.debug(
                 "Stack %s provider status: %s",
                 stack.fqn,
-                self.provider.get_stack_status(provider_stack),
+                provider.get_stack_status(provider_stack),
             )
 
-            if self.provider.is_stack_rolling_back(provider_stack):
+            if provider.is_stack_rolling_back(provider_stack):
                 if 'rolling back' in old_status.reason:
                     return old_status
 
@@ -245,31 +247,31 @@ class Action(BaseAction):
                     reason = 'rolling back new stack'
 
                 return SubmittedStatus(reason)
-            elif self.provider.is_stack_in_progress(provider_stack):
+            elif provider.is_stack_in_progress(provider_stack):
                 logger.debug("Stack %s in progress.", stack.fqn)
                 return old_status
-            elif self.provider.is_stack_destroyed(provider_stack):
+            elif provider.is_stack_destroyed(provider_stack):
                 logger.debug("Stack %s finished deleting", stack.fqn)
                 recreate = True
                 # Continue with creation afterwards
             # Failure must be checked *before* completion, as both will be true
             # when completing a rollback, and we don't want to consider it as
             # a successful update.
-            elif self.provider.is_stack_failed(provider_stack):
+            elif provider.is_stack_failed(provider_stack):
                 reason = old_status.reason
                 if 'rolling' in reason:
                     reason = reason.replace('rolling', 'rolled')
 
                 return FailedStatus(reason)
-            elif self.provider.is_stack_completed(provider_stack):
+            elif provider.is_stack_completed(provider_stack):
                 stack.set_outputs(
-                    self.provider.get_output_dict(provider_stack))
+                    provider.get_output_dict(provider_stack))
                 return CompleteStatus(old_status.reason)
             else:
                 return old_status
 
         logger.debug("Resolving stack %s", stack.fqn)
-        stack.resolve(self.context, self.provider)
+        stack.resolve(self.context, provider)
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template = self._template(stack.blueprint)
@@ -279,21 +281,21 @@ class Action(BaseAction):
 
         if recreate:
             logger.debug("Re-creating stack: %s", stack.fqn)
-            self.provider.create_stack(stack.fqn, template, parameters,
-                                       tags)
+            provider.create_stack(stack.fqn, template, parameters,
+                                  tags)
             return SubmittedStatus("re-creating stack")
         elif not provider_stack:
             logger.debug("Creating new stack: %s", stack.fqn)
-            self.provider.create_stack(stack.fqn, template, parameters, tags,
-                                       force_change_set)
+            provider.create_stack(stack.fqn, template, parameters, tags,
+                                  force_change_set)
             return SubmittedStatus("creating new stack")
         elif not should_update(stack):
             return NotUpdatedStatus()
 
         try:
-            if self.provider.prepare_stack_for_update(provider_stack, tags):
+            if provider.prepare_stack_for_update(provider_stack, tags):
                 existing_params = provider_stack.get('Parameters', [])
-                self.provider.update_stack(
+                provider.update_stack(
                     stack.fqn,
                     template,
                     existing_params,
@@ -311,7 +313,7 @@ class Action(BaseAction):
             stack.set_outputs(self.provider.get_output_dict(provider_stack))
             return SkippedStatus(reason="canceled execution")
         except StackDidNotChange:
-            stack.set_outputs(self.provider.get_output_dict(provider_stack))
+            stack.set_outputs(provider.get_output_dict(provider_stack))
             return DidNotChangeStatus()
 
     def _template(self, blueprint):
@@ -331,7 +333,7 @@ class Action(BaseAction):
         return plan(
             description="Create/Update stacks",
             action=self._launch_stack,
-            tail=self.provider.tail_stack if tail else None,
+            tail=self._tail_stack if tail else None,
             stacks=self.context.get_stacks(),
             targets=self.context.stack_names)
 

@@ -37,6 +37,13 @@ class UI(object):
         finally:
             self.unlock()
 
+    def exception(self, *args, **kwargs):
+        self.lock()
+        try:
+            return logger.exception(*args, **kwargs)
+        finally:
+            self.unlock()
+
     def ask(self, message):
         """This wraps the built-in raw_input function to ensure that only 1
         thread is asking for input from the user at a give time. Any process

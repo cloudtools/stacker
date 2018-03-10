@@ -10,6 +10,7 @@ def getpass(*args):
     """Wraps getpass to lock the UI."""
     try:
         ui.lock()
+        print "obtained lock"
         return getpass_orig(*args)
     finally:
         ui.unlock()

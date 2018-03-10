@@ -92,7 +92,7 @@ class Step(object):
         except CancelExecution:
             status = SkippedStatus(reason="canceled execution")
         except Exception as e:
-            logger.exception(e)
+            ui.exception(e)
             status = FailedStatus(reason=e.message)
         self.set_status(status)
         return status

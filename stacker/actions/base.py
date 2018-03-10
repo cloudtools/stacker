@@ -210,7 +210,8 @@ class BaseAction(object):
     def build_provider(self, stack):
         """Builds a :class:`stacker.providers.base.Provider` suitable for
         operating on the given :class:`stacker.Stack`."""
-        return self.provider_builder.build(region=stack.region)
+        return self.provider_builder.build(region=stack.region,
+                                           profile=stack.profile)
 
     @property
     def provider(self):

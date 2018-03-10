@@ -1,27 +1,27 @@
 import json
 import os
-import botocore
 import boto3
 import logging
+from .ui import ui
 
 
-def get_session(region):
+def get_session(region, profile=None):
     """Creates a boto3 session with a cache
 
     Args:
         region (str): The region for the session
+        profile (str): The profile for the session
 
     Returns:
         :class:`boto3.session.Session`: A boto3 session with
             credential caching
     """
-    session = botocore.session.get_session()
-    if region is not None:
-        session.set_config_variable('region',  region)
-    c = session.get_component('credential_provider')
+    session = boto3.Session(region_name=region, profile_name=profile)
+    c = session._session.get_component('credential_provider')
     provider = c.get_provider('assume-role')
     provider.cache = CredentialCache()
-    return boto3.session.Session(botocore_session=session)
+    provider._prompter = ui.getpass
+    return session
 
 
 logger = logging.getLogger(__name__)

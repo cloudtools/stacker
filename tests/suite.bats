@@ -909,3 +909,28 @@ EOF
   assert_has_line "${STACKER_NAMESPACE}-app: submitted (creating new stack)"
   assert_has_line "${STACKER_NAMESPACE}-app: complete (creating new stack)"
 }
+
+@test "stacker build - profiles" {
+  needs_aws
+
+  config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    profile: stacker
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(config)
+  }
+
+  # Create the new stacks.
+  stacker build <(config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
+}

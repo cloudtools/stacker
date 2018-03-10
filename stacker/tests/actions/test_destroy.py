@@ -22,6 +22,7 @@ class MockStack(object):
         self.name = name
         self.fqn = name
         self.region = None
+        self.profile = None
         self.requires = []
 
 

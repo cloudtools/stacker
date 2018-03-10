@@ -1,11 +1,12 @@
 from troposphere import GetAtt, Output, Sub, Ref
 from troposphere import iam
 
-from awacs.aws import Policy, Statement
+from awacs.aws import Policy, Statement, AWSPrincipal
 import awacs
 import awacs.s3
 import awacs.cloudformation
 import awacs.iam
+import awacs.sts
 
 from troposphere.cloudformation import WaitCondition, WaitConditionHandle
 
@@ -94,11 +95,36 @@ class FunctionalTests(Blueprint):
                             awacs.cloudformation.DescribeStacks,
                             awacs.cloudformation.DescribeStackEvents])]))
 
+        principal = AWSPrincipal(Ref("AWS::AccountId"))
+        role = t.add_resource(
+            iam.Role(
+                "FunctionalTestRole",
+                AssumeRolePolicyDocument=Policy(
+                    Statement=[
+                        Statement(
+                            Effect="Allow",
+                            Action=[
+                                awacs.sts.AssumeRole],
+                            Principal=principal)]),
+                Policies=[
+                    stacker_policy]))
+
+        assumerole_policy = iam.Policy(
+            PolicyName="AssumeRole",
+            PolicyDocument=Policy(
+                Statement=[
+                    Statement(
+                        Effect="Allow",
+                        Resource=[GetAtt(role, "Arn")],
+                        Action=[
+                            awacs.sts.AssumeRole])]))
+
         user = t.add_resource(
             iam.User(
                 "FunctionalTestUser",
                 Policies=[
-                    stacker_policy]))
+                    stacker_policy,
+                    assumerole_policy]))
 
         key = t.add_resource(
             iam.AccessKey(
@@ -112,6 +138,10 @@ class FunctionalTests(Blueprint):
             Output(
                 "SecretAccessKey",
                 Value=GetAtt("FunctionalTestKey", "SecretAccessKey")))
+        t.add_output(
+            Output(
+                "FunctionalTestRole",
+                Value=GetAtt(role, "Arn")))
 
 
 class Dummy(Blueprint):

@@ -1,5 +1,6 @@
 import threading
 import logging
+from getpass import getpass
 
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,14 @@ class UI(object):
         self.lock()
         try:
             return get_raw_input(message)
+        finally:
+            self.unlock()
+
+    def getpass(self, *args):
+        """Wraps getpass to lock the UI."""
+        try:
+            self.lock()
+            return getpass(*args)
         finally:
             self.unlock()
 

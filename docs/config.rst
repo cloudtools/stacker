@@ -360,7 +360,12 @@ A stack has the following keys:
   (optional): If provided, specifies the name of the region that the
   CloudFormation stack should reside in. If not provided, the default region
   will be used (``AWS_DEFAULT_REGION``, ``~/.aws/config`` or the ``--region``
-  flag).
+  flag). If both ``region`` and ``profile`` are specified, the value here takes
+  precedence over the value in the profile.
+**profile**:
+  (optional): If provided, specifies the name of a AWS profile to use when
+  performing AWS API calls for this stack. This can be used to provision stacks
+  in multiple accounts or regions.
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 
@@ -482,6 +487,48 @@ Note: Doing this creates an implicit dependency from the *webservers* stack
 to the *vpc* stack, which will cause stacker to submit the *vpc* stack, and
 then wait until it is complete until it submits the *webservers* stack.
 
+Multi Account/Region Provisioning
+---------------------------------
+
+You can use stacker to manage CloudFormation stacks in multiple accounts and
+regions, and reference outputs across them.
+
+As an example, let's say you had 3 accounts you wanted to manage:
+
+#) OpsAccount: An AWS account that has IAM users for employees.
+#) ProdAccount: An AWS account for a "production" environment.
+#) StageAccount: An AWS account for a "staging" environment.
+
+You want employees with IAM user accounts in OpsAccount to be able to assume
+roles in both the ProdAccount and StageAccount. You can use stacker to easily
+manage this::
+
+
+  stacks:
+    # Create some stacks in both the "prod" and "stage" accounts with IAM roles
+    # that employees can use.
+    - name: prod/roles
+      profile: prod
+      class_path: blueprints.Roles
+    - name: stage/roles
+      profile: stage
+      class_path: blueprints.Roles
+
+    # Create a stack in the "ops" account and grant each employee access to
+    # assume the roles we created above.
+    - name: users
+      profile: ops
+      class_path: blueprints.IAMUsers
+      variables:
+        Users:
+          john-smith:
+            Roles:
+              - ${output prod/roles::EmployeeRoleARN}
+              - ${output stage/roles::EmployeeRoleARN}
+
+
+Note how I was able to reference outputs from stacks in multiple accounts using the `output` plugin!
+
 Environments
 ============
 
@@ -511,3 +558,4 @@ submitting it to CloudFormation. For more information, see the
 .. _Mappings: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 .. _Outputs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
 .. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
+.. _`AWS profiles`: https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html

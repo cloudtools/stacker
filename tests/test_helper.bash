@@ -9,6 +9,26 @@ if [ -z "$STACKER_NAMESPACE" ]; then
   exit 1
 fi
 
+if [ -z "$STACKER_ROLE" ]; then
+  >&2 echo "To run these tests, you must set a STACKER_ROLE environment variable"
+  exit 1
+fi
+
+# Setup a base .aws/config that can be use to test stack configurations that
+# require stacker to assume a role.
+export AWS_CONFIG_DIR=$(mktemp -d)
+export AWS_CONFIG_FILE="$AWS_CONFIG_DIR/config"
+
+cat <<EOF > "$AWS_CONFIG_FILE"
+[default]
+region = us-east-1
+
+[profile stacker]
+region = us-east-1
+role_arn = ${STACKER_ROLE}
+credential_source = Environment
+EOF
+
 # Simple wrapper around the builtin bash `test` command.
 assert() {
   builtin test "$@"

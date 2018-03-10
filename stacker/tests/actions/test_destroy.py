@@ -45,22 +45,15 @@ class TestDestroyAction(unittest.TestCase):
         plan = self.action._generate_plan()
         self.assertEqual(
             {
-                'namespace-vpc': set(
-                    [
-                        'namespace-db',
-                        'namespace-instance',
-                        'namespace-bastion']),
-                'namespace-other': set([]),
-                'namespace-bastion': set(
-                    [
-                        'namespace-instance',
-                        'namespace-db']),
-                'namespace-instance': set(
-                    [
-                        'namespace-db']),
-                'namespace-db': set(
-                    [
-                        'namespace-other'])},
+                'vpc': set(
+                    ['db', 'instance', 'bastion']),
+                'other': set([]),
+                'bastion': set(
+                    ['instance', 'db']),
+                'instance': set(
+                    ['db']),
+                'db': set(
+                    ['other'])},
             plan.graph.to_dict()
         )
 

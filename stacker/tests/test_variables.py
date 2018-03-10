@@ -5,10 +5,11 @@ from troposphere import s3
 from stacker.blueprints.variables.types import TroposphereType
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
+from stacker.stack import Stack
 from stacker.exceptions import FailedVariableLookup
 
 
-from .factories import mock_lookup
+from .factories import mock_lookup, generate_definition
 
 
 class TestVariables(unittest.TestCase):
@@ -43,9 +44,18 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(var.value, "resolved")
 
     def test_variable_resolve_simple_lookup(self):
+        stack = Stack(
+            definition=generate_definition("vpc", 1),
+            context=self.context)
+        stack.set_outputs({
+            "FakeOutput": "resolved",
+            "FakeOutput2": "resolved2",
+        })
+
+        self.context.get_stack.return_value = stack
+
         var = Variable("Param1", "${output fakeStack::FakeOutput}")
         self.assertEqual(len(var.lookups), 1)
-        self.provider.get_output.return_value = "resolved"
         var.resolve(self.context, self.provider)
         self.assertTrue(var.resolved)
         self.assertEqual(var.value, "resolved")
@@ -81,14 +91,15 @@ class TestVariables(unittest.TestCase):
         )
         self.assertEqual(len(var.lookups), 2)
 
-        def _get_output(fqn, output_name):
-            outputs = {
-                "FakeOutput": "resolved",
-                "FakeOutput2": "resolved2",
-            }
-            return outputs[output_name]
+        stack = Stack(
+            definition=generate_definition("vpc", 1),
+            context=self.context)
+        stack.set_outputs({
+            "FakeOutput": "resolved",
+            "FakeOutput2": "resolved2",
+        })
 
-        self.provider.get_output.side_effect = _get_output
+        self.context.get_stack.return_value = stack
         var.resolve(self.context, self.provider)
         self.assertTrue(var.resolved)
         self.assertEqual(var.value, "url://resolved@resolved2")
@@ -169,12 +180,19 @@ class TestVariables(unittest.TestCase):
             var.resolve(self.context, self.provider)
 
     def test_variable_resolve_nested_lookup(self):
+        stack = Stack(
+            definition=generate_definition("vpc", 1),
+            context=self.context)
+        stack.set_outputs({
+            "FakeOutput": "resolved",
+            "FakeOutput2": "resolved2",
+        })
 
         def mock_handler(value, context, provider, **kwargs):
             return "looked up: {}".format(value)
 
         register_lookup_handler("lookup", mock_handler)
-        self.provider.get_output.return_value = "resolved"
+        self.context.get_stack.return_value = stack
         var = Variable(
             "Param1",
             "${lookup ${lookup ${output fakeStack::FakeOutput}}}",

@@ -37,6 +37,7 @@ class TestStep(unittest.TestCase):
 
     def setUp(self):
         stack = mock.MagicMock()
+        stack.fqn = "stack"
         self.step = Step(stack=stack, fn=None)
 
     def test_status(self):
@@ -66,22 +67,22 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('vpc', 1),
             context=self.context)
         bastion = Stack(
-            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            definition=generate_definition('bastion', 1, requires=[vpc.name]),
             context=self.context)
 
         plan = build_plan(description="Test", steps=[
             Step(vpc, fn=None), Step(bastion, fn=None)])
 
         self.assertEqual(plan.graph.to_dict(), {
-            'namespace-bastion.1': set(['namespace-vpc.1']),
-            'namespace-vpc.1': set([])})
+            'bastion.1': set(['vpc.1']),
+            'vpc.1': set([])})
 
     def test_execute_plan(self):
         vpc = Stack(
             definition=generate_definition('vpc', 1),
             context=self.context)
         bastion = Stack(
-            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            definition=generate_definition('bastion', 1, requires=[vpc.name]),
             context=self.context)
 
         calls = []
@@ -101,10 +102,10 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('vpc', 1),
             context=self.context)
         db = Stack(
-            definition=generate_definition('db', 1, requires=[vpc.fqn]),
+            definition=generate_definition('db', 1, requires=[vpc.name]),
             context=self.context)
         app = Stack(
-            definition=generate_definition('app', 1, requires=[db.fqn]),
+            definition=generate_definition('app', 1, requires=[db.name]),
             context=self.context)
 
         calls = []
@@ -127,14 +128,14 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('vpc', 1),
             context=self.context)
         bastion = Stack(
-            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            definition=generate_definition('bastion', 1, requires=[vpc.name]),
             context=self.context)
 
         calls = []
 
         def fn(stack, status=None):
             calls.append(stack.fqn)
-            if stack.fqn == vpc_step.name:
+            if stack.name == vpc_step.name:
                 raise ValueError('Boom')
             return COMPLETE
 
@@ -153,7 +154,7 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('vpc', 1),
             context=self.context)
         bastion = Stack(
-            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            definition=generate_definition('bastion', 1, requires=[vpc.name]),
             context=self.context)
 
         calls = []
@@ -177,7 +178,7 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('vpc', 1),
             context=self.context)
         bastion = Stack(
-            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            definition=generate_definition('bastion', 1, requires=[vpc.name]),
             context=self.context)
         db = Stack(
             definition=generate_definition('db', 1),
@@ -187,7 +188,7 @@ class TestPlan(unittest.TestCase):
 
         def fn(stack, status=None):
             calls.append(stack.fqn)
-            if stack.fqn == vpc_step.name:
+            if stack.name == vpc_step.name:
                 return FAILED
             return COMPLETE
 
@@ -209,7 +210,7 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('vpc', 1),
             context=self.context)
         bastion = Stack(
-            definition=generate_definition('bastion', 1, requires=[vpc.fqn]),
+            definition=generate_definition('bastion', 1, requires=[vpc.name]),
             context=self.context)
 
         calls = []
@@ -232,14 +233,14 @@ class TestPlan(unittest.TestCase):
     def test_build_plan_missing_dependency(self):
         bastion = Stack(
             definition=generate_definition(
-                'bastion', 1, requires=['namespace-vpc.1']),
+                'bastion', 1, requires=['vpc.1']),
             context=self.context)
 
         with self.assertRaises(GraphError) as expected:
             build_plan(description="Test", steps=[Step(bastion, None)])
-        message = ("Error detected when adding 'namespace-vpc.1' "
-                   "as a dependency of 'namespace-bastion.1': dependent node "
-                   "namespace-vpc.1 does not exist")
+        message = ("Error detected when adding 'vpc.1' "
+                   "as a dependency of 'bastion.1': dependent node "
+                   "vpc.1 does not exist")
         self.assertEqual(expected.exception.message, message)
 
     def test_build_plan_cyclic_dependencies(self):
@@ -249,19 +250,19 @@ class TestPlan(unittest.TestCase):
             context=self.context)
         db = Stack(
             definition=generate_definition(
-                'db', 1, requires=['namespace-app.1']),
+                'db', 1, requires=['app.1']),
             context=self.context)
         app = Stack(
             definition=generate_definition(
-                'app', 1, requires=['namespace-db.1']),
+                'app', 1, requires=['db.1']),
             context=self.context)
 
         with self.assertRaises(GraphError) as expected:
             build_plan(
                 description="Test",
                 steps=[Step(vpc, None), Step(db, None), Step(app, None)])
-        message = ("Error detected when adding 'namespace-db.1' "
-                   "as a dependency of 'namespace-app.1': graph is "
+        message = ("Error detected when adding 'db.1' "
+                   "as a dependency of 'app.1': graph is "
                    "not acyclic")
         self.assertEqual(expected.exception.message, message)
 
@@ -283,7 +284,7 @@ class TestPlan(unittest.TestCase):
             stack = Stack(
                 definition=generate_definition('vpc', i, **overrides),
                 context=self.context)
-            requires = [stack.fqn]
+            requires = [stack.name]
 
             steps += [Step(stack, None)]
 

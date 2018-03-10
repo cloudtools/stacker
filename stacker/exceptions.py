@@ -210,11 +210,11 @@ class StackUpdateBadStatus(Exception):
 
 class PlanFailed(Exception):
 
-    def __init__(self, failed_stacks, *args, **kwargs):
-        self.failed_stacks = failed_stacks
+    def __init__(self, failed_steps, *args, **kwargs):
+        self.failed_steps = failed_steps
 
-        stack_names = ', '.join(stack.name for stack in failed_stacks)
-        message = "The following stacks failed: %s" % (stack_names,)
+        step_names = ', '.join(step.name for step in failed_steps)
+        message = "The following steps failed: %s" % (step_names,)
 
         super(PlanFailed, self).__init__(message, *args, **kwargs)
 

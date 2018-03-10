@@ -260,7 +260,8 @@ class Action(BaseAction):
 
                 return FailedStatus(reason)
             elif self.provider.is_stack_completed(provider_stack):
-                self.provider.set_outputs(stack.fqn, provider_stack)
+                stack.set_outputs(
+                    self.provider.get_output_dict(provider_stack))
                 return CompleteStatus(old_status.reason)
             else:
                 return old_status
@@ -305,7 +306,7 @@ class Action(BaseAction):
             else:
                 return SubmittedStatus("destroying stack for re-creation")
         except StackDidNotChange:
-            self.provider.set_outputs(stack.fqn, provider_stack)
+            stack.set_outputs(self.provider.get_output_dict(provider_stack))
             return DidNotChangeStatus()
 
     def _template(self, blueprint):

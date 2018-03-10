@@ -112,10 +112,10 @@ class TestBuildAction(unittest.TestCase):
         plan = build_action._generate_plan()
         self.assertEqual(
             {
-                'namespace-db': set(['namespace-bastion', 'namespace-vpc']),
-                'namespace-bastion': set(['namespace-vpc']),
-                'namespace-other': set([]),
-                'namespace-vpc': set([])},
+                'db': set(['bastion', 'vpc']),
+                'bastion': set(['vpc']),
+                'other': set([]),
+                'vpc': set([])},
             plan.graph.to_dict()
         )
 

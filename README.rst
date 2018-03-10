@@ -43,7 +43,7 @@ Stacker Command
 ===============
 
 The stacker command is built to have sub-commands, much like git. Currently the
-comands are:
+commands are:
 
 - ``build`` which handles taking your stack config and then launching or
   updating stacks as necessary.

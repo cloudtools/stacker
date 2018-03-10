@@ -275,6 +275,8 @@ class Stack(Model):
 
     region = StringType(serialize_when_none=False)
 
+    profile = StringType(serialize_when_none=False)
+
     class_path = StringType(serialize_when_none=False)
 
     template_path = StringType(serialize_when_none=False)

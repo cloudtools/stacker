@@ -64,6 +64,7 @@ class Stack(object):
         self.name = definition.name
         self.fqn = definition.stack_name or context.get_fqn(self.name)
         self.region = definition.region
+        self.profile = definition.profile
         self.definition = definition
         self.variables = _gather_variables(definition)
         self.mappings = mappings

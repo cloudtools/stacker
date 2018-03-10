@@ -213,8 +213,9 @@ class Action(build.Action):
         if not build.should_update(stack):
             return NotUpdatedStatus()
 
-        region = stack.region
-        provider = self.provider.build(region=region)
+        provider = self.provider.build(
+            region=stack.region,
+            profile=stack.profile)
 
         provider_stack = provider.get_stack(stack.fqn)
 

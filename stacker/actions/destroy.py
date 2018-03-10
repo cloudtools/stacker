@@ -47,8 +47,9 @@ class Action(BaseAction):
         if self.cancel.wait(wait_time):
             return INTERRUPTED
 
-        region = stack.region
-        provider = self.provider.build(region=region)
+        provider = self.provider.build(
+            region=stack.region,
+            profile=stack.profile)
 
         try:
             provider_stack = provider.get_stack(stack.fqn)

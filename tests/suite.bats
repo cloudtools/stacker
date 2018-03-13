@@ -198,7 +198,8 @@ stacks:
     class_path: stacker.tests.fixtures.mock_blueprints.Dummy
   - name: bastion
     class_path: stacker.tests.fixtures.mock_blueprints.Dummy
-    requires: [vpc]
+    variables:
+      StringVariable: \${output vpc::DummyId}
 EOF
   }
 

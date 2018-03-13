@@ -6,7 +6,6 @@ import threading
 
 from .util import stack_template_key_name
 from .exceptions import (
-    CancelExecution,
     GraphError,
     PlanFailed,
 )
@@ -14,7 +13,6 @@ from .ui import ui
 from .dag import DAG, DAGValidationError, walk
 from .status import (
     FailedStatus,
-    SkippedStatus,
     PENDING,
     SUBMITTED,
     COMPLETE,
@@ -89,8 +87,6 @@ class Step(object):
     def _run_once(self):
         try:
             status = self.fn(self.stack, status=self.status)
-        except CancelExecution:
-            status = SkippedStatus(reason="canceled execution")
         except Exception as e:
             logger.exception(e)
             status = FailedStatus(reason=e.message)

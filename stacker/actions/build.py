@@ -9,6 +9,7 @@ from ..exceptions import (
     MissingParameterException,
     StackDidNotChange,
     StackDoesNotExist,
+    CancelExecution,
 )
 
 from ..status import (
@@ -18,6 +19,7 @@ from ..status import (
     SubmittedStatus,
     CompleteStatus,
     FailedStatus,
+    SkippedStatus,
     SUBMITTED,
     INTERRUPTED
 )
@@ -305,6 +307,9 @@ class Action(BaseAction):
                 return SubmittedStatus("updating existing stack")
             else:
                 return SubmittedStatus("destroying stack for re-creation")
+        except CancelExecution:
+            stack.set_outputs(self.provider.get_output_dict(provider_stack))
+            return SkippedStatus(reason="canceled execution")
         except StackDidNotChange:
             stack.set_outputs(self.provider.get_output_dict(provider_stack))
             return DidNotChangeStatus()

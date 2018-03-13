@@ -37,7 +37,8 @@ class TestStep(unittest.TestCase):
 
     def setUp(self):
         stack = mock.MagicMock()
-        stack.fqn = "stack"
+        stack.name = "stack"
+        stack.fqn = "namespace-stack"
         self.step = Step(stack=stack, fn=None)
 
     def test_status(self):

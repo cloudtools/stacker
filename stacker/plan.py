@@ -59,7 +59,7 @@ class Step(object):
         return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
 
     def __str__(self):
-        return self.stack.fqn
+        return self.stack.name
 
     def run(self):
         """Runs this step until it has completed successfully, or been

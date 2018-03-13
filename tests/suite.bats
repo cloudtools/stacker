@@ -82,7 +82,7 @@ stacks:
 EOF
   assert ! "$status" -eq 0
   assert_has_line "MissingVariable: Variable \"PublicSubnets\" in blueprint \"vpc\" is missing"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: failed (Variable \"PublicSubnets\" in blueprint \"vpc\" is missing)"
+  assert_has_line "vpc: failed (Variable \"PublicSubnets\" in blueprint \"vpc\" is missing)"
 }
 
 @test "stacker build - simple build" {
@@ -108,20 +108,20 @@ EOF
   stacker build <(config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
+  assert_has_line "vpc: complete (creating new stack)"
 
   # Perform a noop update to the stacks, in interactive mode.
   stacker build -i <(config)
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: skipped (nochange)"
+  assert_has_line "vpc: skipped (nochange)"
 
   # Cleanup
   stacker destroy --force <(config)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (submitted for destruction)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (stack destroyed)"
+  assert_has_line "vpc: submitted (submitted for destruction)"
+  assert_has_line "vpc: complete (stack destroyed)"
 }
 
 @test "stacker info - simple info" {
@@ -147,7 +147,7 @@ EOF
   stacker info <(config)
   assert "$status" -eq 0
   assert_has_line "Outputs for stacks: ${STACKER_NAMESPACE}"
-  assert_has_line "${STACKER_NAMESPACE}-vpc:"
+  assert_has_line "vpc:"
   assert_has_line "DummyId: dummy-1234"
 }
 
@@ -177,8 +177,8 @@ EOF
   assert_has_line "Using default AWS provider mode"
 
   for stack in vpc bastion; do
-    assert_has_line "${STACKER_NAMESPACE}-${stack}: submitted (creating new stack)"
-    assert_has_line "${STACKER_NAMESPACE}-${stack}: complete (creating new stack)"
+    assert_has_line "${stack}: submitted (creating new stack)"
+    assert_has_line "${stack}: complete (creating new stack)"
   done
 }
 
@@ -250,16 +250,16 @@ EOF
   stacker build <(config1)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-bastion: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-bastion: complete (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
+  assert_has_line "vpc: complete (creating new stack)"
+  assert_has_line "bastion: submitted (creating new stack)"
+  assert_has_line "bastion: complete (creating new stack)"
 
   # Attempt an update to all stacks, but skip the vpc update.
   stacker build -i <(config2) <<< $'n\ny\n'
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-vpc: skipped (canceled execution)"
-  assert_has_line "${STACKER_NAMESPACE}-bastion: submitted (updating existing stack)"
+  assert_has_line "vpc: skipped (canceled execution)"
+  assert_has_line "bastion: submitted (updating existing stack)"
 }
 
 @test "stacker build - no namespace" {
@@ -269,7 +269,8 @@ EOF
     cat <<EOF
 namespace: ""
 stacks:
-  - name: ${STACKER_NAMESPACE}-vpc
+  - name: vpc
+    stack_name: ${STACKER_NAMESPACE}-vpc
     class_path: stacker.tests.fixtures.mock_blueprints.Dummy
 EOF
   }
@@ -311,7 +312,7 @@ EOF
   # Create the new stacks.
   stacker build -e namespace=$STACKER_NAMESPACE <(environment) <(config)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
 }
 
 @test "stacker build - dump" {
@@ -416,20 +417,20 @@ EOF
   stacker build <(config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: complete (creating new stack)"
+  assert_has_line "add-resource-test-with-replacements-only: submitted (creating new stack)"
+  assert_has_line "add-resource-test-with-replacements-only: complete (creating new stack)"
 
   # Perform a additional resouce addition in replacements-only mode, should not crash.  This is testing issue #463.
   stacker build -i --replacements-only <(config2)
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: complete (updating existing stack)"
+  assert_has_line "add-resource-test-with-replacements-only: complete (updating existing stack)"
 
   # Cleanup
   stacker destroy --force <(config2)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: submitted (submitted for destruction)"
-  assert_has_line "${STACKER_NAMESPACE}-add-resource-test-with-replacements-only: complete (stack destroyed)"
+  assert_has_line "add-resource-test-with-replacements-only: submitted (submitted for destruction)"
+  assert_has_line "add-resource-test-with-replacements-only: complete (stack destroyed)"
 }
 
 @test "stacker build - default mode, without & with protected stack" {
@@ -464,30 +465,30 @@ EOF
   stacker build --interactive <(PROTECTED="false" config)
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-mystack: complete (creating new stack)"
+  assert_has_line "mystack: submitted (creating new stack)"
+  assert_has_line "mystack: complete (creating new stack)"
 
   # Perform a additional resouce addition in interactive mode, non-protected stack
   stacker build --interactive <(config2) < <(echo "y")
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (updating existing stack)"
-  assert_has_line "${STACKER_NAMESPACE}-mystack: complete (updating existing stack)"
+  assert_has_line "mystack: submitted (updating existing stack)"
+  assert_has_line "mystack: complete (updating existing stack)"
   assert_has_line "Add Dummy2"
 
   # Perform another update, this time without interactive, but with a protected stack
   stacker build <(PROTECTED="true" config) < <(echo "y")
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (updating existing stack)"
-  assert_has_line "${STACKER_NAMESPACE}-mystack: complete (updating existing stack)"
+  assert_has_line "mystack: submitted (updating existing stack)"
+  assert_has_line "mystack: complete (updating existing stack)"
   assert_has_line "Remove Dummy2"
 
   # Cleanup
   stacker destroy --force <(config2)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-mystack: submitted (submitted for destruction)"
-  assert_has_line "${STACKER_NAMESPACE}-mystack: complete (stack destroyed)"
+  assert_has_line "mystack: submitted (submitted for destruction)"
+  assert_has_line "mystack: complete (stack destroyed)"
 }
 
 @test "stacker build - recreate failed stack, non-interactive mode" {
@@ -523,29 +524,29 @@ EOF
   stacker build <(bad_config)
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (rolling back new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: failed (rolled back new stack)"
+  assert_has_line "recreate-failed: submitted (creating new stack)"
+  assert_has_line "recreate-failed: submitted (rolling back new stack)"
+  assert_has_line "recreate-failed: failed (rolled back new stack)"
 
   # Updating the stack should prompt to re-create it.
   stacker build --recreate-failed <(good_config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (destroying stack for re-creation)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: complete (creating new stack)"
+  assert_has_line "recreate-failed: submitted (destroying stack for re-creation)"
+  assert_has_line "recreate-failed: submitted (creating new stack)"
+  assert_has_line "recreate-failed: complete (creating new stack)"
 
   # Confirm the stack is really updated
   stacker build <(good_config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: skipped (nochange)"
+  assert_has_line "recreate-failed: skipped (nochange)"
 
   # Cleanup
   stacker destroy --force <(good_config)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: submitted (submitted for destruction)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed: complete (stack destroyed)"
+  assert_has_line "recreate-failed: submitted (submitted for destruction)"
+  assert_has_line "recreate-failed: complete (stack destroyed)"
 }
 
 
@@ -582,29 +583,29 @@ EOF
   stacker build <(bad_config)
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (rolling back new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: failed (rolled back new stack)"
+  assert_has_line "recreate-failed-interactive: submitted (creating new stack)"
+  assert_has_line "recreate-failed-interactive: submitted (rolling back new stack)"
+  assert_has_line "recreate-failed-interactive: failed (rolled back new stack)"
 
   # Updating the stack should prompt to re-create it.
   stacker build -i <(good_config) <<< $'y\n'
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (destroying stack for re-creation)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: complete (creating new stack)"
+  assert_has_line "recreate-failed-interactive: submitted (destroying stack for re-creation)"
+  assert_has_line "recreate-failed-interactive: submitted (creating new stack)"
+  assert_has_line "recreate-failed-interactive: complete (creating new stack)"
 
   # Confirm the stack is really updated
   stacker build -i <(good_config)
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: skipped (nochange)"
+  assert_has_line "recreate-failed-interactive: skipped (nochange)"
 
   # Cleanup
   stacker destroy --force <(good_config)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: submitted (submitted for destruction)"
-  assert_has_line "${STACKER_NAMESPACE}-recreate-failed-interactive: complete (stack destroyed)"
+  assert_has_line "recreate-failed-interactive: submitted (submitted for destruction)"
+  assert_has_line "recreate-failed-interactive: complete (stack destroyed)"
 }
 
 @test "stacker build - handle rollbacks during updates" {
@@ -650,23 +651,23 @@ EOF
   stacker build <(good_config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-update-rollback: complete (creating new stack)"
+  assert_has_line "update-rollback: submitted (creating new stack)"
+  assert_has_line "update-rollback: complete (creating new stack)"
 
   # Do a bad update and watch the rollback
   stacker build <(bad_config)
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (updating existing stack)"
-  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (rolling back update)"
-  assert_has_line "${STACKER_NAMESPACE}-update-rollback: failed (rolled back update)"
+  assert_has_line "update-rollback: submitted (updating existing stack)"
+  assert_has_line "update-rollback: submitted (rolling back update)"
+  assert_has_line "update-rollback: failed (rolled back update)"
 
   # Do a good update so we know we've correctly waited for rollback
   stacker build <(good_config2)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-update-rollback: submitted (updating existing stack)"
-  assert_has_line "${STACKER_NAMESPACE}-update-rollback: complete (updating existing stack)"
+  assert_has_line "update-rollback: submitted (updating existing stack)"
+  assert_has_line "update-rollback: complete (updating existing stack)"
 }
 
 
@@ -697,10 +698,10 @@ EOF
   stacker build <(config)
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: submitted (rolling back new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-parent: failed (rolled back new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-dependent-rollback-child: failed (dependency has failed)"
+  assert_has_line "dependent-rollback-parent: submitted (creating new stack)"
+  assert_has_line "dependent-rollback-parent: submitted (rolling back new stack)"
+  assert_has_line "dependent-rollback-parent: failed (rolled back new stack)"
+  assert_has_line "dependent-rollback-child: failed (dependency has failed)"
   assert_has_line "The following steps failed: dependent-rollback-parent, dependent-rollback-child"
 }
 
@@ -726,20 +727,20 @@ EOF
   stacker build <(config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
+  assert_has_line "vpc: complete (creating new stack)"
 
   # Perform a noop update to the stacks, in interactive mode.
   stacker build -i <(config)
   assert "$status" -eq 0
   assert_has_line "Using interactive AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: skipped (nochange)"
+  assert_has_line "vpc: skipped (nochange)"
 
   # Cleanup
   stacker destroy --force <(config)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (submitted for destruction)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (stack destroyed)"
+  assert_has_line "vpc: submitted (submitted for destruction)"
+  assert_has_line "vpc: complete (stack destroyed)"
 }
 
 @test "stacker diff - raw template" {
@@ -802,10 +803,10 @@ EOF
   # Create the new stacks.
   stacker build -j 1 <(config)
   assert "$status" -eq 0
-  assert_has_line "${STACKER_NAMESPACE}-vpc1: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc1: complete (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc2: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc2: complete (creating new stack)"
+  assert_has_line "vpc1: submitted (creating new stack)"
+  assert_has_line "vpc1: complete (creating new stack)"
+  assert_has_line "vpc2: submitted (creating new stack)"
+  assert_has_line "vpc2: complete (creating new stack)"
 }
 
 @test "stacker build - tailing" {
@@ -832,11 +833,11 @@ EOF
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
   assert_has_line "Tailing stack: ${STACKER_NAMESPACE}-vpc"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
+  assert_has_line "vpc: complete (creating new stack)"
   assert_has_line "Tailing stack: ${STACKER_NAMESPACE}-bastion"
-  assert_has_line "${STACKER_NAMESPACE}-bastion: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-bastion: complete (creating new stack)"
+  assert_has_line "bastion: submitted (creating new stack)"
+  assert_has_line "bastion: complete (creating new stack)"
 
   stacker destroy --force --tail <(config)
   assert "$status" -eq 0
@@ -867,10 +868,10 @@ EOF
   stacker build <(config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpcx: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpcx: complete (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-bastion: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-bastion: complete (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
+  assert_has_line "vpc: complete (creating new stack)"
+  assert_has_line "bastion: submitted (creating new stack)"
+  assert_has_line "bastion: complete (creating new stack)"
 }
 
 @test "stacker build - multi region" {
@@ -904,10 +905,10 @@ EOF
   stacker build <(config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-app: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-app: complete (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
+  assert_has_line "vpc: complete (creating new stack)"
+  assert_has_line "app: submitted (creating new stack)"
+  assert_has_line "app: complete (creating new stack)"
 }
 
 @test "stacker build - profiles" {
@@ -931,6 +932,6 @@ EOF
   stacker build <(config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
-  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
+  assert_has_line "vpc: submitted (creating new stack)"
+  assert_has_line "vpc: complete (creating new stack)"
 }

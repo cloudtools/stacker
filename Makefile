@@ -1,11 +1,4 @@
-.PHONY: build lint test-unit test-functional test ci
-
-# Only run the functional tests on the master branch, since they can be slow.
-ifeq ($(CIRCLE_BRANCH),master)
-CI_TESTS = test-unit test-functional
-else
-CI_TESTS = test-unit
-endif
+.PHONY: build lint test-unit test-functional test
 
 build:
 	docker build -t remind101/stacker .
@@ -22,10 +15,6 @@ test-functional:
 
 # General testing target for most development.
 test: lint test-unit
-
-# Target for CI tests. If building the master branch, this will also run the
-# functional tests, which can be slow.
-ci: $(CI_TESTS)
 
 apidocs:
 	sphinx-apidoc --force -o docs/api stacker

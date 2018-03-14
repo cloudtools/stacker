@@ -525,7 +525,6 @@ EOF
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
   assert_has_line "recreate-failed: submitted (creating new stack)"
-  assert_has_line "recreate-failed: submitted (rolling back new stack)"
   assert_has_line "recreate-failed: failed (rolled back new stack)"
 
   # Updating the stack should prompt to re-create it.

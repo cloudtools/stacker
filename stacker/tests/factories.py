@@ -15,7 +15,7 @@ class MockProviderBuilder(object):
         self.provider = provider
         self.region = region
 
-    def build(self, region):
+    def build(self, region, profile):
         return self.provider
 
 

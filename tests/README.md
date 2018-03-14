@@ -11,7 +11,6 @@ This directory contains the functional testing suite for stacker. It exercises a
 
   ```console
   $ export STACKER_NAMESPACE=my-stacker-test-namespace
-  $ export AWS_DEFAULT_REGION=us-east-1
   ```
 3. Generate an IAM user for the test suite to use:
 
@@ -24,6 +23,7 @@ This directory contains the functional testing suite for stacker. It exercises a
   $ ./stacker.yaml.sh | stacker info -
   $ export AWS_ACCESS_KEY_ID=access-key
   $ export AWS_SECRET_ACCESS_KEY=secret-access-key
+  $ export STACKER_ROLE=<FunctionalTestRole>
   ```
 5. Run the test suite:
 

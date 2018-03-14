@@ -1,3 +1,7 @@
+## HEAD
+
+- Support for provisioning stacks in multiple accounts and regions has been added [GH-553], [GH-551]
+
 ## 1.2.0 (2018-03-01)
 
 The biggest change in this release has to do with how we build the graph

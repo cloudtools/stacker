@@ -2,11 +2,21 @@ import json
 import os
 import boto3
 import logging
+import threading
 from .ui import ui
 
 
+# boto3 client creation is not threadsafe. This lock ensures that only 1 thread
+# is building a boto3 client at any given time.
+#
+# See https://github.com/boto/boto3/issues/801#issuecomment-245455979
+# See https://github.com/remind101/stacker/issues/560
+_session_lock = threading.RLock()
+
+
 def get_session(region, profile=None):
-    """Creates a boto3 session with a cache
+    """Creates a boto3 session with a cache. This method is threadsafe even
+    though boto3 session creation itself is not.
 
     Args:
         region (str): The region for the session
@@ -16,6 +26,11 @@ def get_session(region, profile=None):
         :class:`boto3.session.Session`: A boto3 session with
             credential caching
     """
+    with _session_lock:
+        return _get_session(region=region, profile=profile)
+
+
+def _get_session(region, profile=None):
     session = boto3.Session(region_name=region, profile_name=profile)
     c = session._session.get_component('credential_provider')
     provider = c.get_provider('assume-role')

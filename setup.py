@@ -14,7 +14,6 @@ install_requires = [
     "formic~=0.9b",
     "gitpython~=2.0",
     "schematics~=2.0.1",
-    "python-dateutil~=2.0"
 ]
 
 tests_require = [

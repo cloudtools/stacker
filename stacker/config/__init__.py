@@ -271,6 +271,10 @@ class Hook(Model):
 class Stack(Model):
     name = StringType(required=True)
 
+    stack_name = StringType(serialize_when_none=False)
+
+    region = StringType(serialize_when_none=False)
+
     class_path = StringType(serialize_when_none=False)
 
     template_path = StringType(serialize_when_none=False)

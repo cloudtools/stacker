@@ -30,7 +30,7 @@ class Stacker(BaseCommand):
             environment=options.environment,
             validate=True)
 
-        options.provider = default.Provider(
+        options.provider_builder = default.ProviderBuilder(
             region=options.region,
             interactive=options.interactive,
             replacements_only=options.replacements_only,

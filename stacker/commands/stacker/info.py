@@ -20,7 +20,9 @@ class Info(BaseCommand):
 
     def run(self, options, **kwargs):
         super(Info, self).run(options, **kwargs)
-        action = info.Action(options.context, provider=options.provider)
+        action = info.Action(options.context,
+                             provider_builder=options.provider_builder)
+
         action.execute()
 
     def get_context_kwargs(self, options, **kwargs):

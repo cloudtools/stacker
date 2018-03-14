@@ -124,6 +124,33 @@ EOF
   assert_has_line "${STACKER_NAMESPACE}-vpc: complete (stack destroyed)"
 }
 
+@test "stacker info - simple info" {
+  needs_aws
+
+  config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(config)
+  }
+
+  # Create the new stacks.
+  stacker build <(config)
+  assert "$status" -eq 0
+
+  stacker info <(config)
+  assert "$status" -eq 0
+  assert_has_line "Outputs for stacks: ${STACKER_NAMESPACE}"
+  assert_has_line "${STACKER_NAMESPACE}-vpc:"
+  assert_has_line "DummyId: dummy-1234"
+}
+
 @test "stacker build - simple build with output lookups" {
   needs_aws
 
@@ -810,4 +837,75 @@ EOF
   assert_has_line "Tailing stack: ${STACKER_NAMESPACE}-bastion"
   assert_has_line "${STACKER_NAMESPACE}-bastion: submitted (creating new stack)"
   assert_has_line "${STACKER_NAMESPACE}-bastion: complete (creating new stack)"
+
+  stacker destroy --force --tail <(config)
+  assert "$status" -eq 0
+}
+
+@test "stacker build - override stack name" {
+  needs_aws
+
+  config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: vpc
+    stack_name: vpcx
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+  - name: bastion
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    variables:
+      StringVariable: \${output vpc::DummyId}
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(config)
+  }
+
+  # Create the new stacks.
+  stacker build <(config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-vpcx: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-vpcx: complete (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-bastion: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-bastion: complete (creating new stack)"
+}
+
+@test "stacker build - multi region" {
+  needs_aws
+
+  config() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: west/vpc
+    region: us-west-1
+    stack_name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+  - name: east/vpc
+    region: us-east-1
+    stack_name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+  - name: app
+    region: us-east-1
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    variables:
+      StringVariable: \${output west/vpc::DummyId}
+EOF
+  }
+
+  teardown() {
+    stacker destroy --force <(config)
+  }
+
+  # Create the new stacks.
+  stacker build <(config)
+  assert "$status" -eq 0
+  assert_has_line "Using default AWS provider mode"
+  assert_has_line "${STACKER_NAMESPACE}-vpc: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-vpc: complete (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-app: submitted (creating new stack)"
+  assert_has_line "${STACKER_NAMESPACE}-app: complete (creating new stack)"
 }

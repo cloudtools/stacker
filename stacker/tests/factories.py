@@ -10,6 +10,15 @@ class MockThreadingEvent(object):
         return False
 
 
+class MockProviderBuilder(object):
+    def __init__(self, provider, region=None):
+        self.provider = provider
+        self.region = region
+
+    def build(self, region):
+        return self.provider
+
+
 def mock_provider(**kwargs):
     return MagicMock(**kwargs)
 

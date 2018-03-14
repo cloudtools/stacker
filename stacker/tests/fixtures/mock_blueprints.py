@@ -43,7 +43,7 @@ class FunctionalTests(Blueprint):
 
         bucket_arn = Sub("arn:aws:s3:::${StackerBucket}*")
         cloudformation_scope = Sub(
-            "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:"
+            "arn:aws:cloudformation:*:${AWS::AccountId}:"
             "stack/${StackerNamespace}-*")
         changeset_scope = "*"
 
@@ -91,7 +91,8 @@ class FunctionalTests(Blueprint):
                             awacs.cloudformation.DeleteStack,
                             awacs.cloudformation.CreateStack,
                             awacs.cloudformation.UpdateStack,
-                            awacs.cloudformation.DescribeStacks])]))
+                            awacs.cloudformation.DescribeStacks,
+                            awacs.cloudformation.DescribeStackEvents])]))
 
         user = t.add_resource(
             iam.User(

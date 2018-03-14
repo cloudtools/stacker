@@ -1,7 +1,6 @@
 import json
 import yaml
 import logging
-import os
 import time
 import urlparse
 import sys
@@ -41,6 +40,15 @@ MAX_ATTEMPTS = 10
 
 MAX_TAIL_RETRIES = 5
 DEFAULT_CAPABILITIES = ["CAPABILITY_NAMED_IAM", ]
+
+
+def get_cloudformation_client(session):
+    config = Config(
+        retries=dict(
+            max_attempts=MAX_ATTEMPTS
+        )
+    )
+    return session.client('cloudformation', config=config)
 
 
 def get_output_dict(stack):
@@ -409,6 +417,23 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
     return args
 
 
+class ProviderBuilder(object):
+    """Implements a ProviderBuilder for the AWS provider."""
+
+    def __init__(self, region=None, **kwargs):
+        self.region = region
+        self.kwargs = kwargs
+
+    def build(self, region=None):
+        # TODO(ejholmes): This class _could_ cache built providers, however,
+        # the building of boto3 clients is _not_ threadsafe. See
+        # https://github.com/boto/boto3/issues/801#issuecomment-245455979
+        if not region:
+            region = self.region
+        session = get_session(region=region)
+        return Provider(session, region=region, **self.kwargs)
+
+
 class Provider(BaseProvider):
 
     """AWS CloudFormation Provider"""
@@ -452,37 +477,17 @@ class Provider(BaseProvider):
         "ROLLBACK_COMPLETE",
     )
 
-    def __init__(self, region, interactive=False, replacements_only=False,
-                 recreate_failed=False, service_role=None, **kwargs):
-        self.region = region
+    def __init__(self, session, region=None, interactive=False,
+                 replacements_only=False, recreate_failed=False,
+                 service_role=None, **kwargs):
         self._outputs = {}
-        self._cloudformation = None
+        self.region = region
+        self.cloudformation = get_cloudformation_client(session)
         self.interactive = interactive
         # replacements only is only used in interactive mode
         self.replacements_only = interactive and replacements_only
         self.recreate_failed = interactive or recreate_failed
         self.service_role = service_role
-
-        # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
-        # see: https://github.com/remind101/stacker/issues/196
-        self._pid = os.getpid()
-
-    @property
-    def cloudformation(self):
-        # deals w/ multiprocessing issues w/ sharing ssl conns
-        # see https://github.com/remind101/stacker/issues/196
-        pid = os.getpid()
-        if pid != self._pid or not self._cloudformation:
-            config = Config(
-                retries=dict(
-                    max_attempts=MAX_ATTEMPTS
-                )
-            )
-            session = get_session(self.region)
-            self._cloudformation = session.client('cloudformation',
-                                                  config=config)
-
-        return self._cloudformation
 
     def get_stack(self, stack_name, **kwargs):
         try:

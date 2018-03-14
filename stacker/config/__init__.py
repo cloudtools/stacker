@@ -312,6 +312,11 @@ class Stack(Model):
         self.validate_stack_source(data)
 
     def validate_stack_source(self, data):
+        # Locked stacks don't actually need a template, since they're
+        # read-only.
+        if data["locked"]:
+            return
+
         if not (data["class_path"] or data["template_path"]):
             raise ValidationError(
                 "class_path or template_path is required.")

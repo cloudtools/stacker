@@ -908,6 +908,21 @@ EOF
   assert_has_line "vpc: complete (creating new stack)"
   assert_has_line "app: submitted (creating new stack)"
   assert_has_line "app: complete (creating new stack)"
+
+  config_simple() {
+    cat <<EOF
+namespace: ${STACKER_NAMESPACE}
+stacks:
+  - name: west/vpc
+    region: us-west-1
+    stack_name: vpc
+    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+EOF
+  }
+
+  # Assert that the vpc stack was built in us-west-1
+  stacker info <(config_simple)
+  assert_has_line "Region: us-west-1"
 }
 
 @test "stacker build - profiles" {

@@ -425,9 +425,6 @@ class ProviderBuilder(object):
         self.kwargs = kwargs
 
     def build(self, region=None, profile=None):
-        # TODO(ejholmes): This class _could_ cache built providers, however,
-        # the building of boto3 clients is _not_ threadsafe. See
-        # https://github.com/boto/boto3/issues/801#issuecomment-245455979
         if not region:
             region = self.region
         session = get_session(region=region, profile=profile)

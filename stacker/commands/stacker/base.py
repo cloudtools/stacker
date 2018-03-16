@@ -150,7 +150,12 @@ class BaseCommand(object):
                  "more than once.")
         parser.add_argument(
             "-r", "--region",
-            help="The AWS region to launch in.")
+            help="The default AWS region to use for all AWS API calls.")
+        parser.add_argument(
+            "-p", "--profile",
+            help="The default AWS profile to use for all AWS API calls. If "
+                 "not specified, the default will be according to http://bo"
+                 "to3.readthedocs.io/en/latest/guide/configuration.html.")
         parser.add_argument(
             "-v", "--verbose", action="count", default=0,
             help="Increase output verbosity. May be specified up to twice.")

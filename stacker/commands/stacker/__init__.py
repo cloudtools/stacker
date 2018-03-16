@@ -9,6 +9,7 @@ from ...config import render_parse_load as load_config
 from ...context import Context
 from ...providers.aws import default
 from ... import __version__
+from ... import session_cache
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,8 @@ class Stacker(BaseCommand):
             options.config.read(),
             environment=options.environment,
             validate=True)
+
+        session_cache.default_profile = options.profile
 
         options.provider_builder = default.ProviderBuilder(
             region=options.region,

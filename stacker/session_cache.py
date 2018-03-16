@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 # https://docs.python.org/3/glossary.html#term-global-interpreter-lock
 credential_cache = {}
 
+default_profile = None
+
 
 def get_session(region, profile=None):
     """Creates a boto3 session with a cache
@@ -23,6 +25,14 @@ def get_session(region, profile=None):
         :class:`boto3.session.Session`: A boto3 session with
             credential caching
     """
+    if profile is None:
+        logger.debug("No AWS profile explicitly provided. "
+                     "Falling back to default.")
+        profile = default_profile
+
+    logger.debug("Building session using profile \"%s\" in region \"%s\""
+                 % (profile, region))
+
     session = boto3.Session(region_name=region, profile_name=profile)
     c = session._session.get_component('credential_provider')
     provider = c.get_provider('assume-role')

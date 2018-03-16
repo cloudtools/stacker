@@ -348,6 +348,14 @@ class TestMethods(unittest.TestCase):
         change_set_result["ChangeSetName"] = "MyChanges"
         self.assertEqual(result, change_set_result)
 
+        # Check stack policy
+        stack_policy = Template(body="{}")
+        result = generate_cloudformation_args(stack_policy=stack_policy,
+                                              **std_args)
+        stack_policy_result = copy.deepcopy(std_return)
+        stack_policy_result["StackPolicyBody"] = "{}"
+        self.assertEqual(result, stack_policy_result)
+
         # If not TemplateURL is provided, use TemplateBody
         std_args["template"] = Template(body=template_body)
         template_body_result = copy.deepcopy(std_return)

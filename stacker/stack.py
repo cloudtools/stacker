@@ -103,6 +103,16 @@ class Stack(object):
         return requires
 
     @property
+    def stack_policy(self):
+        if not hasattr(self, "_stack_policy"):
+            self._stack_policy = None
+            if self.definition.stack_policy_path:
+                with open(self.definition.stack_policy_path) as f:
+                    self._stack_policy = f.read()
+
+        return self._stack_policy
+
+    @property
     def blueprint(self):
         if not hasattr(self, "_blueprint"):
             kwargs = {}

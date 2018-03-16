@@ -55,13 +55,21 @@ class TestConfig(unittest.TestCase):
             config.validate()
 
         stack_errors = ex.exception.errors['stacks'][0]
-        print stack_errors
         self.assertEquals(
             stack_errors['template_path'][0].__str__(),
             "class_path or template_path is required.")
         self.assertEquals(
             stack_errors['class_path'][0].__str__(),
             "class_path or template_path is required.")
+
+    def test_config_validate_missing_stack_source_when_locked(self):
+        config = Config({
+            "namespace": "prod",
+            "stacks": [
+                {
+                    "name": "bastion",
+                    "locked": True}]})
+        config.validate()
 
     def test_config_validate_stack_class_and_template_paths(self):
         config = Config({

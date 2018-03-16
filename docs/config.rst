@@ -334,7 +334,8 @@ A stack has the following keys:
   updated unless the stack is passed to stacker via the *--force* flag.
   This is useful for *risky* stacks that you don't want to take the
   risk of allowing CloudFormation to update, but still want to make
-  sure get launched when the environment is first created.
+  sure get launched when the environment is first created. When ``locked``,
+  it's not necessary to specify a ``class_path`` or ``template_path``.
 **enabled:**
   (optional) If set to false, the stack is disabled, and will not be
   built or updated. This can allow you to disable stacks in different

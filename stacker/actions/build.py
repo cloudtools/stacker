@@ -228,6 +228,11 @@ class Action(BaseAction):
         except StackDoesNotExist:
             provider_stack = None
 
+        if provider_stack and not should_update(stack):
+            stack.set_outputs(
+                self.provider.get_output_dict(provider_stack))
+            return NotUpdatedStatus()
+
         recreate = False
         if provider_stack and old_status == SUBMITTED:
             logger.debug(
@@ -289,8 +294,6 @@ class Action(BaseAction):
             provider.create_stack(stack.fqn, template, parameters, tags,
                                   force_change_set)
             return SubmittedStatus("creating new stack")
-        elif not should_update(stack):
-            return NotUpdatedStatus()
 
         try:
             if provider.prepare_stack_for_update(provider_stack, tags):

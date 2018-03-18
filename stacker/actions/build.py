@@ -223,15 +223,19 @@ class Action(BaseAction):
 
         provider = self.build_provider(stack)
 
-        try:
-            provider_stack = provider.get_stack(stack.fqn)
-        except StackDoesNotExist:
-            provider_stack = None
+        cached = stack.get_cached()
 
-        if provider_stack and not should_update(stack):
-            stack.set_outputs(
-                self.provider.get_output_dict(provider_stack))
-            return NotUpdatedStatus()
+        provider_stack = None
+        if not cached:
+            try:
+                provider_stack = provider.get_stack(stack.fqn)
+            except StackDoesNotExist:
+                provider_stack = None
+
+            if provider_stack and not should_update(stack):
+                stack.set_outputs(
+                    self.provider.get_output_dict(provider_stack))
+                return NotUpdatedStatus()
 
         recreate = False
         if provider_stack and old_status == SUBMITTED:
@@ -277,6 +281,10 @@ class Action(BaseAction):
 
         logger.debug("Resolving stack %s", stack.fqn)
         stack.resolve(self.context, provider)
+
+        if cached and cached["hash"] == stack.hash:
+            stack.set_outputs(cached["outputs"])
+            return DidNotChangeStatus()
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template = self._template(stack.blueprint)

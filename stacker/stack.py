@@ -1,4 +1,5 @@
 import copy
+import hashlib
 
 from . import util
 from .variables import (
@@ -60,7 +61,8 @@ class Stack(object):
     """
 
     def __init__(self, definition, context, variables=None, mappings=None,
-                 locked=False, force=False, enabled=True, protected=False):
+                 locked=False, force=False, enabled=True, protected=False,
+                 cache=None):
         self.name = definition.name
         self.fqn = context.get_fqn(definition.stack_name or self.name)
         self.region = definition.region
@@ -73,6 +75,7 @@ class Stack(object):
         self.enabled = enabled
         self.protected = protected
         self.context = copy.deepcopy(context)
+        self.cache = cache
         self.outputs = None
 
     def __repr__(self):
@@ -176,5 +179,23 @@ class Stack(object):
         resolve_variables(self.variables, context, provider)
         self.blueprint.resolve_variables(self.variables)
 
+    @property
+    def hash(self):
+        h = hashlib.sha256()
+        h.update(self.blueprint.rendered)
+        return h.hexdigest()
+
+    @property
+    def cache_key(self):
+        return hashlib.sha256(self.name).hexdigest()
+
+    def get_cached(self):
+        if self.cache_key in self.cache:
+            return self.cache[self.cache_key]
+
     def set_outputs(self, outputs):
         self.outputs = outputs
+        self.cache[self.cache_key] = {
+            "hash": self.hash,
+            "outputs": outputs
+        }

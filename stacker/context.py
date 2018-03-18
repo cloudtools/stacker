@@ -1,7 +1,9 @@
+import os
 import collections
 import logging
 
 from stacker.config import Config
+from stacker.cache import Cache
 from .stack import Stack
 
 logger = logging.getLogger(__name__)
@@ -130,6 +132,7 @@ class Context(object):
 
         """
         if not hasattr(self, "_stacks"):
+            cache = Cache(".cache")
             stacks = []
             definitions = self._get_stack_definitions()
             for stack_def in definitions:
@@ -141,6 +144,7 @@ class Context(object):
                     locked=stack_def.locked,
                     enabled=stack_def.enabled,
                     protected=stack_def.protected,
+                    cache=cache,
                 )
                 stacks.append(stack)
             self._stacks = stacks

@@ -342,6 +342,7 @@ class Action(BaseAction):
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
+        self.ensure_cfn_bucket()
         hooks = self.context.config.pre_build
         handle_hooks(
             "pre_build",

@@ -41,7 +41,6 @@ class TestDestroyAction(unittest.TestCase):
         })
         self.context = Context(config=config)
         self.action = destroy.Action(self.context,
-                                     provider_builder=mock.MagicMock(),
                                      cancel=MockThreadingEvent())
 
     def test_generate_plan(self):

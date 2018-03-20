@@ -276,7 +276,7 @@ class Action(BaseAction):
                 return old_status
 
         logger.debug("Resolving stack %s", stack.fqn)
-        stack.resolve(self.context, provider)
+        stack.resolve(self.context, self.provider)
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template = self._template(stack.blueprint)
@@ -313,7 +313,7 @@ class Action(BaseAction):
             else:
                 return SubmittedStatus("destroying stack for re-creation")
         except CancelExecution:
-            stack.set_outputs(self.provider.get_output_dict(provider_stack))
+            stack.set_outputs(provider.get_output_dict(provider_stack))
             return SkippedStatus(reason="canceled execution")
         except StackDidNotChange:
             stack.set_outputs(provider.get_output_dict(provider_stack))

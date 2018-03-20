@@ -8,11 +8,15 @@ import logging
 import threading
 
 from ..dag import walk, ThreadedWalker
-from ..plan import Step, build_plan
+from ..plan import Step, build_plan, build_graph
 
 import botocore.exceptions
 from stacker.session_cache import get_session
 from stacker.exceptions import PlanFailed
+
+from ..status import (
+    COMPLETE
+)
 
 from stacker.util import (
     ensure_s3_bucket,
@@ -52,16 +56,15 @@ def build_walker(concurrency):
     return ThreadedWalker(concurrency).walk
 
 
-def plan(description, action, stacks,
-         targets=None, tail=None,
-         reverse=False):
+def plan(description, stack_action, context,
+         tail=None, reverse=False):
     """A simple helper that builds a graph based plan from a set of stacks.
 
     Args:
         description (str): a description of the plan.
         action (func): a function to call for each stack.
-        stacks (list): a list of :class:`stacker.stack.Stack` objects to build.
-        targets (list): an optional list of targets to filter the graph to.
+        context (:class:`stacker.context.Context`): a
+            :class:`stacker.context.Context` to build the plan from.
         tail (func): an optional function to call to tail the stack progress.
         reverse (bool): if True, execute the graph in reverse (useful for
             destroy actions).
@@ -70,14 +73,22 @@ def plan(description, action, stacks,
         :class:`plan.Plan`: The resulting plan object
     """
 
+    def target_fn(*args, **kwargs):
+        return COMPLETE
+
     steps = [
-        Step(stack, fn=action, watch_func=tail)
-        for stack in stacks]
+        Step(stack, fn=stack_action, watch_func=tail)
+        for stack in context.get_stacks()]
+
+    steps += [
+        Step(target, fn=target_fn) for target in context.get_targets()]
+
+    graph = build_graph(steps)
 
     return build_plan(
         description=description,
-        steps=steps,
-        targets=targets,
+        graph=graph,
+        targets=context.stack_names,
         reverse=reverse)
 
 

@@ -65,6 +65,7 @@ class Stack(object):
 
     def __init__(self, definition, context, variables=None, mappings=None,
                  locked=False, force=False, enabled=True, protected=False):
+        self.logging = True
         self.name = definition.name
         self.fqn = context.get_fqn(definition.stack_name or self.name)
         self.region = definition.region
@@ -81,6 +82,10 @@ class Stack(object):
 
     def __repr__(self):
         return self.fqn
+
+    @property
+    def required_by(self):
+        return self.definition.required_by or []
 
     @property
     def requires(self):

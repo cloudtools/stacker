@@ -38,10 +38,9 @@ class Action(BaseAction):
     def _generate_plan(self, tail=False):
         return plan(
             description="Destroy stacks",
-            action=self._destroy_stack,
+            stack_action=self._destroy_stack,
             tail=self._tail_stack if tail else None,
-            stacks=self.context.get_stacks(),
-            targets=self.context.stack_names,
+            context=self.context,
             reverse=True)
 
     def _destroy_stack(self, stack, **kwargs):

@@ -22,7 +22,7 @@ class Destroy(BaseCommand):
         parser.add_argument("-f", "--force", action="store_true",
                             help="Whether or not you want to go through "
                                  " with destroying the stacks")
-        parser.add_argument("--stacks", action="append",
+        parser.add_argument("--targets", "--stacks", action="append",
                             metavar="STACKNAME", type=str,
                             help="Only work on the stacks given. Can be "
                                  "specified more than once. If not specified "
@@ -48,4 +48,4 @@ class Destroy(BaseCommand):
                        tail=options.tail)
 
     def get_context_kwargs(self, options, **kwargs):
-        return {"stack_names": options.stacks}
+        return {"stack_names": options.targets}

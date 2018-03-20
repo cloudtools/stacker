@@ -57,9 +57,8 @@ class Action(BaseAction):
     def _generate_plan(self):
         return plan(
             description="Print graph",
-            action=None,
-            stacks=self.context.get_stacks(),
-            targets=self.context.stack_names)
+            stack_action=None,
+            context=self.context)
 
     def run(self, format=None, reduce=False, *args, **kwargs):
         """Generates the underlying graph and prints it.

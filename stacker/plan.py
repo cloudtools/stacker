@@ -60,7 +60,7 @@ class Step(object):
         self.watch_func = watch_func
 
     def __repr__(self):
-        return "<stacker.plan.Step:%s>" % (self.stack.fqn,)
+        return "<stacker.plan.Step:%s>" % (self.stack.name,)
 
     def __str__(self):
         return self.stack.name
@@ -106,6 +106,10 @@ class Step(object):
         return self.stack.requires
 
     @property
+    def required_by(self):
+        return self.stack.required_by
+
+    @property
     def completed(self):
         """Returns True if the step is in a COMPLETE state."""
         return self.status == COMPLETE
@@ -147,7 +151,8 @@ class Step(object):
                          status.name)
             self.status = status
             self.last_updated = time.time()
-            log_step(self)
+            if self.stack.logging:
+                log_step(self)
 
     def complete(self):
         """A shortcut for set_status(COMPLETE)"""
@@ -162,13 +167,13 @@ class Step(object):
         self.set_status(SUBMITTED)
 
 
-def build_plan(description, steps,
+def build_plan(description, graph,
                targets=None, reverse=False):
     """Builds a plan from a list of steps.
     Args:
         description (str): an arbitrary string to
             describe the plan.
-        steps (list): a list of :class:`Step` objects to execute.
+        graph (:class:`Graph`): a list of :class:`Graph` to execute.
         targets (list): an optional list of step names to filter the graph to.
             If provided, only these steps, and their transitive dependencies
             will be executed. If no targets are specified, every node in the
@@ -176,7 +181,6 @@ def build_plan(description, steps,
         reverse (bool): If provided, the graph will be walked in reverse order
             (dependencies last).
     """
-    graph = build_graph(steps)
 
     # If we want to execute the plan in reverse (e.g. Destroy), transpose the
     # graph.
@@ -187,7 +191,7 @@ def build_plan(description, steps,
     if targets:
         nodes = []
         for target in targets:
-            for step in steps:
+            for k, step in graph.steps.items():
                 if step.name == target:
                     nodes.append(step.name)
         graph = graph.filtered(nodes)
@@ -208,7 +212,10 @@ def build_graph(steps):
 
     for step in steps:
         for dep in step.requires:
-            graph.connect(step, dep)
+            graph.connect(step.name, dep)
+
+        for parent in step.required_by:
+            graph.connect(parent, step.name)
 
     return graph
 
@@ -246,11 +253,11 @@ class Graph(object):
 
     def connect(self, step, dep):
         try:
-            self.dag.add_edge(step.name, dep)
+            self.dag.add_edge(step, dep)
         except KeyError as e:
-            raise GraphError(e, step.name, dep)
+            raise GraphError(e, step, dep)
         except DAGValidationError as e:
-            raise GraphError(e, step.name, dep)
+            raise GraphError(e, step, dep)
 
     def transitive_reduction(self):
         self.dag.transitive_reduction()

@@ -7,6 +7,7 @@ import logging
 
 from stacker.config import Config
 from .stack import Stack
+from .target import Target
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,21 @@ class Context(object):
 
     def _get_stack_definitions(self):
         return self.config.stacks
+
+    def get_targets(self):
+        """Returns the named targets that are specified in the config.
+
+        Returns:
+            list: a list of :class:`stacker.target.Target` objects
+
+        """
+        if not hasattr(self, "_targets"):
+            targets = []
+            for target_def in self.config.targets or []:
+                target = Target(target_def)
+                targets.append(target)
+            self._targets = targets
+        return self._targets
 
     def get_stacks(self):
         """Get the stacks for the current action.

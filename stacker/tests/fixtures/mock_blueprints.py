@@ -92,6 +92,7 @@ class FunctionalTests(Blueprint):
                             awacs.cloudformation.DeleteStack,
                             awacs.cloudformation.CreateStack,
                             awacs.cloudformation.UpdateStack,
+                            awacs.cloudformation.SetStackPolicy,
                             awacs.cloudformation.DescribeStacks,
                             awacs.cloudformation.DescribeStackEvents])]))
 

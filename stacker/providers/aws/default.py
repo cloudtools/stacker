@@ -366,6 +366,7 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
                                  capabilities=DEFAULT_CAPABILITIES,
                                  change_set_type=None,
                                  service_role=None,
+                                 stack_policy=None,
                                  change_set_name=None):
     """Used to generate the args for common cloudformation API interactions.
 
@@ -414,6 +415,28 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
     else:
         args["TemplateBody"] = template.body
 
+    # When creating args for CreateChangeSet, don't include the stack policy,
+    # since ChangeSets don't support it.
+    if not change_set_name:
+        args.update(generate_stack_policy_args(stack_policy))
+
+    return args
+
+
+def generate_stack_policy_args(stack_policy=None):
+    args = {}
+    if stack_policy:
+        logger.debug("Stack has a stack policy")
+        if stack_policy.url:
+            # stacker currently does not support uploading stack policies to
+            # S3, so this will never get hit (unless your implementing S3
+            # uploads, and then you're probably reading this comment about why
+            # the exception below was raised :))
+            #
+            # args["StackPolicyURL"] = stack_policy.url
+            raise NotImplementedError
+        else:
+            args["StackPolicyBody"] = stack_policy.body
     return args
 
 
@@ -600,7 +623,8 @@ class Provider(BaseProvider):
         return True
 
     def create_stack(self, fqn, template, parameters, tags,
-                     force_change_set=False, **kwargs):
+                     force_change_set=False, stack_policy=None,
+                     **kwargs):
         """Create a new Cloudformation stack.
 
         Args:
@@ -637,6 +661,7 @@ class Provider(BaseProvider):
             args = generate_cloudformation_args(
                 fqn, parameters, tags, template,
                 service_role=self.service_role,
+                stack_policy=stack_policy,
             )
 
             try:
@@ -739,7 +764,7 @@ class Provider(BaseProvider):
 
     def update_stack(self, fqn, template, old_parameters, parameters, tags,
                      force_interactive=False, force_change_set=False,
-                     **kwargs):
+                     stack_policy=None, **kwargs):
         """Update a Cloudformation stack.
 
         Args:
@@ -770,10 +795,11 @@ class Provider(BaseProvider):
                                                   force_change_set)
 
         return update_method(fqn, template, old_parameters, parameters, tags,
-                             **kwargs)
+                             stack_policy=stack_policy, **kwargs)
 
     def interactive_update_stack(self, fqn, template, old_parameters,
-                                 parameters, tags, **kwargs):
+                                 parameters, tags, stack_policy=None,
+                                 **kwargs):
         """Update a Cloudformation stack in interactive mode.
 
         Args:
@@ -814,6 +840,13 @@ class Provider(BaseProvider):
             finally:
                 ui.unlock()
 
+        # ChangeSets don't support specifying a stack policy inline, like
+        # CreateStack/UpdateStack, so we just SetStackPolicy if there is one.
+        if stack_policy:
+            args = generate_stack_policy_args(stack_policy)
+            args["StackName"] = fqn
+            self.cloudformation.set_stack_policy(args)
+
         self.cloudformation.execute_change_set(
             ChangeSetName=change_set_id,
         )
@@ -848,7 +881,7 @@ class Provider(BaseProvider):
         )
 
     def default_update_stack(self, fqn, template, old_parameters, parameters,
-                             tags, **kwargs):
+                             tags, stack_policy=None, **kwargs):
         """Update a Cloudformation stack in default mode.
 
         Args:
@@ -867,6 +900,7 @@ class Provider(BaseProvider):
         args = generate_cloudformation_args(
             fqn, parameters, tags, template,
             service_role=self.service_role,
+            stack_policy=stack_policy,
         )
 
         try:

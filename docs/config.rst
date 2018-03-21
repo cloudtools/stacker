@@ -367,6 +367,11 @@ A stack has the following keys:
   (optional): If provided, specifies the name of a AWS profile to use when
   performing AWS API calls for this stack. This can be used to provision stacks
   in multiple accounts or regions.
+**stack_policy_path**:
+  (optional): If provided, specifies the path to a JSON formatted stack policy
+  that will be applied when the CloudFormation stack is created and updated.
+  You can use stack policies to prevent CloudFormation from making updates to
+  protected resources (e.g. databases). See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 

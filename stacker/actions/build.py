@@ -280,6 +280,7 @@ class Action(BaseAction):
 
         logger.debug("Launching stack %s now.", stack.fqn)
         template = self._template(stack.blueprint)
+        stack_policy = self._stack_policy(stack)
         tags = build_stack_tags(stack)
         parameters = self.build_parameters(stack, provider_stack)
         force_change_set = stack.blueprint.requires_change_set
@@ -287,12 +288,13 @@ class Action(BaseAction):
         if recreate:
             logger.debug("Re-creating stack: %s", stack.fqn)
             provider.create_stack(stack.fqn, template, parameters,
-                                  tags)
+                                  tags, stack_policy=stack_policy)
             return SubmittedStatus("re-creating stack")
         elif not provider_stack:
             logger.debug("Creating new stack: %s", stack.fqn)
             provider.create_stack(stack.fqn, template, parameters, tags,
-                                  force_change_set)
+                                  force_change_set,
+                                  stack_policy=stack_policy)
             return SubmittedStatus("creating new stack")
 
         try:
@@ -305,7 +307,8 @@ class Action(BaseAction):
                     parameters,
                     tags,
                     force_interactive=stack.protected,
-                    force_change_set=force_change_set
+                    force_change_set=force_change_set,
+                    stack_policy=stack_policy,
                 )
 
                 logger.debug("Updating existing stack: %s", stack.fqn)
@@ -331,6 +334,12 @@ class Action(BaseAction):
             return Template(url=self.s3_stack_push(blueprint))
         else:
             return Template(body=blueprint.rendered)
+
+    def _stack_policy(self, stack):
+        """Returns a Template object for the stacks stack policy, or None if
+        the stack doesn't have a stack policy."""
+        if stack.stack_policy:
+            return Template(body=stack.stack_policy)
 
     def _generate_plan(self, tail=False):
         return plan(

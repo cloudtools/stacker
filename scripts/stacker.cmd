@@ -36,10 +36,11 @@ goto :EOF
 
 #!/usr/bin/env python
 
+from stacker.logger import setup_logging
 from stacker.commands import Stacker
 
 if __name__ == "__main__":
-    stacker = Stacker()
+    stacker = Stacker(setup_logging=setup_logging)
     args = stacker.parse_args()
     stacker.configure(args)
     args.run(args)

@@ -1,0 +1,20 @@
+---
+namespace: ''
+
+# We'll set this to an empty string until we've provisioned the
+# "stacker-bucket" stack below.
+stacker_bucket: ''
+
+stacks:
+  # This stack will provision an S3 bucket for stacker to use to upload
+  # templates. This will also configure the bucket with a bucket policy
+  # allowing CloudFormation in other accounts to fetch templates from it.
+  - name: stacker-bucket
+    # We're going to "target" this stack in our "master" account.
+    profile: master
+    template_path: templates/stacker-bucket.yaml
+    variables:
+      Roles:
+        # Change these to the correct AWS account IDs
+        - arn:aws:iam::<prod account id>:role/Stacker
+        - arn:aws:iam::<stage account id>:role/Stacker

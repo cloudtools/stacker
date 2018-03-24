@@ -87,6 +87,26 @@ def test_walk():
     assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']
 
 
+@with_setup(blank_setup)
+def test_dfw():
+    dag = DAG()
+
+    # b and c should be executed at the same time.
+    dag.from_dict({'a': ['b', 'c'],
+                   'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+
+    nodes = []
+
+    def walk_func(n):
+        nodes.append(n)
+        return True
+
+    dag.dfw(['a'], walk_func)
+    assert nodes == ['a', 'b', 'd', 'c']
+
+
 @with_setup(start_with_graph)
 def test_ind_nodes():
     assert dag.ind_nodes() == ['a']

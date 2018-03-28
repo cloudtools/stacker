@@ -1,0 +1,37 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A bucket for stacker to store CloudFormation templates
+Parameters:
+  Roles:
+    Type: CommaDelimitedList
+    Description: A list of IAM roles that will be given read access on the bucket.
+
+Resources:
+  StackerBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: StackerBucket
+      PolicyDocument:
+        Statement:
+        - Action:
+          - s3:GetObject
+          Effect: Allow
+          Principal:
+            AWS:
+              Ref: Roles
+          Resource:
+          - Fn::Sub: arn:aws:s3:::${StackerBucket}/*
+
+Outputs:
+  BucketId:
+    Value:
+      Ref: StackerBucket

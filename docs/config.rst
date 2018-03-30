@@ -422,7 +422,7 @@ them taking it as a Variable. Rather than having to enter the domain into
 each stack (and hopefully not typo'ing any of them) you could do the
 following::
 
-  domain_name: mydomain.com &domain
+  domain_name: &domain mydomain.com
 
 Now you have an anchor called **domain** that you can use in place of any value
 in the config to provide the value **mydomain.com**. You use the anchor with

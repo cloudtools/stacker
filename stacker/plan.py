@@ -248,6 +248,9 @@ class Graph(object):
         except DAGValidationError as e:
             raise GraphError(e, step.name, dep)
 
+    def transitive_reduction(self):
+        self.dag.transitive_reduction()
+
     def walk(self, walker, walk_func):
         def fn(step_name):
             step = self.steps[step_name]

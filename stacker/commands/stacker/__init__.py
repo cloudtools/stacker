@@ -4,6 +4,7 @@ from .build import Build
 from .destroy import Destroy
 from .info import Info
 from .diff import Diff
+from .graph import Graph
 from .base import BaseCommand
 from ...config import render_parse_load as load_config
 from ...context import Context
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Stacker(BaseCommand):
 
     name = "stacker"
-    subcommands = (Build, Destroy, Info, Diff)
+    subcommands = (Build, Destroy, Info, Diff, Graph)
 
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)

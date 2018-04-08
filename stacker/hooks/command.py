@@ -1,7 +1,8 @@
-import os
 import logging
+import os
 from subprocess import PIPE, Popen
 
+from stacker.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def run_command(provider, context, command, capture=False, interactive=False,
             enabled. Default: false
         stdin (str, optional):
             String to send to the stdin of the command. Implicitly disables
-            `intearctive`.
+            `interactive`.
         env (dict, optional):
             Dictionary of environment variable overrides for the command
             context. Will be merged with the current environment.
@@ -64,6 +65,11 @@ def run_command(provider, context, command, capture=False, interactive=False,
                     PROJECT_DIR: ./my-project
                   shell: true
     """
+
+    if quiet and capture:
+        raise ImproperlyConfigured(
+            __name__ + '.run_command',
+            'Cannot enable `quiet` and `capture` options simultaneously')
 
     if quiet:
         out_err_type = _devnull()

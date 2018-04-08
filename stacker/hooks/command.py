@@ -85,10 +85,12 @@ def run_command(provider, context, command, capture=False, interactive=False,
     else:
         in_type = _devnull()
 
-    if env is not None:
+    if env:
         full_env = os.environ.copy()
         full_env.update(env)
         env = full_env
+
+    logger.info('Running command: %s', command)
 
     proc = Popen(command, stdin=in_type, stdout=out_err_type,
                  stderr=out_err_type, env=env, **kwargs)
@@ -102,10 +104,15 @@ def run_command(provider, context, command, capture=False, interactive=False,
               'stdout': out,
               'stderr': err
             }
+
+        # Don't print the command line again if we already did earlier
+        if logger.isEnabledFor(logging.INFO):
+            logger.warn('Command failed with returncode %d', status)
         else:
-            logger.warn('Command %s failed with returncode %d', command,
-                        status)
-            return None
+            logger.warn('Command failed with returncode %d: %s', status,
+                        command)
+
+        return None
     finally:
         if proc.returncode is None:
             proc.kill()

@@ -39,6 +39,11 @@ configuration to modify them.
 At Remind we use stacker to manage all of our Cloudformation stacks -
 both in development, staging and production without any major issues.
 
+Requirements
+============
+
+* Python 2.7
+
 Stacker Command
 ===============
 

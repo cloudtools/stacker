@@ -387,6 +387,8 @@ class Config(Model):
 
     template_indent = StringType(serialize_when_none=False)
 
+    dump_format = StringType(serialize_when_none=False)
+
     mappings = DictType(
         DictType(DictType(StringType)), serialize_when_none=False)
 

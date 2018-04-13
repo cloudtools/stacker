@@ -907,6 +907,10 @@ def stack_template_key_name(blueprint):
         string: Key name resulting from blueprint.
     """
     name = blueprint.name
-    return "stack_templates/%s/%s-%s.json" % (blueprint.context.get_fqn(name),
+    ext = blueprint.context.dump_format
+    filename = "stack_templates/%s/%s-%s.%s" % (
+                                              blueprint.context.get_fqn(name),
                                               name,
-                                              blueprint.version)
+                                              blueprint.version,
+                                              ext)
+    return filename

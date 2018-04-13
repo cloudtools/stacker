@@ -466,7 +466,12 @@ class Blueprint(object):
         if self.description:
             self.set_template_description(self.description)
         self.setup_parameters()
-        rendered = self.template.to_json(indent=self.context.template_indent)
+        format = self.context.dump_format
+        if format == "yaml" or format == "yml":
+            rendered = self.template.to_yaml()
+        else:
+            rendered = self.template.to_json(
+                indent=self.context.template_indent)
         version = hashlib.md5(rendered).hexdigest()[:8]
         return (version, rendered)
 

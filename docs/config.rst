@@ -44,6 +44,13 @@ See the `CloudFormation API Reference`_ for allowed stack name characters
 
 .. _`CloudFormation API Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateStack.html
 
+Dump Format
+-----------
+
+By default, stacker will dump templates to 'json' format.  You can pass the **dump_format**
+top level key word in the config to change the format to 'yaml'.
+
+
 S3 Bucket
 ---------
 

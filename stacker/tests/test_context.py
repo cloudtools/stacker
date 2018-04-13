@@ -98,6 +98,24 @@ class TestContext(unittest.TestCase):
         fqn = context.get_fqn("stack1")
         self.assertEqual(fqn, "namespacestack1")
 
+    def test_context_dump_format_is_overriden_and_not_none(self):
+        config = Config({"namespace": "namespace", "dump_format": "yaml"})
+        context = Context(config=config)
+        format = context.dump_format
+        self.assertEqual(format, "yaml")
+
+    def test_context_dump_format_is_overriden_and_is_empty(self):
+        config = Config({"namespace": "namespace", "dump_format": ""})
+        context = Context(config=config)
+        format = context.dump_format
+        self.assertEqual(format, "json")
+
+    def test_context_dump_format_is_overriden_and_is_invalid(self):
+        config = Config({"namespace": "namespace", "dump_format": "xml"})
+        context = Context(config=config)
+        format = context.dump_format
+        self.assertEqual(format, "json")
+
     def test_context_tags_with_empty_map(self):
         config = Config({"namespace": "test", "tags": {}})
         context = Context(config=config)

@@ -843,9 +843,9 @@ class Provider(BaseProvider):
         # ChangeSets don't support specifying a stack policy inline, like
         # CreateStack/UpdateStack, so we just SetStackPolicy if there is one.
         if stack_policy:
-            args = generate_stack_policy_args(stack_policy)
-            args["StackName"] = fqn
-            self.cloudformation.set_stack_policy(args)
+            kwargs = generate_stack_policy_args(stack_policy)
+            kwargs["StackName"] = fqn
+            self.cloudformation.set_stack_policy(**kwargs)
 
         self.cloudformation.execute_change_set(
             ChangeSetName=change_set_id,

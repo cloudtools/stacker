@@ -82,7 +82,6 @@ class Step(object):
             if watcher:
                 stop_watcher.set()
                 watcher.join()
-        return self.ok
 
     def _run_once(self):
         try:

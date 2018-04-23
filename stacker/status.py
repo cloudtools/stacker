@@ -4,10 +4,17 @@ class Status(object):
         self.code = code
         self.reason = reason or getattr(self, "reason", None)
 
+    def cmp(self, a, b):
+        try:
+            return cmp(a, b)
+        except NameError:
+            # Python3 doesn't have cmp function.
+            return ((a > b) - (a < b))
+
     def __cmp__(self, other):
         if hasattr(other, "code"):
-            return cmp(self.code, other.code)
-        return False
+            return self.cmp(self.code, other.code)
+        raise Exception("Both Status objects must have a `code` attribute.")
 
 
 class PendingStatus(Status):

@@ -22,6 +22,7 @@ from stacker.exceptions import (
     PlanFailed,
 )
 from stacker.status import (
+    SUBMITTED,
     COMPLETE,
     SKIPPED,
     FAILED,
@@ -44,12 +45,27 @@ class TestStep(unittest.TestCase):
     def test_status(self):
         self.assertFalse(self.step.submitted)
         self.assertFalse(self.step.completed)
+
         self.step.submit()
+        self.assertEqual(self.step.status, SUBMITTED)
         self.assertTrue(self.step.submitted)
         self.assertFalse(self.step.completed)
+
         self.step.complete()
+        self.assertEqual(self.step.status, COMPLETE)
+        self.assertNotEqual(self.step.status, SUBMITTED)
         self.assertTrue(self.step.submitted)
         self.assertTrue(self.step.completed)
+
+        # trying to compare a Status object to an object without
+        # a code attribute is invalid and should raise an exception.
+        with self.assertRaises(Exception):
+            if self.step.status == True: # noqa
+                pass
+
+        with self.assertRaises(Exception):
+            if self.step.status == False: # noqa
+                pass
 
 
 class TestPlan(unittest.TestCase):

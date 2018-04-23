@@ -1,20 +1,34 @@
+import operator
+
+
 class Status(object):
     def __init__(self, name, code, reason=None):
         self.name = name
         self.code = code
         self.reason = reason or getattr(self, "reason", None)
 
-    def cmp(self, a, b):
-        try:
-            return cmp(a, b)
-        except NameError:
-            # Python3 doesn't have cmp function.
-            return ((a > b) - (a < b))
-
-    def __cmp__(self, other):
+    def _comparison(self, operator, other):
         if hasattr(other, "code"):
-            return self.cmp(self.code, other.code)
-        raise Exception("Both Status objects must have a `code` attribute.")
+            return operator(self.code, other.code)
+        return NotImplemented
+
+    def __eq__(self, other):
+        return self._comparison(operator.eq, other)
+
+    def __ne__(self, other):
+        return self._comparison(operator.ne, other)
+
+    def __lt__(self, other):
+        return self._comparison(operator.lt, other)
+
+    def __gt__(self, other):
+        return self._comparison(operator.gt, other)
+
+    def __le__(self, other):
+        return self._comparison(operator.le, other)
+
+    def __ge__(self, other):
+        return self._comparison(operator.ge, other)
 
 
 class PendingStatus(Status):

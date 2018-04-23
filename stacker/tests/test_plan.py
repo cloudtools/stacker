@@ -57,15 +57,9 @@ class TestStep(unittest.TestCase):
         self.assertTrue(self.step.submitted)
         self.assertTrue(self.step.completed)
 
-        # trying to compare a Status object to an object without
-        # a code attribute is invalid and should raise an exception.
-        with self.assertRaises(Exception):
-            if self.step.status == True: # noqa
-                pass
-
-        with self.assertRaises(Exception):
-            if self.step.status == False: # noqa
-                pass
+        self.assertNotEqual(self.step.status, True)
+        self.assertNotEqual(self.step.status, False)
+        self.assertNotEqual(self.step.status, 'banana')
 
 
 class TestPlan(unittest.TestCase):

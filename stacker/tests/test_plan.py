@@ -22,6 +22,7 @@ from stacker.exceptions import (
     PlanFailed,
 )
 from stacker.status import (
+    SUBMITTED,
     COMPLETE,
     SKIPPED,
     FAILED,
@@ -44,12 +45,21 @@ class TestStep(unittest.TestCase):
     def test_status(self):
         self.assertFalse(self.step.submitted)
         self.assertFalse(self.step.completed)
+
         self.step.submit()
+        self.assertEqual(self.step.status, SUBMITTED)
         self.assertTrue(self.step.submitted)
         self.assertFalse(self.step.completed)
+
         self.step.complete()
+        self.assertEqual(self.step.status, COMPLETE)
+        self.assertNotEqual(self.step.status, SUBMITTED)
         self.assertTrue(self.step.submitted)
         self.assertTrue(self.step.completed)
+
+        self.assertNotEqual(self.step.status, True)
+        self.assertNotEqual(self.step.status, False)
+        self.assertNotEqual(self.step.status, 'banana')
 
 
 class TestPlan(unittest.TestCase):

@@ -102,20 +102,24 @@ class TestDestroyAction(unittest.TestCase):
         # simulate stack doesn't exist and we haven't submitted anything for
         # deletion
         mock_provider.get_stack.side_effect = StackDoesNotExist("mock")
-        status = step.run()
-        self.assertEqual(status, SKIPPED)
+
+        step.run()
+        self.assertEqual(step.status, SKIPPED)
 
         # simulate stack getting successfully deleted
         mock_provider.get_stack.side_effect = get_stack
         mock_provider.is_stack_destroyed.return_value = False
         mock_provider.is_stack_in_progress.return_value = False
-        status = step._run_once()
-        self.assertEqual(status, SUBMITTED)
+
+        step._run_once()
+        self.assertEqual(step.status, SUBMITTED)
         mock_provider.is_stack_destroyed.return_value = False
         mock_provider.is_stack_in_progress.return_value = True
-        status = step._run_once()
-        self.assertEqual(status, SUBMITTED)
+
+        step._run_once()
+        self.assertEqual(step.status, SUBMITTED)
         mock_provider.is_stack_destroyed.return_value = True
         mock_provider.is_stack_in_progress.return_value = False
-        status = step._run_once()
-        self.assertEqual(status, COMPLETE)
+
+        step._run_once()
+        self.assertEqual(step.status, COMPLETE)

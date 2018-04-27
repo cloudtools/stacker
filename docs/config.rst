@@ -373,6 +373,9 @@ A stack has the following keys:
   You can use stack policies to prevent CloudFormation from making updates to
   protected resources (e.g. databases). See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html
 
+Stacks Example
+~~~~~~~~~~~~~~
+
 Here's an example from stacker_blueprints_, used to create a VPC::
 
   stacks:

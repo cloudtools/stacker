@@ -155,6 +155,25 @@ class TestBuildAction(unittest.TestCase):
             mock_stack.force = t.force
             self.assertEqual(build.should_update(mock_stack), t.result)
 
+    def test_should_ensure_cfn_bucket(self):
+        test_scenarios = [
+            {"outline": False, "dump": False, "result": True},
+            {"outline": True, "dump": False, "result": False},
+            {"outline": False, "dump": True, "result": False},
+            {"outline": True, "dump": True, "result": False},
+            {"outline": True, "dump": "DUMP", "result": False}
+        ]
+
+        for scenario in test_scenarios:
+            outline = scenario["outline"]
+            dump = scenario["dump"]
+            result = scenario["result"]
+            try:
+                self.assertEqual(build.should_ensure_cfn_bucket(outline, dump), result)
+            except AssertionError as e:
+                e.args += ("scenario", str(scenario))
+                raise
+
     def test_should_submit(self):
         test_scenario = namedtuple("test_scenario",
                                    ["enabled", "result"])
@@ -168,7 +187,6 @@ class TestBuildAction(unittest.TestCase):
         for t in test_scenarios:
             mock_stack.enabled = t.enabled
             self.assertEqual(build.should_submit(mock_stack), t.result)
-
 
 class TestLaunchStack(TestBuildAction):
     def setUp(self):

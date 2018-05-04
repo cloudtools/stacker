@@ -152,7 +152,7 @@ def normalize_json(template):
         list: json representation of the parameters
     """
     obj = parse_cloudformation_template(template)
-    json_str = json.dumps(obj, sort_keys=True, indent=4)
+    json_str = json.dumps(obj, sort_keys=True, indent=4, default=str)
     result = []
     lines = json_str.split("\n")
     for line in lines:
@@ -250,7 +250,8 @@ class Action(build.Action):
             old_stack = normalize_json(
                 json.dumps(old_template,
                            sort_keys=True,
-                           indent=4)
+                           indent=4,
+                           default=str)
             )
             print_stack_changes(stack.name, new_stack, old_stack, new_params,
                                 old_params)

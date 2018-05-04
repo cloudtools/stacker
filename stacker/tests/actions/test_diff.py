@@ -138,3 +138,22 @@ class TestDiffFunctions(unittest.TestCase):
             '}\n'
         ]
         self.assertEquals(normalized_template, normalize_json(template))
+
+    def test_normalize_json_date(self):
+        """Ensure normalize_json handles objects loaded as datetime objects"""
+
+        template = """
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECS Cluster Application
+Resources:
+  ECSTaskRoleDefault:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17  # datetime.date(2012, 10, 17)
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole"""
+        self.assertTrue(normalize_json(template))

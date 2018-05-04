@@ -1,4 +1,4 @@
-## HEAD
+## 1.3.0 (2018-05-03)
 
 - Support for provisioning stacks in multiple accounts and regions has been added [GH-553], [GH-551]
 - Added a `--profile` flag, which can be used to set the global default profile that stacker will use (similar to `AWS_PROFILE`) [GH-563]

@@ -71,6 +71,32 @@ def should_submit(stack):
     logger.debug("Stack %s is not enabled.  Skipping.", stack.name)
     return False
 
+def should_ensure_cfn_bucket(outline, dump):
+    """Test whether access to the cloudformation template bucket is required
+
+    Args:
+        outline (bool): The outline action.
+        dump (bool): The dump action.
+
+    Returns:
+        bool: If access to CF bucket is needed, return True.
+
+    """
+    return outline is False and dump is False
+
+def should_ensure_cfn_bucket(outline, dump):
+    """Test whether access to the cloudformation template bucket is required
+
+    Args:
+        outline (bool): The outline action.
+        dump (bool): The dump action.
+
+    Returns:
+        bool: If access to CF bucket is needed, return True.
+
+    """
+    return outline is False and dump is False
+
 
 def _resolve_parameters(parameters, blueprint):
     """Resolves CloudFormation Parameters for a given blueprint.
@@ -351,7 +377,8 @@ class Action(BaseAction):
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
-        self.ensure_cfn_bucket()
+        if should_ensure_cfn_bucket(outline, dump):
+            self.ensure_cfn_bucket()
         hooks = self.context.config.pre_build
         handle_hooks(
             "pre_build",

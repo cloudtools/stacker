@@ -71,6 +71,18 @@ def should_submit(stack):
     logger.debug("Stack %s is not enabled.  Skipping.", stack.name)
     return False
 
+def should_ensure_cfn_bucket(outline, dump):
+    """Test whether access to the cloudformation template bucket is required
+
+    Args:
+        outline (bool): The outline action.
+        dump (bool): The dump action.
+
+    Returns:
+        bool: If access to CF bucket is needed, return True.
+
+    """
+    return outline is False and dump is False
 
 def should_ensure_cfn_bucket(outline, dump):
     """Test whether access to the cloudformation template bucket is required

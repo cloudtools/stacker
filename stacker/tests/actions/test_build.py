@@ -189,7 +189,6 @@ class TestBuildAction(unittest.TestCase):
             mock_stack.enabled = t.enabled
             self.assertEqual(build.should_submit(mock_stack), t.result)
 
-
 class TestLaunchStack(TestBuildAction):
     def setUp(self):
         self.context = self._get_context()

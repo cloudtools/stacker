@@ -169,7 +169,8 @@ class TestBuildAction(unittest.TestCase):
             dump = scenario["dump"]
             result = scenario["result"]
             try:
-                self.assertEqual(build.should_ensure_cfn_bucket(outline, dump), result)
+                self.assertEqual(
+                    build.should_ensure_cfn_bucket(outline, dump), result)
             except AssertionError as e:
                 e.args += ("scenario", str(scenario))
                 raise
@@ -187,6 +188,7 @@ class TestBuildAction(unittest.TestCase):
         for t in test_scenarios:
             mock_stack.enabled = t.enabled
             self.assertEqual(build.should_submit(mock_stack), t.result)
+
 
 class TestLaunchStack(TestBuildAction):
     def setUp(self):

@@ -71,6 +71,7 @@ def should_submit(stack):
     logger.debug("Stack %s is not enabled.  Skipping.", stack.name)
     return False
 
+
 def should_ensure_cfn_bucket(outline, dump):
     """Test whether access to the cloudformation template bucket is required
 
@@ -83,6 +84,7 @@ def should_ensure_cfn_bucket(outline, dump):
 
     """
     return outline is False and dump is False
+
 
 def _resolve_parameters(parameters, blueprint):
     """Resolves CloudFormation Parameters for a given blueprint.

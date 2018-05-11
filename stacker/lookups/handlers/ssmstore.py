@@ -13,7 +13,8 @@ def handler(value, **kwargs):
 
         [<region>@]ssmkey
 
-    Note: The region is optional, and defaults to us-east-1 if not given.
+    Note: The region is optional, we'll try to get it from the current
+    session, if that failed, it would fall back to us-east-1
 
     For example:
 
@@ -36,7 +37,7 @@ def handler(value, **kwargs):
     """
     value = read_value_from_path(value)
 
-    region = "us-east-1"
+    region = getattr(kwargs.get('provider'), 'region', 'us-east-1')
     if "@" in value:
         region, value = value.split("@", 1)
 

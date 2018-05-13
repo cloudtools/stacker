@@ -24,6 +24,5 @@ This directory contains the functional testing suite for stacker. It exercises a
 4. Setup functional test environment & run tests:
 
   ```console
-  $ cd tests
-  $ make test
+  $ make -C tests test
   ```

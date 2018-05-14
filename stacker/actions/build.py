@@ -83,7 +83,8 @@ def should_ensure_cfn_bucket(outline, dump):
         bool: If access to CF bucket is needed, return True.
 
     """
-    return outline is False and dump is False
+    print "OUTLINE: %s, DUMP: %s" % (outline, dump)
+    return not outline and not dump
 
 
 def _resolve_parameters(parameters, blueprint):

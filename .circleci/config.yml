@@ -47,6 +47,6 @@ jobs:
           command: |
             export TERM=xterm
             export AWS_DEFAULT_REGION=us-east-1
-            export STACKER_NAMESPACE=stacker-functional-tests-$CIRCLE_BUILD_NUM
-            export STACKER_ROLE=arn:aws:iam::487039194316:role/stacker-functional-tests-stacke-FunctionalTestRole-JKTNS8IDNZZ4
+            export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
+            export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E  make test-functional

@@ -45,7 +45,7 @@ class TestConfig(unittest.TestCase):
         c = render(conf, e)
         self.assertEqual("namespace: !!str", c)
 
-    def test_config_validate_missing_stack_class_path(self):
+    def test_config_validate_missing_stack_source(self):
         config = Config({
             "namespace": "prod",
             "stacks": [
@@ -54,10 +54,41 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(exceptions.InvalidConfig) as ex:
             config.validate()
 
-        error = ex.exception.errors['stacks'][0]['class_path'].errors[0]
+        stack_errors = ex.exception.errors['stacks'][0]
         self.assertEquals(
-            error.__str__(),
-            "This field is required.")
+            stack_errors['template_path'][0].__str__(),
+            "class_path or template_path is required.")
+        self.assertEquals(
+            stack_errors['class_path'][0].__str__(),
+            "class_path or template_path is required.")
+
+    def test_config_validate_missing_stack_source_when_locked(self):
+        config = Config({
+            "namespace": "prod",
+            "stacks": [
+                {
+                    "name": "bastion",
+                    "locked": True}]})
+        config.validate()
+
+    def test_config_validate_stack_class_and_template_paths(self):
+        config = Config({
+            "namespace": "prod",
+            "stacks": [
+                {
+                    "name": "bastion",
+                    "class_path": "foo",
+                    "template_path": "bar"}]})
+        with self.assertRaises(exceptions.InvalidConfig) as ex:
+            config.validate()
+
+        stack_errors = ex.exception.errors['stacks'][0]
+        self.assertEquals(
+            stack_errors['template_path'][0].__str__(),
+            "class_path cannot be present when template_path is provided.")
+        self.assertEquals(
+            stack_errors['class_path'][0].__str__(),
+            "template_path cannot be present when class_path is provided.")
 
     def test_config_validate_no_stacks(self):
         config = Config({"namespace": "prod"})
@@ -198,6 +229,15 @@ stacks: []
             args:
               domain: mydomain.com
         package_sources:
+          s3:
+            - bucket: acmecorpbucket
+              key: public/acmecorp-blueprints-v1.zip
+            - bucket: examplecorpbucket
+              key: public/examplecorp-blueprints-v2.tar.gz
+              requester_pays: true
+            - bucket: anotherexamplebucket
+              key: example-blueprints-v3.tar.gz
+              use_latest: false
           git:
             - uri: git@github.com:acmecorp/stacker_blueprints.git
             - uri: git@github.com:remind101/stacker_blueprints.git
@@ -250,6 +290,15 @@ stacks: []
             args:
               domain: mydomain.com
         package_sources:
+          s3:
+            - bucket: acmecorpbucket
+              key: public/acmecorp-blueprints-v1.zip
+            - bucket: examplecorpbucket
+              key: public/examplecorp-blueprints-v2.tar.gz
+              requester_pays: true
+            - bucket: anotherexamplebucket
+              key: example-blueprints-v3.tar.gz
+              use_latest: false
           git:
             - uri: git@github.com:acmecorp/stacker_blueprints.git
             - uri: git@github.com:remind101/stacker_blueprints.git
@@ -291,6 +340,25 @@ stacks: []
                     hooks[0].required, True)
                 self.assertEqual(
                     hooks[0].args, {"domain": "mydomain.com"})
+
+            self.assertEqual(
+                config.package_sources.s3[0].bucket,
+                "acmecorpbucket")
+            self.assertEqual(
+                config.package_sources.s3[0].key,
+                "public/acmecorp-blueprints-v1.zip")
+            self.assertEqual(
+                config.package_sources.s3[1].bucket,
+                "examplecorpbucket")
+            self.assertEqual(
+                config.package_sources.s3[1].key,
+                "public/examplecorp-blueprints-v2.tar.gz")
+            self.assertEqual(
+                config.package_sources.s3[1].requester_pays,
+                True)
+            self.assertEqual(
+                config.package_sources.s3[2].use_latest,
+                False)
 
             self.assertEqual(
                 config.package_sources.git[0].uri,
@@ -400,7 +468,39 @@ stacks:
         config.validate()
         self.assertEquals(config.namespace, "prod")
 
-    def test_raise_constructor_error_on_duplicate_key(self):
+    def test_allow_most_keys_to_be_duplicates_for_overrides(self):
+        yaml_config = """
+        namespace: prod
+        stacks:
+          - name: vpc
+            class_path: blueprints.VPC
+            variables:
+              CIDR: 192.168.1.0/24
+              CIDR: 192.168.2.0/24
+        """
+        doc = parse(yaml_config)
+        self.assertEqual(
+            doc["stacks"][0]["variables"]["CIDR"], "192.168.2.0/24"
+        )
+        yaml_config = """
+        default_variables: &default_variables
+          CIDR: 192.168.1.0/24
+        namespace: prod
+        stacks:
+          - name: vpc
+            class_path: blueprints.VPC
+            variables:
+              << : *default_variables
+              CIDR: 192.168.2.0/24
+        """
+        doc = parse(yaml_config)
+        self.assertEqual(
+            doc["stacks"][0]["variables"]["CIDR"], "192.168.2.0/24"
+        )
+
+    def test_raise_constructor_error_on_keyword_duplicate_key(self):
+        """Some keys should never have a duplicate sibling. For example we
+        treat `class_path` as a special "keyword" and disallow dupes."""
         yaml_config = """
         namespace: prod
         stacks:
@@ -411,7 +511,9 @@ stacks:
         with self.assertRaises(ConstructorError):
             parse(yaml_config)
 
-    def test_raise_construct_error_on_duplicate_stack_name(self):
+    def test_raise_construct_error_on_duplicate_stack_name_dict(self):
+        """Some mappings should never have a duplicate children. For example we
+        treat `stacks` as a special mapping and disallow dupe children keys."""
         yaml_config = """
         namespace: prod
         stacks:

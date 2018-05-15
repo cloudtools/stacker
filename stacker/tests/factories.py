@@ -5,12 +5,29 @@ from stacker.config import Config, Stack
 from stacker.lookups import Lookup
 
 
+class MockThreadingEvent(object):
+    def wait(self, timeout=None):
+        return False
+
+
+class MockProviderBuilder(object):
+    def __init__(self, provider, region=None):
+        self.provider = provider
+        self.region = region
+
+    def build(self, region=None, profile=None):
+        return self.provider
+
+
 def mock_provider(**kwargs):
     return MagicMock(**kwargs)
 
 
-def mock_context(namespace=None, **kwargs):
-    config = Config({"namespace": namespace})
+def mock_context(namespace="default", extra_config_args=None, **kwargs):
+    config_args = {"namespace": namespace}
+    if extra_config_args:
+        config_args.update(extra_config_args)
+    config = Config(config_args)
     environment = kwargs.get("environment", {})
     return Context(
         config=config,

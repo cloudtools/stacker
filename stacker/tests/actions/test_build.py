@@ -5,13 +5,13 @@ import mock
 
 from stacker import exceptions
 from stacker.actions import build
+from stacker.session_cache import get_session
 from stacker.actions.build import (
     _resolve_parameters,
     _handle_missing_parameters,
 )
 from stacker.blueprints.variables.types import CFNString
-from stacker.context import Context
-from stacker.config import Config
+from stacker.context import Context, Config
 from stacker.exceptions import StackDidNotChange, StackDoesNotExist
 from stacker.providers.base import BaseProvider
 from stacker.providers.aws.default import Provider
@@ -23,6 +23,8 @@ from stacker.status import (
     SUBMITTED,
     FAILED
 )
+
+from ..factories import MockThreadingEvent, MockProviderBuilder
 
 
 def mock_stack(parameters):
@@ -54,7 +56,10 @@ class TestProvider(BaseProvider):
 class TestBuildAction(unittest.TestCase):
     def setUp(self):
         self.context = Context(config=Config({"namespace": "namespace"}))
-        self.build_action = build.Action(self.context, provider=TestProvider())
+        self.provider = TestProvider()
+        self.build_action = build.Action(
+            self.context,
+            provider_builder=MockProviderBuilder(self.provider))
 
     def _get_context(self, **kwargs):
         config = Config({
@@ -62,12 +67,14 @@ class TestBuildAction(unittest.TestCase):
             "stacks": [
                 {"name": "vpc"},
                 {"name": "bastion",
-                 "variables": {"test": "${output vpc::something}"}},
+                    "variables": {
+                        "test": "${output vpc::something}"}},
                 {"name": "db",
-                 "variables": {"test": "${output vpc::something}",
-                               "else": "${output bastion::something}"}},
+                    "variables": {
+                        "test": "${output vpc::something}",
+                        "else": "${output bastion::something}"}},
                 {"name": "other", "variables": {}}
-            ]
+            ],
         })
         return Context(config=config, **kwargs)
 
@@ -103,42 +110,22 @@ class TestBuildAction(unittest.TestCase):
         result = _handle_missing_parameters(def_params, required, stack)
         self.assertEqual(result, def_params.items())
 
-    def test_get_dependencies(self):
-        context = self._get_context()
-        build_action = build.Action(context)
-        dependencies = build_action._get_dependencies()
-        self.assertEqual(
-            dependencies[context.get_fqn("bastion")],
-            set([context.get_fqn("vpc")]),
-        )
-        self.assertEqual(
-            dependencies[context.get_fqn("db")],
-            set([context.get_fqn(s) for s in ["vpc", "bastion"]]),
-        )
-        self.assertFalse(dependencies[context.get_fqn("other")])
-
-    def test_get_stack_execution_order(self):
-        context = self._get_context()
-        build_action = build.Action(context)
-        dependencies = build_action._get_dependencies()
-        execution_order = build_action.get_stack_execution_order(dependencies)
-        self.assertEqual(
-            execution_order,
-            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
-        )
-
     def test_generate_plan(self):
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, cancel=MockThreadingEvent())
         plan = build_action._generate_plan()
         self.assertEqual(
-            plan.keys(),
-            [context.get_fqn(s) for s in ["other", "vpc", "bastion", "db"]],
+            {
+                'db': set(['bastion', 'vpc']),
+                'bastion': set(['vpc']),
+                'other': set([]),
+                'vpc': set([])},
+            plan.graph.to_dict()
         )
 
     def test_dont_execute_plan_when_outline_specified(self):
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, cancel=MockThreadingEvent())
         with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=True)
@@ -146,7 +133,7 @@ class TestBuildAction(unittest.TestCase):
 
     def test_execute_plan_when_outline_not_specified(self):
         context = self._get_context()
-        build_action = build.Action(context)
+        build_action = build.Action(context, cancel=MockThreadingEvent())
         with mock.patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=False)
@@ -168,6 +155,26 @@ class TestBuildAction(unittest.TestCase):
             mock_stack.force = t.force
             self.assertEqual(build.should_update(mock_stack), t.result)
 
+    def test_should_ensure_cfn_bucket(self):
+        test_scenarios = [
+            {"outline": False, "dump": False, "result": True},
+            {"outline": True, "dump": False, "result": False},
+            {"outline": False, "dump": True, "result": False},
+            {"outline": True, "dump": True, "result": False},
+            {"outline": True, "dump": "DUMP", "result": False}
+        ]
+
+        for scenario in test_scenarios:
+            outline = scenario["outline"]
+            dump = scenario["dump"]
+            result = scenario["result"]
+            try:
+                self.assertEqual(
+                    build.should_ensure_cfn_bucket(outline, dump), result)
+            except AssertionError as e:
+                e.args += ("scenario", str(scenario))
+                raise
+
     def test_should_submit(self):
         test_scenario = namedtuple("test_scenario",
                                    ["enabled", "result"])
@@ -182,39 +189,28 @@ class TestBuildAction(unittest.TestCase):
             mock_stack.enabled = t.enabled
             self.assertEqual(build.should_submit(mock_stack), t.result)
 
-    def test_Raises_StackDoesNotExist_from_lookup_non_included_stack(self):
-        # This test is testing the specific scenario listed in PR 466
-        # Because the issue only threw a KeyError when a stack was missing
-        # in the `--stacks` flag at runtime of a `stacker build` run
-        # but needed for an output lookup in the stack specified
-        mock_provider = mock.MagicMock()
-        context = Context(config=Config({
-            "namespace": "namespace",
-            "stacks": [
-                {"name": "bastion",
-                 "variables": {"test": "${output vpc::something}"}
-                 }]
-        }))
-        build_action = build.Action(context, provider=mock_provider)
-        with self.assertRaises(StackDoesNotExist):
-            build_action._generate_plan()
-
 
 class TestLaunchStack(TestBuildAction):
     def setUp(self):
         self.context = self._get_context()
-        self.provider = Provider(None, interactive=False,
+        self.session = get_session(region=None)
+        self.provider = Provider(self.session, interactive=False,
                                  recreate_failed=False)
-        self.build_action = build.Action(self.context, provider=self.provider)
+        provider_builder = MockProviderBuilder(self.provider)
+        self.build_action = build.Action(self.context,
+                                         provider_builder=provider_builder,
+                                         cancel=MockThreadingEvent())
 
         self.stack = mock.MagicMock()
+        self.stack.region = None
         self.stack.name = 'vpc'
         self.stack.fqn = 'vpc'
+        self.stack.blueprint.rendered = '{}'
         self.stack.locked = False
         self.stack_status = None
 
         plan = self.build_action._generate_plan()
-        _, self.step = plan.list_pending()[0]
+        self.step = plan.steps[0]
         self.step.stack = self.stack
 
         def patch_object(*args, **kwargs):
@@ -228,6 +224,7 @@ class TestLaunchStack(TestBuildAction):
 
             return {'StackName': self.stack.name,
                     'StackStatus': self.stack_status,
+                    'Outputs': [],
                     'Tags': []}
 
         patch_object(self.provider, 'get_stack', side_effect=get_stack)
@@ -239,8 +236,7 @@ class TestLaunchStack(TestBuildAction):
 
     def _advance(self, new_provider_status, expected_status, expected_reason):
         self.stack_status = new_provider_status
-        status = self.step.run()
-        self.step.set_status(status)
+        status = self.step._run_once()
         self.assertEqual(status, expected_status)
         self.assertEqual(status.reason, expected_reason)
 

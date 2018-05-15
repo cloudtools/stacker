@@ -11,6 +11,7 @@ import boto3
 from ....actions.diff import DictValue
 
 from ....providers.base import Template
+from ....session_cache import get_session
 
 from ....providers.aws.default import (
     DEFAULT_CAPABILITIES,
@@ -184,7 +185,7 @@ class TestMethods(unittest.TestCase):
 
     @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval(self, patched_format):
-        get_input_path = "stacker.providers.aws.default.get_raw_input"
+        get_input_path = "stacker.ui.get_raw_input"
         with patch(get_input_path, return_value="y"):
             self.assertIsNone(ask_for_approval([], [], None))
 
@@ -204,7 +205,7 @@ class TestMethods(unittest.TestCase):
 
     @patch("stacker.providers.aws.default.format_params_diff")
     def test_ask_for_approval_with_params_diff(self, patched_format):
-        get_input_path = "stacker.providers.aws.default.get_raw_input"
+        get_input_path = "stacker.ui.get_raw_input"
         params_diff = [
             DictValue('ParamA', None, 'new-param-value'),
             DictValue('ParamB', 'param-b-old-value', 'param-b-new-value-delta')
@@ -264,6 +265,12 @@ class TestMethods(unittest.TestCase):
             generate_change_set_response(
                 "FAILED", status_reason="Stack didn't contain changes."
             )
+        )
+
+        self.stubber.add_response(
+            "delete_change_set",
+            {},
+            expected_params={"ChangeSetName": "CHANGESETID"}
         )
 
         with self.stubber:
@@ -341,6 +348,14 @@ class TestMethods(unittest.TestCase):
         change_set_result["ChangeSetName"] = "MyChanges"
         self.assertEqual(result, change_set_result)
 
+        # Check stack policy
+        stack_policy = Template(body="{}")
+        result = generate_cloudformation_args(stack_policy=stack_policy,
+                                              **std_args)
+        stack_policy_result = copy.deepcopy(std_return)
+        stack_policy_result["StackPolicyBody"] = "{}"
+        self.assertEqual(result, stack_policy_result)
+
         # If not TemplateURL is provided, use TemplateBody
         std_args["template"] = Template(body=template_body)
         template_body_result = copy.deepcopy(std_return)
@@ -353,7 +368,9 @@ class TestMethods(unittest.TestCase):
 class TestProviderDefaultMode(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
-        self.provider = Provider(region=region, recreate_failed=False)
+        self.session = get_session(region=region)
+        self.provider = Provider(
+            self.session, region=region, recreate_failed=False)
         self.stubber = Stubber(self.provider.cloudformation)
 
     def test_get_stack_stack_does_not_exist(self):
@@ -386,104 +403,62 @@ class TestProviderDefaultMode(unittest.TestCase):
         self.assertEqual(response["StackName"], stack_name)
 
     def test_select_update_method(self):
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=False),
-            self.provider.default_update_stack
-        )
-
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=True),
-            self.provider.interactive_update_stack
-        )
-
-    def test_prepare_stack_for_update_missing(self):
-        stack_name = "MockStack"
-        self.stubber.add_client_error(
-            "describe_stacks",
-            service_error_code="ValidationError",
-            service_message="Stack with id %s does not exist" % stack_name,
-            expected_params={"StackName": stack_name}
-        )
-
-        with self.assertRaises(exceptions.StackDoesNotExist):
-            with self.stubber:
-                self.provider.prepare_stack_for_update(stack_name, [])
+        for i in [[{'force_interactive': True,
+                    'force_change_set': False},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': False,
+                    'force_change_set': False},
+                   self.provider.default_update_stack],
+                  [{'force_interactive': False,
+                    'force_change_set': True},
+                   self.provider.noninteractive_changeset_update],
+                  [{'force_interactive': True,
+                    'force_change_set': True},
+                   self.provider.interactive_update_stack]]:
+            self.assertEquals(
+                self.provider.select_update_method(**i[0]),
+                i[1]
+            )
 
     def test_prepare_stack_for_update_completed(self):
         stack_name = "MockStack"
-        stack_response = {
-            "Stacks": [
-                generate_describe_stacks_stack(
-                    stack_name, stack_status="UPDATE_COMPLETE")
-            ]
-        }
-        self.stubber.add_response(
-            "describe_stacks",
-            stack_response,
-            expected_params={"StackName": stack_name}
-        )
+        stack = generate_describe_stacks_stack(
+            stack_name, stack_status="UPDATE_COMPLETE")
 
         with self.stubber:
             self.assertTrue(
-                self.provider.prepare_stack_for_update(stack_name, []))
+                self.provider.prepare_stack_for_update(stack, []))
 
     def test_prepare_stack_for_update_in_progress(self):
         stack_name = "MockStack"
-        stack_response = {
-            "Stacks": [
-                generate_describe_stacks_stack(
-                    stack_name, stack_status="UPDATE_IN_PROGRESS")
-            ]
-        }
-        self.stubber.add_response(
-            "describe_stacks",
-            stack_response,
-            expected_params={"StackName": stack_name}
-        )
+        stack = generate_describe_stacks_stack(
+            stack_name, stack_status="UPDATE_IN_PROGRESS")
 
         with self.assertRaises(exceptions.StackUpdateBadStatus) as raised:
             with self.stubber:
-                self.provider.prepare_stack_for_update(stack_name, [])
+                self.provider.prepare_stack_for_update(stack, [])
 
             self.assertIn('in-progress', raised.exception.message)
 
     def test_prepare_stack_for_update_non_recreatable(self):
         stack_name = "MockStack"
-        stack_response = {
-            "Stacks": [
-                generate_describe_stacks_stack(
-                    stack_name, stack_status="REVIEW_IN_PROGRESS")
-            ]
-        }
-        self.stubber.add_response(
-            "describe_stacks",
-            stack_response,
-            expected_params={"StackName": stack_name}
-        )
+        stack = generate_describe_stacks_stack(
+            stack_name, stack_status="REVIEW_IN_PROGRESS")
 
         with self.assertRaises(exceptions.StackUpdateBadStatus) as raised:
             with self.stubber:
-                self.provider.prepare_stack_for_update(stack_name, [])
+                self.provider.prepare_stack_for_update(stack, [])
 
         self.assertIn('Unsupported state', raised.exception.message)
 
     def test_prepare_stack_for_update_disallowed(self):
         stack_name = "MockStack"
-        stack_response = {
-            "Stacks": [
-                generate_describe_stacks_stack(
-                    stack_name, stack_status="ROLLBACK_COMPLETE")
-            ]
-        }
-        self.stubber.add_response(
-            "describe_stacks",
-            stack_response,
-            expected_params={"StackName": stack_name}
-        )
+        stack = generate_describe_stacks_stack(
+            stack_name, stack_status="ROLLBACK_COMPLETE")
 
         with self.assertRaises(exceptions.StackUpdateBadStatus) as raised:
             with self.stubber:
-                self.provider.prepare_stack_for_update(stack_name, [])
+                self.provider.prepare_stack_for_update(stack, [])
 
         self.assertIn('re-creation is disabled', raised.exception.message)
         # Ensure we point out to the user how to enable re-creation
@@ -491,41 +466,23 @@ class TestProviderDefaultMode(unittest.TestCase):
 
     def test_prepare_stack_for_update_bad_tags(self):
         stack_name = "MockStack"
-        stack_response = {
-            "Stacks": [
-                generate_describe_stacks_stack(
-                    stack_name, stack_status="ROLLBACK_COMPLETE")
-            ]
-        }
-        self.stubber.add_response(
-            "describe_stacks",
-            stack_response,
-            expected_params={"StackName": stack_name}
-        )
+        stack = generate_describe_stacks_stack(
+            stack_name, stack_status="ROLLBACK_COMPLETE")
 
         self.provider.recreate_failed = True
 
         with self.assertRaises(exceptions.StackUpdateBadStatus) as raised:
             with self.stubber:
                 self.provider.prepare_stack_for_update(
-                    stack_name,
+                    stack,
                     tags=[{'Key': 'stacker_namespace', 'Value': 'test'}])
 
         self.assertIn('tags differ', raised.exception.message.lower())
 
     def test_prepare_stack_for_update_recreate(self):
         stack_name = "MockStack"
-        stack_response = {
-            "Stacks": [
-                generate_describe_stacks_stack(
-                    stack_name, stack_status="ROLLBACK_COMPLETE")
-            ]
-        }
-        self.stubber.add_response(
-            "describe_stacks",
-            stack_response,
-            expected_params={"StackName": stack_name}
-        )
+        stack = generate_describe_stacks_stack(
+            stack_name, stack_status="ROLLBACK_COMPLETE")
 
         self.stubber.add_response(
             "delete_stack",
@@ -537,22 +494,21 @@ class TestProviderDefaultMode(unittest.TestCase):
 
         with self.stubber:
             self.assertFalse(
-                self.provider.prepare_stack_for_update(stack_name, []))
+                self.provider.prepare_stack_for_update(stack, []))
 
 
 class TestProviderInteractiveMode(unittest.TestCase):
     def setUp(self):
         region = "us-east-1"
-        self.provider = Provider(region=region, interactive=True,
-                                 recreate_failed=True)
+        self.session = get_session(region=region)
+        self.provider = Provider(
+            self.session, interactive=True, recreate_failed=True)
         self.stubber = Stubber(self.provider.cloudformation)
 
     def test_successful_init(self):
-        region = "us-east-1"
         replacements = True
-        p = Provider(region=region, interactive=True,
+        p = Provider(self.session, interactive=True,
                      replacements_only=replacements)
-        self.assertEqual(p.region, region)
         self.assertEqual(p.replacements_only, replacements)
 
     @patch("stacker.providers.aws.default.ask_for_approval")
@@ -591,12 +547,19 @@ class TestProviderInteractiveMode(unittest.TestCase):
         self.assertEqual(patched_approval.call_count, 1)
 
     def test_select_update_method(self):
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=False),
-            self.provider.interactive_update_stack
-        )
-
-        self.assertEquals(
-            self.provider.select_update_method(force_interactive=True),
-            self.provider.interactive_update_stack
-        )
+        for i in [[{'force_interactive': False,
+                    'force_change_set': False},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': True,
+                    'force_change_set': False},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': False,
+                    'force_change_set': True},
+                   self.provider.interactive_update_stack],
+                  [{'force_interactive': True,
+                    'force_change_set': True},
+                   self.provider.interactive_update_stack]]:
+            self.assertEquals(
+                self.provider.select_update_method(**i[0]),
+                i[1]
+            )

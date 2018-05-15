@@ -1,5 +1,4 @@
 import copy
-import collections
 import uuid
 import importlib
 import logging
@@ -8,79 +7,24 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
-import time
+import zipfile
+
+import collections
+from collections import OrderedDict
+
+import botocore.client
+import botocore.exceptions
+import dateutil
 import yaml
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
-from collections import OrderedDict
-from git import Repo
 
-import botocore.exceptions
+from .awscli_yamlhelper import yaml_parse
+from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
-
-
-def retry_with_backoff(function, args=None, kwargs=None, attempts=5,
-                       min_delay=1, max_delay=3, exc_list=None,
-                       retry_checker=None):
-    """Retries function, catching expected Exceptions.
-
-    Each retry has a delay between `min_delay` and `max_delay` seconds,
-    increasing with each attempt.
-
-    Args:
-        function (function): The function to call.
-        args (list, optional): A list of positional arguments to pass to the
-            given function.
-        kwargs (dict, optional): Keyword arguments to pass to the given
-            function.
-        attempts (int, optional): The # of times to retry the function.
-            Default: 5
-        min_delay (int, optional): The minimum time to delay retries, in
-            seconds. Default: 1
-        max_delay (int, optional): The maximum time to delay retries, in
-            seconds. Default: 5
-        exc_list (list, optional): A list of :class:`Exception` classes that
-            should be retried. Default: [:class:`Exception`,]
-        retry_checker (func, optional): An optional function that is used to
-            do a deeper analysis on the received :class:`Exception` to
-            determine if it qualifies for retry. Receives a single argument,
-            the :class:`Exception` object that was caught. Should return
-            True if it should be retried.
-
-    Returns:
-        variable: Returns whatever the given function returns.
-
-    Raises:
-        :class:`Exception`: Raises whatever exception the given function
-            raises, if unable to succeed within the given number of attempts.
-    """
-    args = args or []
-    kwargs = kwargs or {}
-    attempt = 0
-    if not exc_list:
-        exc_list = (Exception, )
-    while True:
-        attempt += 1
-        logger.debug("Calling %s, attempt %d.", function, attempt)
-        sleep_time = min(max_delay, min_delay * attempt)
-        try:
-            return function(*args, **kwargs)
-        except exc_list as e:
-            # If there is no retry checker function, or if there is and it
-            # returns True, then go ahead and retry
-            if not retry_checker or retry_checker(e):
-                if attempt == attempts:
-                    logger.error("Function %s failed after %s retries. Giving "
-                                 "up.", function.func_name, attempts)
-                    raise
-                logger.debug("Caught expected exception: %r", e)
-            # If there is a retry checker function, and it returned False,
-            # do not retry
-            else:
-                raise
-        time.sleep(sleep_time)
 
 
 def camel_to_snake(name):
@@ -306,6 +250,25 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
         Returns an OrderedDict instead of a Dict.
         """
 
+        # keys which require no duplicate siblings.
+        NO_DUPE_SIBLINGS = ["stacks", "class_path"]
+        # keys which require no duplicate children keys.
+        NO_DUPE_CHILDREN = ["stacks"]
+
+        def _error_mapping_on_dupe(self, node, node_name):
+            """check mapping node for dupe children keys."""
+            if isinstance(node, MappingNode):
+                mapping = {}
+                for n in node.value:
+                    a = n[0]
+                    b = mapping.get(a.value, None)
+                    if b:
+                        msg = "{} mapping cannot have duplicate keys {} {}"
+                        raise ConstructorError(
+                            msg.format(node_name, b.start_mark, a.start_mark)
+                        )
+                    mapping[a.value] = a
+
         def _validate_mapping(self, node, deep=False):
             if not isinstance(node, MappingNode):
                 raise ConstructorError(
@@ -322,12 +285,15 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
                         "while constructing a mapping", node.start_mark,
                         "found unhashable key (%s)" % exc, key_node.start_mark
                     )
-                # check for duplicate keys
-                if key in mapping:
+                # prevent duplicate sibling keys for certain "keywords".
+                if key in mapping and key in self.NO_DUPE_SIBLINGS:
+                    msg = "{} key cannot have duplicate siblings {} {}"
                     raise ConstructorError(
-                        "while constructing a mapping", node.start_mark,
-                        "found duplicate key", key_node.start_mark
+                        msg.format(key, node.start_mark, key_node.start_mark)
                     )
+                if key in self.NO_DUPE_CHILDREN:
+                    # prevent duplicate children keys for this mapping.
+                    self._error_mapping_on_dupe(value_node, key_node.value)
                 value = self.construct_object(value_node, deep=deep)
                 mapping[key] = value
             return mapping
@@ -531,13 +497,94 @@ def ensure_s3_bucket(s3_client, bucket_name, bucket_region):
             raise
 
 
-class SourceProcessor():
-    """Makes remote python package sources available in the running python
-       environment."""
+def parse_cloudformation_template(template):
+    """Parse CFN template string.
+
+    Leverages the vendored aws-cli yamlhelper to handle JSON or YAML templates.
+
+    Args:
+        template (str): The template body.
+    """
+    return yaml_parse(template)
+
+
+class Extractor(object):
+    """Base class for extractors."""
+
+    def __init__(self, archive=None):
+        """
+        Create extractor object with the archive path.
+
+        Args:
+            archive (string): Archive path
+        """
+        self.archive = archive
+
+    def set_archive(self, dir_name):
+        """
+        Update archive filename to match directory name & extension.
+
+        Args:
+            dir_name (string): Archive directory name
+        """
+        self.archive = dir_name + self.extension()
+
+    @staticmethod
+    def extension():
+        """Serve as placeholder; override this in subclasses."""
+        return ''
+
+
+class TarExtractor(Extractor):
+    """Extracts tar archives."""
+
+    def extract(self, destination):
+        """Extract the archive."""
+        with tarfile.open(self.archive, 'r:') as tar:
+            tar.extractall(path=destination)
+
+    @staticmethod
+    def extension():
+        """Return archive extension."""
+        return '.tar'
+
+
+class TarGzipExtractor(Extractor):
+    """Extracts compressed tar archives."""
+
+    def extract(self, destination):
+        """Extract the archive."""
+        with tarfile.open(self.archive, 'r:gz') as tar:
+            tar.extractall(path=destination)
+
+    @staticmethod
+    def extension():
+        """Return archive extension."""
+        return '.tar.gz'
+
+
+class ZipExtractor(Extractor):
+    """Extracts zip archives."""
+
+    def extract(self, destination):
+        """Extract the archive."""
+        with zipfile.ZipFile(self.archive, 'r') as zip_ref:
+            zip_ref.extractall(destination)
+
+    @staticmethod
+    def extension():
+        """Return archive extension."""
+        return '.zip'
+
+
+class SourceProcessor(object):
+    """Makes remote python package sources available in current environment."""
+
+    ISO8601_FORMAT = '%Y%m%dT%H%M%SZ'
 
     def __init__(self, sources, stacker_cache_dir=None):
         """
-        Processes a config's defined package sources.
+        Process a config's defined package sources.
 
         Args:
             sources (dict): Package sources from Stacker config dictionary
@@ -554,32 +601,140 @@ class SourceProcessor():
         self.create_cache_directories()
 
     def create_cache_directories(self):
-        """Ensures that SourceProcessor cache directories exist."""
+        """Ensure that SourceProcessor cache directories exist."""
         if not os.path.isdir(self.package_cache_dir):
             if not os.path.isdir(self.stacker_cache_dir):
                 os.mkdir(self.stacker_cache_dir)
             os.mkdir(self.package_cache_dir)
 
     def get_package_sources(self):
-        """Makes remote python packages available for local use."""
+        """Make remote python packages available for local use."""
+        # Checkout S3 repositories specified in config
+        for config in self.sources.get('s3', []):
+            self.fetch_s3_package(config=config)
         # Checkout git repositories specified in config
         for config in self.sources.get('git', []):
             self.fetch_git_package(config=config)
 
-    def fetch_git_package(self, config):
-        """Makes a remote git repository available for local use
+    def fetch_s3_package(self, config):
+        """Make a remote S3 archive available for local use.
 
         Args:
-            config (:class:`stacker.config.GitPackageSource`): git config
-                dictionary
+            config (dict): git config dictionary
 
         """
+        extractor_map = {'.tar.gz': TarGzipExtractor,
+                         '.tar': TarExtractor,
+                         '.zip': ZipExtractor}
+        extractor = None
+        for suffix, klass in extractor_map.iteritems():
+            if config['key'].endswith(suffix):
+                extractor = klass()
+                logger.debug("Using extractor %s for S3 object \"%s\" in "
+                             "bucket %s.",
+                             klass.__name__,
+                             config['key'],
+                             config['bucket'])
+                dir_name = self.sanitize_uri_path(
+                    "s3-%s-%s" % (config['bucket'],
+                                  config['key'][:-len(suffix)])
+                )
+                break
+
+        if extractor is None:
+            raise ValueError(
+                "Archive type could not be determined for S3 object \"%s\" "
+                "in bucket %s." % (config['key'], config['bucket'])
+            )
+
+        session = get_session(region=None)
+        extra_s3_args = {}
+        if config.get('requester_pays', False):
+            extra_s3_args['RequestPayer'] = 'requester'
+
+        # We can skip downloading the archive if it's already been cached
+        if config.get('use_latest', True):
+            try:
+                # LastModified should always be returned in UTC, but it doesn't
+                # hurt to explicitly convert it to UTC again just in case
+                modified_date = session.client('s3').head_object(
+                    Bucket=config['bucket'],
+                    Key=config['key'],
+                    **extra_s3_args
+                )['LastModified'].astimezone(dateutil.tz.tzutc())
+            except botocore.exceptions.ClientError as client_error:
+                logger.error("Error checking modified date of "
+                             "s3://%s/%s : %s",
+                             config['bucket'],
+                             config['key'],
+                             client_error)
+                sys.exit(1)
+            dir_name += "-%s" % modified_date.strftime(self.ISO8601_FORMAT)
+        cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
+        if not os.path.isdir(cached_dir_path):
+            logger.debug("Remote package s3://%s/%s does not appear to have "
+                         "been previously downloaded - starting download and "
+                         "extraction to %s",
+                         config['bucket'],
+                         config['key'],
+                         cached_dir_path)
+            tmp_dir = tempfile.mkdtemp(prefix='stacker')
+            tmp_package_path = os.path.join(tmp_dir, dir_name)
+            try:
+                extractor.set_archive(os.path.join(tmp_dir, dir_name))
+                logger.debug("Starting remote package download from S3 to %s "
+                             "with extra S3 options \"%s\"",
+                             extractor.archive,
+                             str(extra_s3_args))
+                session.resource('s3').Bucket(config['bucket']).download_file(
+                    config['key'],
+                    extractor.archive,
+                    ExtraArgs=extra_s3_args
+                )
+                logger.debug("Download complete; extracting downloaded "
+                             "package to %s",
+                             tmp_package_path)
+                extractor.extract(tmp_package_path)
+                logger.debug("Moving extracted package directory %s to the "
+                             "Stacker cache at %s",
+                             dir_name,
+                             self.package_cache_dir)
+                shutil.move(tmp_package_path, self.package_cache_dir)
+            finally:
+                shutil.rmtree(tmp_dir)
+        else:
+            logger.debug("Remote package s3://%s/%s appears to have "
+                         "been previously downloaded to %s -- bypassing "
+                         "download",
+                         config['bucket'],
+                         config['key'],
+                         cached_dir_path)
+
+        # Update sys.path & merge in remote configs (if necessary)
+        self.update_paths_and_config(config=config,
+                                     pkg_dir_name=dir_name)
+
+    def fetch_git_package(self, config):
+        """Make a remote git repository available for local use.
+
+        Args:
+            config (dict): git config dictionary
+
+        """
+        # only loading git here when needed to avoid load errors on systems
+        # without git installed
+        from git import Repo
+
         ref = self.determine_git_ref(config)
         dir_name = self.sanitize_git_path(uri=config['uri'], ref=ref)
         cached_dir_path = os.path.join(self.package_cache_dir, dir_name)
 
         # We can skip cloning the repo if it's already been cached
         if not os.path.isdir(cached_dir_path):
+            logger.debug("Remote repo %s does not appear to have been "
+                         "previously downloaded - starting clone to %s",
+                         config['uri'],
+                         cached_dir_path)
             tmp_dir = tempfile.mkdtemp(prefix='stacker')
             try:
                 tmp_repo_path = os.path.join(tmp_dir, dir_name)
@@ -589,13 +744,31 @@ class SourceProcessor():
                 shutil.move(tmp_repo_path, self.package_cache_dir)
             finally:
                 shutil.rmtree(tmp_dir)
+        else:
+            logger.debug("Remote repo %s appears to have been previously "
+                         "cloned to %s -- bypassing download",
+                         config['uri'],
+                         cached_dir_path)
 
-        # Cloning (if necessary) is complete. Now add the appropriate
-        # directory (or directories) to sys.path
+        # Update sys.path & merge in remote configs (if necessary)
+        self.update_paths_and_config(config=config,
+                                     pkg_dir_name=dir_name)
+
+    def update_paths_and_config(self, config, pkg_dir_name):
+        """Handle remote source defined sys.paths & configs.
+
+        Args:
+            config (dict): git config dictionary
+            pkg_dir_name (string): directory name of the stacker archive
+
+        """
+        cached_dir_path = os.path.join(self.package_cache_dir, pkg_dir_name)
+
+        # Add the appropriate directory (or directories) to sys.path
         if config.get('paths'):
             for path in config['paths']:
                 path_to_append = os.path.join(self.package_cache_dir,
-                                              dir_name,
+                                              pkg_dir_name,
                                               path)
                 logger.debug("Appending \"%s\" to python sys.path",
                              path_to_append)
@@ -611,7 +784,7 @@ class SourceProcessor():
                                                           config_filename))
 
     def git_ls_remote(self, uri, ref):
-        """Determines the latest commit id for a given ref.
+        """Determine the latest commit id for a given ref.
 
         Args:
             uri (string): git URI
@@ -619,6 +792,7 @@ class SourceProcessor():
 
         Returns:
             str: A commit id
+
         """
         logger.debug("Invoking git to retrieve commit id for repo %s...", uri)
         lsremote_output = subprocess.check_output(['git',
@@ -633,8 +807,7 @@ class SourceProcessor():
             raise ValueError("Ref \"%s\" not found for repo %d." % (ref, uri))
 
     def determine_git_ls_remote_ref(self, config):
-        """Takes a dict describing a git repo and determines the ref to be used
-           with the "git ls-remote" command
+        """Determine the ref to be used with the "git ls-remote" command.
 
         Args:
             config (:class:`stacker.config.GitPackageSource`): git config
@@ -642,6 +815,7 @@ class SourceProcessor():
 
         Returns:
             str: A branch reference or "HEAD"
+
         """
         if config.get('branch'):
             ref = "refs/heads/%s" % config['branch']
@@ -651,15 +825,14 @@ class SourceProcessor():
         return ref
 
     def determine_git_ref(self, config):
-        """Takes a dict describing a git repo and determines the ref to be used
-           for 'git checkout'.
+        """Determine the ref to be used for 'git checkout'.
 
         Args:
-            config (:class:`stacker.config.GitPackageSource`): git config
-                dictionary
+            config (dict): git config dictionary
 
         Returns:
             str: A commit id or tag name
+
         """
         # First ensure redundant config keys aren't specified (which could
         # cause confusion as to which take precedence)
@@ -687,8 +860,22 @@ class SourceProcessor():
             )
         return ref
 
+    def sanitize_uri_path(self, uri):
+        """Take a URI and converts it to a directory safe path.
+
+        Args:
+            uri (string): URI (e.g. http://example.com/cats)
+
+        Returns:
+            str: Directory name for the supplied uri
+
+        """
+        for i in ['@', '/', ':']:
+            uri = uri.replace(i, '_')
+        return uri
+
     def sanitize_git_path(self, uri, ref=None):
-        """Takes a git URI and ref and converts it to a directory safe path
+        """Take a git URI and ref and converts it to a directory safe path.
 
         Args:
             uri (string): git URI
@@ -697,13 +884,29 @@ class SourceProcessor():
 
         Returns:
             str: Directory name for the supplied uri
+
         """
         if uri.endswith('.git'):
             dir_name = uri[:-4]  # drop .git
         else:
             dir_name = uri
-        for i in ['@', '/', ':']:
-            dir_name = dir_name.replace(i, '_')
+        dir_name = self.sanitize_uri_path(dir_name)
         if ref is not None:
             dir_name += "-%s" % ref
         return dir_name
+
+
+def stack_template_key_name(blueprint):
+    """Given a blueprint, produce an appropriate key name.
+
+    Args:
+        blueprint (:class:`stacker.blueprints.base.Blueprint`): The blueprint
+            object to create the key from.
+
+    Returns:
+        string: Key name resulting from blueprint.
+    """
+    name = blueprint.name
+    return "stack_templates/%s/%s-%s.json" % (blueprint.context.get_fqn(name),
+                                              name,
+                                              blueprint.version)

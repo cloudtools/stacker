@@ -1,13 +1,34 @@
+import operator
+
+
 class Status(object):
     def __init__(self, name, code, reason=None):
         self.name = name
         self.code = code
         self.reason = reason or getattr(self, "reason", None)
 
-    def __cmp__(self, other):
+    def _comparison(self, operator, other):
         if hasattr(other, "code"):
-            return cmp(self.code, other.code)
-        return False
+            return operator(self.code, other.code)
+        return NotImplemented
+
+    def __eq__(self, other):
+        return self._comparison(operator.eq, other)
+
+    def __ne__(self, other):
+        return self._comparison(operator.ne, other)
+
+    def __lt__(self, other):
+        return self._comparison(operator.lt, other)
+
+    def __gt__(self, other):
+        return self._comparison(operator.gt, other)
+
+    def __le__(self, other):
+        return self._comparison(operator.le, other)
+
+    def __ge__(self, other):
+        return self._comparison(operator.ge, other)
 
 
 class PendingStatus(Status):
@@ -56,3 +77,4 @@ SUBMITTED = SubmittedStatus()
 COMPLETE = CompleteStatus()
 SKIPPED = SkippedStatus()
 FAILED = FailedStatus()
+INTERRUPTED = FailedStatus(reason="interrupted")

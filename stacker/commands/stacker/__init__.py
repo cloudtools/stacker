@@ -4,11 +4,13 @@ from .build import Build
 from .destroy import Destroy
 from .info import Info
 from .diff import Diff
+from .graph import Graph
 from .base import BaseCommand
 from ...config import render_parse_load as load_config
 from ...context import Context
 from ...providers.aws import default
 from ... import __version__
+from ... import session_cache
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Stacker(BaseCommand):
 
     name = "stacker"
-    subcommands = (Build, Destroy, Info, Diff)
+    subcommands = (Build, Destroy, Info, Diff, Graph)
 
     def configure(self, options, **kwargs):
         super(Stacker, self).configure(options, **kwargs)
@@ -30,7 +32,9 @@ class Stacker(BaseCommand):
             environment=options.environment,
             validate=True)
 
-        options.provider = default.Provider(
+        session_cache.default_profile = options.profile
+
+        options.provider_builder = default.ProviderBuilder(
             region=options.region,
             interactive=options.interactive,
             replacements_only=options.replacements_only,
@@ -41,7 +45,6 @@ class Stacker(BaseCommand):
         options.context = Context(
             environment=options.environment,
             config=config,
-            logger_type=self.logger_type,
             # Allow subcommands to provide any specific kwargs to the Context
             # that it wants.
             **options.get_context_kwargs(options)

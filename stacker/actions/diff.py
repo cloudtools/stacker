@@ -3,10 +3,16 @@ import json
 import logging
 from operator import attrgetter
 
+from .base import plan, build_walker
 from . import build
 from .. import exceptions
-from ..plan import COMPLETE, Plan
-from ..status import NotSubmittedStatus, NotUpdatedStatus
+from ..util import parse_cloudformation_template
+from ..status import (
+    NotSubmittedStatus,
+    NotUpdatedStatus,
+    COMPLETE,
+    INTERRUPTED,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -136,21 +142,41 @@ def diff_parameters(old_params, new_params):
     return diff
 
 
+def normalize_json(template):
+    """Normalize our template for diffing.
+
+    Args:
+        template(str): string representing the template
+
+    Returns:
+        list: json representation of the parameters
+    """
+    obj = parse_cloudformation_template(template)
+    json_str = json.dumps(obj, sort_keys=True, indent=4, default=str)
+    result = []
+    lines = json_str.split("\n")
+    for line in lines:
+        result.append(line + "\n")
+    return result
+
+
 def print_stack_changes(stack_name, new_stack, old_stack, new_params,
                         old_params):
-    """Prints out the paramters (if changed) and stack diff"""
+    """Prints out the parameters (if changed) and stack diff"""
     from_file = "old_%s" % (stack_name,)
     to_file = "new_%s" % (stack_name,)
     lines = difflib.context_diff(
         old_stack, new_stack,
-        fromfile=from_file, tofile=to_file)
+        fromfile=from_file, tofile=to_file,
+        n=7)  # ensure at least a few lines of context are displayed afterward
 
     template_changes = list(lines)
     if not template_changes:
         print "*** No changes to template ***"
-    else:
-        param_diffs = diff_parameters(old_params, new_params)
+    param_diffs = diff_parameters(old_params, new_params)
+    if param_diffs:
         print format_params_diff(param_diffs)
+    if template_changes:
         print "".join(template_changes)
 
 
@@ -166,23 +192,6 @@ class Action(build.Action):
     config.
     """
 
-    def _normalize_json(self, template):
-        """Normalizes our template for diffing
-
-        Args:
-            template(str): json string representing the template
-
-        Returns:
-            list: json representation of the parameters
-        """
-        obj = json.loads(template)
-        json_str = json.dumps(obj, sort_keys=True, indent=4)
-        result = []
-        lines = json_str.split("\n")
-        for line in lines:
-            result.append(line + "\n")
-        return result
-
     def _print_new_stack(self, stack, parameters):
         """Prints out the parameters & stack contents of a new stack"""
         print "New template parameters:"
@@ -195,28 +204,35 @@ class Action(build.Action):
 
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
+        if self.cancel.wait(0):
+            return INTERRUPTED
+
         if not build.should_submit(stack):
             return NotSubmittedStatus()
 
         if not build.should_update(stack):
             return NotUpdatedStatus()
 
+        provider = self.build_provider(stack)
+
+        provider_stack = provider.get_stack(stack.fqn)
+
         # get the current stack template & params from AWS
         try:
-            [old_template, old_params] = self.provider.get_stack_info(
-                stack.fqn)
+            [old_template, old_params] = provider.get_stack_info(
+                provider_stack)
         except exceptions.StackDoesNotExist:
             old_template = None
             old_params = {}
 
-        stack.resolve(self.context, self.provider)
+        stack.resolve(self.context, provider)
         # generate our own template & params
-        new_template = stack.blueprint.rendered
         parameters = self.build_parameters(stack)
         new_params = dict()
         for p in parameters:
             new_params[p['ParameterKey']] = p['ParameterValue']
-        new_stack = self._normalize_json(new_template)
+        new_template = stack.blueprint.rendered
+        new_stack = normalize_json(new_template)
 
         print "============== Stack: %s ==============" % (stack.name,)
         # If this is a completely new template dump our params & stack
@@ -224,29 +240,40 @@ class Action(build.Action):
             self._print_new_stack(new_stack, parameters)
         else:
             # Diff our old & new stack/parameters
-            old_stack = self._normalize_json(old_template)
+            old_template = parse_cloudformation_template(old_template)
+            if isinstance(old_template, (str, unicode)):
+                # YAML templates returned from CFN need parsing again
+                # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
+                # ->
+                # AWSTemplateFormatVersion: "2010-09-09"
+                old_template = parse_cloudformation_template(old_template)
+            old_stack = normalize_json(
+                json.dumps(old_template,
+                           sort_keys=True,
+                           indent=4,
+                           default=str)
+            )
             print_stack_changes(stack.name, new_stack, old_stack, new_params,
                                 old_params)
+
+        stack.set_outputs(
+            provider.get_output_dict(provider_stack))
+
         return COMPLETE
 
     def _generate_plan(self):
-        plan = Plan(description="Diff stacks")
-        stacks = self.context.get_stacks_dict()
-        dependencies = self._get_dependencies()
-        for stack_name in self.get_stack_execution_order(dependencies):
-            plan.add(
-                stacks[stack_name],
-                run_func=self._diff_stack,
-                requires=dependencies.get(stack_name),
-            )
-        return plan
+        return plan(
+            description="Diff stacks",
+            action=self._diff_stack,
+            stacks=self.context.get_stacks(),
+            targets=self.context.stack_names)
 
-    def run(self, *args, **kwargs):
+    def run(self, concurrency=0, *args, **kwargs):
         plan = self._generate_plan()
-        debug_plan = self._generate_plan()
-        debug_plan.outline(logging.DEBUG)
+        plan.outline(logging.DEBUG)
         logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
-        plan.execute()
+        walker = build_walker(concurrency)
+        plan.execute(walker)
 
     """Don't ever do anything for pre_run or post_run"""
     def pre_run(self, *args, **kwargs):

@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: TestTemplate
+Parameters:
+  Param1:
+    Type: String
+  Param2:
+    Default: default
+    Type: CommaDelimitedList
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        !Join
+          - "-"
+          - - !Ref "AWS::StackName"
+            - !Ref "AWS::Region"
+  Dummy:
+    Type: AWS::CloudFormation::WaitConditionHandle
+Outputs:
+  DummyId:
+    Value: dummy-1234

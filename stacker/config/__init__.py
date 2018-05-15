@@ -242,8 +242,20 @@ class GitPackageSource(Model):
     configs = ListType(StringType, serialize_when_none=False)
 
 
+class S3PackageSource(Model):
+    bucket = StringType(required=True)
+
+    key = StringType(required=True)
+
+    use_latest = BooleanType(serialize_when_none=False)
+
+    requester_pays = BooleanType(serialize_when_none=False)
+
+
 class PackageSources(Model):
     git = ListType(ModelType(GitPackageSource))
+
+    s3 = ListType(ModelType(S3PackageSource))
 
 
 class Hook(Model):
@@ -259,7 +271,15 @@ class Hook(Model):
 class Stack(Model):
     name = StringType(required=True)
 
-    class_path = StringType(required=True)
+    stack_name = StringType(serialize_when_none=False)
+
+    region = StringType(serialize_when_none=False)
+
+    profile = StringType(serialize_when_none=False)
+
+    class_path = StringType(serialize_when_none=False)
+
+    template_path = StringType(serialize_when_none=False)
 
     description = StringType(serialize_when_none=False)
 
@@ -276,6 +296,32 @@ class Stack(Model):
     parameters = DictType(AnyType, serialize_when_none=False)
 
     tags = DictType(StringType, serialize_when_none=False)
+
+    stack_policy_path = StringType(serialize_when_none=False)
+
+    def validate_class_path(self, data, value):
+        if value and data["template_path"]:
+            raise ValidationError(
+                "template_path cannot be present when "
+                "class_path is provided.")
+        self.validate_stack_source(data)
+
+    def validate_template_path(self, data, value):
+        if value and data["class_path"]:
+            raise ValidationError(
+                "class_path cannot be present when "
+                "template_path is provided.")
+        self.validate_stack_source(data)
+
+    def validate_stack_source(self, data):
+        # Locked stacks don't actually need a template, since they're
+        # read-only.
+        if data["locked"]:
+            return
+
+        if not (data["class_path"] or data["template_path"]):
+            raise ValidationError(
+                "class_path or template_path is required.")
 
     def validate_parameters(self, data, value):
         if value:
@@ -338,6 +384,8 @@ class Config(Model):
     post_destroy = ListType(ModelType(Hook), serialize_when_none=False)
 
     tags = DictType(StringType, serialize_when_none=False)
+
+    template_indent = StringType(serialize_when_none=False)
 
     mappings = DictType(
         DictType(DictType(StringType)), serialize_when_none=False)

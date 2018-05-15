@@ -5,7 +5,7 @@ any manual requirements they specify or output values they rely on from other
 stacks.
 
 """
-from .base import BaseCommand
+from .base import BaseCommand, cancel
 from ...actions import destroy
 
 
@@ -25,14 +25,24 @@ class Destroy(BaseCommand):
                                  "specified more than once. If not specified "
                                  "then stacker will work on all stacks in the "
                                  "config file.")
+        parser.add_argument("-j", "--max-parallel", action="store", type=int,
+                            default=0,
+                            help="The maximum number of stacks to execute in "
+                                 "parallel. If not provided, the value will "
+                                 "be constrained based on the underlying "
+                                 "graph.")
         parser.add_argument("-t", "--tail", action="store_true",
-                            help="Tail the CloudFormation logs while working"
+                            help="Tail the CloudFormation logs while working "
                                  "with stacks")
 
     def run(self, options, **kwargs):
         super(Destroy, self).run(options, **kwargs)
-        action = destroy.Action(options.context, provider=options.provider)
-        action.execute(force=options.force, tail=options.tail)
+        action = destroy.Action(options.context,
+                                provider_builder=options.provider_builder,
+                                cancel=cancel())
+        action.execute(concurrency=options.max_parallel,
+                       force=options.force,
+                       tail=options.tail)
 
     def get_context_kwargs(self, options, **kwargs):
         return {"stack_names": options.stacks}

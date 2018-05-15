@@ -18,6 +18,11 @@ stacker
    :target: https://landscape.io/github/remind101/stacker/master
    :alt: Code Health
 
+.. image:: https://codecov.io/gh/remind101/stacker/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/remind101/stacker
+   :alt: codecov
+
+
 For full documentation, please see the readthedocs_ site.
 
 About
@@ -34,11 +39,16 @@ configuration to modify them.
 At Remind we use stacker to manage all of our Cloudformation stacks -
 both in development, staging and production without any major issues.
 
+Requirements
+============
+
+* Python 2.7
+
 Stacker Command
 ===============
 
 The stacker command is built to have sub-commands, much like git. Currently the
-comands are:
+commands are:
 
 - ``build`` which handles taking your stack config and then launching or
   updating stacks as necessary.
@@ -59,3 +69,4 @@ want to avoid setting up a python environment::
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _string.Template: https://docs.python.org/2/library/string.html#template-strings
 .. _readthedocs: http://stacker.readthedocs.io/en/latest/
+

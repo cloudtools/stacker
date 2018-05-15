@@ -11,13 +11,31 @@ Example:
         some-relative-fully-qualified-stack-name::SomeOutputName}
 
 """
-from functools import partial
-
-from .output import handler as output_handler
+from .output import deconstruct
 
 TYPE_NAME = "rxref"
 
-# rxref is the same as the `output` handler, except the value already contains
-# the relative fully qualified name for the stack we're fetching the output
-# from.
-handler = partial(output_handler, rfqn=True)
+
+def handler(value, provider=None, context=None, **kwargs):
+    """Fetch an output from the designated stack.
+
+    Args:
+        value (str): string with the following format:
+            <stack_name>::<output_name>, ie. some-stack::SomeOutput
+        provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
+            base provider
+        context (:class:`stacker.context.Context`): stacker context
+
+    Returns:
+        str: output from the specified stack
+    """
+
+    if provider is None:
+        raise ValueError('Provider is required')
+    if context is None:
+        raise ValueError('Context is required')
+
+    d = deconstruct(value)
+    stack_fqn = context.get_fqn(d.stack_name)
+    output = provider.get_output(stack_fqn, d.output_name)
+    return output

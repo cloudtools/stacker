@@ -1,0 +1,52 @@
+version: 2
+
+defaults: &defaults
+  docker:
+    - image: circleci/python:2.7
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - lint
+      - test-unit
+      - test-functional
+
+jobs:
+  lint:
+    << : *defaults
+
+    steps:
+      - checkout
+      - run: sudo pip install flake8 codecov pep8-naming
+      - run: sudo python setup.py install
+      - run: sudo make lint
+
+  test-unit:
+    << : *defaults
+
+    steps:
+      - checkout
+      - run: sudo python setup.py install
+      - run: sudo make test-unit
+
+  test-functional:
+    << : *defaults
+
+    steps:
+      - checkout
+      - run:
+          command: |
+            git clone https://github.com/sstephenson/bats.git
+            cd bats
+            git checkout v0.4.0
+            sudo ./install.sh /usr/local
+            bats --version
+      - run: sudo python setup.py install
+      - run:
+          command: |
+            export TERM=xterm
+            export AWS_DEFAULT_REGION=us-east-1
+            export STACKER_NAMESPACE=stacker-functional-tests-$CIRCLE_BUILD_NUM
+            export STACKER_ROLE=arn:aws:iam::487039194316:role/stacker-functional-tests-stacke-FunctionalTestRole-JKTNS8IDNZZ4
+            sudo -E  make test-functional

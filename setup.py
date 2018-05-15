@@ -1,24 +1,24 @@
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.1.1"
+VERSION = "1.3.0"
 
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
-    "troposphere~=2.0.0",
-    "boto3>=1.3.1,<1.5.0",
+    "troposphere>=1.9.0",
+    "botocore>=1.6.0",
+    "boto3>=1.3.1",
     "PyYAML~=3.12",
-    "awacs~=0.7.1",
-    "colorama~=0.3.7",
+    "awacs>=0.6.0",
     "formic~=0.9b",
     "gitpython~=2.0",
-    "schematics~=2.0.1"
+    "schematics~=2.0.1",
 ]
 
 tests_require = [
     "mock~=2.0.0",
-    "moto~=0.4.30",
+    "moto~=1.1.24",
     "testfixtures~=4.10.0",
     "coverage~=4.3.4"
 ]
@@ -30,6 +30,7 @@ setup_requires = [
 scripts = [
     "scripts/compare_env",
     "scripts/docker-stacker",
+    "scripts/stacker.cmd",
     "scripts/stacker"
 ]
 
@@ -48,7 +49,7 @@ if __name__ == "__main__":
         author_email="loki77@gmail.com",
         license="New BSD license",
         url="https://github.com/remind101/stacker",
-        description="Opinionated AWS CloudFormation Stack manager",
+        description="AWS CloudFormation Stack manager",
         long_description=read("README.rst"),
         packages=find_packages(),
         scripts=scripts,

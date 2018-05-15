@@ -1,16 +1,16 @@
 import json
 import yaml
 import logging
-import os
 import time
 import urlparse
 import sys
 
 import botocore.exceptions
+from botocore.config import Config
 
 from ..base import BaseProvider
 from ... import exceptions
-from ...util import retry_with_backoff
+from ...ui import ui
 from stacker.session_cache import get_session
 
 from ...actions.diff import (
@@ -21,8 +21,34 @@ from ...actions.diff import (
 
 logger = logging.getLogger(__name__)
 
+# This value controls the maximum number of times a CloudFormation API call
+# will be attempted, after being throttled. This value is used in an
+# exponential backoff algorithm to determine how long the client should wait
+# until attempting a retry:
+#
+#   base * growth_factor ^ (attempts - 1)
+#
+# A value of 10 here would cause the worst case wait time for the last retry to
+# be ~8 mins:
+#
+#   1 * 2 ^ (10 - 1) = 512 seconds
+#
+# References:
+# https://github.com/boto/botocore/blob/1.6.1/botocore/retryhandler.py#L39-L58
+# https://github.com/boto/botocore/blob/1.6.1/botocore/data/_retry.json#L97-L121
+MAX_ATTEMPTS = 10
+
 MAX_TAIL_RETRIES = 5
 DEFAULT_CAPABILITIES = ["CAPABILITY_NAMED_IAM", ]
+
+
+def get_cloudformation_client(session):
+    config = Config(
+        retries=dict(
+            max_attempts=MAX_ATTEMPTS
+        )
+    )
+    return session.client('cloudformation', config=config)
 
 
 def get_output_dict(stack):
@@ -37,48 +63,14 @@ def get_output_dict(stack):
 
     """
     outputs = {}
+    if 'Outputs' not in stack:
+        return outputs
+
     for output in stack['Outputs']:
         logger.debug("    %s %s: %s", stack['StackName'], output['OutputKey'],
                      output['OutputValue'])
         outputs[output['OutputKey']] = output['OutputValue']
     return outputs
-
-
-def retry_on_throttling(fn, attempts=3, args=None, kwargs=None):
-    """Wrap retry_with_backoff to handle AWS Cloudformation Throttling.
-
-    Args:
-        fn (function): The function to call.
-        attempts (int): Maximum # of attempts to retry the function.
-        args (list): List of positional arguments to pass to the function.
-        kwargs (dict): Dict of keyword arguments to pass to the function.
-
-    Returns:
-        passthrough: This returns the result of the function call itself.
-
-    Raises:
-        passthrough: This raises any exceptions the function call raises,
-            except for boto.exception.BotoServerError, provided it doesn't
-            retry more than attempts.
-    """
-    def _throttling_checker(exc):
-        """
-
-        Args:
-        exc (botocore.exceptions.ClientError): Expected exception type
-
-        Returns:
-             boolean: indicating whether this error is a throttling error
-        """
-        if exc.response['ResponseMetadata']['HTTPStatusCode'] == 400 and \
-                exc.response['Error']['Code'] == "Throttling":
-            logger.debug("AWS throttling calls.")
-            return True
-        return False
-
-    return retry_with_backoff(fn, args=args, kwargs=kwargs, attempts=attempts,
-                              exc_list=(botocore.exceptions.ClientError, ),
-                              retry_checker=_throttling_checker)
 
 
 def s3_fallback(fqn, template, parameters, tags, method,
@@ -104,7 +96,7 @@ def s3_fallback(fqn, template, parameters, tags, method,
         change_set_name=get_change_set_name()
     )
 
-    response = retry_on_throttling(method, kwargs=args)
+    response = method(**args)
     return response
 
 
@@ -134,11 +126,6 @@ def requires_replacement(changeset):
             "Replacement", False) == "True"]
 
 
-def get_raw_input(message):
-    """ Just a wrapper for raw_input for testing purposes. """
-    return raw_input(message)
-
-
 def ask_for_approval(full_changeset=None, params_diff=None,
                      include_verbose=False):
     """Prompt the user for approval to execute a change set.
@@ -157,7 +144,7 @@ def ask_for_approval(full_changeset=None, params_diff=None,
     if include_verbose:
         approval_options.append('v')
 
-    approve = get_raw_input("Execute the above changes? [{}] ".format(
+    approve = ui.ask("Execute the above changes? [{}] ".format(
         '/'.join(approval_options)))
 
     if include_verbose and approve == "v":
@@ -275,11 +262,8 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
     complete = False
     response = None
     for i in range(try_count):
-        response = retry_on_throttling(
-            cfn_client.describe_change_set,
-            kwargs={
-                'ChangeSetName': change_set_id,
-            },
+        response = cfn_client.describe_change_set(
+            ChangeSetName=change_set_id,
         )
         complete = response["Status"] in ("FAILED", "CREATE_COMPLETE")
         if complete:
@@ -299,18 +283,19 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
 
 
 def create_change_set(cfn_client, fqn, template, parameters, tags,
-                      replacements_only=False, service_role=None):
-    logger.debug("Attempting to create change set for stack: %s.", fqn)
+                      change_set_type='UPDATE', replacements_only=False,
+                      service_role=None):
+    logger.debug("Attempting to create change set of type %s for stack: %s.",
+                 change_set_type,
+                 fqn)
     args = generate_cloudformation_args(
         fqn, parameters, tags, template,
+        change_set_type=change_set_type,
         service_role=service_role,
         change_set_name=get_change_set_name()
     )
     try:
-        response = retry_on_throttling(
-            cfn_client.create_change_set,
-            kwargs=args
-        )
+        response = cfn_client.create_change_set(**args)
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Message'] == ('TemplateURL must reference '
                                               'a valid S3 object to which '
@@ -328,12 +313,21 @@ def create_change_set(cfn_client, fqn, template, parameters, tags,
     status = response["Status"]
     if status == "FAILED":
         status_reason = response["StatusReason"]
-        if "didn't contain changes" in response["StatusReason"]:
+        if ("didn't contain changes" in response["StatusReason"] or
+                "No updates are to be performed" in response["StatusReason"]):
             logger.debug(
-                "Stack %s did not change, not updating.",
+                "Stack %s did not change, not updating and removing "
+                "changeset.",
                 fqn,
             )
-            raise exceptions.StackDidNotChange
+            cfn_client.delete_change_set(ChangeSetName=change_set_id)
+            raise exceptions.StackDidNotChange()
+        logger.warn(
+            "Got strange status, '%s' for changeset '%s'. Not deleting for "
+            "further investigation - you will need to delete the changeset "
+            "manually.",
+            status, change_set_id
+        )
         raise exceptions.UnhandledChangeSetStatus(
             fqn, change_set_id, status, status_reason
         )
@@ -370,7 +364,9 @@ def check_tags_contain(actual, expected):
 
 def generate_cloudformation_args(stack_name, parameters, tags, template,
                                  capabilities=DEFAULT_CAPABILITIES,
+                                 change_set_type=None,
                                  service_role=None,
+                                 stack_policy=None,
                                  change_set_name=None):
     """Used to generate the args for common cloudformation API interactions.
 
@@ -387,6 +383,8 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
             object.
         capabilities (list, optional): A list of capabilities to use when
             updating Cloudformation.
+        change_set_type (str, optional): An optional change set type to use
+            with create_change_set.
         service_role (str, optional): An optional service role to use when
             interacting with Cloudformation.
         change_set_name (str, optional): An optional change set name to use
@@ -409,12 +407,51 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
     if change_set_name:
         args["ChangeSetName"] = change_set_name
 
+    if change_set_type:
+        args["ChangeSetType"] = change_set_type
+
     if template.url:
         args["TemplateURL"] = template.url
     else:
         args["TemplateBody"] = template.body
 
+    # When creating args for CreateChangeSet, don't include the stack policy,
+    # since ChangeSets don't support it.
+    if not change_set_name:
+        args.update(generate_stack_policy_args(stack_policy))
+
     return args
+
+
+def generate_stack_policy_args(stack_policy=None):
+    args = {}
+    if stack_policy:
+        logger.debug("Stack has a stack policy")
+        if stack_policy.url:
+            # stacker currently does not support uploading stack policies to
+            # S3, so this will never get hit (unless your implementing S3
+            # uploads, and then you're probably reading this comment about why
+            # the exception below was raised :))
+            #
+            # args["StackPolicyURL"] = stack_policy.url
+            raise NotImplementedError
+        else:
+            args["StackPolicyBody"] = stack_policy.body
+    return args
+
+
+class ProviderBuilder(object):
+    """Implements a ProviderBuilder for the AWS provider."""
+
+    def __init__(self, region=None, **kwargs):
+        self.region = region
+        self.kwargs = kwargs
+
+    def build(self, region=None, profile=None):
+        if not region:
+            region = self.region
+        session = get_session(region=region, profile=profile)
+        return Provider(session, region=region, **self.kwargs)
 
 
 class Provider(BaseProvider):
@@ -460,37 +497,22 @@ class Provider(BaseProvider):
         "ROLLBACK_COMPLETE",
     )
 
-    def __init__(self, region, interactive=False, replacements_only=False,
-                 recreate_failed=False, service_role=None, **kwargs):
-        self.region = region
+    def __init__(self, session, region=None, interactive=False,
+                 replacements_only=False, recreate_failed=False,
+                 service_role=None, **kwargs):
         self._outputs = {}
-        self._cloudformation = None
+        self.region = region
+        self.cloudformation = get_cloudformation_client(session)
         self.interactive = interactive
         # replacements only is only used in interactive mode
         self.replacements_only = interactive and replacements_only
         self.recreate_failed = interactive or recreate_failed
         self.service_role = service_role
 
-        # Necessary to deal w/ multiprocessing issues w/ sharing ssl conns
-        # see: https://github.com/remind101/stacker/issues/196
-        self._pid = os.getpid()
-
-    @property
-    def cloudformation(self):
-        # deals w/ multiprocessing issues w/ sharing ssl conns
-        # see https://github.com/remind101/stacker/issues/196
-        pid = os.getpid()
-        if pid != self._pid or not self._cloudformation:
-            session = get_session(self.region)
-            self._cloudformation = session.client('cloudformation')
-
-        return self._cloudformation
-
     def get_stack(self, stack_name, **kwargs):
         try:
-            return retry_on_throttling(
-                self.cloudformation.describe_stacks,
-                kwargs=dict(StackName=stack_name))['Stacks'][0]
+            return self.cloudformation.describe_stacks(
+                StackName=stack_name)['Stacks'][0]
         except botocore.exceptions.ClientError as e:
             if "does not exist" not in e.message:
                 raise
@@ -517,7 +539,7 @@ class Provider(BaseProvider):
     def is_stack_failed(self, stack, **kwargs):
         return self.get_stack_status(stack) in self.FAILED_STATUSES
 
-    def tail_stack(self, stack, retries=0, **kwargs):
+    def tail_stack(self, stack, cancel, retries=0, **kwargs):
         def log_func(e):
             event_args = [e['ResourceStatus'], e['ResourceType'],
                           e.get('ResourceStatusReason', None)]
@@ -531,6 +553,7 @@ class Provider(BaseProvider):
 
         try:
             self.tail(stack.fqn,
+                      cancel=cancel,
                       log_func=log_func,
                       include_initial=False)
         except botocore.exceptions.ClientError as e:
@@ -538,7 +561,7 @@ class Provider(BaseProvider):
                 # stack might be in the process of launching, wait for a second
                 # and try again
                 time.sleep(1)
-                self.tail_stack(stack, retries=retries + 1, **kwargs)
+                self.tail_stack(stack, cancel, retries=retries + 1, **kwargs)
             else:
                 raise
 
@@ -568,7 +591,7 @@ class Provider(BaseProvider):
             time.sleep(1)
         return reversed(sum(event_list, []))
 
-    def tail(self, stack_name, log_func=_tail_print, sleep_time=5,
+    def tail(self, stack_name, cancel, log_func=_tail_print, sleep_time=5,
              include_initial=True):
         """Show and then tail the event log"""
         # First dump the full list of events in chronological order and keep
@@ -587,7 +610,8 @@ class Provider(BaseProvider):
                 if e['EventId'] not in seen:
                     log_func(e)
                     seen.add(e['EventId'])
-            time.sleep(sleep_time)
+            if cancel.wait(sleep_time):
+                return
 
     def destroy_stack(self, stack, **kwargs):
         logger.debug("Destroying stack: %s" % (self.get_stack_name(stack)))
@@ -595,10 +619,12 @@ class Provider(BaseProvider):
         if self.service_role:
             args["RoleARN"] = self.service_role
 
-        retry_on_throttling(self.cloudformation.delete_stack, kwargs=args)
+        self.cloudformation.delete_stack(**args)
         return True
 
-    def create_stack(self, fqn, template, parameters, tags, **kwargs):
+    def create_stack(self, fqn, template, parameters, tags,
+                     force_change_set=False, stack_policy=None,
+                     **kwargs):
         """Create a new Cloudformation stack.
 
         Args:
@@ -609,6 +635,7 @@ class Provider(BaseProvider):
                 parameter list to be applied to the Cloudformation stack.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
+            force_change_set (bool): Whether or not to force change set use.
         """
 
         logger.debug("Attempting to create stack %s:.", fqn)
@@ -619,42 +646,56 @@ class Provider(BaseProvider):
         else:
             logger.debug("    no template url, uploading template "
                          "directly.")
-        args = generate_cloudformation_args(
-            fqn, parameters, tags, template,
-            service_role=self.service_role,
-        )
-
-        try:
-            retry_on_throttling(
-                self.cloudformation.create_stack,
-                kwargs=args
+        if force_change_set:
+            logger.debug("force_change_set set to True, creating stack with "
+                         "changeset.")
+            _changes, change_set_id = create_change_set(
+                self.cloudformation, fqn, template, parameters, tags,
+                'CREATE', service_role=self.service_role, **kwargs
             )
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Message'] == ('TemplateURL must reference '
-                                                  'a valid S3 object to which '
-                                                  'you have access.'):
-                s3_fallback(fqn, template, parameters, tags,
-                            self.cloudformation.create_stack,
-                            self.service_role)
-            else:
-                raise
 
-    def select_update_method(self, force_interactive):
+            self.cloudformation.execute_change_set(
+                ChangeSetName=change_set_id,
+            )
+        else:
+            args = generate_cloudformation_args(
+                fqn, parameters, tags, template,
+                service_role=self.service_role,
+                stack_policy=stack_policy,
+            )
+
+            try:
+                self.cloudformation.create_stack(**args)
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error']['Message'] == ('TemplateURL must '
+                                                      'reference a valid S3 '
+                                                      'object to which you '
+                                                      'have access.'):
+                    s3_fallback(fqn, template, parameters, tags,
+                                self.cloudformation.create_stack,
+                                self.service_role)
+                else:
+                    raise
+
+    def select_update_method(self, force_interactive, force_change_set):
         """Select the correct update method when updating a stack.
 
         Args:
             force_interactive (str): Whether or not to force interactive mode
                 no matter what mode the provider is in.
+            force_change_set (bool): Whether or not to force change set use.
 
         Returns:
             function: The correct object method to use when updating.
         """
         if self.interactive or force_interactive:
             return self.interactive_update_stack
+        elif force_change_set:
+            return self.noninteractive_changeset_update
         else:
             return self.default_update_stack
 
-    def prepare_stack_for_update(self, fqn, tags):
+    def prepare_stack_for_update(self, stack, tags):
         """Prepare a stack for updating
 
         It may involve deleting the stack if is has failed it's initial
@@ -665,7 +706,7 @@ class Provider(BaseProvider):
             enabled by the user, or because interactive mode is on.
 
         Args:
-            fqn (str): fully-qualified name of the stack to work on
+            stack (dict): a stack object returned from get_stack
             tags (list): list of expected tags that must be present in the
                 stack if it must be re-created
 
@@ -673,8 +714,6 @@ class Provider(BaseProvider):
             bool: True if the stack can be updated, False if it must be
                 re-created
         """
-
-        stack = self.get_stack(fqn)
 
         if self.is_stack_destroyed(stack):
             return False
@@ -724,7 +763,8 @@ class Provider(BaseProvider):
         return False
 
     def update_stack(self, fqn, template, old_parameters, parameters, tags,
-                     force_interactive=False, **kwargs):
+                     force_interactive=False, force_change_set=False,
+                     stack_policy=None, **kwargs):
         """Update a Cloudformation stack.
 
         Args:
@@ -741,6 +781,8 @@ class Provider(BaseProvider):
                 should be interactive. If set to True, interactive mode will
                 be used no matter if the provider is in interactive mode or
                 not. False will follow the behavior of the provider.
+            force_change_set (bool): A flag that indicates whether the update
+                must be executed with a change set.
         """
         logger.debug("Attempting to update stack %s:", fqn)
         logger.debug("    parameters: %s", parameters)
@@ -749,13 +791,15 @@ class Provider(BaseProvider):
             logger.debug("    template_url: %s", template.url)
         else:
             logger.debug("    no template url, uploading template directly.")
-        update_method = self.select_update_method(force_interactive)
+        update_method = self.select_update_method(force_interactive,
+                                                  force_change_set)
 
         return update_method(fqn, template, old_parameters, parameters, tags,
-                             **kwargs)
+                             stack_policy=stack_policy, **kwargs)
 
     def interactive_update_stack(self, fqn, template, old_parameters,
-                                 parameters, tags, **kwargs):
+                                 parameters, tags, stack_policy=None,
+                                 **kwargs):
         """Update a Cloudformation stack in interactive mode.
 
         Args:
@@ -772,7 +816,7 @@ class Provider(BaseProvider):
         logger.debug("Using interactive provider mode for %s.", fqn)
         changes, change_set_id = create_change_set(
             self.cloudformation, fqn, template, parameters, tags,
-            service_role=self.service_role, **kwargs
+            'UPDATE', service_role=self.service_role, **kwargs
         )
         params_diff = diff_parameters(
             self.params_as_dict(old_parameters),
@@ -784,23 +828,60 @@ class Provider(BaseProvider):
             changes = requires_replacement(changes)
 
         if changes or params_diff:
-            output_summary(fqn, action, changes, params_diff,
-                           replacements_only=self.replacements_only)
-            ask_for_approval(
-                full_changeset=full_changeset,
-                params_diff=params_diff,
-                include_verbose=True,
-            )
+            ui.lock()
+            try:
+                output_summary(fqn, action, changes, params_diff,
+                               replacements_only=self.replacements_only)
+                ask_for_approval(
+                    full_changeset=full_changeset,
+                    params_diff=params_diff,
+                    include_verbose=True,
+                )
+            finally:
+                ui.unlock()
 
-        retry_on_throttling(
-            self.cloudformation.execute_change_set,
-            kwargs={
-                'ChangeSetName': change_set_id,
-            },
+        # ChangeSets don't support specifying a stack policy inline, like
+        # CreateStack/UpdateStack, so we just SetStackPolicy if there is one.
+        if stack_policy:
+            kwargs = generate_stack_policy_args(stack_policy)
+            kwargs["StackName"] = fqn
+            self.cloudformation.set_stack_policy(**kwargs)
+
+        self.cloudformation.execute_change_set(
+            ChangeSetName=change_set_id,
+        )
+
+    def noninteractive_changeset_update(self, fqn, template, old_parameters,
+                                        parameters, tags, **kwargs):
+        """Update a Cloudformation stack using a change set.
+
+        This is required for stacks with a defined Transform (i.e. SAM), as the
+        default update_stack API cannot be used with them.
+
+        Args:
+            fqn (str): The fully qualified name of the Cloudformation stack.
+            template (:class:`stacker.providers.base.Template`): A Template
+                object to use when updating the stack.
+            old_parameters (list): A list of dictionaries that defines the
+                parameter list on the existing Cloudformation stack.
+            parameters (list): A list of dictionaries that defines the
+                parameter list to be applied to the Cloudformation stack.
+            tags (list): A list of dictionaries that defines the tags
+                that should be applied to the Cloudformation stack.
+        """
+        logger.debug("Using noninterative changeset provider mode "
+                     "for %s.", fqn)
+        _changes, change_set_id = create_change_set(
+            self.cloudformation, fqn, template, parameters, tags,
+            'UPDATE', service_role=self.service_role, **kwargs
+        )
+
+        self.cloudformation.execute_change_set(
+            ChangeSetName=change_set_id,
         )
 
     def default_update_stack(self, fqn, template, old_parameters, parameters,
-                             tags, **kwargs):
+                             tags, stack_policy=None, **kwargs):
         """Update a Cloudformation stack in default mode.
 
         Args:
@@ -819,13 +900,11 @@ class Provider(BaseProvider):
         args = generate_cloudformation_args(
             fqn, parameters, tags, template,
             service_role=self.service_role,
+            stack_policy=stack_policy,
         )
 
         try:
-            retry_on_throttling(
-                self.cloudformation.update_stack,
-                kwargs=args
-            )
+            self.cloudformation.update_stack(**args)
         except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in e.message:
                 logger.debug(
@@ -855,17 +934,19 @@ class Provider(BaseProvider):
             self._outputs[stack_name] = get_output_dict(stack)
         return self._outputs[stack_name]
 
-    def get_stack_info(self, stack_name):
+    def get_output_dict(self, stack):
+        return get_output_dict(stack)
+
+    def get_stack_info(self, stack):
         """ Get the template and parameters of the stack currently in AWS
 
         Returns [ template, parameters ]
         """
-        stack = self.get_stack(stack_name)
+        stack_name = stack['StackId']
 
         try:
-            template = retry_on_throttling(
-                self.cloudformation.get_template,
-                kwargs=dict(StackName=stack_name))['TemplateBody']
+            template = self.cloudformation.get_template(
+                StackName=stack_name)['TemplateBody']
         except botocore.exceptions.ClientError as e:
             if "does not exist" not in e.message:
                 raise

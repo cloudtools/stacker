@@ -16,10 +16,14 @@ from stacker.util import (
     handle_hooks,
     merge_map,
     yaml_to_ordered_dict,
-    retry_with_backoff,
     get_client_region,
     get_s3_endpoint,
     s3_bucket_location_constraint,
+    parse_cloudformation_template,
+    Extractor,
+    TarExtractor,
+    TarGzipExtractor,
+    ZipExtractor,
     SourceProcessor
 )
 
@@ -121,9 +125,9 @@ class TestUtil(unittest.TestCase):
     def test_get_s3_endpoint(self):
         endpoint_map = {
             "us-east-1": "https://s3.amazonaws.com",
-            "us-west-1": "https://s3-us-west-1.amazonaws.com",
-            "eu-west-1": "https://s3-eu-west-1.amazonaws.com",
-            "sa-east-1": "https://s3-sa-east-1.amazonaws.com",
+            "us-west-1": "https://s3.us-west-1.amazonaws.com",
+            "eu-west-1": "https://s3.eu-west-1.amazonaws.com",
+            "sa-east-1": "https://s3.sa-east-1.amazonaws.com",
         }
 
         for region in endpoint_map:
@@ -141,6 +145,54 @@ class TestUtil(unittest.TestCase):
                 result
             )
 
+    def test_parse_cloudformation_template(self):
+        template = """AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  Param1:
+    Type: String
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        !Join
+          - "-"
+          - - !Ref "AWS::StackName"
+            - !Ref "AWS::Region"
+Outputs:
+  DummyId:
+    Value: dummy-1234"""
+        parsed_template = {
+            'AWSTemplateFormatVersion': '2010-09-09',
+            'Outputs': {'DummyId': {'Value': 'dummy-1234'}},
+            'Parameters': {'Param1': {'Type': 'String'}},
+            'Resources': {
+                'Bucket': {'Type': 'AWS::S3::Bucket',
+                           'Properties': {
+                               'BucketName': {
+                                   u'Fn::Join': [
+                                       '-',
+                                       [{u'Ref': u'AWS::StackName'},
+                                        {u'Ref': u'AWS::Region'}]
+                                   ]
+                               }
+                           }}
+            }
+        }
+        self.assertEqual(
+            parse_cloudformation_template(template),
+            parsed_template
+        )
+
+    def test_extractors(self):
+        self.assertEqual(Extractor('test.zip').archive, 'test.zip')
+        self.assertEqual(TarExtractor().extension(), '.tar')
+        self.assertEqual(TarGzipExtractor().extension(), '.tar.gz')
+        self.assertEqual(ZipExtractor().extension(), '.zip')
+        for i in [TarExtractor(), ZipExtractor(), ZipExtractor()]:
+            i.set_archive('/tmp/foo')
+            self.assertEqual(i.archive.endswith(i.extension()), True)
+
     def test_SourceProcessor_helpers(self):
         with mock.patch.object(SourceProcessor,
                                'create_cache_directories',
@@ -150,6 +202,10 @@ class TestUtil(unittest.TestCase):
             self.assertEqual(
                 sp.sanitize_git_path('git@github.com:foo/bar.git'),
                 'git_github.com_foo_bar'
+            )
+            self.assertEqual(
+                sp.sanitize_uri_path('http://example.com/foo/bar.gz@1'),
+                'http___example.com_foo_bar.gz_1'
             )
             self.assertEqual(
                 sp.sanitize_git_path('git@github.com:foo/bar.git', 'v1'),
@@ -374,88 +430,3 @@ class TestExceptionRetries(unittest.TestCase):
     def _throws_exception2(self, a, b, x=None, y=None):
         self.counter += 1
         raise TestException2("Broke.")
-
-    def test_function_works_no_retry(self):
-
-        r = retry_with_backoff(self._works_immediately,
-                               attempts=2, min_delay=0, max_delay=.1,
-                               args=["a", "b"],
-                               kwargs={"x": "X", "y": "Y"})
-        self.assertEqual(r, ["a", "b", "X", "Y"])
-        self.assertEqual(self.counter, 1)
-
-    def test_retry_exception(self):
-
-        r = retry_with_backoff(self._works_second_attempt,
-                               attempts=5, min_delay=0, max_delay=.1,
-                               args=["a", "b"],
-                               kwargs={"x": "X", "y": "Y"})
-        self.assertEqual(r, ["a", "b", "X", "Y"])
-        self.assertEqual(self.counter, 2)
-
-    def test_multiple_exceptions(self):
-
-        r = retry_with_backoff(self._second_raises_exception2,
-                               exc_list=(TestException1, TestException2),
-                               attempts=5, min_delay=0, max_delay=.1,
-                               args=["a", "b"],
-                               kwargs={"x": "X", "y": "Y"})
-        self.assertEqual(r, ["a", "b", "X", "Y"])
-        self.assertEqual(self.counter, 2)
-
-    def test_unhandled_exception(self):
-
-        with self.assertRaises(TestException2):
-            retry_with_backoff(self._throws_exception2,
-                               exc_list=(TestException1),
-                               attempts=5, min_delay=0, max_delay=.1,
-                               args=["a", "b"],
-                               kwargs={"x": "X", "y": "Y"})
-        self.assertEqual(self.counter, 1)
-
-    def test_never_recovers(self):
-
-        with self.assertRaises(TestException2):
-            retry_with_backoff(self._throws_exception2,
-                               exc_list=(TestException1, TestException2),
-                               attempts=5, min_delay=0, max_delay=.1,
-                               args=["a", "b"],
-                               kwargs={"x": "X", "y": "Y"})
-        self.assertEqual(self.counter, 5)
-
-    def test_retry_checker(self):
-        def _throws_handled_exception(a, b, x=None, y=None):
-            self.counter += 1
-            if self.counter == 2:
-                return [a, b, x, y]
-            raise TestException2("Broke.")
-
-        def _throws_unhandled_exception(a, b, x=None, y=None):
-            self.counter += 1
-            if self.counter == 2:
-                return [a, b, x, y]
-            raise TestException2("Invalid")
-
-        def _check_for_broke_message(e):
-            if "Broke." in e.message:
-                return True
-            return False
-
-        r = retry_with_backoff(_throws_handled_exception,
-                               exc_list=(TestException2),
-                               retry_checker=_check_for_broke_message,
-                               attempts=5, min_delay=0, max_delay=.1,
-                               args=["a", "b"],
-                               kwargs={"x": "X", "y": "Y"})
-        self.assertEqual(self.counter, 2)
-        self.assertEqual(r, ["a", "b", "X", "Y"])
-
-        self.counter = 0
-        with self.assertRaises(TestException2):
-            retry_with_backoff(_throws_unhandled_exception,
-                               exc_list=(TestException2),
-                               retry_checker=_check_for_broke_message,
-                               attempts=5, min_delay=0, max_delay=.1,
-                               args=["a", "b"],
-                               kwargs={"x": "X", "y": "Y"})
-        self.assertEqual(self.counter, 1)

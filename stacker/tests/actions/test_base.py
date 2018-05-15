@@ -9,8 +9,10 @@ from stacker.actions.base import (
 
 from stacker.providers.aws.default import Provider
 from stacker.blueprints.base import Blueprint
+from stacker.session_cache import get_session
 
 from stacker.tests.factories import (
+    MockProviderBuilder,
     mock_context,
 )
 
@@ -29,10 +31,11 @@ class TestBlueprint(Blueprint):
 
 class TestBaseAction(unittest.TestCase):
     def test_ensure_cfn_bucket_exists(self):
-        provider = Provider("us-east-1")
+        session = get_session("us-east-1")
+        provider = Provider(session)
         action = BaseAction(
             context=mock_context("mynamespace"),
-            provider=provider
+            provider_builder=MockProviderBuilder(provider)
         )
         stubber = Stubber(action.s3_conn)
         stubber.add_response(
@@ -46,10 +49,11 @@ class TestBaseAction(unittest.TestCase):
             action.ensure_cfn_bucket()
 
     def test_ensure_cfn_bucket_doesnt_exist_us_east(self):
-        provider = Provider("us-east-1")
+        session = get_session("us-east-1")
+        provider = Provider(session)
         action = BaseAction(
             context=mock_context("mynamespace"),
-            provider=provider
+            provider_builder=MockProviderBuilder(provider)
         )
         stubber = Stubber(action.s3_conn)
         stubber.add_client_error(
@@ -69,10 +73,11 @@ class TestBaseAction(unittest.TestCase):
             action.ensure_cfn_bucket()
 
     def test_ensure_cfn_bucket_doesnt_exist_us_west(self):
-        provider = Provider("us-west-1")
+        session = get_session("us-west-1")
+        provider = Provider(session)
         action = BaseAction(
             context=mock_context("mynamespace"),
-            provider=provider
+            provider_builder=MockProviderBuilder(provider, region="us-west-1")
         )
         stubber = Stubber(action.s3_conn)
         stubber.add_client_error(
@@ -95,10 +100,11 @@ class TestBaseAction(unittest.TestCase):
             action.ensure_cfn_bucket()
 
     def test_ensure_cfn_forbidden(self):
-        provider = Provider("us-west-1")
+        session = get_session("us-west-1")
+        provider = Provider(session)
         action = BaseAction(
             context=mock_context("mynamespace"),
-            provider=provider
+            provider_builder=MockProviderBuilder(provider)
         )
         stubber = Stubber(action.s3_conn)
         stubber.add_client_error(
@@ -114,18 +120,19 @@ class TestBaseAction(unittest.TestCase):
     def test_stack_template_url(self):
         test_cases = (
             ("us-east-1", "s3.amazonaws.com"),
-            ("us-west-1", "s3-us-west-1.amazonaws.com"),
-            ("eu-west-1", "s3-eu-west-1.amazonaws.com"),
-            ("sa-east-1", "s3-sa-east-1.amazonaws.com"),
+            ("us-west-1", "s3.us-west-1.amazonaws.com"),
+            ("eu-west-1", "s3.eu-west-1.amazonaws.com"),
+            ("sa-east-1", "s3.sa-east-1.amazonaws.com"),
         )
         context = mock_context("mynamespace")
         blueprint = TestBlueprint(name="myblueprint", context=context)
 
         for region, endpoint in test_cases:
-            provider = Provider(region)
+            session = get_session(region)
+            provider = Provider(session)
             action = BaseAction(
                 context=context,
-                provider=provider
+                provider_builder=MockProviderBuilder(provider, region=region)
             )
             self.assertEqual(
                 action.stack_template_url(blueprint),

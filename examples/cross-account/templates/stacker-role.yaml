@@ -1,0 +1,73 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A role that stacker can assume
+Parameters:
+  MasterAccountId:
+    Type: String
+    Description: The 12-digit ID for the master account
+    MinLength: 12
+    MaxLength: 12
+    AllowedPattern: "[0-9]+"
+    ConstraintDescription: Must contain a 12 digit account ID
+  RoleName:
+    Type: String
+    Description: The name of the stacker role.
+    Default: Stacker
+
+
+Conditions:
+  # Check if we're creating this role in the master account.
+  InMasterAccount:
+    Fn::Equals:
+      - { Ref: "AWS::AccountId" }
+      - { Ref: "MasterAccountId" }
+
+Resources:
+  StackerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Ref: RoleName
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          Fn::If:
+            - InMasterAccount
+            - Effect: Allow
+              Principal:
+                AWS:
+                  Fn::Sub: "arn:aws:iam::${MasterAccountId}:root"
+              Action: sts:AssumeRole
+              Condition:
+                'Null':
+                  aws:MultiFactorAuthAge: false
+            - Effect: Allow
+              Principal:
+                AWS:
+                  Fn::Sub: "arn:aws:iam::${MasterAccountId}:role/${RoleName}"
+              Action: sts:AssumeRole
+              Condition:
+                'Null':
+                  aws:MultiFactorAuthAge: false
+
+  # Generally, Stacker will need fairly wide open permissions, since it will be
+  # managing all resources in an account.
+  StackerPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: Stacker
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: ["*"]
+            Resource: "*"
+      Roles:
+        - Ref: StackerRole
+
+Outputs:
+  StackerRole:
+    Value:
+      Fn::GetAtt:
+        - StackerRole
+        - Arn

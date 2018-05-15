@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_NAMESPACE_DELIMITER = "-"
+DEFAULT_TEMPLATE_INDENT = 4
 
 
 def get_fqn(base_fqn, delimiter, name=None):
@@ -44,11 +45,9 @@ class Context(object):
     def __init__(self, environment=None,
                  stack_names=None,
                  config=None,
-                 logger_type=None,
                  force_stacks=None):
         self.environment = environment
         self.stack_names = stack_names or []
-        self.logger_type = logger_type
         self.config = config or Config()
         self.force_stacks = force_stacks or []
         self.hook_data = {}
@@ -63,6 +62,13 @@ class Context(object):
         if delimiter is not None:
             return delimiter
         return DEFAULT_NAMESPACE_DELIMITER
+
+    @property
+    def template_indent(self):
+        indent = self.config.template_indent
+        if indent is not None:
+            return int(indent)
+        return DEFAULT_TEMPLATE_INDENT
 
     @property
     def bucket_name(self):
@@ -111,10 +117,7 @@ class Context(object):
         return self.config.mappings or {}
 
     def _get_stack_definitions(self):
-        if not self.stack_names:
-            return self.config.stacks
-        return [s for s in self.config.stacks if s.name in
-                self.stack_names]
+        return self.config.stacks
 
     def get_stacks(self):
         """Get the stacks for the current action.
@@ -126,20 +129,27 @@ class Context(object):
             list: a list of :class:`stacker.stack.Stack` objects
 
         """
-        stacks = []
-        definitions = self._get_stack_definitions()
-        for stack_def in definitions:
-            stack = Stack(
-                definition=stack_def,
-                context=self,
-                mappings=self.mappings,
-                force=stack_def.name in self.force_stacks,
-                locked=stack_def.locked,
-                enabled=stack_def.enabled,
-                protected=stack_def.protected,
-            )
-            stacks.append(stack)
-        return stacks
+        if not hasattr(self, "_stacks"):
+            stacks = []
+            definitions = self._get_stack_definitions()
+            for stack_def in definitions:
+                stack = Stack(
+                    definition=stack_def,
+                    context=self,
+                    mappings=self.mappings,
+                    force=stack_def.name in self.force_stacks,
+                    locked=stack_def.locked,
+                    enabled=stack_def.enabled,
+                    protected=stack_def.protected,
+                )
+                stacks.append(stack)
+            self._stacks = stacks
+        return self._stacks
+
+    def get_stack(self, name):
+        for stack in self.get_stacks():
+            if stack.name == name:
+                return stack
 
     def get_stacks_dict(self):
         return dict((stack.fqn, stack) for stack in self.get_stacks())

@@ -10,6 +10,7 @@ from .lookups.handlers.output import (
     deconstruct,
 )
 
+from .blueprints.raw import RawTemplateBlueprint
 from .exceptions import FailedVariableLookup
 
 
@@ -61,7 +62,9 @@ class Stack(object):
     def __init__(self, definition, context, variables=None, mappings=None,
                  locked=False, force=False, enabled=True, protected=False):
         self.name = definition.name
-        self.fqn = context.get_fqn(self.name)
+        self.fqn = context.get_fqn(definition.stack_name or self.name)
+        self.region = definition.region
+        self.profile = definition.profile
         self.definition = definition
         self.variables = _gather_variables(definition)
         self.mappings = mappings
@@ -70,14 +73,14 @@ class Stack(object):
         self.enabled = enabled
         self.protected = protected
         self.context = copy.deepcopy(context)
+        self.outputs = None
 
     def __repr__(self):
         return self.fqn
 
     @property
     def requires(self):
-        requires = set([self.context.get_fqn(r) for r in
-                        self.definition.requires or []])
+        requires = set(self.definition.requires or [])
 
         # Add any dependencies based on output lookups
         for variable in self.variables:
@@ -95,25 +98,45 @@ class Stack(object):
                             "within lookup: %s"
                         ) % (variable.name, self.name, lookup.raw)
                         raise ValueError(message)
-                    stack_fqn = self.context.get_fqn(d.stack_name)
-                    requires.add(stack_fqn)
+                    requires.add(d.stack_name)
 
         return requires
 
     @property
+    def stack_policy(self):
+        if not hasattr(self, "_stack_policy"):
+            self._stack_policy = None
+            if self.definition.stack_policy_path:
+                with open(self.definition.stack_policy_path) as f:
+                    self._stack_policy = f.read()
+
+        return self._stack_policy
+
+    @property
     def blueprint(self):
         if not hasattr(self, "_blueprint"):
-            class_path = self.definition.class_path
-            blueprint_class = util.load_object_from_string(class_path)
-            if not hasattr(blueprint_class, "rendered"):
-                raise AttributeError("Stack class %s does not have a "
-                                     "\"rendered\" "
-                                     "attribute." % (class_path,))
+            kwargs = {}
+            blueprint_class = None
+            if self.definition.class_path:
+                class_path = self.definition.class_path
+                blueprint_class = util.load_object_from_string(class_path)
+                if not hasattr(blueprint_class, "rendered"):
+                    raise AttributeError("Stack class %s does not have a "
+                                         "\"rendered\" "
+                                         "attribute." % (class_path,))
+            elif self.definition.template_path:
+                blueprint_class = RawTemplateBlueprint
+                kwargs["raw_template_path"] = self.definition.template_path
+            else:
+                raise AttributeError("Stack does not have a defined class or "
+                                     "template path.")
+
             self._blueprint = blueprint_class(
                 name=self.name,
                 context=self.context,
                 mappings=self.mappings,
                 description=self.definition.description,
+                **kwargs
             )
         return self._blueprint
 
@@ -162,3 +185,6 @@ class Stack(object):
         """
         resolve_variables(self.variables, context, provider)
         self.blueprint.resolve_variables(self.variables)
+
+    def set_outputs(self, outputs):
+        self.outputs = outputs

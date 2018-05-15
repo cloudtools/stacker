@@ -117,7 +117,7 @@ See the AWS documentation for `AWS CloudFormation Service Roles`_.
 
 Remote Packages
 ---------------
-The **package_sources** top level keyword can be used to define remote git
+The **package_sources** top level keyword can be used to define remote
 sources for blueprints (e.g., retrieving ``stacker_blueprints`` on github at
 tag ``v1.0.2``).
 
@@ -136,13 +136,30 @@ The only required key for a git repository config is ``uri``, but ``branch``,
         - uri: git@github.com:contoso/foo.git
           commit: 12345678
 
-Use the ``paths`` option when subdirectories of the repo should be added to
-Stacker's ``sys.path``.
-
 If no specific commit or tag is specified for a repo, the remote repository
 will be checked for newer commits on every execution of Stacker.
 
-Cloned repositories will be cached between builds; the cache location defaults
+For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
+
+    package_sources:
+      s3:
+        - bucket: mystackers3bucket
+          key: archives/blueprints-v1.zip
+          paths:
+            - stacker_blueprints
+        - bucket: anothers3bucket
+          key: public/public-blueprints-v2.tar.gz
+          requester_pays: true
+        - bucket: yetanothers3bucket
+          key: sallys-blueprints-v1.tar.gz
+          # use_latest defaults to true - will update local copy if the
+          # last modified date on S3 changes
+          use_latest: false
+
+Use the ``paths`` option when subdirectories of the repo/archive should be
+added to Stacker's ``sys.path``.
+
+Cloned repos/archives will be cached between builds; the cache location defaults
 to ~/.stacker but can be manually specified via the **stacker_cache_dir** top
 level keyword.
 
@@ -295,10 +312,16 @@ stack to be built.
 A stack has the following keys:
 
 **name:**
-  The base name for the stack (note: the namespace from the environment
-  will be prepended to this)
+  The logical name for this stack, which can be used in conjuction with the
+  ``output`` lookup. The value here must be unique within the config. If no
+  ``stack_name`` is provided, the value here will be used for the name of the
+  CloudFormation stack.
 **class_path:**
-  The python class path to the Blueprint to be used.
+  The python class path to the Blueprint to be used. Specify this or
+  ``template_path`` for the stack.
+**template_path:**
+  Path to raw CloudFormation template (JSON or YAML). Specify this or
+  ``class_path`` for the stack.
 **description:**
   A short description to apply to the stack. This overwrites any description
   provided in the Blueprint. See: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
@@ -311,7 +334,8 @@ A stack has the following keys:
   updated unless the stack is passed to stacker via the *--force* flag.
   This is useful for *risky* stacks that you don't want to take the
   risk of allowing CloudFormation to update, but still want to make
-  sure get launched when the environment is first created.
+  sure get launched when the environment is first created. When ``locked``,
+  it's not necessary to specify a ``class_path`` or ``template_path``.
 **enabled:**
   (optional) If set to false, the stack is disabled, and will not be
   built or updated. This can allow you to disable stacks in different
@@ -327,6 +351,30 @@ A stack has the following keys:
 **tags:**
   (optional) a dictionary of CloudFormation tags to apply to this stack. This
   will be combined with the global tags, but these tags will take precendence.
+**stack_name:**
+  (optional) If provided, this will be used as the name of the CloudFormation
+  stack. Unlike ``name``, the value doesn't need to be unique within the config,
+  since you could have multiple stacks with the same name, but in different
+  regions or accounts. (note: the namespace from the environment will be
+  prepended to this)
+**region**:
+  (optional): If provided, specifies the name of the region that the
+  CloudFormation stack should reside in. If not provided, the default region
+  will be used (``AWS_DEFAULT_REGION``, ``~/.aws/config`` or the ``--region``
+  flag). If both ``region`` and ``profile`` are specified, the value here takes
+  precedence over the value in the profile.
+**profile**:
+  (optional): If provided, specifies the name of a AWS profile to use when
+  performing AWS API calls for this stack. This can be used to provision stacks
+  in multiple accounts or regions.
+**stack_policy_path**:
+  (optional): If provided, specifies the path to a JSON formatted stack policy
+  that will be applied when the CloudFormation stack is created and updated.
+  You can use stack policies to prevent CloudFormation from making updates to
+  protected resources (e.g. databases). See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html
+
+Stacks Example
+~~~~~~~~~~~~~~
 
 Here's an example from stacker_blueprints_, used to create a VPC::
 
@@ -377,7 +425,7 @@ them taking it as a Variable. Rather than having to enter the domain into
 each stack (and hopefully not typo'ing any of them) you could do the
 following::
 
-  domain_name: mydomain.com &domain
+  domain_name: &domain mydomain.com
 
 Now you have an anchor called **domain** that you can use in place of any value
 in the config to provide the value **mydomain.com**. You use the anchor with
@@ -448,6 +496,48 @@ Note: Doing this creates an implicit dependency from the *webservers* stack
 to the *vpc* stack, which will cause stacker to submit the *vpc* stack, and
 then wait until it is complete until it submits the *webservers* stack.
 
+Multi Account/Region Provisioning
+---------------------------------
+
+You can use stacker to manage CloudFormation stacks in multiple accounts and
+regions, and reference outputs across them.
+
+As an example, let's say you had 3 accounts you wanted to manage:
+
+#) OpsAccount: An AWS account that has IAM users for employees.
+#) ProdAccount: An AWS account for a "production" environment.
+#) StageAccount: An AWS account for a "staging" environment.
+
+You want employees with IAM user accounts in OpsAccount to be able to assume
+roles in both the ProdAccount and StageAccount. You can use stacker to easily
+manage this::
+
+
+  stacks:
+    # Create some stacks in both the "prod" and "stage" accounts with IAM roles
+    # that employees can use.
+    - name: prod/roles
+      profile: prod
+      class_path: blueprints.Roles
+    - name: stage/roles
+      profile: stage
+      class_path: blueprints.Roles
+
+    # Create a stack in the "ops" account and grant each employee access to
+    # assume the roles we created above.
+    - name: users
+      profile: ops
+      class_path: blueprints.IAMUsers
+      variables:
+        Users:
+          john-smith:
+            Roles:
+              - ${output prod/roles::EmployeeRoleARN}
+              - ${output stage/roles::EmployeeRoleARN}
+
+
+Note how I was able to reference outputs from stacks in multiple accounts using the `output` plugin!
+
 Environments
 ============
 
@@ -477,3 +567,4 @@ submitting it to CloudFormation. For more information, see the
 .. _Mappings: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 .. _Outputs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
 .. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
+.. _`AWS profiles`: https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html

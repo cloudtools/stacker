@@ -24,12 +24,12 @@ class BlueprintTestCase(unittest.TestCase):
         rendered_dict = blueprint.template.to_dict()
         rendered_text = json.dumps(rendered_dict, indent=4, sort_keys=True)
 
+        with open(expected_output + "-result", "w") as fd:
+            fd.write(rendered_text)
+
         with open(expected_output) as fd:
             expected_dict = json.loads(fd.read())
             expected_text = json.dumps(expected_dict, indent=4, sort_keys=True)
-
-        with open(expected_output + "-result", "w") as fd:
-            fd.write(rendered_text)
 
         self.assertEquals(rendered_dict, expected_dict,
                           diff(rendered_text, expected_text))

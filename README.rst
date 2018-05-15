@@ -69,3 +69,4 @@ want to avoid setting up a python environment::
 .. _troposphere: https://github.com/cloudtools/troposphere
 .. _string.Template: https://docs.python.org/2/library/string.html#template-strings
 .. _readthedocs: http://stacker.readthedocs.io/en/latest/
+

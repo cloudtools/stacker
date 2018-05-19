@@ -1,12 +1,15 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from past.builtins import basestring
 import os
 import os.path
 import stat
 import logging
 import hashlib
-from StringIO import StringIO
+from io import StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 import botocore
 from functools import partial
@@ -498,7 +501,7 @@ def upload_lambda_functions(context, provider, **kwargs):
     prefix = kwargs.get('prefix', '')
 
     results = {}
-    for name, options in kwargs['functions'].items():
+    for name, options in list(kwargs['functions'].items()):
         results[name] = _upload_function(s3_client, bucket_name, prefix, name,
                                          options, follow_symlinks)
 

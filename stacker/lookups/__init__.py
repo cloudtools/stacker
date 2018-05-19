@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from past.builtins import basestring
 from collections import namedtuple
 import re
 
@@ -63,6 +64,6 @@ def extract_lookups(value):
         for v in value:
             lookups = lookups.union(extract_lookups(v))
     elif isinstance(value, dict):
-        for v in value.values():
+        for v in list(value.values()):
             lookups = lookups.union(extract_lookups(v))
     return lookups

@@ -1,11 +1,13 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 import unittest
 
 import string
 import os
-import Queue
+import queue
 
 import mock
 
@@ -116,7 +118,7 @@ class TestUtil(unittest.TestCase):
             path: foo1.bar1
         """
         config = yaml_to_ordered_dict(raw_config)
-        self.assertEqual(config['pre_build'].keys()[0], 'hook2')
+        self.assertEqual(list(config['pre_build'].keys())[0], 'hook2')
         self.assertEqual(config['pre_build']['hook2']['path'], 'foo.bar')
 
     def test_get_client_region(self):
@@ -277,7 +279,7 @@ Outputs:
             )
 
 
-hook_queue = Queue.Queue()
+hook_queue = queue.Queue()
 
 
 def mock_hook(*args, **kwargs):
@@ -339,7 +341,7 @@ class TestHooks(unittest.TestCase):
         handle_hooks("missing", hooks, self.provider, self.context)
         good = hook_queue.get_nowait()
         self.assertEqual(good["provider"].region, "us-east-1")
-        with self.assertRaises(Queue.Empty):
+        with self.assertRaises(queue.Empty):
             hook_queue.get_nowait()
 
     def test_context_provided_to_hook(self):
@@ -383,7 +385,7 @@ class TestHooks(unittest.TestCase):
         )
         # Verify only the first hook resulted in stored data
         self.assertEqual(
-            self.context.hook_data.keys(), ["my_hook_results"]
+            list(self.context.hook_data.keys()), ["my_hook_results"]
         )
 
     def test_return_data_hook_duplicate_key(self):

@@ -1,6 +1,9 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import copy
 import hashlib
 import logging
@@ -104,7 +107,7 @@ def build_parameter(name, properties):
         :class:`troposphere.Parameter`: The created parameter object.
     """
     p = Parameter(name, Type=properties.get("type"))
-    for name, attr in PARAMETER_PROPERTIES.items():
+    for name, attr in list(PARAMETER_PROPERTIES.items()):
         if name in properties:
             setattr(p, attr, properties[name])
     return p
@@ -263,7 +266,7 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
     """
     variable_values = {}
 
-    for key in variables.keys():
+    for key in list(variables.keys()):
         if type(variables[key]) is CFNParameter:
             variable_values[key] = variables[key].to_parameter_value()
         else:
@@ -324,7 +327,7 @@ class Blueprint(object):
 
         """
         required = {}
-        for name, attrs in self.template.parameters.iteritems():
+        for name, attrs in self.template.parameters.items():
             if not hasattr(attrs, "Default"):
                 required[name] = attrs
         return required
@@ -342,7 +345,7 @@ class Blueprint(object):
 
         """
         output = {}
-        for var_name, attrs in self.defined_variables().iteritems():
+        for var_name, attrs in self.defined_variables().items():
             var_type = attrs.get("type")
             if isinstance(var_type, CFNType):
                 cfn_attrs = copy.deepcopy(attrs)
@@ -361,7 +364,7 @@ class Blueprint(object):
         """
         variables = self.get_variables()
         output = {}
-        for key, value in variables.iteritems():
+        for key, value in variables.items():
             try:
                 output[key] = value.to_parameter_value()
             except AttributeError:
@@ -378,7 +381,7 @@ class Blueprint(object):
             logger.debug("No parameters defined.")
             return
 
-        for name, attrs in parameters.items():
+        for name, attrs in list(parameters.items()):
             p = build_parameter(name, attrs)
             t.add_parameter(p)
 
@@ -421,7 +424,7 @@ class Blueprint(object):
         """
         variables = self.get_variables()
         output = {}
-        for key, value in variables.iteritems():
+        for key, value in variables.items():
             if hasattr(value, "to_parameter_value"):
                 output[key] = value.to_parameter_value()
         return output
@@ -440,7 +443,7 @@ class Blueprint(object):
         self.resolved_variables = {}
         defined_variables = self.defined_variables()
         variable_dict = dict((var.name, var) for var in provided_variables)
-        for var_name, var_def in defined_variables.iteritems():
+        for var_name, var_def in defined_variables.items():
             value = resolve_variable(
                 var_name,
                 var_def,
@@ -453,7 +456,7 @@ class Blueprint(object):
         if not self.mappings:
             return
 
-        for name, mapping in self.mappings.iteritems():
+        for name, mapping in self.mappings.items():
             logger.debug("Adding mapping %s.", name)
             self.template.add_mapping(name, mapping)
 
@@ -486,7 +489,7 @@ class Blueprint(object):
 
         variables_to_resolve = []
         if variables:
-            for key, value in variables.iteritems():
+            for key, value in variables.items():
                 variables_to_resolve.append(Variable(key, value))
         for k in self.get_parameter_definitions():
             if not variables or k not in variables:

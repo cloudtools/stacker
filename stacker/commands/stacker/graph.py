@@ -17,7 +17,7 @@ class Graph(BaseCommand):
     def add_arguments(self, parser):
         super(Graph, self).add_arguments(parser)
         parser.add_argument("-f", "--format", default="dot",
-                            choices=list(graph.FORMATTERS.iterkeys()),
+                            choices=list(graph.FORMATTERS.keys()),
                             help="The format to print the graph in.")
         parser.add_argument("--reduce", action="store_true",
                             help="When provided, this will create a "

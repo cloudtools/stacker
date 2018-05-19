@@ -1,6 +1,9 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import collections
 import logging
 from threading import Thread
@@ -66,7 +69,7 @@ class DAG(object):
             raise KeyError('node %s does not exist' % node_name)
         graph.pop(node_name)
 
-        for node, edges in graph.iteritems():
+        for node, edges in graph.items():
             if node_name in edges:
                 edges.remove(node_name)
 
@@ -139,9 +142,9 @@ class DAG(object):
         """
         graph = self.graph
         transposed = DAG()
-        for node, edges in graph.items():
+        for node, edges in list(graph.items()):
             transposed.add_node(node)
-        for node, edges in graph.items():
+        for node, edges in list(graph.items()):
             # for each edge A -> B, transpose it so that B -> A
             for edge in edges:
                 transposed.add_edge(edge, node)
@@ -173,9 +176,9 @@ class DAG(object):
         """
 
         graph = self.graph
-        for x in graph.keys():
-            for y in graph.keys():
-                for z in graph.keys():
+        for x in list(graph.keys()):
+            for y in list(graph.keys()):
+                for z in list(graph.keys()):
                     # Edge from x -> y
                     xy = y in graph[x]
                     # Edge from y -> x
@@ -196,7 +199,7 @@ class DAG(object):
             new_node_name (str): The new name for the node.
         """
         graph = self.graph
-        for node, edges in graph.items():
+        for node, edges in list(graph.items()):
             if node == old_node_name:
                 graph[new_node_name] = copy(edges)
                 del graph[old_node_name]
@@ -254,9 +257,8 @@ class DAG(object):
                     nodes_seen.add(downstream_node)
                     nodes.append(downstream_node)
             i += 1
-        return filter(
-                lambda node: node
-                in nodes_seen, self.topological_sort())
+        return [node for node in self.topological_sort() if node
+                in nodes_seen]
 
     def filter(self, nodes):
         """ Returns a new DAG with only the given nodes and their
@@ -278,7 +280,7 @@ class DAG(object):
                 filtered_dag.add_node_if_not_exists(edge)
 
         # Now, rebuild the graph for each node that's present.
-        for node, edges in self.graph.items():
+        for node, edges in list(self.graph.items()):
             if node in filtered_dag.graph:
                 filtered_dag.graph[node] = edges
 
@@ -306,9 +308,9 @@ class DAG(object):
         """
 
         self.reset_graph()
-        for new_node in graph_dict.iterkeys():
+        for new_node in graph_dict.keys():
             self.add_node(new_node)
-        for ind_node, dep_nodes in graph_dict.iteritems():
+        for ind_node, dep_nodes in graph_dict.items():
             if not isinstance(dep_nodes, collections.Iterable):
                 raise TypeError('%s: dict values must be lists' % ind_node)
             for dep_node in dep_nodes:
@@ -328,8 +330,8 @@ class DAG(object):
 
         dependent_nodes = set(
             node for dependents
-            in graph.itervalues() for node in dependents)
-        return [node for node in graph.keys() if node not in dependent_nodes]
+            in graph.values() for node in dependents)
+        return [node for node in list(graph.keys()) if node not in dependent_nodes]
 
     def validate(self):
         """ Returns (Boolean, message) of whether DAG is valid. """

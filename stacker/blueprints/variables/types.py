@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 
+from builtins import object
 class TroposphereType(object):
 
     def __init__(self, defined_type, many=False, optional=False,
@@ -87,7 +88,7 @@ class TroposphereType(object):
                                  "TroposphereType variable")
 
             result = [self._type.from_dict(title, v) for title, v in
-                      value.items()]
+                      list(value.items())]
         else:
             # Our type is for properties, not a resource, so don't use
             # titles

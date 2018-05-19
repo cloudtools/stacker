@@ -1,12 +1,15 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
 import copy
 import sys
 import logging
 
 from string import Template
-from StringIO import StringIO
+from io import StringIO
 
 from schematics import Model
 from schematics.exceptions import ValidationError
@@ -123,7 +126,7 @@ def parse(raw_config):
             top_level_value = config_dict.get(top_level_key)
             if isinstance(top_level_value, dict):
                 tmp_list = []
-                for key, value in top_level_value.iteritems():
+                for key, value in top_level_value.items():
                     tmp_dict = copy.deepcopy(value)
                     if top_level_key == 'stacks':
                         tmp_dict['name'] = key
@@ -162,7 +165,7 @@ def load(config):
         sys.path.append(config.sys_path)
         logger.debug("sys.path is now %s", sys.path)
     if config.lookups:
-        for key, handler in config.lookups.iteritems():
+        for key, handler in config.lookups.items():
             register_lookup_handler(key, handler)
 
     return config

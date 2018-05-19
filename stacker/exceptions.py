@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 
+from builtins import str
 class InvalidConfig(Exception):
     def __init__(self, errors):
         super(InvalidConfig, self).__init__(errors)

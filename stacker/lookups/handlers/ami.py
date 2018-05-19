@@ -79,7 +79,7 @@ def handler(value, provider, **kwargs):
         describe_args["ExecutableUsers"] = executable_users
 
     filters = []
-    for k, v in values.iteritems():
+    for k, v in values.items():
         filters.append({"Name": k, "Values": v.split(',')})
     describe_args["Filters"] = filters
 

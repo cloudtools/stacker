@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from past.builtins import basestring
 from ..exceptions import UnknownLookupType
 from ..util import load_object_from_string
 

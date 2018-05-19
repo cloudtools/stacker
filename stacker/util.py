@@ -1,6 +1,8 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from builtins import str
+from builtins import object
 import copy
 import uuid
 import importlib
@@ -228,7 +230,7 @@ def merge_map(a, b):
     if not isinstance(a, dict) or not isinstance(b, dict):
         return b
 
-    for key in b.keys():
+    for key in list(b.keys()):
         a[key] = merge_map(a[key], b[key]) if key in a else b[key]
     return a
 
@@ -630,7 +632,7 @@ class SourceProcessor(object):
                          '.tar': TarExtractor,
                          '.zip': ZipExtractor}
         extractor = None
-        for suffix, klass in extractor_map.iteritems():
+        for suffix, klass in extractor_map.items():
             if config['key'].endswith(suffix):
                 extractor = klass()
                 logger.debug("Using extractor %s for S3 object \"%s\" in "

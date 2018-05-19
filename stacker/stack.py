@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from builtins import object
 import copy
 
 from . import util
@@ -43,7 +44,7 @@ def _gather_variables(stack_def):
             variables.
     """
     variable_values = copy.deepcopy(stack_def.variables or {})
-    return [Variable(k, v) for k, v in variable_values.iteritems()]
+    return [Variable(k, v) for k, v in variable_values.items()]
 
 
 class Stack(object):

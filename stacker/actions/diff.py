@@ -1,6 +1,8 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from builtins import str
+from builtins import object
 import difflib
 import json
 import logging
@@ -244,7 +246,7 @@ class Action(build.Action):
         else:
             # Diff our old & new stack/parameters
             old_template = parse_cloudformation_template(old_template)
-            if isinstance(old_template, (str, unicode)):
+            if isinstance(old_template, (str, str)):
                 # YAML templates returned from CFN need parsing again
                 # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
                 # ->
@@ -274,7 +276,7 @@ class Action(build.Action):
     def run(self, concurrency=0, *args, **kwargs):
         plan = self._generate_plan()
         plan.outline(logging.DEBUG)
-        logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
+        logger.info("Diffing stacks: %s", ", ".join(list(plan.keys())))
         walker = build_walker(concurrency)
         plan.execute(walker)
 

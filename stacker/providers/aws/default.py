@@ -1,11 +1,15 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import object
 import json
 import yaml
 import logging
 import time
-import urlparse
+import urllib.parse
 import sys
 
 import botocore.exceptions
@@ -88,10 +92,10 @@ def s3_fallback(fqn, template, parameters, tags, method,
     logger.debug("Modifying the S3 TemplateURL to point to "
                  "us-east-1 endpoint")
     template_url = template.url
-    template_url_parsed = urlparse.urlparse(template_url)
+    template_url_parsed = urllib.parse.urlparse(template_url)
     template_url_parsed = template_url_parsed._replace(
         netloc="s3.amazonaws.com")
-    template_url = urlparse.urlunparse(template_url_parsed)
+    template_url = urllib.parse.urlunparse(template_url_parsed)
     logger.debug("Using template_url: %s", template_url)
     args = generate_cloudformation_args(
         fqn, parameters, tags, template,

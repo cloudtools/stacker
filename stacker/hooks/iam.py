@@ -40,7 +40,7 @@ def create_ecs_service_role(provider, context, **kwargs):
             AssumeRolePolicyDocument=get_ecs_assumerole_policy().to_json()
         )
     except ClientError as e:
-        if "already exists" in e.message:
+        if "already exists" in str(e):
             pass
         else:
             raise

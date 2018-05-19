@@ -341,7 +341,7 @@ class DAG(object):
         try:
             self.topological_sort()
         except ValueError as e:
-            return (False, e.message)
+            return (False, str(e))
         return (True, 'valid')
 
     def topological_sort(self):

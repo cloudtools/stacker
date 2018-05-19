@@ -93,7 +93,7 @@ class Step(object):
             status = self.fn(self.stack, status=self.status)
         except Exception as e:
             logger.exception(e)
-            status = FailedStatus(reason=e.message)
+            status = FailedStatus(reason=str(e))
         self.set_status(status)
         return status
 

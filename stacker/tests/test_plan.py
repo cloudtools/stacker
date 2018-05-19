@@ -256,7 +256,7 @@ class TestPlan(unittest.TestCase):
         message = ("Error detected when adding 'vpc.1' "
                    "as a dependency of 'bastion.1': dependent node "
                    "vpc.1 does not exist")
-        self.assertEqual(expected.exception.message, message)
+        self.assertEqual(str(expected.exception), message)
 
     def test_build_plan_cyclic_dependencies(self):
         vpc = Stack(
@@ -279,7 +279,7 @@ class TestPlan(unittest.TestCase):
         message = ("Error detected when adding 'db.1' "
                    "as a dependency of 'app.1': graph is "
                    "not acyclic")
-        self.assertEqual(expected.exception.message, message)
+        self.assertEqual(str(expected.exception), message)
 
     def test_dump(self, *args):
         requires = None

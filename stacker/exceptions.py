@@ -236,5 +236,5 @@ class GraphError(Exception):
         message = (
             "Error detected when adding '%s' "
             "as a dependency of '%s': %s"
-        ) % (dependency, stack, exception.message)
+        ) % (dependency, stack, str(exception))
         super(GraphError, self).__init__(message)

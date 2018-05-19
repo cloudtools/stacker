@@ -253,10 +253,13 @@ class TestPlan(unittest.TestCase):
 
         with self.assertRaises(GraphError) as expected:
             build_plan(description="Test", steps=[Step(bastion, None)])
-        message = ("Error detected when adding 'vpc.1' "
-                   "as a dependency of 'bastion.1': dependent node "
-                   "vpc.1 does not exist")
-        self.assertEqual(str(expected.exception), message)
+        message_starts = (
+            "Error detected when adding 'vpc.1' "
+            "as a dependency of 'bastion.1':"
+        )
+        message_contains = "dependent node vpc.1 does not exist"
+        self.assertTrue(str(expected.exception).startswith(message_starts))
+        self.assertTrue(message_contains in str(expected.exception))
 
     def test_build_plan_cyclic_dependencies(self):
         vpc = Stack(

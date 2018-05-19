@@ -9,7 +9,7 @@ import os.path
 import stat
 import logging
 import hashlib
-from io import StringIO
+from io import BytesIO as StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 import botocore
 from functools import partial

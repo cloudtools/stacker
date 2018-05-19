@@ -9,7 +9,7 @@ import os
 import unittest
 import mock
 import random
-from io import StringIO
+from io import BytesIO as StringIO
 from zipfile import ZipFile
 
 import boto3

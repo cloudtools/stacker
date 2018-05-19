@@ -93,12 +93,12 @@ def render(raw_config, environment=None):
     if not environment:
         environment = {}
     try:
-        buff.write(t.substitute(environment))
+        buff.write(t.substitute(environment).decode('utf-8'))
     except KeyError as e:
         raise exceptions.MissingEnvironment(e.args[0])
     except ValueError:
         # Support "invalid" placeholders for lookup placeholders.
-        buff.write(t.safe_substitute(environment))
+        buff.write(t.safe_substitute(environment).decode('utf-8'))
 
     buff.seek(0)
     return buff.read()

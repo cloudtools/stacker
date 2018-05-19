@@ -76,7 +76,7 @@ class Stack(object):
         self.force = force
         self.enabled = enabled
         self.protected = protected
-        self.context = copy.deepcopy(context)
+        self.context = context
         self.outputs = None
 
     def __repr__(self):

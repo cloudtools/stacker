@@ -140,7 +140,8 @@ class TestDiffFunctions(unittest.TestCase):
             '    }\n',
             '}\n'
         ]
-        self.assertEquals(normalized_template, normalize_json(template))
+        for i, line in enumerate(normalize_json(template)):
+            self.assertEquals(normalized_template[i].strip(), line.strip())
 
     def test_normalize_json_date(self):
         """Ensure normalize_json handles objects loaded as datetime objects"""

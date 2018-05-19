@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import logging
 
 from .base import BaseAction, plan, build_walker
@@ -83,7 +86,7 @@ def should_ensure_cfn_bucket(outline, dump):
         bool: If access to CF bucket is needed, return True.
 
     """
-    print "OUTLINE: %s, DUMP: %s" % (outline, dump)
+    print("OUTLINE: %s, DUMP: %s" % (outline, dump))
     return not outline and not dump
 
 

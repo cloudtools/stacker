@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import copy
 import uuid
 import importlib
@@ -280,7 +283,7 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
                 key = self.construct_object(key_node, deep=deep)
                 try:
                     hash(key)
-                except TypeError, exc:
+                except TypeError as exc:
                     raise ConstructorError(
                         "while constructing a mapping", node.start_mark,
                         "found unhashable key (%s)" % exc, key_node.start_mark

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import unittest
 
 from moto import mock_kms
@@ -20,7 +23,7 @@ class TestKMSHandler(unittest.TestCase):
     def test_kms_handler(self):
         with mock_kms():
             decrypted = handler(self.secret)
-            print "DECRYPTED: %s" % decrypted
+            print("DECRYPTED: %s" % decrypted)
             self.assertEqual(decrypted, self.plain)
 
     def test_kms_handler_with_region(self):

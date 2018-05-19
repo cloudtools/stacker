@@ -1,4 +1,7 @@
 """ Tests on the DAG implementation """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 from nose import with_setup
 from nose.tools import nottest, raises

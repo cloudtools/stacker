@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
 from string import Template
 
 from .exceptions import InvalidLookupCombination
@@ -6,7 +9,7 @@ from .lookups import (
     resolve_lookups,
 )
 
-from exceptions import FailedVariableLookup
+from .exceptions import FailedVariableLookup
 
 
 class LookupTemplate(Template):

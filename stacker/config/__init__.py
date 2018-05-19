@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import copy
 import sys
 import logging
@@ -88,7 +91,7 @@ def render(raw_config, environment=None):
         environment = {}
     try:
         buff.write(t.substitute(environment))
-    except KeyError, e:
+    except KeyError as e:
         raise exceptions.MissingEnvironment(e.args[0])
     except ValueError:
         # Support "invalid" placeholders for lookup placeholders.

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import os.path
 import os
 import unittest
@@ -60,7 +63,7 @@ class TestLambdaHooks(unittest.TestCase):
         with ZipFile(zip_data, 'r') as zip_file:
             for zip_info in zip_file.infolist():
                 perms = (zip_info.external_attr & ZIP_PERMS_MASK) >> 16
-                self.assertIn(perms, (0755, 0644),
+                self.assertIn(perms, (0o755, 0o644),
                               'ZIP member permission must be 755 or 644')
                 found_files.add(zip_info.filename)
 

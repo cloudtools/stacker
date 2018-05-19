@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import os
 import os.path
 import stat
@@ -52,9 +55,9 @@ def _zip_files(files, root):
         for zip_entry in zip_file.filelist:
             perms = (zip_entry.external_attr & ZIP_PERMS_MASK) >> 16
             if perms & stat.S_IXUSR != 0:
-                new_perms = 0755
+                new_perms = 0o755
             else:
-                new_perms = 0644
+                new_perms = 0o644
 
             if new_perms != perms:
                 logger.debug("lambda: fixing perms: %s: %o => %o",

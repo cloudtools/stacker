@@ -473,7 +473,7 @@ class Blueprint(object):
             self.set_template_description(self.description)
         self.setup_parameters()
         rendered = self.template.to_json(indent=self.context.template_indent)
-        version = hashlib.md5(rendered).hexdigest()[:8]
+        version = hashlib.md5(rendered.encode()).hexdigest()[:8]
         return (version, rendered)
 
     def to_json(self, variables=None):

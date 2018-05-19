@@ -121,7 +121,7 @@ def parameterized_codec(raw, b64):
 
 CODECS = {
     "plain": lambda x: x,
-    "base64": base64.b64encode,
+    "base64": lambda x: base64.b64encode(x.encode('utf8')),
     "parameterized": lambda x: parameterized_codec(x, False),
     "parameterized-b64": lambda x: parameterized_codec(x, True)
 }

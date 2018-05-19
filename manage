@@ -15,7 +15,7 @@ _init_python (){
   set +u
   source "$venv"/bin/activate
   set -o nounset
-  pip install -r "$requirements"
+  pip install -r "$requirements" >/dev/null
 }
 
 # Run unit-test in python2
@@ -28,6 +28,18 @@ nose2 () {
 nose3 () {
   _init_python "3"
   AWS_DEFAULT_REGION=us-east-1 python setup.py nosetests
+}
+
+lint2 () {
+  _init_python "2"
+  flake8 --exclude stacker/tests/ stacker
+  flake8 --ignore N802 stacker/tests # ignore setUp naming
+}
+
+lint3 () {
+  _init_python "3"
+  flake8 --exclude stacker/tests/ stacker
+  flake8 --ignore N802 stacker/tests # ignore setUp naming
 }
 
 # helpers
@@ -51,9 +63,12 @@ case "$command" in
   n2)
     nose2
   ;;
-  n3)
-    nose3
+  l2)
+    lint2
+  ;;
+  l3)
+    lint3
   ;;
   *)
-    clean
+    _init_python "2"
 esac

@@ -30,16 +30,26 @@ nose3 () {
   AWS_DEFAULT_REGION=us-east-1 python setup.py nosetests
 }
 
+lint () {
+  flake8 --ignore E402 --exclude stacker/tests/ stacker
+  flake8 --ignore E402,N802 stacker/tests # ignore setUp naming
+}
+
 lint2 () {
   _init_python "2"
-  flake8 --exclude stacker/tests/ stacker
-  flake8 --ignore N802 stacker/tests # ignore setUp naming
+  lint
 }
 
 lint3 () {
   _init_python "3"
-  flake8 --exclude stacker/tests/ stacker
-  flake8 --ignore N802 stacker/tests # ignore setUp naming
+  lint
+}
+
+run () {
+  lint2
+  lint3
+  nose2
+  nose3
 }
 
 # helpers
@@ -70,5 +80,5 @@ case "$command" in
     lint3
   ;;
   *)
-    _init_python "2"
+    run
 esac

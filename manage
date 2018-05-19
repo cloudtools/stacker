@@ -73,6 +73,9 @@ case "$command" in
   n2)
     nose2
   ;;
+  n3)
+    nose3
+  ;;
   l2)
     lint2
   ;;

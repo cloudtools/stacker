@@ -1,0 +1,59 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+
+# library functions
+_init_python (){
+  python="/usr/local/bin/python$1"
+  venv="venv$1"
+  requirements="requirements$1.txt"
+  rm -rf stacker.egg-info
+  ls -l | grep -q $venv || virtualenv -p "$python" "$venv"
+  set +u
+  source "$venv"/bin/activate
+  set -o nounset
+  pip install -r "$requirements"
+}
+
+# Run unit-test in python2
+nose2 () {
+  _init_python "2"
+  AWS_DEFAULT_REGION=us-east-1 python setup.py nosetests
+}
+
+# Run unit-test in python3
+nose3 () {
+  _init_python "3"
+  AWS_DEFAULT_REGION=us-east-1 python setup.py nosetests
+}
+
+# helpers
+list () {
+  grep -E "()\ ?{$" $0 | grep -v 'grep ' | awk '{print $1}' | sort
+}
+
+# main start here
+command=${1:-""}
+
+if [ -n "$(type -t $command)" ] && [ "$(type -t $command)" = function ]
+then
+  eval $command
+  exit $?
+fi
+
+case "$command" in
+  ls)
+    list
+  ;;
+  n2)
+    nose2
+  ;;
+  n3)
+    nose3
+  ;;
+  *)
+    clean
+esac

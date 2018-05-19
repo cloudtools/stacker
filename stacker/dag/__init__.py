@@ -128,9 +128,8 @@ class DAG(object):
         """
         graph = self.graph
         if dep_node not in graph.get(ind_node, []):
-            raise KeyError("No edge exists between %s and %s." % (
-                ind_node, dep_node
-                )
+            raise KeyError(
+                "No edge exists between %s and %s." % (ind_node, dep_node)
             )
         graph[ind_node].remove(dep_node)
 
@@ -257,8 +256,10 @@ class DAG(object):
                     nodes_seen.add(downstream_node)
                     nodes.append(downstream_node)
             i += 1
-        return [node for node in self.topological_sort() if node
-                in nodes_seen]
+        return [
+            node_ for node_ in self.topological_sort()
+            if node_ in nodes_seen
+        ]
 
     def filter(self, nodes):
         """ Returns a new DAG with only the given nodes and their
@@ -331,7 +332,7 @@ class DAG(object):
         dependent_nodes = set(
             node for dependents
             in graph.values() for node in dependents)
-        return [node for node in list(graph.keys()) if node not in dependent_nodes]
+        return [node_ for node_ in graph if node_ not in dependent_nodes]
 
     def validate(self):
         """ Returns (Boolean, message) of whether DAG is valid. """

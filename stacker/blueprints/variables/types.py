@@ -1,9 +1,9 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-
-
 from builtins import object
+
+
 class TroposphereType(object):
 
     def __init__(self, defined_type, many=False, optional=False,
@@ -54,8 +54,9 @@ class TroposphereType(object):
 
     @property
     def resource_name(self):
-        return (getattr(self._type, 'resource_name', None)
-                or self._type.__name__)
+        return (
+            getattr(self._type, 'resource_name', None) or self._type.__name__
+        )
 
     def create(self, value):
         """Create the troposphere type from the value.

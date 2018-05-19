@@ -49,7 +49,7 @@ class TestLambdaHooks(unittest.TestCase):
     def temp_directory_with_files(cls, files=ALL_FILES):
         d = TempDirectory()
         for f in files:
-            d.write(f, '')
+            d.write(f, b'')
         return d
 
     @property
@@ -364,7 +364,7 @@ class TestLambdaHooks(unittest.TestCase):
         with TempDirectory() as d:
             root = d.path
             for fname in files:
-                d.write(fname, "data")
+                d.write(fname, b"data")
             hash1 = _calculate_hash([file1], root)
             hash2 = _calculate_hash([file2], root)
         self.assertNotEqual(hash1, hash2)
@@ -375,11 +375,11 @@ class TestLambdaHooks(unittest.TestCase):
         with TempDirectory() as d1:
             root1 = d1.path
             for fname in files1:
-                d1.write(fname, "")
+                d1.write(fname, b"")
             with TempDirectory() as d2:
                 root2 = d2.path
                 for fname in files2:
-                    d2.write(fname, "")
+                    d2.write(fname, b"")
                 hash1 = _calculate_hash(files1, root1)
                 hash2 = _calculate_hash(files2, root2)
                 self.assertEqual(hash1, hash2)

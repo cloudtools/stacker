@@ -90,11 +90,13 @@ def _calculate_hash(files, root):
     file_hash = hashlib.md5()
     for fname in sorted(files):
         f = os.path.join(root, fname)
-        file_hash.update(fname + "\0")
+        file_hash.update((fname + "\0").encode())
         with open(f, "rb") as fd:
             for chunk in iter(lambda: fd.read(4096), ""):
+                if not chunk:
+                    break
                 file_hash.update(chunk)
-            file_hash.update("\0")
+            file_hash.update("\0".encode())
 
     return file_hash.hexdigest()
 

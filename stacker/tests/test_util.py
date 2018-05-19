@@ -62,7 +62,7 @@ class TestUtil(unittest.TestCase):
         tests = (
             ("string.Template", string.Template),
             ("os.path.basename", os.path.basename),
-            ("string.letters", string.letters)
+            ("string.ascii_letters", string.ascii_letters)
         )
         for t in tests:
             self.assertIs(load_object_from_string(t[0]), t[1])
@@ -235,7 +235,7 @@ Outputs:
             self.assertEqual(
                 sp.git_ls_remote('https://github.com/remind101/stacker.git',
                                  'refs/heads/release-1.0'),
-                '857b4834980e582874d70feef77bb064b60762d1'
+                b'857b4834980e582874d70feef77bb064b60762d1'
             )
 
             bad_configs = [{'uri': 'x',
@@ -257,7 +257,7 @@ Outputs:
                     GitPackageSource({'uri': 'https://github.com/remind101/'
                                              'stacker.git',
                                       'branch': 'release-1.0'})),
-                '857b4834980e582874d70feef77bb064b60762d1'
+                b'857b4834980e582874d70feef77bb064b60762d1'
             )
             self.assertEqual(
                 sp.determine_git_ref(

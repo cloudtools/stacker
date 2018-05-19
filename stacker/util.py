@@ -804,8 +804,8 @@ class SourceProcessor(object):
                                                    'ls-remote',
                                                    uri,
                                                    ref])
-        if "\t" in lsremote_output:
-            commit_id = lsremote_output.split("\t")[0]
+        if b"\t" in lsremote_output:
+            commit_id = lsremote_output.split(b"\t")[0]
             logger.debug("Matching commit id found: %s", commit_id)
             return commit_id
         else:

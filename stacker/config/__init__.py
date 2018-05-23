@@ -104,7 +104,7 @@ def render(raw_config, environment=None):
         substituted = t.safe_substitute(environment)
         if not isinstance(substituted, str):
             substituted = substituted.decode('utf-8')
-        buff.write(t.safe_substitute(environment).decode('utf-8'))
+        buff.write(substituted)
 
     buff.seek(0)
     return buff.read()

@@ -1,11 +1,14 @@
 import os
+import sys
 from setuptools import setup, find_packages
+
 
 VERSION = "1.3.0"
 
 src_dir = os.path.dirname(__file__)
 
 install_requires = [
+    "future",
     "troposphere>=1.9.0",
     "botocore>=1.6.0",
     "boto3>=1.3.1",
@@ -32,6 +35,11 @@ scripts = [
     "scripts/stacker.cmd",
     "scripts/stacker"
 ]
+
+if sys.version_info.major == 3:
+    install_requires.append("formic-py3")
+else:
+    install_requires.append("formic~=0.9b")
 
 
 def read(filename):

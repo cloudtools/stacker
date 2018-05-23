@@ -100,35 +100,7 @@ EOF
   # Print the graph
   stacker graph -f json <(config)
   assert "$status" -eq 0
-  cat <<-EOF | diff -y <(echo "$output" | grep -v "Using default") -
-{
-    "steps": {
-        "app1": {
-            "deps": [
-                "bastion1"
-            ]
-        }, 
-        "app2": {
-            "deps": [
-                "bastion2"
-            ]
-        }, 
-        "bastion2": {
-            "deps": [
-                "vpc"
-            ]
-        }, 
-        "vpc": {
-            "deps": []
-        }, 
-        "bastion1": {
-            "deps": [
-                "vpc"
-            ]
-        }
-    }
-}
-EOF
+  assert $(echo "$output" | grep -v "Using default" | python -c "import sys, json; data = json.loads(sys.stdin.read()); print(data['steps']['vpc']['deps'] == [] and data['steps']['bastion1']['deps'] == ['vpc'] and data['steps']['app2']['deps'] == ['bastion2'])") = 'True'
 }
 
 @test "stacker graph - dot format" {

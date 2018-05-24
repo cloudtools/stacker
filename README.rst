@@ -2,7 +2,7 @@
 stacker
 =======
 
-.. image:: https://readthedocs.org/projects/pip/badge/?version=latest
+.. image:: https://readthedocs.org/projects/stacker/badge/?version=latest
    :target: http://stacker.readthedocs.org/en/latest/
 
 .. image:: https://circleci.com/gh/cloudtools/stacker.svg?style=shield

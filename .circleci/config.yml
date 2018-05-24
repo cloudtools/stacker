@@ -7,6 +7,11 @@ workflows:
       - unit-test-27
       - functional-test-27
 
+  test-35:
+    jobs:
+      - unit-test-35
+      - functional-test-35
+
   test-36:
     jobs:
       - unit-test-36
@@ -34,6 +39,14 @@ jobs:
       - run: sudo python setup.py install
       - run: sudo make test-unit
 
+  unit-test-35:
+    docker:
+      - image: circleci/python:3.5
+    steps:
+      - checkout
+      - run: sudo python setup.py install
+      - run: sudo make test-unit
+
   unit-test-36:
     docker:
       - image: circleci/python:3.6
@@ -45,6 +58,27 @@ jobs:
   functional-test-27:
     docker:
       - image: circleci/python:2.7
+    steps:
+      - checkout
+      - run:
+          command: |
+            git clone https://github.com/sstephenson/bats.git
+            cd bats
+            git checkout v0.4.0
+            sudo ./install.sh /usr/local
+            bats --version
+      - run: sudo python setup.py install
+      - run:
+          command: |
+            export TERM=xterm
+            export AWS_DEFAULT_REGION=us-east-1
+            export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
+            export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
+            sudo -E make test-functional
+
+  functional-test-35:
+    docker:
+      - image: circleci/python:3.5
     steps:
       - checkout
       - run:

@@ -17,7 +17,7 @@
 - Push tag: `git push --tags`
 - Merge PR into master, checkout master locally: `git checkout master; git pull`
 - Create PyPI release: `python setup.py sdist upload --sign`
-- Update github release page: https://github.com/remind101/stacker/releases 
+- Update github release page: https://github.com/cloudtools/stacker/releases 
   - use the contents of the latest CHANGELOG entry for the body.
 
 # Helper to create CHANGELOG entries

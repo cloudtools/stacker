@@ -48,7 +48,7 @@ if __name__ == "__main__":
         author="Michael Barrett",
         author_email="loki77@gmail.com",
         license="New BSD license",
-        url="https://github.com/remind101/stacker",
+        url="https://github.com/cloudtools/stacker",
         description="AWS CloudFormation Stack manager",
         long_description=read("README.rst"),
         packages=find_packages(),

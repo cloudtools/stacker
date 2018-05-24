@@ -406,8 +406,8 @@ stacker_blueprints repo. For example, see the tests used to test the
 `Route53 DNSRecords Blueprint`_ and the accompanying `output results`_:
 
 .. _troposphere: https://github.com/cloudtools/troposphere
-.. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
-.. _Route53 DNSRecords Blueprint: https://github.com/remind101/stacker_blueprints/blob/master/tests/test_route53.py
-.. _output results: https://github.com/remind101/stacker_blueprints/tree/master/tests/fixtures/blueprints
+.. _stacker_blueprints: https://github.com/cloudtools/stacker_blueprints
+.. _Route53 DNSRecords Blueprint: https://github.com/cloudtools/stacker_blueprints/blob/master/tests/test_route53.py
+.. _output results: https://github.com/cloudtools/stacker_blueprints/tree/master/tests/fixtures/blueprints
 .. _Resource Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html
 .. _Property Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-product-property-reference.html

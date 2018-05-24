@@ -2,10 +2,6 @@ version: 2
 
 workflows:
   version: 2
-  lint:
-    jobs:
-      - lint
-
   test-27:
     jobs:
       - unit-test-27
@@ -15,6 +11,10 @@ workflows:
     jobs:
       - unit-test-36
       - functional-test-36
+
+  lint:
+    jobs:
+      - lint
 
 jobs:
   lint:

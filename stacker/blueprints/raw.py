@@ -187,5 +187,5 @@ class RawTemplateBlueprint(object):
     def version(self):
         """Return (generating first if needed) version hash."""
         if not self._version:
-            self._version = hashlib.md5(self.rendered).hexdigest()[:8]
+            self._version = hashlib.md5(self.rendered.encode()).hexdigest()[:8]
         return self._version

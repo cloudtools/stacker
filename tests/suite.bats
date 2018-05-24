@@ -132,14 +132,11 @@ EOF
   # Print the graph
   stacker graph -f dot <(config)
   assert "$status" -eq 0
-  cat <<-EOF | diff -y <(echo "$output" | grep -v "Using default") -
-digraph digraph {
-  "bastion2" -> "vpc";
-  "bastion1" -> "vpc";
-  "app2" -> "bastion2";
-  "app1" -> "bastion1";
-}
-EOF
+  assert_has_line '"bastion1" -> "vpc";'
+  assert_has_line '"bastion2" -> "vpc";'
+  assert_has_line '"app1" -> "bastion1";'
+  assert_has_line '"app2" -> "bastion2";'
+  assert $(echo "$output" | grep -A 2 vpc | tail -n 2 | grep -c vpc) = '0'
 }
 
 @test "stacker build - missing variable" {

@@ -5,8 +5,8 @@ stacker
 .. image:: https://readthedocs.org/projects/pip/badge/?version=latest
    :target: http://stacker.readthedocs.org/en/latest/
 
-.. image:: https://circleci.com/gh/remind101/stacker.svg?style=shield
-   :target: https://circleci.com/gh/remind101/stacker
+.. image:: https://circleci.com/gh/cloudtools/stacker.svg?style=shield
+   :target: https://circleci.com/gh/cloudtools/stacker
 
 .. image:: https://empire-slack.herokuapp.com/badge.svg
    :target: https://empire-slack.herokuapp.com
@@ -14,12 +14,12 @@ stacker
 .. image:: https://badge.fury.io/py/stacker.svg
    :target: https://badge.fury.io/py/stacker
 
-.. image:: https://landscape.io/github/remind101/stacker/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/remind101/stacker/master
+.. image:: https://landscape.io/github/cloudtools/stacker/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/cloudtools/stacker/master
    :alt: Code Health
 
-.. image:: https://codecov.io/gh/remind101/stacker/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/remind101/stacker
+.. image:: https://codecov.io/gh/cloudtools/stacker/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/cloudtools/stacker
    :alt: codecov
 
 

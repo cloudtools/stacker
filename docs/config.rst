@@ -566,5 +566,5 @@ submitting it to CloudFormation. For more information, see the
 .. _`anchors & references`: https://en.wikipedia.org/wiki/YAML#Repeated_nodes
 .. _Mappings: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 .. _Outputs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
-.. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
+.. _stacker_blueprints: https://github.com/cloudtools/stacker_blueprints
 .. _`AWS profiles`: https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html

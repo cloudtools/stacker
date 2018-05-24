@@ -8,7 +8,7 @@ You can contribute in many ways:
 
 ### Report Bugs
 
-Report bugs at https://github.com/remind101/stacker/issues.
+Report bugs at https://github.com/cloudtools/stacker/issues.
 
 If you are reporting a bug, please include:
 
@@ -36,7 +36,7 @@ Note: We use Google style docstrings (http://sphinxcontrib-napoleon.readthedocs.
 
 ### Submit Feedback
 
-The best way to send feedback is to file an issue at https://github.com/remind101/stacker/issues.
+The best way to send feedback is to file an issue at https://github.com/cloudtools/stacker/issues.
 
 If you are proposing a feature:
 
@@ -100,5 +100,5 @@ Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. (See `Write Documentation` above for guidelines)
 3. The pull request should work for Python 2.7 and for PyPy. Check
-   https://circleci.com/gh/remind101/stacker and make sure that the tests pass for all supported Python versions.
+   https://circleci.com/gh/cloudtools/stacker and make sure that the tests pass for all supported Python versions.
 4. Please update the `Upcoming/Master` section of the [CHANGELOG](./CHANGELOG.md) with a small bullet point about the change.

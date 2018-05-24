@@ -422,4 +422,4 @@ For more information see `Configuring Lookups <config.html#lookups>`_.
 
 .. _`hook_data`: http://stacker.readthedocs.io/en/latest/config.html#pre-post-hooks
 .. _`aws_lambda hook`: http://stacker.readthedocs.io/en/latest/api/stacker.hooks.html#stacker.hooks.aws_lambda.upload_lambda_functions
-.. _`aws_lambda blueprint`: https://github.com/remind101/stacker_blueprints/blob/master/stacker_blueprints/aws_lambda.py
+.. _`aws_lambda blueprint`: https://github.com/cloudtools/stacker_blueprints/blob/master/stacker_blueprints/aws_lambda.py

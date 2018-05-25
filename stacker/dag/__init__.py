@@ -175,24 +175,24 @@ class DAG(object):
         """
         combinations = []
         for node, edges in self.graph.items():
-            combinations += [node + e for e in edges]
+            combinations += [[node, edge] for edge in edges]
 
         while True:
             new_combinations = []
-            for i in combinations:
-                for j in combinations:
-                    if not j.startswith(i[-1]):
+            for comb1 in combinations:
+                for comb2 in combinations:
+                    if not comb1[-1] == comb2[0]:
                         continue
-                    new_entry = i + j[1:]
+                    new_entry = comb1 + comb2[1:]
                     if new_entry not in combinations:
                         new_combinations.append(new_entry)
             if not new_combinations:
                 break
             combinations += new_combinations
 
-        constructed = {c[0] + c[-1] for c in combinations if len(c) != 2}
+        constructed = {(c[0], c[-1]) for c in combinations if len(c) != 2}
         for node, edges in self.graph.items():
-            bad_nodes = {c[-1] for c in constructed if c.startswith(node)}
+            bad_nodes = {e for n, e in constructed if node == n}
             self.graph[node] = edges - bad_nodes
 
     def rename_edges(self, old_node_name, new_node_name):

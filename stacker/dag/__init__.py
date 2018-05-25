@@ -173,22 +173,27 @@ class DAG(object):
 
         See https://en.wikipedia.org/wiki/Transitive_reduction
         """
+        combinations = []
+        for node, edges in self.graph.items():
+            combinations += [node + e for e in edges]
 
-        graph = self.graph
-        for x in list(graph.keys()):
-            for y in list(graph.keys()):
-                for z in list(graph.keys()):
-                    # Edge from x -> y
-                    xy = y in graph[x]
-                    # Edge from y -> x
-                    yz = z in graph[y]
-                    # Edge from x -> z
-                    xz = z in graph[x]
+        while True:
+            new_combinations = []
+            for i in combinations:
+                for j in combinations:
+                    if not j.startswith(i[-1]):
+                        continue
+                    new_entry = i + j[1:]
+                    if new_entry not in combinations:
+                        new_combinations.append(new_entry)
+            if not new_combinations:
+                break
+            combinations += new_combinations
 
-                    # If edges xy and yz exist, remove edge xz.
-                    if xz and xy and yz:
-                        logger.debug("Removing edge %s -> %s" % (x, z))
-                        graph[x].remove(z)
+        constructed = {c[0] + c[-1] for c in combinations if len(c) != 2}
+        for node, edges in self.graph.items():
+            bad_nodes = {c[-1] for c in constructed if c.startswith(node)}
+            self.graph[node] = edges - bad_nodes
 
     def rename_edges(self, old_node_name, new_node_name):
         """ Change references to a node in existing edges.

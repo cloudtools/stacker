@@ -200,6 +200,24 @@ def test_transitive_reduction():
 
 
 @with_setup(blank_setup)
+def test_transitive_deep_reduction():
+    dag = DAG()
+    # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-G.svg
+    dag.from_dict({
+        'a': ['b', 'd'],
+        'b': ['c'],
+        'c': ['d'],
+        'd': [],
+    })
+    dag.transitive_reduction()
+    # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-Gprime.svg
+    assert dag.graph == {'a': set('b'),
+                         'b': set('c'),
+                         'c': set('d'),
+                         'd': set()}
+
+
+@with_setup(blank_setup)
 def test_threaded_walker():
     dag = DAG()
     walker = ThreadedWalker()

@@ -280,7 +280,7 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
                     None, None,
                     "expected a mapping node, but found %s" % node.id,
                     node.start_mark)
-            mapping = {}
+            mapping = OrderedDict()
             for key_node, value_node in node.value:
                 key = self.construct_object(key_node, deep=deep)
                 try:
@@ -307,8 +307,17 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
             """Override parent method to use OrderedDict."""
             if isinstance(node, MappingNode):
                 self.flatten_mapping(node)
-            return OrderedDict(self._validate_mapping(node, deep=deep))
+            return self._validate_mapping(node, deep=deep)
 
+        def construct_yaml_map(self, node):
+            data = OrderedDict()
+            yield data
+            value = self.construct_mapping(node)
+            data.update(value)
+
+    OrderedUniqueLoader.add_constructor(
+        u'tag:yaml.org,2002:map', OrderedUniqueLoader.construct_yaml_map,
+    )
     return yaml.load(stream, OrderedUniqueLoader)
 
 

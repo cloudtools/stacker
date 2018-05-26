@@ -157,7 +157,9 @@ def normalize_json(template):
         list: json representation of the parameters
     """
     obj = parse_cloudformation_template(template)
-    json_str = json.dumps(obj, sort_keys=True, indent=4, default=str)
+    json_str = json.dumps(
+        obj, sort_keys=True, indent=4, default=str, separators=(',', ': '),
+    )
     result = []
     lines = json_str.split("\n")
     for line in lines:
@@ -246,7 +248,7 @@ class Action(build.Action):
         else:
             # Diff our old & new stack/parameters
             old_template = parse_cloudformation_template(old_template)
-            if isinstance(old_template, (str, str)):
+            if isinstance(old_template, str):
                 # YAML templates returned from CFN need parsing again
                 # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
                 # ->

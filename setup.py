@@ -22,7 +22,8 @@ tests_require = [
     "mock~=2.0.0",
     "moto~=1.1.24",
     "testfixtures~=4.10.0",
-    "coverage~=4.3.4"
+    "coverage~=4.3.4",
+    "flake8-future-import",
 ]
 
 setup_requires = [

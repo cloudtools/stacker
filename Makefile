@@ -4,8 +4,8 @@ build:
 	docker build -t remind101/stacker .
 
 lint:
-	flake8 --ignore E402 --exclude stacker/tests/ stacker
-	flake8 --ignore E402,N802 stacker/tests # ignore setUp naming
+	flake8 --require-code --min-version=2.7 --ignore FI50,FI51,FI53,FI14,E402 --exclude stacker/tests/ stacker
+	flake8 --require-code --min-version=2.7 --ignore FI50,FI51,FI53,FI14,E402,N802 stacker/tests # ignore setUp naming
 
 test-unit: clean
 	AWS_DEFAULT_REGION=us-east-1 python setup.py nosetests

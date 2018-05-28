@@ -141,9 +141,9 @@ class DAG(object):
         """
         graph = self.graph
         transposed = DAG()
-        for node, edges in list(graph.items()):
+        for node, edges in graph.items():
             transposed.add_node(node)
-        for node, edges in list(graph.items()):
+        for node, edges in graph.items():
             # for each edge A -> B, transpose it so that B -> A
             for edge in edges:
                 transposed.add_edge(edge, node)
@@ -203,7 +203,7 @@ class DAG(object):
             new_node_name (str): The new name for the node.
         """
         graph = self.graph
-        for node, edges in list(graph.items()):
+        for node, edges in graph.items():
             if node == old_node_name:
                 graph[new_node_name] = copy(edges)
                 del graph[old_node_name]
@@ -262,8 +262,7 @@ class DAG(object):
                     nodes.append(downstream_node)
             i += 1
         return [
-            node_ for node_ in self.topological_sort()
-            if node_ in nodes_seen
+            node_ for node_ in self.topological_sort() if node_ in nodes_seen
         ]
 
     def filter(self, nodes):
@@ -286,7 +285,7 @@ class DAG(object):
                 filtered_dag.add_node_if_not_exists(edge)
 
         # Now, rebuild the graph for each node that's present.
-        for node, edges in list(self.graph.items()):
+        for node, edges in self.graph.items():
             if node in filtered_dag.graph:
                 filtered_dag.graph[node] = edges
 
@@ -314,7 +313,7 @@ class DAG(object):
         """
 
         self.reset_graph()
-        for new_node in graph_dict.keys():
+        for new_node in graph_dict:
             self.add_node(new_node)
         for ind_node, dep_nodes in graph_dict.items():
             if not isinstance(dep_nodes, collections.Iterable):

@@ -278,7 +278,7 @@ class Action(build.Action):
     def run(self, concurrency=0, *args, **kwargs):
         plan = self._generate_plan()
         plan.outline(logging.DEBUG)
-        logger.info("Diffing stacks: %s", ", ".join(list(plan.keys())))
+        logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
         walker = build_walker(concurrency)
         plan.execute(walker)
 

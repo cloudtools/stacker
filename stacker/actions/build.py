@@ -34,8 +34,7 @@ logger = logging.getLogger(__name__)
 
 def build_stack_tags(stack):
     """Builds a common set of tags to attach to a stack"""
-    return [
-        {'Key': t[0], 'Value': t[1]} for t in list(stack.tags.items())]
+    return [{'Key': t[0], 'Value': t[1]} for t in stack.tags.items()]
 
 
 def should_update(stack):
@@ -112,7 +111,7 @@ def _resolve_parameters(parameters, blueprint):
     params = {}
     param_defs = blueprint.get_parameter_definitions()
 
-    for key, value in list(parameters.items()):
+    for key, value in parameters.items():
         if key not in param_defs:
             logger.debug("Blueprint %s does not use parameter %s.",
                          blueprint.name, key)
@@ -392,7 +391,7 @@ class Action(BaseAction):
         plan = self._generate_plan(tail=tail)
         if not outline and not dump:
             plan.outline(logging.DEBUG)
-            logger.debug("Launching stacks: %s", ", ".join(list(plan.keys())))
+            logger.debug("Launching stacks: %s", ", ".join(plan.keys()))
             walker = build_walker(concurrency)
             plan.execute(walker)
         else:

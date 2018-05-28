@@ -230,7 +230,7 @@ def merge_map(a, b):
     if not isinstance(a, dict) or not isinstance(b, dict):
         return b
 
-    for key in list(b.keys()):
+    for key in b:
         a[key] = merge_map(a[key], b[key]) if key in a else b[key]
     return a
 

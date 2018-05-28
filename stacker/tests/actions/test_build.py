@@ -34,8 +34,8 @@ from ..factories import MockThreadingEvent, MockProviderBuilder
 def mock_stack(parameters):
     return {
         'Parameters': [
-            {'ParameterKey': k, 'ParameterValue': v} for k, v in
-            list(parameters.items())
+            {'ParameterKey': k, 'ParameterValue': v}
+            for k, v in parameters.items()
         ]
     }
 

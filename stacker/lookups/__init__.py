@@ -64,6 +64,6 @@ def extract_lookups(value):
         for v in value:
             lookups = lookups.union(extract_lookups(v))
     elif isinstance(value, dict):
-        for v in list(value.values()):
+        for v in value.values():
             lookups = lookups.union(extract_lookups(v))
     return lookups

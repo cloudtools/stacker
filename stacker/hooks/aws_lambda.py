@@ -503,7 +503,7 @@ def upload_lambda_functions(context, provider, **kwargs):
     prefix = kwargs.get('prefix', '')
 
     results = {}
-    for name, options in list(kwargs['functions'].items()):
+    for name, options in kwargs['functions'].items():
         results[name] = _upload_function(s3_client, bucket_name, prefix, name,
                                          options, follow_symlinks)
 

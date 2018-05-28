@@ -107,7 +107,7 @@ def build_parameter(name, properties):
         :class:`troposphere.Parameter`: The created parameter object.
     """
     p = Parameter(name, Type=properties.get("type"))
-    for name, attr in list(PARAMETER_PROPERTIES.items()):
+    for name, attr in PARAMETER_PROPERTIES.items():
         if name in properties:
             setattr(p, attr, properties[name])
     return p
@@ -266,11 +266,11 @@ def parse_user_data(variables, raw_user_data, blueprint_name):
     """
     variable_values = {}
 
-    for key in list(variables.keys()):
-        if type(variables[key]) is CFNParameter:
-            variable_values[key] = variables[key].to_parameter_value()
+    for key, value in variables.items():
+        if type(value) is CFNParameter:
+            variable_values[key] = value.to_parameter_value()
         else:
-            variable_values[key] = variables[key]
+            variable_values[key] = value
 
     template = string.Template(raw_user_data)
 
@@ -381,7 +381,7 @@ class Blueprint(object):
             logger.debug("No parameters defined.")
             return
 
-        for name, attrs in list(parameters.items()):
+        for name, attrs in parameters.items():
             p = build_parameter(name, attrs)
             t.add_parameter(p)
 

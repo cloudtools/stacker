@@ -88,8 +88,9 @@ class TroposphereType(object):
                 raise ValueError("Only one resource can be provided for this "
                                  "TroposphereType variable")
 
-            result = [self._type.from_dict(title, v) for title, v in
-                      list(value.items())]
+            result = [
+                self._type.from_dict(title, v) for title, v in value.items()
+            ]
         else:
             # Our type is for properties, not a resource, so don't use
             # titles

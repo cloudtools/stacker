@@ -1,5 +1,4 @@
 import os
-import sys
 from setuptools import setup, find_packages
 
 
@@ -16,6 +15,7 @@ install_requires = [
     "awacs>=0.6.0",
     "gitpython~=2.0",
     "schematics~=2.0.1",
+    "formic2",
 ]
 
 tests_require = [
@@ -26,21 +26,14 @@ tests_require = [
     "flake8-future-import",
 ]
 
-setup_requires = [
-    "nose",
-]
+setup_requires = ["nose"]
 
 scripts = [
     "scripts/compare_env",
     "scripts/docker-stacker",
     "scripts/stacker.cmd",
-    "scripts/stacker"
+    "scripts/stacker",
 ]
-
-if sys.version_info.major == 3:
-    install_requires.append("formic-py3")
-else:
-    install_requires.append("formic~=0.9b")
 
 
 def read(filename):

@@ -94,18 +94,16 @@ def render(raw_config, environment=None):
         environment = {}
     try:
         substituted = t.substitute(environment)
-        if not isinstance(substituted, str):
-            substituted = substituted.decode('utf-8')
-        buff.write(substituted)
     except KeyError as e:
         raise exceptions.MissingEnvironment(e.args[0])
     except ValueError:
         # Support "invalid" placeholders for lookup placeholders.
         substituted = t.safe_substitute(environment)
-        if not isinstance(substituted, str):
-            substituted = substituted.decode('utf-8')
-        buff.write(substituted)
 
+    if not isinstance(substituted, str):
+        substituted = substituted.decode('utf-8')
+
+    buff.write(substituted)
     buff.seek(0)
     return buff.read()
 

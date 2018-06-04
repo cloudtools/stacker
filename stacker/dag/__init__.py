@@ -376,7 +376,7 @@ class DAG(object):
         while queue:
             u = queue.pop()
             sorted_graph.append(u)
-            for v in graph[u]:
+            for v in sorted(graph[u]):
                 in_degree[v] -= 1
                 if in_degree[v] == 0:
                     queue.appendleft(v)

@@ -122,9 +122,9 @@ def test_downstream():
 
 @with_setup(start_with_graph)
 def test_all_downstreams():
-    assert set(dag.all_downstreams('a')) == set(['c', 'b', 'd'])
-    assert set(dag.all_downstreams('b')) == set(['d'])
-    assert set(dag.all_downstreams('d')) == set([])
+    assert dag.all_downstreams('a') == ['b', 'c', 'd']
+    assert dag.all_downstreams('b') == ['d']
+    assert dag.all_downstreams('d') == []
 
 
 @with_setup(start_with_graph)

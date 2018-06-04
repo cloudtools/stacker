@@ -12,7 +12,6 @@ import hashlib
 from io import BytesIO as StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 import botocore
-from functools import partial
 import formic
 from troposphere.awslambda import Code
 from stacker.session_cache import get_session
@@ -126,10 +125,10 @@ def _find_files(root, includes, excludes, follow_symlinks):
     """
 
     root = os.path.abspath(root)
-    file_set = formic.FileSet(directory=root, include=includes,
-                              exclude=excludes,
-                              walk=partial(
-                                  os.walk, followlinks=follow_symlinks))
+    file_set = formic.FileSet(
+        directory=root, include=includes,
+        exclude=excludes, symlinks=follow_symlinks,
+    )
 
     for filename in file_set.qualified_files(absolute=False):
         yield filename

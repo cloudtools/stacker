@@ -1,5 +1,4 @@
 import os
-import sys
 from setuptools import setup, find_packages
 
 
@@ -35,11 +34,6 @@ scripts = [
     "scripts/stacker.cmd",
     "scripts/stacker",
 ]
-
-if sys.version_info.major == 3:
-    install_requires.append("formic-py3")
-else:
-    install_requires.append("formic~=0.9b")
 
 
 def read(filename):

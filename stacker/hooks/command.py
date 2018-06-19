@@ -48,11 +48,13 @@ def run_command(provider, context, command, capture=False, interactive=False,
             pre_build:
               - path: stacker.hooks.command.run_command
                 required: true
+                enabled: true
                 data_key: copy_env
                 args:
                   command: ['cp', 'environment.template', 'environment']
               - path: stacker.hooks.command.run_command
                 required: true
+                enabled: true
                 data_key: get_git_commit
                 args:
                   command: ['git', 'rev-parse', 'HEAD']

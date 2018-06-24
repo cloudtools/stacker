@@ -3,11 +3,16 @@ from __future__ import division
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
+
 import unittest
 
 import string
 import os
-import queue
+
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 import mock
 

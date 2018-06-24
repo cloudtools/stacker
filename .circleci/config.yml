@@ -2,27 +2,21 @@ version: 2
 
 workflows:
   version: 2
-  test-27:
+  test-all:
     jobs:
+      - lint
       - unit-test-27:
           requires:
             - lint
       - functional-test-27:
           requires:
             - unit-test-27
-
-
-  test-35:
-    jobs:
       - unit-test-35:
           requires:
             - lint
       - functional-test-35:
           requires:
             - unit-test-35
-
-  test-36:
-    jobs:
       - unit-test-36:
           requires:
             - lint
@@ -30,9 +24,6 @@ workflows:
           requires:
             - unit-test-36
 
-  lint:
-    jobs:
-      - lint
 
 jobs:
   lint:

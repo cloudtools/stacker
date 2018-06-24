@@ -356,7 +356,7 @@ class TestHooks(unittest.TestCase):
         handle_hooks("missing", hooks, self.provider, self.context)
         good = hook_queue.get_nowait()
         self.assertEqual(good["provider"].region, "us-east-1")
-        with self.assertRaises(queue.Queue.Empty):
+        with self.assertRaises(queue.Empty):
             hook_queue.get_nowait()
 
     def test_valid_enabled_false_hook(self):

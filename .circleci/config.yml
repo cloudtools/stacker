@@ -5,30 +5,30 @@ workflows:
   test-27:
     jobs:
       - unit-test-27:
-        requires:
-          - lint
+          requires:
+            - lint
       - functional-test-27:
-        requires:
-          - unit-test-27
+          requires:
+            - unit-test-27
 
 
   test-35:
     jobs:
       - unit-test-35:
-        requires:
-          - lint
+          requires:
+            - lint
       - functional-test-35:
-        requires:
-          - unit-test-35
+          requires:
+            - unit-test-35
 
   test-36:
     jobs:
       - unit-test-36:
-        requires:
-          - lint
+          requires:
+            - lint
       - functional-test-36:
-        requires:
-          - unit-test-36
+          requires:
+            - unit-test-36
 
   lint:
     jobs:

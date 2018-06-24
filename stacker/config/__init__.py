@@ -273,6 +273,8 @@ class Hook(Model):
 
     required = BooleanType(default=True)
 
+    enabled = BooleanType(default=True)
+
     data_key = StringType(serialize_when_none=False)
 
     args = DictType(AnyType)

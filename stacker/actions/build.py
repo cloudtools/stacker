@@ -86,7 +86,6 @@ def should_ensure_cfn_bucket(outline, dump):
         bool: If access to CF bucket is needed, return True.
 
     """
-    print("OUTLINE: %s, DUMP: %s" % (outline, dump))
     return not outline and not dump
 
 

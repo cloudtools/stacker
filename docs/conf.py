@@ -126,7 +126,7 @@ html_theme = 'alabaster'
 html_theme_options = {
     "description": "A Cloudformation Stack Manager",
     "github_button": True,
-    "github_user": "remind101",
+    "github_user": "cloudtools",
     "github_repo": "stacker",
     "github_banner": True,
 }

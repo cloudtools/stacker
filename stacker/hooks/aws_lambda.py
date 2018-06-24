@@ -432,6 +432,7 @@ def upload_lambda_functions(context, provider, **kwargs):
             pre_build:
               - path: stacker.hooks.aws_lambda.upload_lambda_functions
                 required: true
+                enabled: true
                 data_key: lambda
                 args:
                   bucket: custom-bucket

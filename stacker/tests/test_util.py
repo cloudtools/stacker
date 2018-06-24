@@ -344,6 +344,23 @@ class TestHooks(unittest.TestCase):
         with self.assertRaises(queue.Empty):
             hook_queue.get_nowait()
 
+    def test_valid_enabled_hook(self):
+        hooks = [
+            Hook({"path": "stacker.tests.test_util.mock_hook",
+                  "required": True, "enabled": True})]
+        handle_hooks("missing", hooks, self.provider, self.context)
+        good = hook_queue.get_nowait()
+        self.assertEqual(good["provider"].region, "us-east-1")
+        with self.assertRaises(Queue.Empty):
+            hook_queue.get_nowait()
+
+    def test_valid_enabled_false_hook(self):
+        hooks = [
+            Hook({"path": "stacker.tests.test_util.mock_hook",
+                  "required": True, "enabled": False})]
+        handle_hooks("missing", hooks, self.provider, self.context)
+        self.assertTrue(hook_queue.empty())
+
     def test_context_provided_to_hook(self):
         hooks = [
             Hook({"path": "stacker.tests.test_util.context_hook",

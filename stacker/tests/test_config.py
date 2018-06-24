@@ -215,21 +215,25 @@ stacks: []
         pre_build:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_build:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         pre_destroy:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_destroy:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         package_sources:
@@ -273,24 +277,28 @@ stacks: []
           prebuild_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_build:
           postbuild_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         pre_destroy:
           predestroy_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_destroy:
           postdestroy_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         package_sources:

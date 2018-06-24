@@ -5,6 +5,9 @@ any manual requirements they specify or output values they rely on from other
 stacks.
 
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 from .base import BaseCommand, cancel
 from ...actions import destroy
 

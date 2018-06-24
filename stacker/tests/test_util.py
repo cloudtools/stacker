@@ -1,8 +1,13 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 import unittest
 
 import string
 import os
-import Queue
+import queue
 
 import mock
 
@@ -57,7 +62,7 @@ class TestUtil(unittest.TestCase):
         tests = (
             ("string.Template", string.Template),
             ("os.path.basename", os.path.basename),
-            ("string.letters", string.letters)
+            ("string.ascii_letters", string.ascii_letters)
         )
         for t in tests:
             self.assertIs(load_object_from_string(t[0]), t[1])
@@ -113,7 +118,7 @@ class TestUtil(unittest.TestCase):
             path: foo1.bar1
         """
         config = yaml_to_ordered_dict(raw_config)
-        self.assertEqual(config['pre_build'].keys()[0], 'hook2')
+        self.assertEqual(list(config['pre_build'].keys())[0], 'hook2')
         self.assertEqual(config['pre_build']['hook2']['path'], 'foo.bar')
 
     def test_get_client_region(self):
@@ -230,7 +235,7 @@ Outputs:
             self.assertEqual(
                 sp.git_ls_remote('https://github.com/remind101/stacker.git',
                                  'refs/heads/release-1.0'),
-                '857b4834980e582874d70feef77bb064b60762d1'
+                b'857b4834980e582874d70feef77bb064b60762d1'
             )
 
             bad_configs = [{'uri': 'x',
@@ -252,7 +257,7 @@ Outputs:
                     GitPackageSource({'uri': 'https://github.com/remind101/'
                                              'stacker.git',
                                       'branch': 'release-1.0'})),
-                '857b4834980e582874d70feef77bb064b60762d1'
+                b'857b4834980e582874d70feef77bb064b60762d1'
             )
             self.assertEqual(
                 sp.determine_git_ref(
@@ -274,7 +279,7 @@ Outputs:
             )
 
 
-hook_queue = Queue.Queue()
+hook_queue = queue.Queue()
 
 
 def mock_hook(*args, **kwargs):
@@ -336,7 +341,7 @@ class TestHooks(unittest.TestCase):
         handle_hooks("missing", hooks, self.provider, self.context)
         good = hook_queue.get_nowait()
         self.assertEqual(good["provider"].region, "us-east-1")
-        with self.assertRaises(Queue.Empty):
+        with self.assertRaises(queue.Empty):
             hook_queue.get_nowait()
 
     def test_valid_enabled_hook(self):
@@ -346,7 +351,7 @@ class TestHooks(unittest.TestCase):
         handle_hooks("missing", hooks, self.provider, self.context)
         good = hook_queue.get_nowait()
         self.assertEqual(good["provider"].region, "us-east-1")
-        with self.assertRaises(Queue.Empty):
+        with self.assertRaises(queue.Queue.Empty):
             hook_queue.get_nowait()
 
     def test_valid_enabled_false_hook(self):
@@ -397,7 +402,7 @@ class TestHooks(unittest.TestCase):
         )
         # Verify only the first hook resulted in stored data
         self.assertEqual(
-            self.context.hook_data.keys(), ["my_hook_results"]
+            list(self.context.hook_data.keys()), ["my_hook_results"]
         )
 
     def test_return_data_hook_duplicate_key(self):

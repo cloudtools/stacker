@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 from mock import MagicMock
 import unittest
 
@@ -69,7 +72,7 @@ class TestStack(unittest.TestCase):
         stack._blueprint.get_parameter_values.return_value = {
             "Param2": "Some Resolved Value",
         }
-        self.assertEqual(len(stack.parameter_values.keys()), 1)
+        self.assertEqual(len(stack.parameter_values), 1)
         param = stack.parameter_values["Param2"]
         self.assertEqual(param, "Some Resolved Value")
 

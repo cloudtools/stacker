@@ -5,7 +5,7 @@ load test_helper
 @test "stacker build - no config" {
   stacker build
   assert ! "$status" -eq 0
-  assert_has_line "stacker build: error: too few arguments"
+  assert_has_line -E "too few arguments|the following arguments are required: config"
 }
 
 @test "stacker build - empty config" {
@@ -100,35 +100,7 @@ EOF
   # Print the graph
   stacker graph -f json <(config)
   assert "$status" -eq 0
-  cat <<-EOF | diff -y <(echo "$output" | grep -v "Using default") -
-{
-    "steps": {
-        "app1": {
-            "deps": [
-                "bastion1"
-            ]
-        }, 
-        "app2": {
-            "deps": [
-                "bastion2"
-            ]
-        }, 
-        "bastion2": {
-            "deps": [
-                "vpc"
-            ]
-        }, 
-        "vpc": {
-            "deps": []
-        }, 
-        "bastion1": {
-            "deps": [
-                "vpc"
-            ]
-        }
-    }
-}
-EOF
+  assert $(echo "$output" | grep -v "Using default" | python -c "import sys, json; data = json.loads(sys.stdin.read()); print(data['steps']['vpc']['deps'] == [] and data['steps']['bastion1']['deps'] == ['vpc'] and data['steps']['app2']['deps'] == ['bastion2'])") = 'True'
 }
 
 @test "stacker graph - dot format" {
@@ -160,14 +132,11 @@ EOF
   # Print the graph
   stacker graph -f dot <(config)
   assert "$status" -eq 0
-  cat <<-EOF | diff -y <(echo "$output" | grep -v "Using default") -
-digraph digraph {
-  "bastion2" -> "vpc";
-  "bastion1" -> "vpc";
-  "app2" -> "bastion2";
-  "app1" -> "bastion1";
-}
-EOF
+  assert_has_line '"bastion1" -> "vpc";'
+  assert_has_line '"bastion2" -> "vpc";'
+  assert_has_line '"app1" -> "bastion1";'
+  assert_has_line '"app2" -> "bastion2";'
+  assert $(echo "$output" | grep -A 2 vpc | tail -n 2 | grep -c vpc) = '0'
 }
 
 @test "stacker build - missing variable" {
@@ -180,8 +149,8 @@ stacks:
     class_path: stacker.tests.fixtures.mock_blueprints.VPC
 EOF
   assert ! "$status" -eq 0
-  assert_has_line "MissingVariable: Variable \"PublicSubnets\" in blueprint \"vpc\" is missing"
-  assert_has_line "vpc: failed (Variable \"PublicSubnets\" in blueprint \"vpc\" is missing)"
+  assert_has_line -E 'MissingVariable: Variable "(PublicSubnets|PrivateSubnets)" in blueprint "vpc" is missing'
+  assert_has_line -E 'vpc: failed \(Variable "(PublicSubnets|PrivateSubnets)" in blueprint "vpc" is missing\)'
 }
 
 @test "stacker build - simple build" {

@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
 import os
 import logging
 import time
@@ -89,7 +93,7 @@ class Step(object):
             status = self.fn(self.stack, status=self.status)
         except Exception as e:
             logger.exception(e)
-            status = FailedStatus(reason=e.message)
+            status = FailedStatus(reason=str(e))
         self.set_status(status)
         return status
 

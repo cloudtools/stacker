@@ -1,6 +1,9 @@
 """Prints the the relationships between steps as a graph.
 
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 from .base import BaseCommand
 from ...actions import graph
@@ -14,7 +17,7 @@ class Graph(BaseCommand):
     def add_arguments(self, parser):
         super(Graph, self).add_arguments(parser)
         parser.add_argument("-f", "--format", default="dot",
-                            choices=list(graph.FORMATTERS.iterkeys()),
+                            choices=graph.FORMATTERS,
                             help="The format to print the graph in.")
         parser.add_argument("--reduce", action="store_true",
                             help="When provided, this will create a "

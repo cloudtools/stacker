@@ -1,5 +1,9 @@
 """Blueprint representing raw template module."""
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
+from builtins import object
 import hashlib
 import json
 
@@ -131,7 +135,7 @@ class RawTemplateBlueprint(object):
         self.resolved_variables = {}
         defined_variables = self.get_parameter_definitions()
         variable_dict = dict((var.name, var) for var in provided_variables)
-        for var_name, var_def in defined_variables.iteritems():
+        for var_name, var_def in defined_variables.items():
             value = resolve_variable(
                 var_name,
                 var_def,
@@ -183,5 +187,5 @@ class RawTemplateBlueprint(object):
     def version(self):
         """Return (generating first if needed) version hash."""
         if not self._version:
-            self._version = hashlib.md5(self.rendered).hexdigest()[:8]
+            self._version = hashlib.md5(self.rendered.encode()).hexdigest()[:8]
         return self._version

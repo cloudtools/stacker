@@ -1,8 +1,15 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import object
 import json
 import yaml
 import logging
 import time
-import urlparse
+import urllib.parse
 import sys
 
 import botocore.exceptions
@@ -85,10 +92,10 @@ def s3_fallback(fqn, template, parameters, tags, method,
     logger.debug("Modifying the S3 TemplateURL to point to "
                  "us-east-1 endpoint")
     template_url = template.url
-    template_url_parsed = urlparse.urlparse(template_url)
+    template_url_parsed = urllib.parse.urlparse(template_url)
     template_url_parsed = template_url_parsed._replace(
         netloc="s3.amazonaws.com")
-    template_url = urlparse.urlunparse(template_url_parsed)
+    template_url = urllib.parse.urlunparse(template_url_parsed)
     logger.debug("Using template_url: %s", template_url)
     args = generate_cloudformation_args(
         fqn, parameters, tags, template,
@@ -514,7 +521,7 @@ class Provider(BaseProvider):
             return self.cloudformation.describe_stacks(
                 StackName=stack_name)['Stacks'][0]
         except botocore.exceptions.ClientError as e:
-            if "does not exist" not in e.message:
+            if "does not exist" not in str(e):
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 
@@ -557,7 +564,7 @@ class Provider(BaseProvider):
                       log_func=log_func,
                       include_initial=False)
         except botocore.exceptions.ClientError as e:
-            if "does not exist" in e.message and retries < MAX_TAIL_RETRIES:
+            if "does not exist" in str(e) and retries < MAX_TAIL_RETRIES:
                 # stack might be in the process of launching, wait for a second
                 # and try again
                 time.sleep(1)
@@ -906,7 +913,7 @@ class Provider(BaseProvider):
         try:
             self.cloudformation.update_stack(**args)
         except botocore.exceptions.ClientError as e:
-            if "No updates are to be performed." in e.message:
+            if "No updates are to be performed." in str(e):
                 logger.debug(
                     "Stack %s did not change, not updating.",
                     fqn,
@@ -948,7 +955,7 @@ class Provider(BaseProvider):
             template = self.cloudformation.get_template(
                 StackName=stack_name)['TemplateBody']
         except botocore.exceptions.ClientError as e:
-            if "does not exist" not in e.message:
+            if "does not exist" not in str(e):
                 raise
             raise exceptions.StackDoesNotExist(stack_name)
 

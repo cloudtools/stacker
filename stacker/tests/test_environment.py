@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import unittest
 
 from stacker.environment import parse_environment
@@ -34,7 +37,7 @@ class TestEnvironment(unittest.TestCase):
         self.assertEqual(parsed_env["key3"], "some:complex::value")
         self.assertEqual(parsed_env["key4"], ":otherValue:")
         self.assertEqual(parsed_env["key5"], "<another>@value")
-        self.assertEqual(len(parsed_env.keys()), 5)
+        self.assertEqual(len(parsed_env), 5)
 
     def test_simple_key_value_parsing_exception(self):
         with self.assertRaises(ValueError):

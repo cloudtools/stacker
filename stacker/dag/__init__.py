@@ -1,3 +1,9 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import collections
 import logging
 from threading import Thread
@@ -63,7 +69,7 @@ class DAG(object):
             raise KeyError('node %s does not exist' % node_name)
         graph.pop(node_name)
 
-        for node, edges in graph.iteritems():
+        for node, edges in graph.items():
             if node_name in edges:
                 edges.remove(node_name)
 
@@ -122,9 +128,8 @@ class DAG(object):
         """
         graph = self.graph
         if dep_node not in graph.get(ind_node, []):
-            raise KeyError("No edge exists between %s and %s." % (
-                ind_node, dep_node
-                )
+            raise KeyError(
+                "No edge exists between %s and %s." % (ind_node, dep_node)
             )
         graph[ind_node].remove(dep_node)
 
@@ -168,22 +173,27 @@ class DAG(object):
 
         See https://en.wikipedia.org/wiki/Transitive_reduction
         """
+        combinations = []
+        for node, edges in self.graph.items():
+            combinations += [[node, edge] for edge in edges]
 
-        graph = self.graph
-        for x in graph.keys():
-            for y in graph.keys():
-                for z in graph.keys():
-                    # Edge from x -> y
-                    xy = y in graph[x]
-                    # Edge from y -> x
-                    yz = z in graph[y]
-                    # Edge from x -> z
-                    xz = z in graph[x]
+        while True:
+            new_combinations = []
+            for comb1 in combinations:
+                for comb2 in combinations:
+                    if not comb1[-1] == comb2[0]:
+                        continue
+                    new_entry = comb1 + comb2[1:]
+                    if new_entry not in combinations:
+                        new_combinations.append(new_entry)
+            if not new_combinations:
+                break
+            combinations += new_combinations
 
-                    # If edges xy and yz exist, remove edge xz.
-                    if xz and xy and yz:
-                        logger.debug("Removing edge %s -> %s" % (x, z))
-                        graph[x].remove(z)
+        constructed = {(c[0], c[-1]) for c in combinations if len(c) != 2}
+        for node, edges in self.graph.items():
+            bad_nodes = {e for n, e in constructed if node == n}
+            self.graph[node] = edges - bad_nodes
 
     def rename_edges(self, old_node_name, new_node_name):
         """ Change references to a node in existing edges.
@@ -251,9 +261,9 @@ class DAG(object):
                     nodes_seen.add(downstream_node)
                     nodes.append(downstream_node)
             i += 1
-        return filter(
-                lambda node: node
-                in nodes_seen, self.topological_sort())
+        return [
+            node_ for node_ in self.topological_sort() if node_ in nodes_seen
+        ]
 
     def filter(self, nodes):
         """ Returns a new DAG with only the given nodes and their
@@ -303,9 +313,9 @@ class DAG(object):
         """
 
         self.reset_graph()
-        for new_node in graph_dict.iterkeys():
+        for new_node in graph_dict:
             self.add_node(new_node)
-        for ind_node, dep_nodes in graph_dict.iteritems():
+        for ind_node, dep_nodes in graph_dict.items():
             if not isinstance(dep_nodes, collections.Iterable):
                 raise TypeError('%s: dict values must be lists' % ind_node)
             for dep_node in dep_nodes:
@@ -325,8 +335,8 @@ class DAG(object):
 
         dependent_nodes = set(
             node for dependents
-            in graph.itervalues() for node in dependents)
-        return [node for node in graph.keys() if node not in dependent_nodes]
+            in graph.values() for node in dependents)
+        return [node_ for node_ in graph if node_ not in dependent_nodes]
 
     def validate(self):
         """ Returns (Boolean, message) of whether DAG is valid. """
@@ -335,7 +345,7 @@ class DAG(object):
         try:
             self.topological_sort()
         except ValueError as e:
-            return (False, e.message)
+            return (False, str(e))
         return (True, 'valid')
 
     def topological_sort(self):
@@ -366,7 +376,7 @@ class DAG(object):
         while queue:
             u = queue.pop()
             sorted_graph.append(u)
-            for v in graph[u]:
+            for v in sorted(graph[u]):
                 in_degree[v] -= 1
                 if in_degree[v] == 0:
                     queue.appendleft(v)

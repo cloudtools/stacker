@@ -1,3 +1,8 @@
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
+from past.builtins import basestring
+from builtins import object
 from string import Template
 
 from .exceptions import InvalidLookupCombination
@@ -6,7 +11,7 @@ from .lookups import (
     resolve_lookups,
 )
 
-from exceptions import FailedVariableLookup
+from .exceptions import FailedVariableLookup
 
 
 class LookupTemplate(Template):
@@ -56,7 +61,7 @@ def resolve(value, replacements):
             resolved.append(resolve(v, replacements))
         return resolved
     elif isinstance(value, dict):
-        for key, v in value.iteritems():
+        for key, v in value.items():
             value[key] = resolve(v, replacements)
         return value
     return value
@@ -156,7 +161,7 @@ class Variable(object):
 
         """
         replacements = {}
-        for lookup, value in resolved_lookups.iteritems():
+        for lookup, value in resolved_lookups.items():
             replacements[lookup.raw] = value
 
         self._resolved_value = resolve(self.value, replacements)

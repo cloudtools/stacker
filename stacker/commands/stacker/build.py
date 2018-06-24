@@ -5,6 +5,9 @@ have changed for a given stack. If nothing has changed, stacker will correctly
 skip executing anything against the stack.
 
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 from .base import BaseCommand, cancel
 from ...actions import build

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import unittest
 import sys
 from mock import patch
@@ -128,7 +131,7 @@ class TestVariables(unittest.TestCase):
 
         blueprint = TestBlueprintSublcass(name="test", context=MagicMock())
         variables = blueprint.defined_variables()
-        self.assertEqual(len(variables.keys()), 3)
+        self.assertEqual(len(variables), 3)
         self.assertEqual(variables["Param2"]["default"], 1)
 
     def test_get_variables_unresolved_variables(self):
@@ -623,7 +626,7 @@ class TestVariables(unittest.TestCase):
         blueprint = TestBlueprint(name="test", context=MagicMock())
         blueprint.setup_parameters()
         params = blueprint.get_required_parameter_definitions()
-        self.assertEqual(params.keys()[0], "Param1")
+        self.assertEqual(list(params.keys())[0], "Param1")
 
     def test_get_parameter_values(self):
         class TestBlueprint(Blueprint):
@@ -638,7 +641,7 @@ class TestVariables(unittest.TestCase):
         variables = blueprint.get_variables()
         self.assertEqual(len(variables), 2)
         parameters = blueprint.get_parameter_values()
-        self.assertEqual(len(parameters.keys()), 1)
+        self.assertEqual(len(parameters), 1)
         self.assertEqual(parameters["Param2"], "Value")
 
     def test_validate_allowed_values(self):

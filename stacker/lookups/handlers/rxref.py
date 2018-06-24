@@ -11,6 +11,9 @@ Example:
         some-relative-fully-qualified-stack-name::SomeOutputName}
 
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 from .output import deconstruct
 
 TYPE_NAME = "rxref"

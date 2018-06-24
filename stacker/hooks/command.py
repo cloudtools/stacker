@@ -106,9 +106,9 @@ def run_command(provider, context, command, capture=False, interactive=False,
 
         if status == 0 or ignore_status:
             return {
-              'returncode': proc.returncode,
-              'stdout': out,
-              'stderr': err
+                'returncode': proc.returncode,
+                'stdout': out,
+                'stderr': err
             }
 
         # Don't print the command line again if we already did earlier

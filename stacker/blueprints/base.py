@@ -6,9 +6,10 @@ from stacker.util import read_value_from_path
 from stacker.variables import Variable
 
 from troposphere import (
+    Output,
     Parameter,
     Ref,
-    Template
+    Template,
 )
 
 from ..exceptions import (
@@ -521,6 +522,15 @@ class Blueprint(object):
 
         """
         self.template.add_description(description)
+
+    def add_output(self, name, value):
+        """Simple helper for adding outputs.
+
+        Args:
+            name (str): The name of the output to create.
+            value (str): The value to put in the output.
+        """
+        self.template.add_output(Output(name, Value=value))
 
     @property
     def requires_change_set(self):

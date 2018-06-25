@@ -8,11 +8,7 @@ import unittest
 
 import string
 import os
-
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 import mock
 

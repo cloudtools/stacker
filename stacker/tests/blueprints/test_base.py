@@ -96,6 +96,25 @@ class TestBlueprintRendering(unittest.TestCase):
         )
 
 
+class TestBaseBlueprint(unittest.TestCase):
+    def test_add_output(self):
+        output_name = "MyOutput1"
+        output_value = "OutputValue"
+
+        class TestBlueprint(Blueprint):
+            VARIABLES = {}
+
+            def create_template(self):
+                self.template.add_version('2010-09-09')
+                self.template.add_description('TestBlueprint')
+                self.add_output(output_name, output_value)
+
+        bp = TestBlueprint(name="test", context=mock_context())
+        bp.render_template()
+        self.assertEqual(bp.template.outputs[output_name].properties["Value"],
+                         output_value)
+
+
 class TestVariables(unittest.TestCase):
 
     def test_defined_variables(self):

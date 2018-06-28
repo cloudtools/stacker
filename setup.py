@@ -9,7 +9,7 @@ install_requires = [
     "troposphere>=1.9.0",
     "botocore>=1.6.0",
     "boto3>=1.3.1",
-    "PyYAML>=3.12,<=4.1",
+    "PyYAML>=3.12",
     "awacs>=0.6.0",
     "formic~=0.9b",
     "gitpython~=2.0",

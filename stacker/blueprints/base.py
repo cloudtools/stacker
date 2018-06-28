@@ -41,6 +41,20 @@ PARAMETER_PROPERTIES = {
 }
 
 
+def normalize_defined_variables(variables):
+    """Looks for any variable definitions that are a "str", and assumes that
+    they're the name of a CloudFormation parameter type, in which case the type
+    is converted to a CFNType.
+
+    Returns:
+        dict: normalized variable definitions
+    """
+    for k, v in variables.iteritems():
+        if isinstance(v["type"], str):
+            v["type"] = CFNType.from_name(v["type"])
+    return variables
+
+
 class CFNParameter(object):
 
     def __init__(self, name, value):
@@ -340,7 +354,8 @@ class Blueprint(object):
 
         """
         output = {}
-        for var_name, attrs in self.defined_variables().iteritems():
+        defined_variables = self._normalized_defined_variables()
+        for var_name, attrs in defined_variables.iteritems():
             var_type = attrs.get("type")
             if isinstance(var_type, CFNType):
                 cfn_attrs = copy.deepcopy(attrs)
@@ -392,6 +407,9 @@ class Blueprint(object):
         """
         return copy.deepcopy(getattr(self, "VARIABLES", {}))
 
+    def _normalized_defined_variables(self):
+        return normalize_defined_variables(self.defined_variables())
+
     def get_variables(self):
         """Return a dictionary of variables available to the template.
 
@@ -436,7 +454,7 @@ class Blueprint(object):
 
         """
         self.resolved_variables = {}
-        defined_variables = self.defined_variables()
+        defined_variables = self._normalized_defined_variables()
         variable_dict = dict((var.name, var) for var in provided_variables)
         for var_name, var_def in defined_variables.iteritems():
             value = resolve_variable(

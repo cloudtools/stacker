@@ -29,12 +29,12 @@ class FunctionalTests(Blueprint):
 
     VARIABLES = {
         "StackerNamespace": {
-            "type": CFNString,
+            "type": "String",
             "description": "The stacker namespace that the tests will use. "
                            "Access to cloudformation will be restricted to "
                            "only allow access to stacks with this prefix."},
         "StackerBucket": {
-            "type": CFNString,
+            "type": "String",
             "description": "The name of the bucket that the tests will use "
                            "for uploading templates."}
     }
@@ -205,38 +205,38 @@ class VPC(Blueprint):
             "default": 2,
         },
         "PrivateSubnets": {
-            "type": CFNCommaDelimitedList,
+            "type": "CommaDelimitedList",
             "description": "Comma separated list of subnets to use for "
                            "non-public hosts. NOTE: Must have as many subnets "
                            "as AZCount"},
         "PublicSubnets": {
-            "type": CFNCommaDelimitedList,
+            "type": "CommaDelimitedList",
             "description": "Comma separated list of subnets to use for "
                            "public hosts. NOTE: Must have as many subnets "
                            "as AZCount"},
         "InstanceType": {
-            "type": CFNString,
+            "type": "String",
             "description": "NAT EC2 instance type.",
             "default": "m3.medium"},
         "BaseDomain": {
-            "type": CFNString,
+            "type": "String",
             "default": "",
             "description": "Base domain for the stack."},
         "InternalDomain": {
-            "type": CFNString,
+            "type": "String",
             "default": "",
             "description": "Internal domain name, if you have one."},
         "CidrBlock": {
-            "type": CFNString,
+            "type": "String",
             "description": "Base CIDR block for subnets.",
             "default": "10.128.0.0/16"},
         "ImageName": {
-            "type": CFNString,
+            "type": "String",
             "description": "The image name to use from the AMIMap (usually "
                            "found in the config file.)",
             "default": "NAT"},
         "UseNatGateway": {
-            "type": CFNString,
+            "type": "String",
             "allowed_values": ["true", "false"],
             "description": "If set to true, will configure a NAT Gateway"
                            "instead of NAT instances.",
@@ -250,7 +250,7 @@ class VPC(Blueprint):
 class DiffTester(Blueprint):
     VARIABLES = {
         "InstanceType": {
-            "type": CFNString,
+            "type": "String",
             "description": "NAT EC2 instance type.",
             "default": "m3.medium"},
         "WaitConditionCount": {

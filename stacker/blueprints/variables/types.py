@@ -120,6 +120,10 @@ class CFNType(object):
         """
         self.parameter_type = parameter_type
 
+    @staticmethod
+    def from_name(name):
+        return CFNType(name)
+
 
 CFNString = CFNType("String")
 CFNNumber = CFNType("Number")

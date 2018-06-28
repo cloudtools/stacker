@@ -66,7 +66,8 @@ class TestBlueprintRendering(unittest.TestCase):
                 "Param2": {"type": CFNNumber},
                 "Param3": {"type": CFNCommaDelimitedList},
                 "Param4": {"default": "foo", "type": str},
-                "Param5": {"default": 5, "type": int}
+                "Param5": {"default": 5, "type": int},
+                "Param6": {"type": "AWS::EC2::Image::Id"}
             }
 
             def create_template(self):
@@ -86,6 +87,9 @@ class TestBlueprintRendering(unittest.TestCase):
         },
         "Param3": {
             "Type": "CommaDelimitedList"
+        },
+        "Param6": {
+            "Type": "AWS::EC2::Image::Id"
         }
     },
     "Resources": {}

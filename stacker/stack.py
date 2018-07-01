@@ -195,3 +195,53 @@ class Stack(object):
 
     def set_outputs(self, outputs):
         self.outputs = outputs
+
+
+class ExternalStack(Stack):
+    """Represents gathered information about an existing external stack
+
+    Args:
+        definition (:class:`stacker.config.Stack`): A stack definition.
+        context (:class:`stacker.context.Context`): Current context for
+            building the stack.
+
+    """
+
+    def __init__(self, definition, context):
+        self.name = definition.name
+        self.fqn = definition.stack_name
+        self.region = definition.region
+        self.profile = definition.profile
+        self.definition = definition
+        self.context = context
+        self.outputs = None
+
+    @property
+    def requires(self):
+        return set()
+
+    @property
+    def stack_policy(self):
+        return None
+
+    @property
+    def blueprint(self):
+        return None
+
+    @property
+    def tags(self):
+        return dict()
+
+    @property
+    def parameter_values(self):
+        return dict()
+
+    @property
+    def required_parameter_definitions(self):
+        return dict()
+
+    def resolve(self, context, provider):
+        pass
+
+    def set_outputs(self, outputs):
+        self.outputs = outputs

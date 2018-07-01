@@ -48,6 +48,10 @@ def should_update(stack):
         bool: If the stack should be updated, return True.
 
     """
+
+    if not stack.blueprint:
+        return False
+
     if stack.locked:
         if not stack.force:
             logger.debug("Stack %s locked and not in --force list. "
@@ -69,6 +73,11 @@ def should_submit(stack):
         bool: If the stack should be submitted, return True.
 
     """
+
+    # Submit stack without a blueprint just to grab outputs
+    if not stack.blueprint:
+        return True
+
     if stack.enabled:
         return True
 

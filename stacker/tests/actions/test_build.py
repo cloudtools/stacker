@@ -157,28 +157,28 @@ class TestBuildAction(unittest.TestCase):
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
 
     def test_should_update(self):
-        test_scenario = namedtuple("test_scenario",
-                                   ["locked", "force", "result"])
         test_scenarios = (
-            test_scenario(locked=False, force=False, result=True),
-            test_scenario(locked=False, force=True, result=True),
-            test_scenario(locked=True, force=False, result=False),
-            test_scenario(locked=True, force=True, result=True)
+            dict(blueprint=None, locked=False, force=False, result=False),
+            dict(blueprint="BLUEPRINT", locked=False, force=False,
+                 result=True),
+            dict(blueprint="BLUEPRINT", locked=False, force=True, result=True),
+            dict(blueprint="BLUEPRINT", locked=True, force=False,
+                 result=False),
+            dict(blueprint="BLUEPRINT", locked=True, force=True, result=True)
         )
-        mock_stack = mock.MagicMock(["locked", "force", "name"])
-        mock_stack.name = "test-stack"
         for t in test_scenarios:
-            mock_stack.locked = t.locked
-            mock_stack.force = t.force
-            self.assertEqual(build.should_update(mock_stack), t.result)
+            mock_stack = mock.MagicMock(
+                ["blueprint", "locked", "force", "name"],
+                name='test-stack', **t)
+            self.assertEqual(build.should_update(mock_stack), t['result'])
 
     def test_should_ensure_cfn_bucket(self):
         test_scenarios = [
-            {"outline": False, "dump": False, "result": True},
-            {"outline": True, "dump": False, "result": False},
-            {"outline": False, "dump": True, "result": False},
-            {"outline": True, "dump": True, "result": False},
-            {"outline": True, "dump": "DUMP", "result": False}
+            dict(outline=False, dump=False, result=True),
+            dict(outline=True, dump=False, result=False),
+            dict(outline=False, dump=True, result=False),
+            dict(outline=True, dump=True, result=False),
+            dict(outline=True, dump="DUMP", result=False)
         ]
 
         for scenario in test_scenarios:
@@ -193,18 +193,17 @@ class TestBuildAction(unittest.TestCase):
                 raise
 
     def test_should_submit(self):
-        test_scenario = namedtuple("test_scenario",
-                                   ["enabled", "result"])
         test_scenarios = (
-            test_scenario(enabled=False, result=False),
-            test_scenario(enabled=True, result=True),
+            dict(blueprint=None, enabled=False, result=True),
+            dict(blueprint="BLUEPRINT", enabled=False,  result=False),
+            dict(blueprint="BLUEPRINT", enabled=True, result=True),
         )
 
-        mock_stack = mock.MagicMock(["enabled", "name"])
-        mock_stack.name = "test-stack"
         for t in test_scenarios:
-            mock_stack.enabled = t.enabled
-            self.assertEqual(build.should_submit(mock_stack), t.result)
+            mock_stack = mock.MagicMock(
+                ["blueprint", "enabled", "name"],
+                name='test-stack', **t)
+            self.assertEqual(build.should_submit(mock_stack), t['result'])
 
 
 class TestLaunchStack(TestBuildAction):

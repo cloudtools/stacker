@@ -5,8 +5,8 @@ from builtins import object
 import collections
 import logging
 
-from stacker.config import Config
-from .stack import Stack
+from stacker.config import Config, ExternalStack as ExternalStackModel
+from .stack import ExternalStack, Stack
 from .target import Target
 
 logger = logging.getLogger(__name__)
@@ -153,15 +153,21 @@ class Context(object):
             stacks = []
             definitions = self._get_stack_definitions()
             for stack_def in definitions:
-                stack = Stack(
-                    definition=stack_def,
-                    context=self,
-                    mappings=self.mappings,
-                    force=stack_def.name in self.force_stacks,
-                    locked=stack_def.locked,
-                    enabled=stack_def.enabled,
-                    protected=stack_def.protected,
-                )
+                if isinstance(stack_def, ExternalStackModel):
+                    stack = ExternalStack(
+                        definition=stack_def,
+                        context=self
+                    )
+                else:
+                    stack = Stack(
+                        definition=stack_def,
+                        context=self,
+                        mappings=self.mappings,
+                        force=stack_def.name in self.force_stacks,
+                        locked=stack_def.locked,
+                        enabled=stack_def.enabled,
+                        protected=stack_def.protected,
+                    )
                 stacks.append(stack)
             self._stacks = stacks
         return self._stacks

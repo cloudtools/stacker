@@ -31,7 +31,7 @@ class FailedVariableLookup(Exception):
         self.error = error
         message = "Couldn't resolve lookup in variable `%s`, " % variable_name
         message += "lookup: ${%s}: " % lookup.raw
-        message += "%s" % error
+        message += "(%s) %s" % (error.__class__, error)
         super(FailedVariableLookup, self).__init__(message, *args, **kwargs)
 
 

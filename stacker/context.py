@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_NAMESPACE_DELIMITER = "-"
 DEFAULT_TEMPLATE_INDENT = 4
+DEFAULT_DUMP_FORMAT = "json"
 
 
 def get_fqn(base_fqn, delimiter, name=None):
@@ -69,6 +70,17 @@ class Context(object):
         if indent is not None:
             return int(indent)
         return DEFAULT_TEMPLATE_INDENT
+
+    @property
+    def dump_format(self):
+        format = self.config.dump_format
+        valid_formats = ["json", "yml", "yaml"]
+        if format is not None and format in valid_formats:
+            return format
+        if format not in valid_formats:
+            logger.debug("Invalid dump format specified, setting it to %s",
+                         DEFAULT_DUMP_FORMAT)
+        return DEFAULT_DUMP_FORMAT
 
     @property
     def bucket_name(self):

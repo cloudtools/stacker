@@ -4,7 +4,7 @@ import hashlib
 import json
 
 from ..util import parse_cloudformation_template
-from ..exceptions import MissingVariable, UnresolvedVariable
+from ..exceptions import UnresolvedVariable
 
 
 def get_template_params(template):
@@ -57,10 +57,7 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     else:
         # Variable value not provided, try using the default, if it exists
         # in the definition
-        try:
-            value = var_def["Default"]
-        except KeyError:
-            raise MissingVariable(blueprint_name, var_name)
+        value = var_def.get("Default")
 
     return value
 
@@ -138,7 +135,8 @@ class RawTemplateBlueprint(object):
                 variable_dict.get(var_name),
                 self.name
             )
-            self.resolved_variables[var_name] = value
+            if value is not None:
+                self.resolved_variables[var_name] = value
 
     def get_parameter_values(self):
         """Return a dictionary of variables with `type` :class:`CFNType`.

@@ -307,6 +307,8 @@ class BaseStack(Model):
 
 
 class ExternalStack(BaseStack):
+    fqn = StringType(serialize_when_none=False)
+
     @classmethod
     def _claim_polymorphic(cls, value):
         if value.get("external", False) is True:
@@ -315,6 +317,12 @@ class ExternalStack(BaseStack):
     def __init__(self, *args, **kwargs):
         super(ExternalStack, self).__init__(*args, **kwargs)
         self.external = True
+
+    def validate_fqn(self, data, value):
+        if (not value and not data["stack_name"]) or \
+           (value and data["stack_name"]):
+            raise ValidationError("Exactly one of `fqn` and `stack_name` must "
+                                  "be provided for external stacks")
 
 
 class Stack(BaseStack):

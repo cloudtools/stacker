@@ -201,7 +201,7 @@ class ExternalStack(Stack):
     """Represents gathered information about an existing external stack
 
     Args:
-        definition (:class:`stacker.config.Stack`): A stack definition.
+        definition (:class:`stacker.config.ExternalStack`): A stack definition.
         context (:class:`stacker.context.Context`): Current context for
             building the stack.
 
@@ -209,7 +209,8 @@ class ExternalStack(Stack):
 
     def __init__(self, definition, context):
         self.name = definition.name
-        self.fqn = definition.stack_name
+        stack_name = definition.stack_name or self.name
+        self.fqn = definition.fqn or context.get_fqn(stack_name)
         self.region = definition.region
         self.profile = definition.profile
         self.definition = definition

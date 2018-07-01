@@ -6,8 +6,6 @@ from .lookups import (
     resolve_lookups,
 )
 
-from exceptions import FailedVariableLookup
-
 
 class LookupTemplate(Template):
 
@@ -139,12 +137,7 @@ class Variable(object):
         """
 
         while self.lookups:
-            try:
-                resolved_lookups = resolve_lookups(
-                    self.lookups, context, provider)
-            except Exception as e:
-                raise FailedVariableLookup(self.name, e)
-
+            resolved_lookups = resolve_lookups(self, context, provider)
             self.replace(resolved_lookups)
 
     def replace(self, resolved_lookups):

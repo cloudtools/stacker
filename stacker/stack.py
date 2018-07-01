@@ -90,7 +90,7 @@ class Stack(object):
                     try:
                         d = deconstruct(lookup.input)
                     except ValueError as e:
-                        raise FailedVariableLookup(self.name, e)
+                        raise FailedVariableLookup(self.name, lookup, e)
 
                     if d.stack_name == self.name:
                         message = (

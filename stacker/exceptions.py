@@ -25,8 +25,9 @@ class UnknownLookupType(Exception):
 
 class FailedVariableLookup(Exception):
 
-    def __init__(self, variable_name, error, *args, **kwargs):
-        message = "Couldn't resolve lookups in variable `%s`. " % variable_name
+    def __init__(self, variable_name, lookup, error, *args, **kwargs):
+        message = "Couldn't resolve lookup in variable `%s`, " % variable_name
+        message += "lookup: ${%s}: " % lookup.raw
         message += "%s" % error
         super(FailedVariableLookup, self).__init__(message, *args, **kwargs)
 

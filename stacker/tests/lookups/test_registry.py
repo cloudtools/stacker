@@ -1,6 +1,6 @@
 import unittest
 
-from mock import patch
+from mock import patch, MagicMock
 
 from stacker.exceptions import (
     UnknownLookupType,
@@ -55,24 +55,25 @@ class TestRegistry(unittest.TestCase):
         with self.assertRaises(UnknownLookupType):
             resolve_lookups(variable, self.ctx, self.provider)
 
-    @patch("stacker.lookups.handlers.output")
-    def test_resolve_lookups_string_failed_variable_lookup(self, mock_handler):
-        mock_handler.side_effect = ValueError("FakeError")
+    def resolve_lookups_with_output_handler_raise_valueerror(self, variable):
+        """Mock output handler to throw ValueError, then run resolve_lookups
+        on the given variable.
+        """
+        mock_handler = MagicMock(side_effect=ValueError("Error"))
+        with patch.dict(LOOKUP_HANDLERS, {"output": mock_handler}):
+            with self.assertRaises(FailedVariableLookup) as cm:
+                resolve_lookups(variable, self.ctx, self.provider)
 
+            self.assertIsInstance(cm.exception.error, ValueError)
+
+    def test_resolve_lookups_string_failed_variable_lookup(self):
         variable = Variable("MyVar", "${output foo::bar}")
+        self.resolve_lookups_with_output_handler_raise_valueerror(variable)
 
-        with self.assertRaises(FailedVariableLookup):
-            resolve_lookups(variable, self.ctx, self.provider)
-
-    @patch("stacker.lookups.handlers.output")
-    def test_resolve_lookups_list_failed_variable_lookup(self, mock_handler):
-        mock_handler.side_effect = ValueError("FakeError")
-
+    def test_resolve_lookups_list_failed_variable_lookup(self):
         variable = Variable(
             "MyVar", [
                 "random string", "${output foo::bar}", "random string",
             ]
         )
-
-        with self.assertRaises(FailedVariableLookup):
-            resolve_lookups(variable, self.ctx, self.provider)
+        self.resolve_lookups_with_output_handler_raise_valueerror(variable)

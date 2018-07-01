@@ -19,6 +19,7 @@ class InvalidLookupCombination(Exception):
 class UnknownLookupType(Exception):
 
     def __init__(self, lookup, *args, **kwargs):
+        self.lookup = lookup
         message = "Unknown lookup type: \"{}\"".format(lookup.type)
         super(UnknownLookupType, self).__init__(message, *args, **kwargs)
 
@@ -26,6 +27,8 @@ class UnknownLookupType(Exception):
 class FailedVariableLookup(Exception):
 
     def __init__(self, variable_name, lookup, error, *args, **kwargs):
+        self.lookup = lookup
+        self.error = error
         message = "Couldn't resolve lookup in variable `%s`, " % variable_name
         message += "lookup: ${%s}: " % lookup.raw
         message += "%s" % error

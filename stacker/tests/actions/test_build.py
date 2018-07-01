@@ -3,13 +3,11 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import str
 import unittest
-from collections import namedtuple
 
 import mock
 
 from stacker import exceptions
 from stacker.actions import build
-from stacker.session_cache import get_session
 from stacker.actions.build import (
     _resolve_parameters,
     _handle_missing_parameters,
@@ -20,6 +18,7 @@ from stacker.context import Context, Config
 from stacker.exceptions import StackDidNotChange, StackDoesNotExist
 from stacker.providers.base import BaseProvider
 from stacker.providers.aws.default import Provider
+from stacker.session_cache import get_session
 from stacker.status import (
     NotSubmittedStatus,
     COMPLETE,

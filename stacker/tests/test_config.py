@@ -13,7 +13,7 @@ from stacker.config import (
     dump,
     process_remote_sources
 )
-from stacker.config import Config, Stack
+from stacker.config import Config, ExternalStack, Stack
 from stacker.environment import parse_environment
 from stacker import exceptions
 from stacker.lookups.registry import LOOKUP_HANDLERS
@@ -189,6 +189,44 @@ stacks: []
             "'parameters', rather than 'variables'. You are required to update"
             " your config. See https://stacker.readthedocs.io/en/latest/c"
             "onfig.html#variables for additional information.")
+
+    def test_parse_external(self):
+        config = parse("""
+        namespace: prod
+        stacks:
+        - name: vpc
+          stack_name: cool-vpc
+          class_path: blueprints.VPC
+          parameters:
+            Foo: bar
+        - name: external-vpc
+          stack_name: other-cool-vpc
+          external: yes
+        """)
+
+        local_stack, external_stack = config.stacks
+        self.assertIsInstance(local_stack, Stack)
+        self.assertEquals(local_stack.name, 'vpc')
+        self.assertEquals(local_stack.stack_name, 'cool-vpc')
+        self.assertIsInstance(external_stack, ExternalStack)
+        self.assertEquals(external_stack.name, 'external-vpc')
+        self.assertEquals(external_stack.stack_name, 'other-cool-vpc')
+
+    def test_parse_external_invalid(self):
+        config = parse("""
+        namespace: prod
+        stacks:
+        - name: vpc
+          class_path: blueprints.VPC
+          parameters:
+            Foo: bar
+        - name: external-vpc
+          stack_name: some-other-vpc
+          external: yes
+        """)
+
+        with self.assertRaises(exceptions.InvalidConfig):
+            config.validate()
 
     def test_config_build(self):
         vpc = Stack({"name": "vpc", "class_path": "blueprints.VPC"})
@@ -428,22 +466,28 @@ stacks: []
                 Stack({
                     "name": "bastion",
                     "class_path": "blueprints.Bastion",
-                    "requires": ["vpc"]})]})
+                    "requires": ["vpc"]}),
+                ExternalStack({
+                    "name": "external"})]})
 
         self.assertEqual(dump(config), b"""namespace: prod
 stacks:
 - class_path: blueprints.VPC
   enabled: true
+  external: false
   locked: false
   name: vpc
   protected: false
 - class_path: blueprints.Bastion
   enabled: true
+  external: false
   locked: false
   name: bastion
   protected: false
   requires:
   - vpc
+- external: true
+  name: external
 """)
 
     def test_load_register_custom_lookups(self):

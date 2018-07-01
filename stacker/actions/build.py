@@ -125,6 +125,13 @@ def _resolve_parameters(parameters, blueprint):
     return params
 
 
+class UsePreviousParameterValue(object):
+    """ A simple class used to indicate a Parameter should use it's existng
+    value.
+    """
+    pass
+
+
 def _handle_missing_parameters(params, required_params, existing_stack=None):
     """Handles any missing parameters.
 
@@ -147,14 +154,17 @@ def _handle_missing_parameters(params, required_params, existing_stack=None):
     """
     missing_params = list(set(required_params) - set(params.keys()))
     if existing_stack and 'Parameters' in existing_stack:
-        stack_params = {p['ParameterKey']: p['ParameterValue'] for p in
-                        existing_stack['Parameters']}
+        stack_parameters = [
+            p["ParameterKey"] for p in existing_stack["Parameters"]
+        ]
         for p in missing_params:
-            if p in stack_params:
-                value = stack_params[p]
-                logger.debug("Using parameter %s from existing stack: %s",
-                             p, value)
-                params[p] = value
+            if p in stack_parameters:
+                logger.debug(
+                    "Using previous value for parameter %s from existing "
+                    "stack",
+                    p
+                )
+                params[p] = UsePreviousParameterValue
     final_missing = list(set(required_params) - set(params.keys()))
     if final_missing:
         raise MissingParameterException(final_missing)
@@ -215,10 +225,19 @@ class Action(BaseAction):
         required_parameters = stack.required_parameter_definitions.keys()
         parameters = _handle_missing_parameters(resolved, required_parameters,
                                                 provider_stack)
-        return [
-            {'ParameterKey': p[0],
-             'ParameterValue': str(p[1])} for p in parameters
-        ]
+
+        param_list = []
+
+        for key, value in parameters:
+            param_dict = {"ParameterKey": key}
+            if value is UsePreviousParameterValue:
+                param_dict["UsePreviousValue"] = True
+            else:
+                param_dict["ParameterValue"] = str(value)
+
+            param_list.append(param_dict)
+
+        return param_list
 
     def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.

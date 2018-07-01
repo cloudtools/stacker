@@ -9,6 +9,7 @@ from stacker.session_cache import get_session
 from stacker.actions.build import (
     _resolve_parameters,
     _handle_missing_parameters,
+    UsePreviousParameterValue,
 )
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context, Config
@@ -87,12 +88,13 @@ class TestBuildAction(unittest.TestCase):
 
     def test_gather_missing_from_stack(self):
         stack_params = {"Address": "10.0.0.1"}
+        expected_params = {"Address": UsePreviousParameterValue}
         stack = mock_stack(stack_params)
-        def_params = {}
+        defined_params = {}
         required = ["Address"]
         self.assertEqual(
-            _handle_missing_parameters(def_params, required, stack),
-            stack_params.items())
+            _handle_missing_parameters(defined_params, required, stack),
+            expected_params.items())
 
     def test_missing_params_no_stack(self):
         params = {}

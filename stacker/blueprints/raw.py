@@ -49,15 +49,12 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
             resolved.
 
     """
+    value = None
     if provided_variable:
         if not provided_variable.resolved:
             raise UnresolvedVariable(blueprint_name, provided_variable)
 
         value = provided_variable.value
-    else:
-        # Variable value not provided, try using the default, if it exists
-        # in the definition
-        value = var_def.get("Default")
 
     return value
 

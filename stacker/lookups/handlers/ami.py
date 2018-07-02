@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 from stacker.session_cache import get_session
 import re
 import operator
@@ -76,7 +79,7 @@ def handler(value, provider, **kwargs):
         describe_args["ExecutableUsers"] = executable_users
 
     filters = []
-    for k, v in values.iteritems():
+    for k, v in values.items():
         filters.append({"Name": k, "Values": v.split(',')})
     describe_args["Filters"] = filters
 

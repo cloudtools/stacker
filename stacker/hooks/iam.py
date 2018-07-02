@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import input
 import copy
 import logging
 
@@ -36,7 +40,7 @@ def create_ecs_service_role(provider, context, **kwargs):
             AssumeRolePolicyDocument=get_ecs_assumerole_policy().to_json()
         )
     except ClientError as e:
-        if "already exists" in e.message:
+        if "already exists" in str(e):
             pass
         else:
             raise
@@ -85,11 +89,11 @@ def get_cert_contents(kwargs):
         "chain": kwargs.get("path_to_chain"),
     }
 
-    for key, value in paths.iteritems():
+    for key, value in paths.items():
         if value is not None:
             continue
 
-        path = raw_input("Path to %s (skip): " % (key,))
+        path = input("Path to %s (skip): " % (key,))
         if path == "skip" or not path.strip():
             continue
 
@@ -99,7 +103,7 @@ def get_cert_contents(kwargs):
         "ServerCertificateName": kwargs.get("cert_name"),
     }
 
-    for key, path in paths.iteritems():
+    for key, path in paths.items():
         if not path:
             continue
 
@@ -133,7 +137,7 @@ def ensure_server_cert_exists(provider, context, **kwargs):
         logger.info("certificate exists: %s (%s)", cert_name, cert_arn)
     except ClientError:
         if kwargs.get("prompt", True):
-            upload = raw_input(
+            upload = input(
                 "Certificate '%s' wasn't found. Upload it now? (yes/no) " % (
                     cert_name,
                 )

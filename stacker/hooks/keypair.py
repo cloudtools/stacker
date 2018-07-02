@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import input
 import logging
 import os
 
@@ -46,13 +50,13 @@ def ensure_keypair_exists(provider, context, **kwargs):
         }
 
     logger.info("keypair: \"%s\" not found", keypair_name)
-    create_or_upload = raw_input(
+    create_or_upload = input(
         "import or create keypair \"%s\"? (import/create/Cancel) " % (
             keypair_name,
         ),
     )
     if create_or_upload == "import":
-        path = raw_input("path to keypair file: ")
+        path = input("path to keypair file: ")
         full_path = utils.full_path(path)
         if not os.path.exists(full_path):
             logger.error("Failed to find keypair at path: %s", full_path)
@@ -74,7 +78,7 @@ def ensure_keypair_exists(provider, context, **kwargs):
             "file_path": full_path,
         }
     elif create_or_upload == "create":
-        path = raw_input("directory to save keyfile: ")
+        path = input("directory to save keyfile: ")
         full_path = utils.full_path(path)
         if not os.path.exists(full_path) and not os.path.isdir(full_path):
             logger.error("\"%s\" is not a valid directory", full_path)

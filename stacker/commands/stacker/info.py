@@ -1,4 +1,7 @@
 """Gets information on the CloudFormation stacks based on the given config."""
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 from .base import BaseCommand
 from ...actions import info

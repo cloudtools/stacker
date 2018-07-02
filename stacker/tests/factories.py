@@ -5,7 +5,7 @@ from builtins import object
 from mock import MagicMock
 
 from stacker.context import Context
-from stacker.config import Config, Stack
+from stacker.config import Config, Stack, ExternalStack
 from stacker.lookups import Lookup
 
 
@@ -51,6 +51,15 @@ def generate_definition(base_name, stack_id, **overrides):
     }
     definition.update(overrides)
     return Stack(definition)
+
+
+def generate_external_definition(base_name, stack_id, **overrides):
+    definition = {
+        "name": "%s.%d" % (base_name, stack_id),
+        "external": True,
+    }
+    definition.update(overrides)
+    return ExternalStack(definition)
 
 
 def mock_lookup(lookup_input, lookup_type, raw=None):

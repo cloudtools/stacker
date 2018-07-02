@@ -222,10 +222,10 @@ class Action(build.Action):
         if self.cancel.wait(0):
             return INTERRUPTED
 
-        if not build.should_submit(stack):
+        if not stack.should_submit():
             return NotSubmittedStatus()
 
-        if not build.should_update(stack):
+        if not stack.should_update():
             return NotUpdatedStatus()
 
         provider = self.build_provider(stack)

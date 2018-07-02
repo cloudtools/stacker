@@ -7,8 +7,8 @@ import unittest
 from stacker.lookups import register_lookup_handler
 from stacker.context import Context
 from stacker.config import Config
-from stacker.stack import Stack
-from .factories import generate_definition
+from stacker.stack import Stack, ExternalStack
+from .factories import generate_definition, generate_external_definition
 
 
 class TestStack(unittest.TestCase):
@@ -132,6 +132,46 @@ class TestStack(unittest.TestCase):
         )
         stack = Stack(definition=definition, context=self.context)
         self.assertEquals(stack.tags, {"environment": "prod", "app": "graph"})
+
+    def test_stack_should_update(self):
+        test_scenarios = [
+            dict(locked=False, force=False, result=True),
+            dict(locked=False, force=True, result=True),
+            dict(locked=True, force=False, result=False),
+            dict(locked=True, force=True, result=True)
+        ]
+
+        for t in test_scenarios:
+            definition = generate_definition(
+                base_name="vpc",
+                stack_id=1,
+                locked=t['locked'])
+            stack = Stack(definition=definition, context=self.context,
+                          force=t['force'])
+            self.assertEqual(stack.should_update(), t['result'])
+
+    def test_stack_should_submit(self):
+        for enabled in (True, False):
+            definition = generate_definition(
+                base_name="vpc",
+                stack_id=1,
+                enabled=enabled)
+            stack = Stack(definition=definition, context=self.context)
+            self.assertEqual(stack.should_submit(), enabled)
+
+    def test_external_stack_should_update(self):
+        definition = generate_external_definition(
+            base_name="vpc",
+            stack_id=1)
+        stack = ExternalStack(definition=definition, context=self.context)
+        self.assertEqual(stack.should_update(), False)
+
+    def test_external_stack_should_submit(self):
+        definition = generate_external_definition(
+            base_name="vpc",
+            stack_id=1)
+        stack = ExternalStack(definition=definition, context=self.context)
+        self.assertEqual(stack.should_submit(), True)
 
 
 if __name__ == '__main__':

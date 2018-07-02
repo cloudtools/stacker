@@ -38,53 +38,6 @@ def build_stack_tags(stack):
     return [{'Key': t[0], 'Value': t[1]} for t in stack.tags.items()]
 
 
-def should_update(stack):
-    """Tests whether a stack should be submitted for updates to CF.
-
-    Args:
-        stack (:class:`stacker.stack.Stack`): The stack object to check.
-
-    Returns:
-        bool: If the stack should be updated, return True.
-
-    """
-
-    if not stack.blueprint:
-        return False
-
-    if stack.locked:
-        if not stack.force:
-            logger.debug("Stack %s locked and not in --force list. "
-                         "Refusing to update.", stack.name)
-            return False
-        else:
-            logger.debug("Stack %s locked, but is in --force "
-                         "list.", stack.name)
-    return True
-
-
-def should_submit(stack):
-    """Tests whether a stack should be submitted to CF for update/create
-
-    Args:
-        stack (:class:`stacker.stack.Stack`): The stack object to check.
-
-    Returns:
-        bool: If the stack should be submitted, return True.
-
-    """
-
-    # Submit stack without a blueprint just to grab outputs
-    if not stack.blueprint:
-        return True
-
-    if stack.enabled:
-        return True
-
-    logger.debug("Stack %s is not enabled.  Skipping.", stack.name)
-    return False
-
-
 def should_ensure_cfn_bucket(outline, dump):
     """Test whether access to the cloudformation template bucket is required
 
@@ -271,7 +224,7 @@ class Action(BaseAction):
         if self.cancel.wait(wait_time):
             return INTERRUPTED
 
-        if not should_submit(stack):
+        if not stack.should_submit():
             return NotSubmittedStatus()
 
         provider = self.build_provider(stack)
@@ -281,7 +234,7 @@ class Action(BaseAction):
         except StackDoesNotExist:
             provider_stack = None
 
-        if provider_stack and not should_update(stack):
+        if provider_stack and not stack.should_update():
             stack.set_outputs(
                 self.provider.get_output_dict(provider_stack))
             return NotUpdatedStatus()

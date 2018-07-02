@@ -163,10 +163,7 @@ class Context(object):
                         definition=stack_def,
                         context=self,
                         mappings=self.mappings,
-                        force=stack_def.name in self.force_stacks,
-                        locked=stack_def.locked,
-                        enabled=stack_def.enabled,
-                        protected=stack_def.protected,
+                        force=stack_def.name in self.force_stacks
                     )
                 stacks.append(stack)
             self._stacks = stacks

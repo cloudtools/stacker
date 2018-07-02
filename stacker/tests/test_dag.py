@@ -1,4 +1,7 @@
 """ Tests on the DAG implementation """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 from nose import with_setup
 from nose.tools import nottest, raises
@@ -119,7 +122,7 @@ def test_downstream():
 
 @with_setup(start_with_graph)
 def test_all_downstreams():
-    assert dag.all_downstreams('a') == ['c', 'b', 'd']
+    assert dag.all_downstreams('a') == ['b', 'c', 'd']
     assert dag.all_downstreams('b') == ['d']
     assert dag.all_downstreams('d') == []
 
@@ -194,6 +197,24 @@ def test_transitive_reduction():
                          'c': set('d'),
                          'd': set('e'),
                          'e': set()}
+
+
+@with_setup(blank_setup)
+def test_transitive_deep_reduction():
+    dag = DAG()
+    # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-G.svg
+    dag.from_dict({
+        'a': ['b', 'd'],
+        'b': ['c'],
+        'c': ['d'],
+        'd': [],
+    })
+    dag.transitive_reduction()
+    # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-Gprime.svg
+    assert dag.graph == {'a': set('b'),
+                         'b': set('c'),
+                         'c': set('d'),
+                         'd': set()}
 
 
 @with_setup(blank_setup)

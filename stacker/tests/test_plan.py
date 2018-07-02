@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import range
 import os
 import shutil
 import tempfile
@@ -249,10 +253,13 @@ class TestPlan(unittest.TestCase):
 
         with self.assertRaises(GraphError) as expected:
             build_plan(description="Test", steps=[Step(bastion, None)])
-        message = ("Error detected when adding 'vpc.1' "
-                   "as a dependency of 'bastion.1': dependent node "
-                   "vpc.1 does not exist")
-        self.assertEqual(expected.exception.message, message)
+        message_starts = (
+            "Error detected when adding 'vpc.1' "
+            "as a dependency of 'bastion.1':"
+        )
+        message_contains = "dependent node vpc.1 does not exist"
+        self.assertTrue(str(expected.exception).startswith(message_starts))
+        self.assertTrue(message_contains in str(expected.exception))
 
     def test_build_plan_cyclic_dependencies(self):
         vpc = Stack(
@@ -275,7 +282,7 @@ class TestPlan(unittest.TestCase):
         message = ("Error detected when adding 'db.1' "
                    "as a dependency of 'app.1': graph is "
                    "not acyclic")
-        self.assertEqual(expected.exception.message, message)
+        self.assertEqual(str(expected.exception), message)
 
     def test_dump(self, *args):
         requires = None

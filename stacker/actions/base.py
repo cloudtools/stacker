@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
 import os
 import sys
 import logging
@@ -185,7 +189,7 @@ class BaseAction(object):
             self.run(*args, **kwargs)
             self.post_run(*args, **kwargs)
         except PlanFailed as e:
-            logger.error(e.message)
+            logger.error(str(e))
             sys.exit(1)
 
     def pre_run(self, *args, **kwargs):

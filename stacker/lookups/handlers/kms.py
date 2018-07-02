@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+import codecs
 from stacker.session_cache import get_session
 
 from ...util import read_value_from_path
@@ -48,5 +52,5 @@ def handler(value, **kwargs):
         region, value = value.split("@", 1)
 
     kms = get_session(region).client('kms')
-    decoded = value.decode("base64")
+    decoded = codecs.decode(value.encode(), 'base64').decode()
     return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]

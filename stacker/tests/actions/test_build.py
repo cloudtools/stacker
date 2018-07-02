@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import str
 import unittest
 from collections import namedtuple
 
@@ -31,8 +35,8 @@ from ..factories import MockThreadingEvent, MockProviderBuilder
 def mock_stack(parameters):
     return {
         'Parameters': [
-            {'ParameterKey': k, 'ParameterValue': v} for k, v in
-            parameters.items()
+            {'ParameterKey': k, 'ParameterValue': v}
+            for k, v in parameters.items()
         ]
     }
 
@@ -84,7 +88,7 @@ class TestBuildAction(unittest.TestCase):
         def_params = {"Address": "192.168.0.1"}
         required = ["Address"]
         result = _handle_missing_parameters(def_params, required, stack)
-        self.assertEqual(result, def_params.items())
+        self.assertEqual(result, list(def_params.items()))
 
     def test_gather_missing_from_stack(self):
         stack_params = {"Address": "10.0.0.1"}
@@ -94,7 +98,7 @@ class TestBuildAction(unittest.TestCase):
         required = ["Address"]
         self.assertEqual(
             _handle_missing_parameters(defined_params, required, stack),
-            expected_params.items())
+            list(expected_params.items()))
 
     def test_missing_params_no_stack(self):
         params = {}
@@ -110,7 +114,7 @@ class TestBuildAction(unittest.TestCase):
         def_params = {"Address": "192.168.0.1"}
         required = ["Address"]
         result = _handle_missing_parameters(def_params, required, stack)
-        self.assertEqual(result, def_params.items())
+        self.assertEqual(result, list(def_params.items()))
 
     def test_generate_plan(self):
         context = self._get_context()

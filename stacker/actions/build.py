@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import logging
 
 from .base import BaseAction, plan, build_walker
@@ -30,8 +33,7 @@ logger = logging.getLogger(__name__)
 
 def build_stack_tags(stack):
     """Builds a common set of tags to attach to a stack"""
-    return [
-        {'Key': t[0], 'Value': t[1]} for t in stack.tags.items()]
+    return [{'Key': t[0], 'Value': t[1]} for t in stack.tags.items()]
 
 
 def should_update(stack):
@@ -169,7 +171,7 @@ def _handle_missing_parameters(params, required_params, existing_stack=None):
     if final_missing:
         raise MissingParameterException(final_missing)
 
-    return params.items()
+    return list(params.items())
 
 
 def handle_hooks(stage, hooks, provider, context, dump, outline):
@@ -222,7 +224,7 @@ class Action(BaseAction):
 
         """
         resolved = _resolve_parameters(stack.parameter_values, stack.blueprint)
-        required_parameters = stack.required_parameter_definitions.keys()
+        required_parameters = list(stack.required_parameter_definitions.keys())
         parameters = _handle_missing_parameters(resolved, required_parameters,
                                                 provider_stack)
 

@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
 from mock import MagicMock
 
 from stacker.context import Context
@@ -52,7 +56,7 @@ def mock_lookup(lookup_input, lookup_type, raw=None):
     return Lookup(type=lookup_type, input=lookup_input, raw=raw)
 
 
-class SessionStub:
+class SessionStub(object):
 
     """Stubber class for boto3 sessions made with session_cache.get_session()
 

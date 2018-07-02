@@ -16,12 +16,14 @@ workflows:
             - lint
       - functional-test-35:
           requires:
+            - functional-test-27
             - unit-test-35
       - unit-test-36:
           requires:
             - lint
       - functional-test-36:
           requires:
+            - functional-test-35
             - unit-test-36
 
 

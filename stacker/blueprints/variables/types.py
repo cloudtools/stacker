@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
 
 
 class TroposphereType(object):
@@ -50,8 +54,9 @@ class TroposphereType(object):
 
     @property
     def resource_name(self):
-        return (getattr(self._type, 'resource_name', None)
-                or self._type.__name__)
+        return (
+            getattr(self._type, 'resource_name', None) or self._type.__name__
+        )
 
     def create(self, value):
         """Create the troposphere type from the value.
@@ -83,8 +88,9 @@ class TroposphereType(object):
                 raise ValueError("Only one resource can be provided for this "
                                  "TroposphereType variable")
 
-            result = [self._type.from_dict(title, v) for title, v in
-                      value.items()]
+            result = [
+                self._type.from_dict(title, v) for title, v in value.items()
+            ]
         else:
             # Our type is for properties, not a resource, so don't use
             # titles

@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
 import collections
 import logging
 
@@ -21,7 +25,7 @@ def get_fqn(base_fqn, delimiter, name=None):
     if name and name.startswith("%s%s" % (base_fqn, delimiter)):
         return name
 
-    return delimiter.join(filter(None, [base_fqn, name]))
+    return delimiter.join([_f for _f in [base_fqn, name] if _f])
 
 
 class Context(object):

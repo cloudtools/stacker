@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import range
 import copy
 from datetime import datetime
 import random
@@ -438,7 +442,7 @@ class TestProviderDefaultMode(unittest.TestCase):
             with self.stubber:
                 self.provider.prepare_stack_for_update(stack, [])
 
-            self.assertIn('in-progress', raised.exception.message)
+            self.assertIn('in-progress', str(raised.exception))
 
     def test_prepare_stack_for_update_non_recreatable(self):
         stack_name = "MockStack"
@@ -449,7 +453,7 @@ class TestProviderDefaultMode(unittest.TestCase):
             with self.stubber:
                 self.provider.prepare_stack_for_update(stack, [])
 
-        self.assertIn('Unsupported state', raised.exception.message)
+        self.assertIn('Unsupported state', str(raised.exception))
 
     def test_prepare_stack_for_update_disallowed(self):
         stack_name = "MockStack"
@@ -460,9 +464,9 @@ class TestProviderDefaultMode(unittest.TestCase):
             with self.stubber:
                 self.provider.prepare_stack_for_update(stack, [])
 
-        self.assertIn('re-creation is disabled', raised.exception.message)
+        self.assertIn('re-creation is disabled', str(raised.exception))
         # Ensure we point out to the user how to enable re-creation
-        self.assertIn('--recreate-failed', raised.exception.message)
+        self.assertIn('--recreate-failed', str(raised.exception))
 
     def test_prepare_stack_for_update_bad_tags(self):
         stack_name = "MockStack"
@@ -477,7 +481,7 @@ class TestProviderDefaultMode(unittest.TestCase):
                     stack,
                     tags=[{'Key': 'stacker_namespace', 'Value': 'test'}])
 
-        self.assertIn('tags differ', raised.exception.message.lower())
+        self.assertIn('tags differ', str(raised.exception).lower())
 
     def test_prepare_stack_for_update_recreate(self):
         stack_name = "MockStack"

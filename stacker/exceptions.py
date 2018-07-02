@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+
+
 class InvalidConfig(Exception):
     def __init__(self, errors):
         super(InvalidConfig, self).__init__(errors)
@@ -227,7 +232,8 @@ class GraphError(Exception):
         self.stack = stack
         self.dependency = dependency
         self.exception = exception
-        message = ("Error detected when adding '%s' "
-                   "as a dependency of '%s': %s") % (
-                           dependency, stack, exception.message)
+        message = (
+            "Error detected when adding '%s' "
+            "as a dependency of '%s': %s"
+        ) % (dependency, stack, str(exception))
         super(GraphError, self).__init__(message)

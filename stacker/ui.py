@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import input
+from builtins import object
 import threading
 import logging
 from getpass import getpass
@@ -8,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def get_raw_input(message):
     """ Just a wrapper for raw_input for testing purposes. """
-    return raw_input(message)
+    return input(message)
 
 
 class UI(object):

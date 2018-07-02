@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import unittest
 import mock
 import base64
@@ -48,7 +51,7 @@ class TestFileTranslator(unittest.TestCase):
         with mock.patch('stacker.lookups.handlers.file.read_value_from_path',
                         return_value=expected):
             out = handler('base64:file://tmp/test')
-            self.assertEqual(expected, base64.b64decode(out))
+            self.assertEqual(expected, base64.b64decode(out).decode())
 
     def test_handler_parameterized(self):
         expected = 'Hello, world'

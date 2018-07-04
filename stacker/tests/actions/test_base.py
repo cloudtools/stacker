@@ -1,17 +1,21 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+
 import unittest
 
-from botocore.stub import Stubber, ANY
+import mock
+
 import botocore.exceptions
+from botocore.stub import Stubber, ANY
 
 from stacker.actions.base import (
     BaseAction
 )
-
-from stacker.providers.aws.default import Provider
 from stacker.blueprints.base import Blueprint
+from stacker.providers.aws.default import Provider
 from stacker.session_cache import get_session
 
 from stacker.tests.factories import (
@@ -121,30 +125,27 @@ class TestBaseAction(unittest.TestCase):
                 action.ensure_cfn_bucket()
 
     def test_stack_template_url(self):
-        test_cases = (
-            ("us-east-1", "s3.amazonaws.com"),
-            ("us-west-1", "s3.us-west-1.amazonaws.com"),
-            ("eu-west-1", "s3.eu-west-1.amazonaws.com"),
-            ("sa-east-1", "s3.sa-east-1.amazonaws.com"),
-        )
         context = mock_context("mynamespace")
         blueprint = TestBlueprint(name="myblueprint", context=context)
 
-        for region, endpoint in test_cases:
-            session = get_session(region)
-            provider = Provider(session)
-            action = BaseAction(
-                context=context,
-                provider_builder=MockProviderBuilder(provider, region=region)
-            )
+        region = "us-east-1"
+        endpoint = "https://example.com"
+        session = get_session(region)
+        provider = Provider(session)
+        action = BaseAction(
+            context=context,
+            provider_builder=MockProviderBuilder(provider, region=region)
+        )
+
+        with mock.patch('stacker.actions.base.get_s3_endpoint', autospec=True,
+                        return_value=endpoint):
             self.assertEqual(
                 action.stack_template_url(blueprint),
-                "https://%s/%s/stack_templates/%s/%s-%s.json" % (
+                "%s/%s/stack_templates/%s/%s-%s.json" % (
                     endpoint,
                     "stacker-mynamespace",
                     "mynamespace-myblueprint",
                     "myblueprint",
                     MOCK_VERSION
-
                 )
             )

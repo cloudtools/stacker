@@ -129,16 +129,10 @@ class TestUtil(unittest.TestCase):
             self.assertEqual(get_client_region(client), region)
 
     def test_get_s3_endpoint(self):
-        endpoint_map = {
-            "us-east-1": "https://s3.amazonaws.com",
-            "us-west-1": "https://s3.us-west-1.amazonaws.com",
-            "eu-west-1": "https://s3.eu-west-1.amazonaws.com",
-            "sa-east-1": "https://s3.sa-east-1.amazonaws.com",
-        }
-
-        for region in endpoint_map:
-            client = boto3.client("s3", region_name=region)
-            self.assertEqual(get_s3_endpoint(client), endpoint_map[region])
+        endpoint_url = "https://example.com"
+        client = boto3.client("s3", region_name="us-east-1",
+                              endpoint_url=endpoint_url)
+        self.assertEqual(get_s3_endpoint(client), endpoint_url)
 
     def test_s3_bucket_location_constraint(self):
         tests = (

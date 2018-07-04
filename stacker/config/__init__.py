@@ -319,9 +319,8 @@ class ExternalStack(BaseStack):
         self.external = True
 
     def validate_fqn(self, data, value):
-        if (not value and not data["stack_name"]) or \
-           (value and data["stack_name"]):
-            raise ValidationError("Exactly one of `fqn` and `stack_name` must "
+        if value and data["stack_name"]:
+            raise ValidationError("At most one of `fqn` and `stack_name` must "
                                   "be provided for external stacks")
 
 

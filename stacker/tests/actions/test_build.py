@@ -32,7 +32,7 @@ from stacker.status import (
 from ..factories import MockThreadingEvent, MockProviderBuilder
 
 
-def mock_stack(parameters):
+def mock_stack_parameters(parameters):
     return {
         'Parameters': [
             {'ParameterKey': k, 'ParameterValue': v}
@@ -84,37 +84,48 @@ class TestBuildAction(unittest.TestCase):
         return Context(config=config, **kwargs)
 
     def test_handle_missing_params(self):
-        stack = {'StackName': 'teststack'}
-        def_params = {"Address": "192.168.0.1"}
+        existing_stack_param_dict = {
+            "StackName": "teststack",
+            "Address": "192.168.0.1"
+        }
+        existing_stack_params = mock_stack_parameters(
+            existing_stack_param_dict
+        )
+        all_params = existing_stack_param_dict.keys()
         required = ["Address"]
-        result = _handle_missing_parameters(def_params, required, stack)
-        self.assertEqual(result, list(def_params.items()))
+        parameter_values = {"Address": "192.168.0.1"}
+        expected_params = {"StackName": UsePreviousParameterValue,
+                           "Address": "192.168.0.1"}
+        result = _handle_missing_parameters(parameter_values, all_params,
+                                            required, existing_stack_params)
+        self.assertEqual(sorted(result), sorted(list(expected_params.items())))
 
-    def test_gather_missing_from_stack(self):
-        stack_params = {"Address": "10.0.0.1"}
-        expected_params = {"Address": UsePreviousParameterValue}
-        stack = mock_stack(stack_params)
-        defined_params = {}
+    def test_missing_params_no_existing_stack(self):
+        all_params = ["Address", "StackName"]
         required = ["Address"]
-        self.assertEqual(
-            _handle_missing_parameters(defined_params, required, stack),
-            list(expected_params.items()))
-
-    def test_missing_params_no_stack(self):
-        params = {}
-        required = ["Address"]
+        parameter_values = {}
         with self.assertRaises(exceptions.MissingParameterException) as cm:
-            _handle_missing_parameters(params, required)
+            _handle_missing_parameters(parameter_values, all_params, required)
 
         self.assertEqual(cm.exception.parameters, required)
 
-    def test_stack_params_dont_override_given_params(self):
-        stack_params = {"Address": "10.0.0.1"}
-        stack = mock_stack(stack_params)
-        def_params = {"Address": "192.168.0.1"}
+    def test_existing_stack_params_dont_override_given_params(self):
+        existing_stack_param_dict = {
+            "StackName": "teststack",
+            "Address": "192.168.0.1"
+        }
+        existing_stack_params = mock_stack_parameters(
+            existing_stack_param_dict
+        )
+        all_params = existing_stack_param_dict.keys()
         required = ["Address"]
-        result = _handle_missing_parameters(def_params, required, stack)
-        self.assertEqual(result, list(def_params.items()))
+        parameter_values = {"Address": "10.0.0.1"}
+        result = _handle_missing_parameters(parameter_values, all_params,
+                                            required, existing_stack_params)
+        self.assertEqual(
+            sorted(result),
+            sorted(list(parameter_values.items()))
+        )
 
     def test_generate_plan(self):
         context = self._get_context()

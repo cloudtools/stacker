@@ -3,12 +3,12 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 
-from builtins import object
 import hashlib
 import json
 
 from ..util import parse_cloudformation_template
 from ..exceptions import UnresolvedVariable
+from .base import Blueprint
 
 
 def get_template_params(template):
@@ -63,7 +63,7 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
     return value
 
 
-class RawTemplateBlueprint(object):
+class RawTemplateBlueprint(Blueprint):
     """Blueprint class for blueprints auto-generated from raw templates."""
 
     def __init__(self, name, context, raw_template_path, mappings=None, # noqa pylint: disable=too-many-arguments
@@ -149,21 +149,6 @@ class RawTemplateBlueprint(object):
 
         """
         return self.resolved_variables
-
-    def get_required_parameter_definitions(self):  # noqa pylint: disable=invalid-name
-        """Return all template parameters that do not have a default value.
-
-        Returns:
-            dict: dict of required CloudFormation Parameters for the blueprint.
-                Will be a dictionary of <parameter name>: <parameter
-                attributes>.
-
-        """
-        required = {}
-        for i in list(self.get_parameter_definitions().items()):
-            if i[1].get('Default', None) is None:
-                required[i[0]] = i[1]
-        return required
 
     @property
     def requires_change_set(self):

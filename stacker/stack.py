@@ -171,6 +171,11 @@ class Stack(object):
         return self.blueprint.get_parameter_values()
 
     @property
+    def all_parameter_definitions(self):
+        """Return a list of all parameters in the blueprint/template."""
+        return self.blueprint.get_all_parameter_definitions()
+
+    @property
     def required_parameter_definitions(self):
         """Return all the required CloudFormation Parameters for the stack."""
         return self.blueprint.get_required_parameter_definitions()

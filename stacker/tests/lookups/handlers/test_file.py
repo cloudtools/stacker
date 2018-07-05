@@ -68,7 +68,8 @@ class TestFileTranslator(unittest.TestCase):
 
     def test_yaml_codec_parameterized(self):
         processed = {
-            u'Test': Join(u'', [u'Test ', {u'Ref': u'Interpolation'}, u' Here'])
+            u'Test': Join(u'', [u'Test ', {u'Ref': u'Interpolation'},
+                          u' Here'])
         }
         structured = {
             u'Test': u'Test {{Interpolation}} Here'

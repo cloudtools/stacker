@@ -246,6 +246,35 @@ Supported codecs:
  - parameterized-b64 - the same as parameterized, with the results additionally
    wrapped in { "Fn::Base64": ... } , which is what you actually need for
    EC2 UserData
+ - json - decode the file as JSON and return the resulting object
+ - json-parameterized - Same as ``json``, but applying templating rules from
+   ``parameterized`` to every object *value*. Note that object *keys* are not
+   modified. Example (an external PolicyDocument)::
+
+     {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "some:Action"
+          ],
+          "Resource": "{{MyResource}}"
+        }
+      ]
+     }
+
+ - yaml - decode the file as YAML and return the resulting object. All strings
+   are returned as ``unicode`` even in Python 2.
+ - yaml-parameterized - Same as ``json-parameterized``, but using YAML. Example::
+
+     Version: 2012-10-17
+     Statement
+       - Effect: Allow
+         Action:
+           - "some:Action"
+         Resource: "{{MyResource}}"
+
 
 When using parameterized-b64 for UserData, you should use a local_parameter defined
 as such::

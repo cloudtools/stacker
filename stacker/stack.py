@@ -173,7 +173,7 @@ class Stack(object):
     @property
     def all_parameter_definitions(self):
         """Return a list of all parameters in the blueprint/template."""
-        return self.blueprint.get_all_parameter_definitions()
+        return self.blueprint.get_parameter_definitions()
 
     @property
     def required_parameter_definitions(self):

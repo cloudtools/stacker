@@ -187,6 +187,7 @@ paths can optionally be defined as dictionaries, e.g.::
     my_route53_hook:
       path: stacker.hooks.route53.create_domain:
       required: true
+      enabled: true
       args:
         domain: mydomain.com
   stacks:
@@ -203,8 +204,9 @@ Pre & Post Hooks
 ----------------
 
 Many actions allow for pre & post hooks. These are python methods that are
-executed before, and after the action is taken for the entire config. Only the
-following actions allow pre/post hooks:
+executed before, and after the action is taken for the entire config. Hooks 
+can be enabled or disabled, per hook. Only the following actions allow
+pre/post hooks:
 
 * build (keywords: *pre_build*, *post_build*)
 * destroy (keywords: *pre_destroy*, *post_destroy*)
@@ -221,6 +223,10 @@ The keyword is a list of dictionaries with the following keys:
   in the context.hook_data with the data_key as it's key.
 **required:**
   whether to stop execution if the hook fails
+**enabled:**
+  whether to execute the hook every stacker run. Default: True. This is a bool
+  that grants you the ability to execute a hook per environment when combined
+  with a variable pulled from an environment file.
 **args:**
   a dictionary of arguments to pass to the hook
 
@@ -230,6 +236,19 @@ the build action::
   pre_build:
     - path: stacker.hooks.route53.create_domain
       required: true
+      enabled: true
+      args:
+        domain: mydomain.com
+
+An example of a hook using the ``create_domain_bool`` variable from the environment
+file to determine if hook should run. Set ``create_domain_bool: true`` or
+``create_domain_bool: false`` in the environment file to determine if the hook
+should run in the environment stacker is running against::
+
+  pre_build:
+    - path: stacker.hooks.route53.create_domain
+      required: true
+      enabled: ${create_domain_bool}
       args:
         domain: mydomain.com
 
@@ -566,5 +585,5 @@ submitting it to CloudFormation. For more information, see the
 .. _`anchors & references`: https://en.wikipedia.org/wiki/YAML#Repeated_nodes
 .. _Mappings: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 .. _Outputs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
-.. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
+.. _stacker_blueprints: https://github.com/cloudtools/stacker_blueprints
 .. _`AWS profiles`: https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html

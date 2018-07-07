@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import next
 import sys
 import unittest
 
@@ -135,7 +139,7 @@ class TestConfig(unittest.TestCase):
     def test_dump_unicode(self):
         config = Config()
         config.namespace = "test"
-        self.assertEquals(dump(config), """namespace: test
+        self.assertEquals(dump(config), b"""namespace: test
 stacks: []
 """)
 
@@ -143,8 +147,8 @@ stacks: []
         # Ensure that we're producing standard yaml, that doesn't include
         # python specific objects.
         self.assertNotEquals(
-            dump(config), "namespace: !!python/unicode 'test'\n")
-        self.assertEquals(dump(config), """namespace: test
+            dump(config), b"namespace: !!python/unicode 'test'\n")
+        self.assertEquals(dump(config), b"""namespace: test
 stacks: []
 """)
 
@@ -211,21 +215,25 @@ stacks: []
         pre_build:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_build:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         pre_destroy:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_destroy:
           - path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         package_sources:
@@ -269,24 +277,28 @@ stacks: []
           prebuild_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_build:
           postbuild_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         pre_destroy:
           predestroy_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         post_destroy:
           postdestroy_createdomain:
             path: stacker.hooks.route53.create_domain
             required: true
+            enabled: true
             args:
               domain: mydomain.com
         package_sources:
@@ -412,7 +424,7 @@ stacks: []
                     "class_path": "blueprints.Bastion",
                     "requires": ["vpc"]})]})
 
-        self.assertEqual(dump(config), """namespace: prod
+        self.assertEqual(dump(config), b"""namespace: prod
 stacks:
 - class_path: blueprints.VPC
   enabled: true

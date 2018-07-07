@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import unittest
 import sys
 from mock import patch
@@ -96,6 +99,25 @@ class TestBlueprintRendering(unittest.TestCase):
         )
 
 
+class TestBaseBlueprint(unittest.TestCase):
+    def test_add_output(self):
+        output_name = "MyOutput1"
+        output_value = "OutputValue"
+
+        class TestBlueprint(Blueprint):
+            VARIABLES = {}
+
+            def create_template(self):
+                self.template.add_version('2010-09-09')
+                self.template.add_description('TestBlueprint')
+                self.add_output(output_name, output_value)
+
+        bp = TestBlueprint(name="test", context=mock_context())
+        bp.render_template()
+        self.assertEqual(bp.template.outputs[output_name].properties["Value"],
+                         output_value)
+
+
 class TestVariables(unittest.TestCase):
 
     def test_defined_variables(self):
@@ -128,7 +150,7 @@ class TestVariables(unittest.TestCase):
 
         blueprint = TestBlueprintSublcass(name="test", context=MagicMock())
         variables = blueprint.defined_variables()
-        self.assertEqual(len(variables.keys()), 3)
+        self.assertEqual(len(variables), 3)
         self.assertEqual(variables["Param2"]["default"], 1)
 
     def test_get_variables_unresolved_variables(self):
@@ -623,7 +645,7 @@ class TestVariables(unittest.TestCase):
         blueprint = TestBlueprint(name="test", context=MagicMock())
         blueprint.setup_parameters()
         params = blueprint.get_required_parameter_definitions()
-        self.assertEqual(params.keys()[0], "Param1")
+        self.assertEqual(list(params.keys())[0], "Param1")
 
     def test_get_parameter_values(self):
         class TestBlueprint(Blueprint):
@@ -638,7 +660,7 @@ class TestVariables(unittest.TestCase):
         variables = blueprint.get_variables()
         self.assertEqual(len(variables), 2)
         parameters = blueprint.get_parameter_values()
-        self.assertEqual(len(parameters.keys()), 1)
+        self.assertEqual(len(parameters), 1)
         self.assertEqual(parameters["Param2"], "Value")
 
     def test_validate_allowed_values(self):

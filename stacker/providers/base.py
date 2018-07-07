@@ -1,3 +1,9 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
+
+
 def not_implemented(method):
     raise NotImplementedError("Provider does not support '%s' "
                               "method." % method)

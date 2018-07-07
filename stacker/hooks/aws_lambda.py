@@ -1,12 +1,17 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from past.builtins import basestring
 import os
 import os.path
 import stat
 import logging
 import hashlib
-from StringIO import StringIO
+from io import BytesIO as StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
 import botocore
-from functools import partial
 import formic
 from troposphere.awslambda import Code
 from stacker.session_cache import get_session
@@ -52,9 +57,9 @@ def _zip_files(files, root):
         for zip_entry in zip_file.filelist:
             perms = (zip_entry.external_attr & ZIP_PERMS_MASK) >> 16
             if perms & stat.S_IXUSR != 0:
-                new_perms = 0755
+                new_perms = 0o755
             else:
-                new_perms = 0644
+                new_perms = 0o644
 
             if new_perms != perms:
                 logger.debug("lambda: fixing perms: %s: %o => %o",
@@ -84,11 +89,13 @@ def _calculate_hash(files, root):
     file_hash = hashlib.md5()
     for fname in sorted(files):
         f = os.path.join(root, fname)
-        file_hash.update(fname + "\0")
+        file_hash.update((fname + "\0").encode())
         with open(f, "rb") as fd:
             for chunk in iter(lambda: fd.read(4096), ""):
+                if not chunk:
+                    break
                 file_hash.update(chunk)
-            file_hash.update("\0")
+            file_hash.update("\0".encode())
 
     return file_hash.hexdigest()
 
@@ -118,10 +125,10 @@ def _find_files(root, includes, excludes, follow_symlinks):
     """
 
     root = os.path.abspath(root)
-    file_set = formic.FileSet(directory=root, include=includes,
-                              exclude=excludes,
-                              walk=partial(
-                                  os.walk, followlinks=follow_symlinks))
+    file_set = formic.FileSet(
+        directory=root, include=includes,
+        exclude=excludes, symlinks=follow_symlinks,
+    )
 
     for filename in file_set.qualified_files(absolute=False):
         yield filename
@@ -425,6 +432,7 @@ def upload_lambda_functions(context, provider, **kwargs):
             pre_build:
               - path: stacker.hooks.aws_lambda.upload_lambda_functions
                 required: true
+                enabled: true
                 data_key: lambda
                 args:
                   bucket: custom-bucket

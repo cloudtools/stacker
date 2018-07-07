@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import str
+from builtins import object
 import copy
 import uuid
 import importlib
@@ -225,7 +230,7 @@ def merge_map(a, b):
     if not isinstance(a, dict) or not isinstance(b, dict):
         return b
 
-    for key in b.keys():
+    for key in b:
         a[key] = merge_map(a[key], b[key]) if key in a else b[key]
     return a
 
@@ -275,12 +280,12 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
                     None, None,
                     "expected a mapping node, but found %s" % node.id,
                     node.start_mark)
-            mapping = {}
+            mapping = OrderedDict()
             for key_node, value_node in node.value:
                 key = self.construct_object(key_node, deep=deep)
                 try:
                     hash(key)
-                except TypeError, exc:
+                except TypeError as exc:
                     raise ConstructorError(
                         "while constructing a mapping", node.start_mark,
                         "found unhashable key (%s)" % exc, key_node.start_mark
@@ -302,8 +307,17 @@ def yaml_to_ordered_dict(stream, loader=yaml.SafeLoader):
             """Override parent method to use OrderedDict."""
             if isinstance(node, MappingNode):
                 self.flatten_mapping(node)
-            return OrderedDict(self._validate_mapping(node, deep=deep))
+            return self._validate_mapping(node, deep=deep)
 
+        def construct_yaml_map(self, node):
+            data = OrderedDict()
+            yield data
+            value = self.construct_mapping(node)
+            data.update(value)
+
+    OrderedUniqueLoader.add_constructor(
+        u'tag:yaml.org,2002:map', OrderedUniqueLoader.construct_yaml_map,
+    )
     return yaml.load(stream, OrderedUniqueLoader)
 
 
@@ -354,6 +368,11 @@ def handle_hooks(stage, hooks, provider, context):
         data_key = hook.data_key
         required = hook.required
         kwargs = hook.args or {}
+        enabled = hook.enabled
+        if not enabled:
+            logger.debug("hook with method %s is disabled, skipping",
+                         hook.path)
+            continue
         try:
             method = load_object_from_string(hook.path)
         except (AttributeError, ImportError):
@@ -627,7 +646,7 @@ class SourceProcessor(object):
                          '.tar': TarExtractor,
                          '.zip': ZipExtractor}
         extractor = None
-        for suffix, klass in extractor_map.iteritems():
+        for suffix, klass in extractor_map.items():
             if config['key'].endswith(suffix):
                 extractor = klass()
                 logger.debug("Using extractor %s for S3 object \"%s\" in "
@@ -799,8 +818,8 @@ class SourceProcessor(object):
                                                    'ls-remote',
                                                    uri,
                                                    ref])
-        if "\t" in lsremote_output:
-            commit_id = lsremote_output.split("\t")[0]
+        if b"\t" in lsremote_output:
+            commit_id = lsremote_output.split(b"\t")[0]
             logger.debug("Matching commit id found: %s", commit_id)
             return commit_id
         else:

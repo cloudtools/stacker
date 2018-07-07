@@ -3,6 +3,9 @@
 Sometimes small changes can have big impacts.  Run "stacker diff" before
 "stacker build" to detect bad things(tm) from happening in advance!
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 from .base import BaseCommand
 from ...actions import diff

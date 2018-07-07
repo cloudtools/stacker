@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import str
+from builtins import object
 import difflib
 import json
 import logging
@@ -152,7 +157,9 @@ def normalize_json(template):
         list: json representation of the parameters
     """
     obj = parse_cloudformation_template(template)
-    json_str = json.dumps(obj, sort_keys=True, indent=4)
+    json_str = json.dumps(
+        obj, sort_keys=True, indent=4, default=str, separators=(',', ': '),
+    )
     result = []
     lines = json_str.split("\n")
     for line in lines:
@@ -172,12 +179,12 @@ def print_stack_changes(stack_name, new_stack, old_stack, new_params,
 
     template_changes = list(lines)
     if not template_changes:
-        print "*** No changes to template ***"
+        print("*** No changes to template ***")
     param_diffs = diff_parameters(old_params, new_params)
     if param_diffs:
-        print format_params_diff(param_diffs)
+        print(format_params_diff(param_diffs))
     if template_changes:
-        print "".join(template_changes)
+        print("".join(template_changes))
 
 
 class Action(build.Action):
@@ -194,13 +201,13 @@ class Action(build.Action):
 
     def _print_new_stack(self, stack, parameters):
         """Prints out the parameters & stack contents of a new stack"""
-        print "New template parameters:"
+        print("New template parameters:")
         for param in sorted(parameters,
                             key=lambda param: param['ParameterKey']):
-            print "%s = %s" % (param['ParameterKey'], param['ParameterValue'])
+            print("%s = %s" % (param['ParameterKey'], param['ParameterValue']))
 
-        print "\nNew template contents:"
-        print "".join(stack)
+        print("\nNew template contents:")
+        print("".join(stack))
 
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
@@ -234,14 +241,14 @@ class Action(build.Action):
         new_template = stack.blueprint.rendered
         new_stack = normalize_json(new_template)
 
-        print "============== Stack: %s ==============" % (stack.name,)
+        print("============== Stack: %s ==============" % (stack.name,))
         # If this is a completely new template dump our params & stack
         if not old_template:
             self._print_new_stack(new_stack, parameters)
         else:
             # Diff our old & new stack/parameters
             old_template = parse_cloudformation_template(old_template)
-            if isinstance(old_template, (str, unicode)):
+            if isinstance(old_template, str):
                 # YAML templates returned from CFN need parsing again
                 # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
                 # ->
@@ -250,7 +257,8 @@ class Action(build.Action):
             old_stack = normalize_json(
                 json.dumps(old_template,
                            sort_keys=True,
-                           indent=4)
+                           indent=4,
+                           default=str)
             )
             print_stack_changes(stack.name, new_stack, old_stack, new_params,
                                 old_params)

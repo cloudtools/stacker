@@ -406,8 +406,38 @@ stacker_blueprints repo. For example, see the tests used to test the
 `Route53 DNSRecords Blueprint`_ and the accompanying `output results`_:
 
 .. _troposphere: https://github.com/cloudtools/troposphere
-.. _stacker_blueprints: https://github.com/remind101/stacker_blueprints
-.. _Route53 DNSRecords Blueprint: https://github.com/remind101/stacker_blueprints/blob/master/tests/test_route53.py
-.. _output results: https://github.com/remind101/stacker_blueprints/tree/master/tests/fixtures/blueprints
+.. _stacker_blueprints: https://github.com/cloudtools/stacker_blueprints
+.. _Route53 DNSRecords Blueprint: https://github.com/cloudtools/stacker_blueprints/blob/master/tests/test_route53.py
+.. _output results: https://github.com/cloudtools/stacker_blueprints/tree/master/tests/fixtures/blueprints
 .. _Resource Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html
 .. _Property Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-product-property-reference.html
+
+Yaml (stacker) format tests
+---------------------------
+
+In order to wrap the `BlueprintTestCase` tests in a format similar to stacker's
+stack format, the `YamlDirTestGenerator` class is provided. When subclassed in
+a directory, it will search for yaml files in that directory with certain
+structure and execute a test case for it. As an example:
+
+.. code-block:: yaml
+  ---
+  namespace: test
+  stacks:
+    - name: test_stack
+      class_path: stacker_blueprints.s3.Buckets
+      variables:
+        var1: val1
+
+When run from nosetests, this will create a template fixture file called
+test_stack.json containing the output from the `stacker_blueprints.s3.Buckets`
+template.
+
+Examples of using the `YamlDirTestGenerator` class can be found in the
+stacker_blueprints repo. For example, see the tests used to test the
+`s3.Buckets`_ class and the accompanying `fixture`_. These are
+generated from a `subclass of YamlDirTestGenerator`_.
+
+.. _s3.Buckets: https://github.com/cloudtools/stacker_blueprints/blob/yaml-tests/tests/test_s3.yaml
+.. _fixture: https://github.com/cloudtools/stacker_blueprints/tree/yaml-tests/tests/fixtures/blueprints/s3_static_website.json
+.. _subclass of YamlDirTestGenerator: https://github.com/cloudtools/stacker_blueprints/tree/yaml-tests/tests/__init__.py

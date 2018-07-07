@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  NormalParam:
+    Type: String
+  SecretParam:
+    Type: String
+    Default: default-secret
+    NoEcho: true
+
+Outputs:
+  NormalParam:
+    Value: !Ref "NormalParam"
+  SecretParam:
+    Value: !Ref "SecretParam"
+
+
+Resources:
+  WaitConditionHandle:
+    Type: "AWS::CloudFormation::WaitConditionHandle"

@@ -1,4 +1,4 @@
-This directory contains the functional testing suite for stacker. It exercises all of stacker against a real AWS account.
+This directory contains the functional testing suite for stacker. It exercises all of stacker against a real AWS account. Make sure you have the AWS credentials loaded into your environment when you run these steps.
 
 ## Setup
 
@@ -7,27 +7,26 @@ This directory contains the functional testing suite for stacker. It exercises a
   ```console
   $ source venv/bin/activate
   ```
+
 2. Set a stacker namespace & the AWS region for the test suite to use:
 
   ```console
   $ export STACKER_NAMESPACE=my-stacker-test-namespace
+  $ export AWS_DEFAULT_REGION=us-east-1
   ```
-3. Generate an IAM user for the test suite to use:
+
+3. Ensure that bats is installed:
 
   ```console
-  $ ./stacker.yaml.sh | stacker build -
-  ```
-4. Grab the generated key pair for the user and set it in your shell:
-
-  ```console
-  $ ./stacker.yaml.sh | stacker info -
-  $ export AWS_ACCESS_KEY_ID=access-key
-  $ export AWS_SECRET_ACCESS_KEY=secret-access-key
-  $ export STACKER_ROLE=<FunctionalTestRole>
-  ```
-5. Run the test suite:
-
-  ```console
+  # On MacOS if brew is installed
   $ brew install bats
-  $ bats .
+  ```
+
+4. Setup functional test environment & run tests:
+
+  ```console
+  # To run all the tests
+  $ make -C tests test
+  # To run specific tests (ie: tests 1, 2 and 3)
+  $ TESTS="1 2 3" make -C tests test
   ```

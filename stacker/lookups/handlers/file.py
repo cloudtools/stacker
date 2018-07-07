@@ -1,13 +1,26 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-import re
-import base64
+from builtins import bytes, str
 
-from ...util import read_value_from_path
+import base64
+import json
+import re
+try:
+    from collections.abc import Mapping, Sequence
+except ImportError:
+    from collections import Mapping, Sequence
+
+import yaml
+
 from troposphere import GenericHelperFn, Base64
 
+from ...util import read_value_from_path
+
+
 TYPE_NAME = "file"
+
+_PARAMETER_PATTERN = re.compile(r'{{([::|\w]+)}}')
 
 
 def handler(value, **kwargs):
@@ -99,29 +112,113 @@ def handler(value, **kwargs):
     return CODECS[codec](value)
 
 
-def parameterized_codec(raw, b64):
-    pattern = re.compile(r'{{([::|\w]+)}}')
+def _parameterize_string(raw):
+    """Substitute placeholders in a string using CloudFormation references
+
+    Args:
+        raw (`str`): String to be processed. Byte strings are not
+        supported; decode them before passing them to this function.
+
+    Returns:
+        `str` | :class:`troposphere.GenericHelperFn`: An expression with
+            placeholders from the input replaced, suitable to be passed to
+            Troposphere to be included in CloudFormation template. This will
+            be the input string without modification if no substitutions are
+            found, and a composition of CloudFormation calls otherwise.
+    """
 
     parts = []
     s_index = 0
 
-    for match in pattern.finditer(raw):
+    for match in _PARAMETER_PATTERN.finditer(raw):
         parts.append(raw[s_index:match.start()])
-        parts.append({"Ref": match.group(1)})
+        parts.append({u"Ref": match.group(1)})
         s_index = match.end()
 
+    if not parts:
+        return raw
+
     parts.append(raw[s_index:])
-    result = {"Fn::Join": ["", parts]}
+    return GenericHelperFn({u"Fn::Join": [u"", parts]})
+
+
+def parameterized_codec(raw, b64):
+    """Parameterize a string, possibly encoding it as Base64 afterwards
+
+    Args:
+        raw (`str` | `bytes`): String to be processed. Byte strings will be
+            interpreted as UTF-8.
+        b64 (`bool`): Whether to wrap the output in a Base64 CloudFormation
+            call
+
+    Returns:
+        :class:`troposphere.GenericHelperFn`: output to be included in a
+        CloudFormation template.
+    """
+
+    if isinstance(raw, bytes):
+        raw = raw.decode('utf-8')
+
+    result = _parameterize_string(raw)
 
     # Note, since we want a raw JSON object (not a string) output in the
     # template, we wrap the result in GenericHelperFn (not needed if we're
     # using Base64)
-    return Base64(result) if b64 else GenericHelperFn(result)
+    return Base64(result.data) if b64 else result
+
+
+def _parameterize_obj(obj):
+    """Recursively parameterize all strings contained in an object.
+
+    Parameterizes all values of a Mapping, all items of a Sequence, an
+    unicode string, or pass other objects through unmodified.
+
+    Byte strings will be interpreted as UTF-8.
+
+    Args:
+        obj: data to parameterize
+
+    Return:
+        A parameterized object to be included in a CloudFormation template.
+        Mappings are converted to `dict`, Sequences are converted to  `list`,
+        and strings possibly replaced by compositions of function calls.
+    """
+
+    if isinstance(obj, Mapping):
+        return dict((key, _parameterize_obj(value))
+                    for key, value in obj.items())
+    elif isinstance(obj, bytes):
+        return _parameterize_string(obj.decode('utf8'))
+    elif isinstance(obj, str):
+        return _parameterize_string(obj)
+    elif isinstance(obj, Sequence):
+        return list(_parameterize_obj(item) for item in obj)
+    else:
+        return obj
+
+
+class SafeUnicodeLoader(yaml.SafeLoader):
+    def construct_yaml_str(self, node):
+        return self.construct_scalar(node)
+
+
+def yaml_codec(raw, parameterized=False):
+    data = yaml.load(raw, Loader=SafeUnicodeLoader)
+    return _parameterize_obj(data) if parameterized else data
+
+
+def json_codec(raw, parameterized=False):
+    data = json.loads(raw)
+    return _parameterize_obj(data) if parameterized else data
 
 
 CODECS = {
     "plain": lambda x: x,
     "base64": lambda x: base64.b64encode(x.encode('utf8')),
     "parameterized": lambda x: parameterized_codec(x, False),
-    "parameterized-b64": lambda x: parameterized_codec(x, True)
+    "parameterized-b64": lambda x: parameterized_codec(x, True),
+    "yaml": lambda x: yaml_codec(x, parameterized=False),
+    "yaml-parameterized": lambda x: yaml_codec(x, parameterized=True),
+    "json": lambda x: json_codec(x, parameterized=False),
+    "json-parameterized": lambda x: json_codec(x, parameterized=True),
 }

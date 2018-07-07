@@ -53,7 +53,6 @@ EOF
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
   assert_has_line "update-rollback: submitted (updating existing stack)"
-  assert_has_line "update-rollback: submitted (rolling back update)"
   assert_has_line "update-rollback: failed (rolled back update)"
 
   # Do a good update so we know we've correctly waited for rollback

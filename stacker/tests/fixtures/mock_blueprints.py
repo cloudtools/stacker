@@ -77,6 +77,7 @@ class FunctionalTests(Blueprint):
                         Effect="Allow",
                         Resource=[bucket_arn],
                         Action=[
+                            awacs.s3.DeleteObject,
                             awacs.s3.GetObject,
                             awacs.s3.GetObjectAcl,
                             awacs.s3.PutObject,

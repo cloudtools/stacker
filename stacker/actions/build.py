@@ -127,14 +127,26 @@ def _resolve_parameters(parameters, blueprint):
     return params
 
 
-def _handle_missing_parameters(params, required_params, existing_stack=None):
+class UsePreviousParameterValue(object):
+    """ A simple class used to indicate a Parameter should use it's existng
+    value.
+    """
+    pass
+
+
+def _handle_missing_parameters(parameter_values, all_params, required_params,
+                               existing_stack=None):
     """Handles any missing parameters.
 
     If an existing_stack is provided, look up missing parameters there.
 
     Args:
-        params (dict): key/value dictionary of stack definition parameters
-        required_params (list): A list of required parameter names.
+        parameter_values (dict): key/value dictionary of stack definition
+            parameters
+        all_params (list): A list of all the parameters used by the
+            template/blueprint.
+        required_params (list): A list of all the parameters required by the
+            template/blueprint.
         existing_stack (dict): A dict representation of the stack. If
             provided, will be searched for any missing parameters.
 
@@ -147,21 +159,24 @@ def _handle_missing_parameters(params, required_params, existing_stack=None):
             still missing.
 
     """
-    missing_params = list(set(required_params) - set(params.keys()))
+    missing_params = list(set(all_params) - set(parameter_values.keys()))
     if existing_stack and 'Parameters' in existing_stack:
-        stack_params = {p['ParameterKey']: p['ParameterValue'] for p in
-                        existing_stack['Parameters']}
+        stack_parameters = [
+            p["ParameterKey"] for p in existing_stack["Parameters"]
+        ]
         for p in missing_params:
-            if p in stack_params:
-                value = stack_params[p]
-                logger.debug("Using parameter %s from existing stack: %s",
-                             p, value)
-                params[p] = value
-    final_missing = list(set(required_params) - set(params.keys()))
+            if p in stack_parameters:
+                logger.debug(
+                    "Using previous value for parameter %s from existing "
+                    "stack",
+                    p
+                )
+                parameter_values[p] = UsePreviousParameterValue
+    final_missing = list(set(required_params) - set(parameter_values.keys()))
     if final_missing:
         raise MissingParameterException(final_missing)
 
-    return list(params.items())
+    return list(parameter_values.items())
 
 
 def handle_hooks(stage, hooks, provider, context, dump, outline):
@@ -214,13 +229,24 @@ class Action(BaseAction):
 
         """
         resolved = _resolve_parameters(stack.parameter_values, stack.blueprint)
-        required_parameters = list(stack.required_parameter_definitions.keys())
-        parameters = _handle_missing_parameters(resolved, required_parameters,
+        required_parameters = list(stack.required_parameter_definitions)
+        all_parameters = list(stack.all_parameter_definitions)
+        parameters = _handle_missing_parameters(resolved, all_parameters,
+                                                required_parameters,
                                                 provider_stack)
-        return [
-            {'ParameterKey': p[0],
-             'ParameterValue': str(p[1])} for p in parameters
-        ]
+
+        param_list = []
+
+        for key, value in parameters:
+            param_dict = {"ParameterKey": key}
+            if value is UsePreviousParameterValue:
+                param_dict["UsePreviousValue"] = True
+            else:
+                param_dict["ParameterValue"] = str(value)
+
+            param_list.append(param_dict)
+
+        return param_list
 
     def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.

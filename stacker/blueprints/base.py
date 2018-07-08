@@ -318,21 +318,6 @@ class Blueprint(object):
                                  "html#variables for aditional information."
                                  % name)
 
-    def get_required_parameter_definitions(self):
-        """Returns all template parameters that do not have a default value.
-
-        Returns:
-            dict: dict of required CloudFormation Parameters for the blueprint.
-                Will be a dictionary of <parameter name>: <parameter
-                attributes>.
-
-        """
-        required = {}
-        for name, attrs in self.template.parameters.items():
-            if not hasattr(attrs, "Default"):
-                required[name] = attrs
-        return required
-
     def get_parameter_definitions(self):
         """Get the parameter definitions to submit to CloudFormation.
 
@@ -353,6 +338,21 @@ class Blueprint(object):
                 cfn_attrs["type"] = var_type.parameter_type
                 output[var_name] = cfn_attrs
         return output
+
+    def get_required_parameter_definitions(self):
+        """Returns all template parameters that do not have a default value.
+
+        Returns:
+            dict: dict of required CloudFormation Parameters for the blueprint.
+                Will be a dictionary of <parameter name>: <parameter
+                attributes>.
+
+        """
+        required = {}
+        for name, attrs in self.get_parameter_definitions().items():
+            if "Default" not in attrs:
+                required[name] = attrs
+        return required
 
     def get_parameter_values(self):
         """Return a dictionary of variables with `type` :class:`CFNType`.

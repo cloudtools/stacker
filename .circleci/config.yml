@@ -73,8 +73,8 @@ jobs:
       - run:
           command: |
             git clone https://github.com/bats-core/bats-core.git
-            cd bats
-            git checkout v0.4.0
+            cd bats-core
+            git checkout v1.0.2
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
@@ -95,8 +95,8 @@ jobs:
       - run:
           command: |
             git clone https://github.com/bats-core/bats-core.git
-            cd bats
-            git checkout v0.4.0
+            cd bats-core
+            git checkout v1.0.2
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
@@ -117,8 +117,8 @@ jobs:
       - run:
           command: |
             git clone https://github.com/bats-core/bats-core.git
-            cd bats
-            git checkout v0.4.0
+            cd bats-core
+            git checkout v1.0.2
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install

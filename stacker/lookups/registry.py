@@ -2,7 +2,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from past.builtins import basestring
-from ..exceptions import UnknownLookupType
+
+from ..exceptions import UnknownLookupType, FailedVariableLookup
 from ..util import load_object_from_string
 
 from .handlers import output
@@ -48,12 +49,12 @@ def unregister_lookup_handler(lookup_type):
     LOOKUP_HANDLERS.pop(lookup_type, None)
 
 
-def resolve_lookups(lookups, context, provider):
+def resolve_lookups(variable, context, provider):
     """Resolve a set of lookups.
 
     Args:
-        lookups (list of :class:`stacker.lookups.Lookup`): a list of stacker
-            lookups to resolve
+        variable (:class:`stacker.variables.Variable`): The variable resolving
+            it's lookups.
         context (:class:`stacker.context.Context`): stacker context
         provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
             base provider
@@ -63,16 +64,19 @@ def resolve_lookups(lookups, context, provider):
 
     """
     resolved_lookups = {}
-    for lookup in lookups:
+    for lookup in variable.lookups:
         try:
             handler = LOOKUP_HANDLERS[lookup.type]
         except KeyError:
             raise UnknownLookupType(lookup)
-        resolved_lookups[lookup] = handler(
-            value=lookup.input,
-            context=context,
-            provider=provider,
-        )
+        try:
+            resolved_lookups[lookup] = handler(
+                value=lookup.input,
+                context=context,
+                provider=provider,
+            )
+        except Exception as e:
+            raise FailedVariableLookup(variable.name, lookup, e)
     return resolved_lookups
 
 

@@ -47,6 +47,7 @@ class FunctionalTests(Blueprint):
         t = self.template
 
         bucket_arn = Sub("arn:aws:s3:::${StackerBucket}*")
+        objects_arn = Sub("arn:aws:s3:::${StackerBucket}*/*")
         cloudformation_scope = Sub(
             "arn:aws:cloudformation:*:${AWS::AccountId}:"
             "stack/${StackerNamespace}-*")
@@ -77,11 +78,17 @@ class FunctionalTests(Blueprint):
                         Effect="Allow",
                         Resource=[bucket_arn],
                         Action=[
-                            awacs.s3.DeleteObject,
                             awacs.s3.GetObject,
                             awacs.s3.GetObjectAcl,
                             awacs.s3.PutObject,
                             awacs.s3.PutObjectAcl,
+                        ]
+                    ),
+                    Statement(
+                        Effect="Allow",
+                        Resource=[objects_arn],
+                        Action=[
+                            awacs.s3.DeleteObject,
                         ]
                     ),
                     Statement(

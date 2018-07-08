@@ -1,3 +1,7 @@
+## Upcoming/Master
+
+- Add JSON and YAML codecs to file lookup
+
 ## 1.3.0 (2018-05-03)
 
 - Support for provisioning stacks in multiple accounts and regions has been added [GH-553], [GH-551]

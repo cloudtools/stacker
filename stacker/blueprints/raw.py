@@ -3,12 +3,12 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 
-from builtins import object
 import hashlib
 import json
 
 from ..util import parse_cloudformation_template
-from ..exceptions import MissingVariable, UnresolvedVariable
+from ..exceptions import UnresolvedVariable
+from .base import Blueprint
 
 
 def get_template_params(template):
@@ -53,23 +53,17 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
             resolved.
 
     """
+    value = None
     if provided_variable:
         if not provided_variable.resolved:
             raise UnresolvedVariable(blueprint_name, provided_variable)
 
         value = provided_variable.value
-    else:
-        # Variable value not provided, try using the default, if it exists
-        # in the definition
-        try:
-            value = var_def["Default"]
-        except KeyError:
-            raise MissingVariable(blueprint_name, var_name)
 
     return value
 
 
-class RawTemplateBlueprint(object):
+class RawTemplateBlueprint(Blueprint):
     """Blueprint class for blueprints auto-generated from raw templates."""
 
     def __init__(self, name, context, raw_template_path, mappings=None, # noqa pylint: disable=too-many-arguments
@@ -142,7 +136,8 @@ class RawTemplateBlueprint(object):
                 variable_dict.get(var_name),
                 self.name
             )
-            self.resolved_variables[var_name] = value
+            if value is not None:
+                self.resolved_variables[var_name] = value
 
     def get_parameter_values(self):
         """Return a dictionary of variables with `type` :class:`CFNType`.
@@ -154,21 +149,6 @@ class RawTemplateBlueprint(object):
 
         """
         return self.resolved_variables
-
-    def get_required_parameter_definitions(self):  # noqa pylint: disable=invalid-name
-        """Return all template parameters that do not have a default value.
-
-        Returns:
-            dict: dict of required CloudFormation Parameters for the blueprint.
-                Will be a dictionary of <parameter name>: <parameter
-                attributes>.
-
-        """
-        required = {}
-        for i in list(self.get_parameter_definitions().items()):
-            if i[1].get('Default', None) is None:
-                required[i[0]] = i[1]
-        return required
 
     @property
     def requires_change_set(self):

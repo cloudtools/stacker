@@ -60,11 +60,19 @@ class FunctionalTests(Blueprint):
                 Statement=[
                     Statement(
                         Effect="Allow",
+                        Resource=["*"],
+                        Action=[awacs.s3.ListAllMyBuckets]
+                    ),
+                    Statement(
+                        Effect="Allow",
                         Resource=[bucket_arn],
                         Action=[
                             awacs.s3.ListBucket,
                             awacs.s3.GetBucketLocation,
-                            awacs.s3.CreateBucket]),
+                            awacs.s3.CreateBucket,
+                            awacs.s3.DeleteBucket,
+                        ]
+                    ),
                     Statement(
                         Effect="Allow",
                         Resource=[bucket_arn],
@@ -72,7 +80,9 @@ class FunctionalTests(Blueprint):
                             awacs.s3.GetObject,
                             awacs.s3.GetObjectAcl,
                             awacs.s3.PutObject,
-                            awacs.s3.PutObjectAcl]),
+                            awacs.s3.PutObjectAcl,
+                        ]
+                    ),
                     Statement(
                         Effect="Allow",
                         Resource=[changeset_scope],
@@ -80,12 +90,13 @@ class FunctionalTests(Blueprint):
                             awacs.cloudformation.DescribeChangeSet,
                             awacs.cloudformation.ExecuteChangeSet,
                             awacs.cloudformation.DeleteChangeSet,
-                        ]),
+                        ]
+                    ),
                     Statement(
                         Effect="Deny",
                         Resource=[Ref("AWS::StackId")],
-                        Action=[
-                            awacs.cloudformation.Action("*")]),
+                        Action=[awacs.cloudformation.Action("*")]
+                    ),
                     Statement(
                         Effect="Allow",
                         Resource=[cloudformation_scope],
@@ -98,7 +109,12 @@ class FunctionalTests(Blueprint):
                             awacs.cloudformation.UpdateStack,
                             awacs.cloudformation.SetStackPolicy,
                             awacs.cloudformation.DescribeStacks,
-                            awacs.cloudformation.DescribeStackEvents])]))
+                            awacs.cloudformation.DescribeStackEvents
+                        ]
+                    )
+                ]
+            )
+        )
 
         principal = AWSPrincipal(Ref("AWS::AccountId"))
         role = t.add_resource(

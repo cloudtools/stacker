@@ -15,8 +15,7 @@ from schematics import Model
 from schematics.exceptions import ValidationError
 from schematics.exceptions import (
     BaseError as SchematicsError,
-    UndefinedValueError,
-    UnknownFieldError
+    UndefinedValueError
 )
 
 from schematics.types import (
@@ -144,7 +143,10 @@ def parse(raw_config):
 
     # Top-level excess keys are removed by Config._convert, so enabling strict
     # mode is fine here.
-    return Config(config_dict, strict=True)
+    try:
+        return Config(config_dict, strict=True)
+    except SchematicsError as e:
+        raise exceptions.InvalidConfig(e.errors)
 
 
 def load(config):
@@ -430,7 +432,7 @@ class Config(Model):
     def validate(self, *args, **kwargs):
         try:
             return super(Config, self).validate(*args, **kwargs)
-        except (UndefinedValueError, UnknownFieldError) as e:
+        except UndefinedValueError as e:
             raise exceptions.InvalidConfig([e.message])
         except SchematicsError as e:
             raise exceptions.InvalidConfig(e.errors)

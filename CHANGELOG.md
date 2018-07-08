@@ -1,6 +1,7 @@
 ## Upcoming/Master
 
 - Add JSON and YAML codecs to file lookup
+- Improve config. validation by only allowing unrecognized keys at the top level
 
 ## 1.3.0 (2018-05-03)
 

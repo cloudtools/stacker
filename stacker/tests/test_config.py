@@ -537,6 +537,20 @@ stacks:
         with self.assertRaises(ConstructorError):
             parse(yaml_config)
 
+    def test_parse_invalid_inner_keys(self):
+        yaml_config = """
+        namespace: prod
+        stacks:
+        - name: vpc
+          class_path: blueprints.VPC
+          garbage: yes
+          variables:
+            Foo: bar
+        """
+
+        with self.assertRaises(exceptions.InvalidConfig):
+            parse(yaml_config)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -51,7 +51,7 @@ class TestRegistry(unittest.TestCase):
     def test_resolve_lookups_list_unknown_lookup(self):
         variable = Variable(
             "MyVar", [
-                "${bad_lookup foo}", "${output foo::bar}", "random string",
+                "${bad_lookup foo}", "random string",
             ]
         )
 

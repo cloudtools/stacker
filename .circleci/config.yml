@@ -86,12 +86,6 @@ jobs:
             export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
             export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E make test-functional
-      - run:
-          command: |
-            export BUCKET=s3://stacker-${STACKER_NAMESPACE}
-            pip install awscli
-            aws s3 rm --recursive ${BUCKET}
-            aws s3 rb ${BUCKET}
 
   functional-test-35:
     docker:
@@ -114,12 +108,6 @@ jobs:
             export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
             export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E make test-functional
-      - run:
-          command: |
-            export BUCKET=s3://stacker-${STACKER_NAMESPACE}
-            pip install awscli
-            aws s3 rm --recursive ${BUCKET}
-            aws s3 rb ${BUCKET}
 
   functional-test-36:
     docker:
@@ -141,12 +129,6 @@ jobs:
             export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
             export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E make test-functional
-      - run:
-          command: |
-            export BUCKET=s3://stacker-${STACKER_NAMESPACE}
-            pip install awscli
-            aws s3 rm --recursive ${BUCKET}
-            aws s3 rb ${BUCKET}
 
   cleanup-functional-buckets:
     docker:

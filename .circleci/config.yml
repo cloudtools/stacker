@@ -78,7 +78,6 @@ jobs:
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
-      - run: pip install awscli
       - run:
           command: |
             export TERM=xterm
@@ -100,7 +99,6 @@ jobs:
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
-      - run: pip install awscli
       - run:
           command: |
             export TERM=xterm

@@ -25,7 +25,11 @@ workflows:
           requires:
             - functional-test-35
             - unit-test-36
-
+      - cleanup-functional-buckets:
+          requires:
+            - functional-test-27
+            - functional-test-35
+            - functional-test-36
 
 jobs:
   lint:
@@ -68,12 +72,13 @@ jobs:
       - checkout
       - run:
           command: |
-            git clone https://github.com/sstephenson/bats.git
+            git clone https://github.com/bats-core/bats-core.git
             cd bats
             git checkout v0.4.0
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
+      - run: pip install awscli
       - run:
           command: |
             export TERM=xterm
@@ -81,6 +86,12 @@ jobs:
             export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
             export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E make test-functional
+      - run:
+          command: |
+            export BUCKET=s3://stacker-${STACKER_NAMESPACE}
+            pip install awscli
+            aws s3 rm --recursive ${BUCKET}
+            aws s3 rb ${BUCKET}
 
   functional-test-35:
     docker:
@@ -89,12 +100,13 @@ jobs:
       - checkout
       - run:
           command: |
-            git clone https://github.com/sstephenson/bats.git
+            git clone https://github.com/bats-core/bats-core.git
             cd bats
             git checkout v0.4.0
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
+      - run: pip install awscli
       - run:
           command: |
             export TERM=xterm
@@ -102,6 +114,12 @@ jobs:
             export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
             export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E make test-functional
+      - run:
+          command: |
+            export BUCKET=s3://stacker-${STACKER_NAMESPACE}
+            pip install awscli
+            aws s3 rm --recursive ${BUCKET}
+            aws s3 rb ${BUCKET}
 
   functional-test-36:
     docker:
@@ -110,7 +128,7 @@ jobs:
       - checkout
       - run:
           command: |
-            git clone https://github.com/sstephenson/bats.git
+            git clone https://github.com/bats-core/bats-core.git
             cd bats
             git checkout v0.4.0
             sudo ./install.sh /usr/local
@@ -123,3 +141,19 @@ jobs:
             export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
             export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E make test-functional
+      - run:
+          command: |
+            export BUCKET=s3://stacker-${STACKER_NAMESPACE}
+            pip install awscli
+            aws s3 rm --recursive ${BUCKET}
+            aws s3 rb ${BUCKET}
+
+  cleanup-functional-buckets:
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      - run:
+          command: |
+            pip install awscli
+            ALL_BUT_LAST_6_BUCKETS=$(aws s3 ls | grep stacker-cloudtools-functional | sort | tail -r | tail +7 | awk '{print $3}')
+            for bucket in ${ALL_BUT_LAST_6_BUCKETS}; do aws --region us-east-1 s3 rm --recursive s3://$bucket/; aws --region us-east-1 s3 rb s3://$bucket; done

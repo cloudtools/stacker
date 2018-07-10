@@ -232,12 +232,13 @@ class LongRunningDummy(Blueprint):
     def create_template(self):
         v = self.get_variables()
         t = self.template
+        base_name = "Dummy"
 
         for i in range(v["Count"]):
-            name = "Dummy%s" % i
+            name = "%s%s" % (base_name, i)
             last_name = None
             if i:
-                last_name = name + str(i - 1)
+                last_name = "%s%s" % (base_name, i - 1)
             wch = WaitConditionHandle(name)
             if last_name is not None:
                 wch.DependsOn = last_name

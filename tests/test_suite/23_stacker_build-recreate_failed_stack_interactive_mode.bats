@@ -9,8 +9,11 @@ load ../test_helper
     cat <<EOF
 namespace: ${STACKER_NAMESPACE}
 stacks:
-  - name: recreate-failed-interactive
-    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+  - name: recreate-failed
+    class_path: stacker.tests.fixtures.mock_blueprints.LongRunningDummy
+    variables:
+      Count: 10
+      BreakLast: true
 
 EOF
   }
@@ -19,8 +22,12 @@ EOF
     cat <<EOF
 namespace: ${STACKER_NAMESPACE}
 stacks:
-  - name: recreate-failed-interactive
-    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+  - name: recreate-failed
+    class_path: stacker.tests.fixtures.mock_blueprints.LongRunningDummy
+    variables:
+      Count: 10
+      BreakLast: false
+      OutputValue: GoodOutput
 
 EOF
   }

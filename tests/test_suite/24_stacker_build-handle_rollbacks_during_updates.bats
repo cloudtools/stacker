@@ -10,7 +10,10 @@ load ../test_helper
 namespace: ${STACKER_NAMESPACE}
 stacks:
   - name: update-rollback
-    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+    class_path: stacker.tests.fixtures.mock_blueprints.LongRunningDummy
+    variables:
+      Count: 10
+      BreakLast: true
 
 EOF
   }
@@ -20,7 +23,10 @@ EOF
 namespace: ${STACKER_NAMESPACE}
 stacks:
   - name: update-rollback
-    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    class_path: stacker.tests.fixtures.mock_blueprints.LongRunningDummy
+    variables:
+      Count: 10
+      BreakLast: false
 
 EOF
   }
@@ -30,7 +36,11 @@ EOF
 namespace: ${STACKER_NAMESPACE}
 stacks:
   - name: update-rollback
-    class_path: stacker.tests.fixtures.mock_blueprints.Dummy2
+    class_path: stacker.tests.fixtures.mock_blueprints.LongRunningDummy
+    variables:
+      Count: 10
+      BreakLast: false
+      OutputValue: UpdateFoo
 
 EOF
   }

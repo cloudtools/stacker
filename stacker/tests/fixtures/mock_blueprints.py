@@ -244,7 +244,7 @@ class LongRunningDummy(Blueprint):
                 wch.DependsOn = last_name
             t.add_resource(wch)
 
-        self.add_output("WCHCount", str(v["OutputValue"]))
+        self.add_output("OutputValue", str(v["OutputValue"]))
         self.add_output("WCHCount", str(v["Count"]))
 
         if v["BreakLast"]:

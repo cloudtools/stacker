@@ -16,16 +16,18 @@ workflows:
             - lint
       - functional-test-35:
           requires:
-            - functional-test-27
             - unit-test-35
       - unit-test-36:
           requires:
             - lint
       - functional-test-36:
           requires:
-            - functional-test-35
             - unit-test-36
-
+      - cleanup-functional-buckets:
+          requires:
+            - functional-test-27
+            - functional-test-35
+            - functional-test-36
 
 jobs:
   lint:
@@ -68,9 +70,9 @@ jobs:
       - checkout
       - run:
           command: |
-            git clone https://github.com/sstephenson/bats.git
-            cd bats
-            git checkout v0.4.0
+            git clone https://github.com/bats-core/bats-core.git
+            cd bats-core
+            git checkout v1.0.2
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
@@ -89,9 +91,9 @@ jobs:
       - checkout
       - run:
           command: |
-            git clone https://github.com/sstephenson/bats.git
-            cd bats
-            git checkout v0.4.0
+            git clone https://github.com/bats-core/bats-core.git
+            cd bats-core
+            git checkout v1.0.2
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
@@ -110,9 +112,9 @@ jobs:
       - checkout
       - run:
           command: |
-            git clone https://github.com/sstephenson/bats.git
-            cd bats
-            git checkout v0.4.0
+            git clone https://github.com/bats-core/bats-core.git
+            cd bats-core
+            git checkout v1.0.2
             sudo ./install.sh /usr/local
             bats --version
       - run: sudo python setup.py install
@@ -123,3 +125,13 @@ jobs:
             export STACKER_NAMESPACE=cloudtools-functional-tests-$CIRCLE_BUILD_NUM
             export STACKER_ROLE=arn:aws:iam::459170252436:role/cloudtools-functional-tests-sta-FunctionalTestRole-1M9HFJ9VQVMFX
             sudo -E make test-functional
+
+  cleanup-functional-buckets:
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      - run:
+          command: |
+            sudo pip install awscli
+            ALL_BUT_LAST_6_BUCKETS=$(aws s3 ls | grep stacker-cloudtools-functional-tests- | sort -r | tail -n +7 | awk '{print $3}')
+            for bucket in ${ALL_BUT_LAST_6_BUCKETS}; do echo "## Deleting bucket: 's3://$bucket'"; aws --region us-east-1 s3 rm --recursive s3://$bucket/; aws --region us-east-1 s3 rb s3://$bucket; done

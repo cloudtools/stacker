@@ -19,7 +19,7 @@ This directory contains the functional testing suite for stacker. It exercises a
 
   ```console
   # On MacOS if brew is installed
-  $ brew install bats
+  $ brew install bats-core
   ```
 
 4. Setup functional test environment & run tests:

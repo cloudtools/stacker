@@ -52,7 +52,7 @@ EOF
   stacker destroy --force <(good_config)
 
   # Create the initial stack
-  stacker build <(good_config)
+  stacker build -v <(good_config)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
   assert_has_line "update-rollback: submitted (creating new stack)"

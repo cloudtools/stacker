@@ -20,6 +20,7 @@ install_requires = [
     "schematics>=2.0.1,<2.1.0",
     "formic2",
     "python-dateutil>=2.0,<3.0",
+    "ddtrace",
 ]
 
 tests_require = [

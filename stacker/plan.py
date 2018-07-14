@@ -7,6 +7,7 @@ import logging
 import time
 import uuid
 import threading
+from ddtrace import tracer
 
 from .util import stack_template_key_name
 from .exceptions import (
@@ -369,16 +370,21 @@ class Plan(object):
                 :class:`stacker.dag.DAG` to walk the graph.
         """
 
-        def walk_func(step):
-            # Before we execute the step, we need to ensure that it's
-            # transitive dependencies are all in an "ok" state. If not, we
-            # won't execute this step.
-            for dep in self.graph.downstream(step.name):
-                if not dep.ok:
-                    step.set_status(FailedStatus("dependency has failed"))
-                    return step.ok
+        parent_context = tracer.get_call_context()
 
-            return step.run()
+        def walk_func(step):
+            context = parent_context.clone()
+            tracer.context_provider.activate(context)
+            with tracer.start_span("step", resource=step.name, child_of=context):
+                # Before we execute the step, we need to ensure that it's
+                # transitive dependencies are all in an "ok" state. If not, we
+                # won't execute this step.
+                for dep in self.graph.downstream(step.name):
+                    if not dep.ok:
+                        step.set_status(FailedStatus("dependency has failed"))
+                        return step.ok
+
+                return step.run()
 
         return self.graph.walk(walker, walk_func)
 

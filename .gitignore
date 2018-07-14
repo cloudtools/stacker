@@ -68,3 +68,4 @@ dev.yaml
 dev.env
 
 tests/fixtures/blueprints/*-result
+.env

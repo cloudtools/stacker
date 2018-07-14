@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 
+import os
 from stacker.logger import setup_logging
 from stacker.commands import Stacker
+from ddtrace import patch, tracer
+
+patch(botocore=True)
+
+tracer.configure(hostname=os.environ.get("DATADOG_APM_HOSTNAME"))
 
 if __name__ == "__main__":
     stacker = Stacker(setup_logging=setup_logging)

@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import absolute_import
 import logging
 
+from ddtrace import tracer
+
 from .base import BaseAction, plan, build_walker
 from .base import STACK_POLL_TIME
 
@@ -248,6 +250,7 @@ class Action(BaseAction):
 
         return param_list
 
+    @tracer.wrap("launch_stack")
     def _launch_stack(self, stack, **kwargs):
         """Handles the creating or updating of a stack in CloudFormation.
 
@@ -255,20 +258,24 @@ class Action(BaseAction):
         it is already updating or creating.
 
         """
-        old_status = kwargs.get("status")
-        wait_time = STACK_POLL_TIME if old_status == SUBMITTED else 0
-        if self.cancel.wait(wait_time):
-            return INTERRUPTED
+
+        with tracer.trace("wait"):
+            old_status = kwargs.get("status")
+            wait_time = STACK_POLL_TIME if old_status == SUBMITTED else 0
+            if self.cancel.wait(wait_time):
+                return INTERRUPTED
 
         if not should_submit(stack):
             return NotSubmittedStatus()
 
-        provider = self.build_provider(stack)
+        with tracer.trace("build_provider"):
+            provider = self.build_provider(stack)
 
-        try:
-            provider_stack = provider.get_stack(stack.fqn)
-        except StackDoesNotExist:
-            provider_stack = None
+        with tracer.trace("get_stack"):
+            try:
+                provider_stack = provider.get_stack(stack.fqn)
+            except StackDoesNotExist:
+                provider_stack = None
 
         if provider_stack and not should_update(stack):
             stack.set_outputs(

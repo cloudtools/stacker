@@ -11,6 +11,7 @@ import logging
 import time
 import urllib.parse
 import sys
+from ddtrace import tracer
 
 # thread safe, memoized, provider builder.
 from threading import Lock
@@ -52,6 +53,7 @@ MAX_TAIL_RETRIES = 5
 DEFAULT_CAPABILITIES = ["CAPABILITY_NAMED_IAM", ]
 
 
+@tracer.wrap("get_cloudformation_client")
 def get_cloudformation_client(session):
     config = Config(
         retries=dict(
@@ -471,6 +473,7 @@ class ProviderBuilder(object):
         self.providers = {}
         self.lock = Lock()
 
+    @tracer.wrap("aws.ProviderBuilder.build")
     def build(self, region=None, profile=None):
         """Get or create the provider for the given region and profile."""
 

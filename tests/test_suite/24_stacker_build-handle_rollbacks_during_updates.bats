@@ -59,14 +59,14 @@ EOF
   assert_has_line "update-rollback: complete (creating new stack)"
 
   # Do a bad update and watch the rollback
-  stacker build <(bad_config)
+  stacker build -v <(bad_config)
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
   assert_has_line "update-rollback: submitted (updating existing stack)"
   assert_has_line "update-rollback: failed (rolled back update)"
 
   # Do a good update so we know we've correctly waited for rollback
-  stacker build <(good_config2)
+  stacker build -v <(good_config2)
   assert "$status" -eq 0
   assert_has_line "Using default AWS provider mode"
   assert_has_line "update-rollback: submitted (updating existing stack)"

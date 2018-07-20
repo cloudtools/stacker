@@ -34,6 +34,9 @@ class Build(BaseCommand):
                                  "dependencies. Can be specified more than "
                                  "once. If not specified then stacker will "
                                  "work on all stacks in the config file.")
+        parser.add_argument("--only", action="store_true",
+                            help="Lock all stacks, other than those provided "
+                                 "in the --stacks flag.")
         parser.add_argument("-j", "--max-parallel", action="store", type=int,
                             default=0,
                             help="The maximum number of stacks to execute in "
@@ -58,4 +61,7 @@ class Build(BaseCommand):
                        dump=options.dump)
 
     def get_context_kwargs(self, options, **kwargs):
-        return {"stack_names": options.stacks, "force_stacks": options.force}
+        return {
+            "stack_names": options.stacks,
+            "force_stacks": options.force,
+            "only_specified": options.only}

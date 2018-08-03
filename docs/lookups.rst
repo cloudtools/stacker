@@ -7,8 +7,8 @@ concept called lookups. A lookup is meant to take a value and convert
 it by calling out to another service or system.
 
 A lookup is denoted in the config with the ``${<lookup type> <lookup
-input>}`` syntax. If ``<lookup type>`` isn't provided, the default of
-``output`` will be used.
+input>}`` syntax. If ``<lookup type>`` isn't provided, stacker will
+fall back to use the ``output`` lookup .
 
 Lookups are only resolved within `Variables
 <terminology.html#variables>`_. They can be nested in any part of a YAML
@@ -58,6 +58,7 @@ dictionary::
 stacker includes the following lookup types:
 
   - `output lookup`_
+  - `default lookup`_
   - `kms lookup`_
   - `xref lookup`_
   - `rxref lookup`_
@@ -85,6 +86,27 @@ whose variable the output value is being passed to.
 You can specify an output lookup with the following syntax::
 
   ConfVariable: ${output someStack::SomeOutput}
+
+
+.. _`default lookup`:
+
+default Lookup
+--------------
+
+The ``default`` lookup type will check if a value exists for the variable
+in the environment, then fall back to a default defined in the stacker
+config if the environment doesn't contain the variable. This allows defaults
+to be set at the config file level, while granting the user the ability
+to override that value per environment.
+
+Format of value::
+  <env_var>::<default value>
+
+For example::
+  Groups: ${default app_security_groups::sg-12345,sg-67890}
+  If `app_security_groups` is defined in the environment file, its defined
+  value will be returned. Otherwise, `sg-12345,sg-67890` will be the returned
+  value.
 
 .. _`kms lookup`:
 

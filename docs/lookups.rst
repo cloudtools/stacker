@@ -111,8 +111,8 @@ value.
 
 .. note::
   The ``default`` lookup only supports checking if a variable is defined in
-  An environment file. It does not support other embedded lookups to see
-  if they exist. Only variables in the environment file are supported.
+  an environment file. It does not support other embedded lookups to see
+  if they exist. Only checking variables in the environment file are supported.
   If you attempt to have the default lookup perform any other lookup that
   fails, stacker will throw an exception for that lookup and will stop your
   build before it gets a chance to fall back to the default in your config.

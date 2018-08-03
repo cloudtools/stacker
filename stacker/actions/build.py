@@ -413,6 +413,8 @@ class Action(BaseAction):
 
         """
         plan = self._generate_plan(tail=tail)
+        if not plan.keys():
+            logger.warn('WARNING: No stacks detected (error in config?)')
         if not outline and not dump:
             plan.outline(logging.DEBUG)
             logger.debug("Launching stacks: %s", ", ".join(plan.keys()))

@@ -26,7 +26,7 @@ EOF
   stacker destroy --force <(config)
 
   # Verify both stacks fail during creation
-  stacker build <(config)
+  stacker build -v <(config)
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
   assert_has_line "dependent-rollback-parent: submitted (creating new stack)"

@@ -10,7 +10,10 @@ load ../test_helper
 namespace: ${STACKER_NAMESPACE}
 stacks:
   - name: recreate-failed-interactive
-    class_path: stacker.tests.fixtures.mock_blueprints.Broken
+    class_path: stacker.tests.fixtures.mock_blueprints.LongRunningDummy
+    variables:
+      Count: 10
+      BreakLast: true
 
 EOF
   }
@@ -20,7 +23,11 @@ EOF
 namespace: ${STACKER_NAMESPACE}
 stacks:
   - name: recreate-failed-interactive
-    class_path: stacker.tests.fixtures.mock_blueprints.Dummy
+    class_path: stacker.tests.fixtures.mock_blueprints.LongRunningDummy
+    variables:
+      Count: 10
+      BreakLast: false
+      OutputValue: GoodOutput
 
 EOF
   }
@@ -32,7 +39,7 @@ EOF
   stacker destroy --force <(good_config)
 
   # Create the initial stack. This must fail.
-  stacker build <(bad_config)
+  stacker build -v <(bad_config)
   assert "$status" -eq 1
   assert_has_line "Using default AWS provider mode"
   assert_has_line "recreate-failed-interactive: submitted (creating new stack)"

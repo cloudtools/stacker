@@ -203,6 +203,62 @@ class Dummy2(Blueprint):
         self.template.add_resource(WaitConditionHandle("Dummy2"))
 
 
+class LongRunningDummy(Blueprint):
+    """
+    Meant to be an attempt to create a cheap blueprint that takes a little bit
+    of time to create/rollback/destroy to avoid some of the race conditions
+    we've seen in some of our functional tests.
+    """
+    VARIABLES = {
+        "Count": {
+            "type": int,
+            "description": "The # of WaitConditonHandles to create.",
+            "default": 1,
+        },
+        "BreakLast": {
+            "type": bool,
+            "description": "Whether or not to break the last WaitConditon "
+                           "by creating an invalid WaitConditionHandle.",
+            "default": True,
+        },
+        "OutputValue": {
+            "type": str,
+            "description": "The value to put in an output to allow for "
+                           "updates.",
+            "default": "DefaultOutput",
+        },
+    }
+
+    def create_template(self):
+        v = self.get_variables()
+        t = self.template
+        base_name = "Dummy"
+
+        for i in range(v["Count"]):
+            name = "%s%s" % (base_name, i)
+            last_name = None
+            if i:
+                last_name = "%s%s" % (base_name, i - 1)
+            wch = WaitConditionHandle(name)
+            if last_name is not None:
+                wch.DependsOn = last_name
+            t.add_resource(wch)
+
+        self.add_output("OutputValue", str(v["OutputValue"]))
+        self.add_output("WCHCount", str(v["Count"]))
+
+        if v["BreakLast"]:
+            t.add_resource(
+                WaitCondition(
+                    "BrokenWaitCondition",
+                    Handle=wch.Ref(),
+                    # Timeout is made deliberately large so CF rejects it
+                    Timeout=2 ** 32,
+                    Count=0
+                )
+            )
+
+
 class Broken(Blueprint):
     """
     This blueprint deliberately fails validation, so that it can be used to

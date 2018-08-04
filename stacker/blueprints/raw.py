@@ -5,10 +5,34 @@ from __future__ import absolute_import
 
 import hashlib
 import json
+import os
+import sys
 
 from ..util import parse_cloudformation_template
-from ..exceptions import UnresolvedVariable
+from ..exceptions import InvalidConfig, UnresolvedVariable
 from .base import Blueprint
+
+
+def get_template_path(filename):
+    """Find raw template in working directory or in sys.path.
+
+    template_path from config may refer to templates colocated with the Stacker
+    config, or files in remote package_sources. Here, we emulate python module
+    loading to find the path to the template.
+
+    Args:
+        filename (str): Template filename.
+
+    Returns:
+        Optional[str]: Path to file, or None if no file found
+
+    """
+    if os.path.isfile(filename):
+        return filename
+    for i in sys.path:
+        if os.path.isfile(os.path.join(i, filename)):
+            return os.path.join(i, filename)
+    return None
 
 
 def get_template_params(template):
@@ -159,8 +183,15 @@ class RawTemplateBlueprint(Blueprint):
     def rendered(self):
         """Return (generating first if needed) rendered template."""
         if not self._rendered:
-            with open(self.raw_template_path, 'r') as template:
-                self._rendered = template.read()
+            template_path = get_template_path(self.raw_template_path)
+            if template_path:
+                with open(template_path, 'r') as template:
+                    self._rendered = template.read()
+            else:
+                raise InvalidConfig(
+                    'Could not find template %s' % self.raw_template_path
+                )
+
         return self._rendered
 
     @property

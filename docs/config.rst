@@ -340,7 +340,11 @@ A stack has the following keys:
   ``template_path`` for the stack.
 **template_path:**
   Path to raw CloudFormation template (JSON or YAML). Specify this or
-  ``class_path`` for the stack.
+  ``class_path`` for the stack. Path can be specified relative to the current
+  working directory (e.g. templates stored alongside the Config), or relative
+  to a directory in the python ``sys.path`` (i.e. for loading templates
+  retrieved via ``packages_sources``).
+
 **description:**
   A short description to apply to the stack. This overwrites any description
   provided in the Blueprint. See: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html

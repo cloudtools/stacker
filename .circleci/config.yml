@@ -130,6 +130,7 @@ jobs:
     docker:
       - image: circleci/python:2.7
     steps:
+      - checkout
       - run:
           command: |
             tests/cleanup_functional_test_buckets.sh

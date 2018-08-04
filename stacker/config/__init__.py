@@ -402,7 +402,7 @@ class Config(Model):
     lookups = DictType(StringType, serialize_when_none=False)
 
     stacks = ListType(
-        ModelType(Stack), default=[], validators=[not_empty_list])
+        ModelType(Stack), default=[])
 
     def _remove_excess_keys(self, data):
         excess_keys = set(data.keys())

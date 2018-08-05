@@ -94,16 +94,6 @@ class TestConfig(unittest.TestCase):
             stack_errors['class_path'][0].__str__(),
             "template_path cannot be present when class_path is provided.")
 
-    def test_config_validate_no_stacks(self):
-        config = Config({"namespace": "prod"})
-        with self.assertRaises(exceptions.InvalidConfig) as ex:
-            config.validate()
-
-        error = ex.exception.errors['stacks'].errors[0]
-        self.assertEquals(
-            error.__str__(),
-            "Should have more than one element.")
-
     def test_config_validate_missing_name(self):
         config = Config({
             "namespace": "prod",

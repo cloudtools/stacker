@@ -278,7 +278,10 @@ class Action(build.Action):
     def run(self, concurrency=0, *args, **kwargs):
         plan = self._generate_plan()
         plan.outline(logging.DEBUG)
-        logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
+        if plan.keys():
+            logger.info("Diffing stacks: %s", ", ".join(plan.keys()))
+        else:
+            logger.warn('WARNING: No stacks detected (error in config?)')
         walker = build_walker(concurrency)
         plan.execute(walker)
 

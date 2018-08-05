@@ -8,6 +8,6 @@ load ../test_helper
   stacker build - <<EOF
 namespace: ${STACKER_NAMESPACE}
 EOF
-  assert ! "$status" -eq 0
+  assert "$status" -eq 0
   assert_has_line 'WARNING: No stacks detected (error in config?)'
 }

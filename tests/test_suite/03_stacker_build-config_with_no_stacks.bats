@@ -9,5 +9,5 @@ load ../test_helper
 namespace: ${STACKER_NAMESPACE}
 EOF
   assert ! "$status" -eq 0
-  assert_has_line 'Should have more than one element'
+  assert_has_line 'WARNING: No stacks detected (error in config?)'
 }

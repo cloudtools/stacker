@@ -1,7 +1,20 @@
-## Upcoming/Master
+## Upcoming Release
 
-- Add JSON and YAML codecs to file lookup
-- Improve config. validation by only allowing unrecognized keys at the top level
+## 1.4.0 (2018-08-05)
+
+- YAML & JSON codecs for `file` lookup [GH-537]
+- Arbitrary `command` hook [GH-565]
+- Fix datetime is not JSON serializable error [GH-591]
+- Run dump and outline actions offline [GH-594]
+- Helper Makefile for functional tests [GH-597]
+- Python3 support!!! [GH-600]
+- YAML blueprint testing framework [GH-606]
+- new `add_output` helper on Blueprint [GH-611]
+- Include lookup contents when lookups fail [GH-614]
+- Fix issue with using previous value for parameters [GH-615]
+- Stricter config parsing - only allow unrecognized config variables at the top-level [GH-623]
+- Documentation for the `default` lookup [GH-636]
+- Allow configs without stacks [GH-640]
 
 ## 1.3.0 (2018-05-03)
 

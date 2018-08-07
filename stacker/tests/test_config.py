@@ -236,6 +236,10 @@ stacks: []
             - bucket: anotherexamplebucket
               key: example-blueprints-v3.tar.gz
               use_latest: false
+              paths:
+                - foo
+              configs:
+                - foo/config.yml
           git:
             - uri: git@github.com:acmecorp/stacker_blueprints.git
             - uri: git@github.com:remind101/stacker_blueprints.git
@@ -246,6 +250,10 @@ stacks: []
               branch: staging
             - uri: git@github.com:contoso/foo.git
               commit: 12345678
+              paths:
+                - bar
+              configs:
+                - bar/moreconfig.yml
         tags:
           environment: production
         stacks:
@@ -301,6 +309,10 @@ stacks: []
             - bucket: anotherexamplebucket
               key: example-blueprints-v3.tar.gz
               use_latest: false
+              paths:
+                - foo
+              configs:
+                - foo/config.yml
           git:
             - uri: git@github.com:acmecorp/stacker_blueprints.git
             - uri: git@github.com:remind101/stacker_blueprints.git
@@ -311,6 +323,10 @@ stacks: []
               branch: staging
             - uri: git@github.com:contoso/foo.git
               commit: 12345678
+              paths:
+                - bar
+              configs:
+                - bar/moreconfig.yml
         tags:
           environment: production
         stacks:

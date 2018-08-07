@@ -258,6 +258,10 @@ class S3PackageSource(Model):
 
     requester_pays = BooleanType(serialize_when_none=False)
 
+    paths = ListType(StringType, serialize_when_none=False)
+
+    configs = ListType(StringType, serialize_when_none=False)
+
 
 class PackageSources(Model):
     git = ListType(ModelType(GitPackageSource))

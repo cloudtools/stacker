@@ -825,9 +825,17 @@ class Provider(BaseProvider):
             self.cloudformation, fqn, template, parameters, tags,
             'UPDATE', service_role=self.service_role, **kwargs
         )
+        old_parameters_as_dict = self.params_as_dict(old_parameters)
+        new_parameters_as_dict = self.params_as_dict(
+            [x
+             if x.get('ParameterValue')
+             else {'ParameterKey': x['ParameterKey'],
+                   'ParameterValue': old_parameters_as_dict[x['ParameterKey']]}
+             for x in parameters]
+        )
         params_diff = diff_parameters(
-            self.params_as_dict(old_parameters),
-            self.params_as_dict(parameters))
+            old_parameters_as_dict,
+            new_parameters_as_dict)
 
         action = "replacements" if self.replacements_only else "changes"
         full_changeset = changes

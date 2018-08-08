@@ -9,7 +9,7 @@ import mock
 import base64
 import yaml
 import json
-from troposphere import Base64, Join
+from troposphere import Base64, GenericHelperFn, Join
 
 from stacker.lookups.handlers.file import (json_codec, handler,
                                            parameterized_codec, yaml_codec)
@@ -46,12 +46,21 @@ class TestFileTranslator(unittest.TestCase):
         )
 
         out = parameterized_codec(u'Test {{Interpolation}} Here', True)
+        self.assertEqual(Base64, out.__class__)
         self.assertTemplateEqual(expected, out)
 
     def test_parameterized_codec_plain(self):
         expected = Join(u'', [u'Test ', {u'Ref': u'Interpolation'}, u' Here'])
 
         out = parameterized_codec(u'Test {{Interpolation}} Here', False)
+        self.assertEqual(GenericHelperFn, out.__class__)
+        self.assertTemplateEqual(expected, out)
+
+    def test_parameterized_codec_plain_no_interpolation(self):
+        expected = u'Test Without Interpolation Here'
+
+        out = parameterized_codec(u'Test Without Interpolation Here', False)
+        self.assertEqual(GenericHelperFn, out.__class__)
         self.assertTemplateEqual(expected, out)
 
     def test_yaml_codec_raw(self):

@@ -136,7 +136,7 @@ def _parameterize_string(raw):
         s_index = match.end()
 
     if not parts:
-        return raw
+        return GenericHelperFn(raw)
 
     parts.append(raw[s_index:])
     return GenericHelperFn({u"Fn::Join": [u"", parts]})
@@ -152,7 +152,7 @@ def parameterized_codec(raw, b64):
             call
 
     Returns:
-        :class:`troposphere.GenericHelperFn`: output to be included in a
+        :class:`troposphere.AWSHelperFn`: output to be included in a
         CloudFormation template.
     """
 

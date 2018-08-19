@@ -3,11 +3,15 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 import json
+import os
+import sys
 import unittest
 
 from mock import MagicMock
 
-from stacker.blueprints.raw import get_template_params, RawTemplateBlueprint
+from stacker.blueprints.raw import (
+    get_template_params, get_template_path, RawTemplateBlueprint
+)
 from ..factories import mock_context
 
 RAW_JSON_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.json'
@@ -16,6 +20,32 @@ RAW_YAML_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.yaml'
 
 class TestRawBluePrintHelpers(unittest.TestCase):
     """Test class for functions in module."""
+
+    def test_get_template_path_local_file(self):  # noqa pylint: disable=invalid-name
+        """Verify get_template_path finding a file relative to CWD."""
+        self.assertEqual(get_template_path(RAW_YAML_TEMPLATE_PATH),
+                         RAW_YAML_TEMPLATE_PATH)
+
+    def test_get_template_path_invalid_file(self):  # noqa pylint: disable=invalid-name
+        """Verify get_template_path with an invalid filename."""
+        self.assertEqual(get_template_path('afilenamethatdoesnotexist.txt'),
+                         None)
+
+    def test_get_template_path_file_in_syspath(self):  # noqa pylint: disable=invalid-name
+        """Verify get_template_path with a file in sys.path.
+
+        This ensures templates are able to be retreived from remote packages.
+
+        """
+        stacker_tests_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # noqa
+        old_sys_path = list(sys.path)
+        sys.path.append(stacker_tests_dir)
+        try:
+            self.assertEqual(get_template_path('fixtures/cfn_template.yaml'),
+                             os.path.join(stacker_tests_dir,
+                                          'fixtures/cfn_template.yaml'))
+        finally:
+            sys.path = old_sys_path
 
     def test_get_template_params(self):
         """Verify get_template_params function operation."""

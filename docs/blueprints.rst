@@ -421,6 +421,7 @@ a directory, it will search for yaml files in that directory with certain
 structure and execute a test case for it. As an example:
 
 .. code-block:: yaml
+
   ---
   namespace: test
   stacks:

@@ -405,13 +405,6 @@ Examples of using the `BlueprintTestCase` class can be found in the
 stacker_blueprints repo. For example, see the tests used to test the
 `Route53 DNSRecords Blueprint`_ and the accompanying `output results`_:
 
-.. _troposphere: https://github.com/cloudtools/troposphere
-.. _stacker_blueprints: https://github.com/cloudtools/stacker_blueprints
-.. _Route53 DNSRecords Blueprint: https://github.com/cloudtools/stacker_blueprints/blob/master/tests/test_route53.py
-.. _output results: https://github.com/cloudtools/stacker_blueprints/tree/master/tests/fixtures/blueprints
-.. _Resource Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html
-.. _Property Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-product-property-reference.html
-
 Yaml (stacker) format tests
 ---------------------------
 
@@ -439,6 +432,12 @@ stacker_blueprints repo. For example, see the tests used to test the
 `s3.Buckets`_ class and the accompanying `fixture`_. These are
 generated from a `subclass of YamlDirTestGenerator`_.
 
-.. _s3.Buckets: https://github.com/cloudtools/stacker_blueprints/blob/yaml-tests/tests/test_s3.yaml
-.. _fixture: https://github.com/cloudtools/stacker_blueprints/tree/yaml-tests/tests/fixtures/blueprints/s3_static_website.json
-.. _subclass of YamlDirTestGenerator: https://github.com/cloudtools/stacker_blueprints/tree/yaml-tests/tests/__init__.py
+.. _troposphere: https://github.com/cloudtools/troposphere
+.. _stacker_blueprints: https://github.com/cloudtools/stacker_blueprints
+.. _Route53 DNSRecords Blueprint: https://github.com/cloudtools/stacker_blueprints/blob/master/tests/test_route53.py
+.. _output results: https://github.com/cloudtools/stacker_blueprints/tree/master/tests/fixtures/blueprints
+.. _Resource Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html
+.. _Property Type: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-product-property-reference.html
+.. _s3.Buckets: https://github.com/cloudtools/stacker_blueprints/blob/master/tests/test_s3.yaml
+.. _fixture: https://github.com/cloudtools/stacker_blueprints/blob/master/tests/fixtures/blueprints/s3_static_website.json
+.. _subclass of YamlDirTestGenerator: https://github.com/cloudtools/stacker_blueprints/blob/master/tests/__init__.py

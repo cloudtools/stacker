@@ -58,17 +58,17 @@ dictionary::
 stacker includes the following lookup types:
 
   - `output lookup`_
+  - `ami lookup`_
+  - `custom lookup`_
   - `default lookup`_
-  - `kms lookup`_
-  - `xref lookup`_
-  - `rxref lookup`_
-  - `file lookup`_
-  - `ssmstore lookup`_
   - `dynamodb lookup`_
   - `envvar lookup`_
-  - `ami lookup`_
+  - `file lookup`_
   - `hook_data lookup`_
-  - `custom lookup`_
+  - `kms lookup`_
+  - `rxref lookup`_
+  - `ssmstore lookup`_
+  - `xref lookup`_
 
 .. _`output lookup`:
 
@@ -372,7 +372,7 @@ For example::
   BucketName: ${dynamodb us-east-1:TestTable@TestKey:TestVal.BucketName}
 
   # Which would resolve to:
-  DBUser: stacker-test-bucket
+  BucketName: stacker-test-bucket
 
 You can lookup other data types by putting the data type in the lookup. Valid
 values are "S"(String), "N"(Number), "M"(Map), "L"(List).

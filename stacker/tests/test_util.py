@@ -252,7 +252,7 @@ Outputs:
                     GitPackageSource({'uri': 'https://github.com/remind101/'
                                              'stacker.git',
                                       'branch': 'release-1.0'})),
-                b'857b4834980e582874d70feef77bb064b60762d1'
+                '857b4834980e582874d70feef77bb064b60762d1'
             )
             self.assertEqual(
                 sp.determine_git_ref(

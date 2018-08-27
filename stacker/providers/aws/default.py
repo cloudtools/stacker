@@ -12,6 +12,9 @@ import time
 import urllib.parse
 import sys
 
+# thread safe, memoized, provider builder.
+from threading import Lock
+
 import botocore.exceptions
 from botocore.config import Config
 
@@ -448,17 +451,37 @@ def generate_stack_policy_args(stack_policy=None):
 
 
 class ProviderBuilder(object):
-    """Implements a ProviderBuilder for the AWS provider."""
+    """Implements a Memoized ProviderBuilder for the AWS provider."""
 
     def __init__(self, region=None, **kwargs):
         self.region = region
         self.kwargs = kwargs
+        self.providers = {}
+        self.lock = Lock()
 
     def build(self, region=None, profile=None):
-        if not region:
-            region = self.region
-        session = get_session(region=region, profile=profile)
-        return Provider(session, region=region, **self.kwargs)
+        """Get or create the provider for the given region and profile."""
+
+        with self.lock:
+            # memoization lookup key derived from region + profile.
+            key = "{}-{}".format(profile, region)
+            try:
+                # assume provider is in provider dictionary.
+                provider = self.providers[key]
+            except KeyError:
+                msg = "Missed memoized lookup ({}), creating new AWS Provider."
+                logger.debug(msg.format(key))
+                if not region:
+                    region = self.region
+                # memoize the result for later.
+                self.providers[key] = Provider(
+                    get_session(region=region, profile=profile),
+                    region=region,
+                    **self.kwargs
+                )
+                provider = self.providers[key]
+
+        return provider
 
 
 class Provider(BaseProvider):

@@ -9,8 +9,8 @@ src_dir = os.path.dirname(__file__)
 install_requires = [
     "future",
     "troposphere>=1.9.0",
-    "botocore>=1.6.0",
-    "boto3>=1.3.1",
+    "botocore<1.11.0",
+    "boto3>=1.7.0,<1.8.0",
     "PyYAML>=3.12",
     "awacs>=0.6.0",
     "gitpython~=2.0",

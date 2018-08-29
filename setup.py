@@ -59,12 +59,12 @@ if __name__ == "__main__":
         tests_require=tests_require,
         setup_requires=setup_requires,
         test_suite="nose.collector",
-        classifiers=(
+        classifiers=[
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "License :: OSI Approved :: BSD License",
             "Programming Language :: Python :: 2.7",
             "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
-        ),
+        ],
     )

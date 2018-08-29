@@ -1,4 +1,20 @@
-## Upcoming Release
+## Upcoming release
+
+## 1.4.1 (2018-08-28)
+
+This is a minor bugfix release for 1.4.0, no major feature updates.
+
+As of this release python 3.5+ support is no longer considered experimental, and should be stable.
+
+Special thanks to @troyready for this release, I think most of these PRs were his :)
+
+- allow raw cfn templates to be loaded from remote package\_sources [GH-638]
+- Add missing config keys to s3 package source model [GH-642]
+- Account for UsePreviousValue parameters in diff [GH-644]
+- fix file lookup documented and actual return types [GH-646]
+- Creates a memoized provider builder for AWS [GH-648]
+- update git ref to explicitly return string (fix py3 bytes error) [GH-649]
+- Lock botocore/boto to versions that work with moto [GH-651]
 
 ## 1.4.0 (2018-08-05)
 

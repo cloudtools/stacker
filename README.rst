@@ -46,7 +46,7 @@ Requirements
 ============
 
 * Python 2.7
-* Python 3.5+(evaluation purpose only)
+* Python 3.5+
 
 Stacker Command
 ===============

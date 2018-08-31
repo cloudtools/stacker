@@ -16,10 +16,10 @@ install_requires = [
     ##
     "PyYAML>=3.12",
     "awacs>=0.6.0",
-    "gitpython~=2.0",
-    "schematics~=2.0.1",
+    "gitpython>=2.0,<3.0",
+    "schematics>=2.0.1,<2.1.0",
     "formic2",
-    "python-dateutil~=2.0",
+    "python-dateutil>=2.0,<3.0",
 ]
 
 tests_require = [

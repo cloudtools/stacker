@@ -397,6 +397,8 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
             with create_change_set.
         service_role (str, optional): An optional service role to use when
             interacting with Cloudformation.
+        stack_policy (:class:`stacker.providers.base.Template`): A template
+            object representing a stack policy.
         change_set_name (str, optional): An optional change set name to use
             with create_change_set.
 
@@ -434,6 +436,16 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
 
 
 def generate_stack_policy_args(stack_policy=None):
+    """ Converts a stack policy object into keyword args.
+
+    Args:
+        stack_policy (:class:`stacker.providers.base.Template`): A template
+            object representing a stack policy.
+
+    Returns:
+        dict: A dictionary of keyword arguments to be used elsewhere.
+    """
+
     args = {}
     if stack_policy:
         logger.debug("Stack has a stack policy")
@@ -666,6 +678,8 @@ class Provider(BaseProvider):
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
             force_change_set (bool): Whether or not to force change set use.
+            stack_policy (:class:`stacker.providers.base.Template`): A template
+                object representing a stack policy.
         """
 
         logger.debug("Attempting to create stack %s:.", fqn)
@@ -813,6 +827,8 @@ class Provider(BaseProvider):
                 not. False will follow the behavior of the provider.
             force_change_set (bool): A flag that indicates whether the update
                 must be executed with a change set.
+            stack_policy (:class:`stacker.providers.base.Template`): A template
+                object representing a stack policy.
         """
         logger.debug("Attempting to update stack %s:", fqn)
         logger.debug("    parameters: %s", parameters)
@@ -824,11 +840,28 @@ class Provider(BaseProvider):
         update_method = self.select_update_method(force_interactive,
                                                   force_change_set)
 
-        return update_method(fqn, template, old_parameters, parameters, tags,
-                             stack_policy=stack_policy, **kwargs)
+        return update_method(fqn, template, old_parameters, parameters,
+                             stack_policy=stack_policy, tags=tags, **kwargs)
+
+    def deal_with_changeset_stack_policy(self, fqn, stack_policy):
+        """ Set a stack policy when using changesets.
+
+        ChangeSets don't allow you to set stack policies in the same call to
+        update them. This sets it before executing the changeset if the
+        stack policy is passed in.
+
+        Args:
+            stack_policy (:class:`stacker.providers.base.Template`): A template
+                object representing a stack policy.
+        """
+        if stack_policy:
+            kwargs = generate_stack_policy_args(stack_policy)
+            kwargs["StackName"] = fqn
+            logger.debug("Setting stack policy on %s.", fqn)
+            self.cloudformation.set_stack_policy(**kwargs)
 
     def interactive_update_stack(self, fqn, template, old_parameters,
-                                 parameters, tags, stack_policy=None,
+                                 parameters, stack_policy, tags,
                                  **kwargs):
         """Update a Cloudformation stack in interactive mode.
 
@@ -840,6 +873,8 @@ class Provider(BaseProvider):
                 parameter list on the existing Cloudformation stack.
             parameters (list): A list of dictionaries that defines the
                 parameter list to be applied to the Cloudformation stack.
+            stack_policy (:class:`stacker.providers.base.Template`): A template
+                object representing a stack policy.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
         """
@@ -878,19 +913,15 @@ class Provider(BaseProvider):
             finally:
                 ui.unlock()
 
-        # ChangeSets don't support specifying a stack policy inline, like
-        # CreateStack/UpdateStack, so we just SetStackPolicy if there is one.
-        if stack_policy:
-            kwargs = generate_stack_policy_args(stack_policy)
-            kwargs["StackName"] = fqn
-            self.cloudformation.set_stack_policy(**kwargs)
+        self.deal_with_changeset_stack_policy(fqn, stack_policy)
 
         self.cloudformation.execute_change_set(
             ChangeSetName=change_set_id,
         )
 
     def noninteractive_changeset_update(self, fqn, template, old_parameters,
-                                        parameters, tags, **kwargs):
+                                        parameters, stack_policy, tags,
+                                        **kwargs):
         """Update a Cloudformation stack using a change set.
 
         This is required for stacks with a defined Transform (i.e. SAM), as the
@@ -904,6 +935,8 @@ class Provider(BaseProvider):
                 parameter list on the existing Cloudformation stack.
             parameters (list): A list of dictionaries that defines the
                 parameter list to be applied to the Cloudformation stack.
+            stack_policy (:class:`stacker.providers.base.Template`): A template
+                object representing a stack policy.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
         """
@@ -913,6 +946,8 @@ class Provider(BaseProvider):
             self.cloudformation, fqn, template, parameters, tags,
             'UPDATE', service_role=self.service_role, **kwargs
         )
+
+        self.deal_with_changeset_stack_policy(fqn, stack_policy)
 
         self.cloudformation.execute_change_set(
             ChangeSetName=change_set_id,
@@ -932,6 +967,8 @@ class Provider(BaseProvider):
                 parameter list to be applied to the Cloudformation stack.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
+            stack_policy (:class:`stacker.providers.base.Template`): A template
+                object representing a stack policy.
         """
 
         logger.debug("Using default provider mode for %s.", fqn)

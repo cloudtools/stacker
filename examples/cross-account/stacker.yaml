@@ -14,7 +14,5 @@ stacks:
     profile: master
     template_path: templates/stacker-bucket.yaml
     variables:
-      Roles:
-        # Change these to the correct AWS account IDs
-        - arn:aws:iam::<prod account id>:role/Stacker
-        - arn:aws:iam::<stage account id>:role/Stacker
+      # Change these to the correct AWS account IDs, must be comma seperated list
+      Roles: arn:aws:iam::<prod account id>:role/Stacker, arn:aws:iam::<stage account id>:role/Stacker

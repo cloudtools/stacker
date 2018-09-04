@@ -851,7 +851,7 @@ class Provider(BaseProvider):
         old_parameters_as_dict = self.params_as_dict(old_parameters)
         new_parameters_as_dict = self.params_as_dict(
             [x
-             if x.get('ParameterValue')
+             if 'ParameterValue' in x
              else {'ParameterKey': x['ParameterKey'],
                    'ParameterValue': old_parameters_as_dict[x['ParameterKey']]}
              for x in parameters]

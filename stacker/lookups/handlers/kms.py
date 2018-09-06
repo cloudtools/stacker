@@ -52,5 +52,12 @@ def handler(value, **kwargs):
         region, value = value.split("@", 1)
 
     kms = get_session(region).client('kms')
-    decoded = codecs.decode(value.encode(), 'base64').decode()
+
+    # encode str value as an utf-8 bytestring for use with codecs.decode.
+    value = value.encode('utf-8')
+
+    # get raw but still encrypted value from base64 version.
+    decoded = codecs.decode(value, 'base64')
+
+    # decrypt and return the plain text raw value.
     return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]

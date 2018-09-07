@@ -500,6 +500,64 @@ class TestProviderDefaultMode(unittest.TestCase):
             self.assertFalse(
                 self.provider.prepare_stack_for_update(stack, []))
 
+    def test_noninteractive_changeset_update_no_stack_policy(self):
+        stack_name = "MockStack"
+
+        self.stubber.add_response(
+            "create_change_set",
+            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+        )
+        changes = []
+        changes.append(generate_change())
+
+        self.stubber.add_response(
+            "describe_change_set",
+            generate_change_set_response(
+                status="CREATE_COMPLETE", execution_status="AVAILABLE",
+                changes=changes,
+            )
+        )
+
+        self.stubber.add_response("execute_change_set", {})
+
+        with self.stubber:
+            self.provider.noninteractive_changeset_update(
+                fqn=stack_name,
+                template=Template(url="http://fake.template.url.com/"),
+                old_parameters=[],
+                parameters=[], stack_policy=None, tags=[],
+            )
+
+    def test_noninteractive_changeset_update_with_stack_policy(self):
+        stack_name = "MockStack"
+
+        self.stubber.add_response(
+            "create_change_set",
+            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+        )
+        changes = []
+        changes.append(generate_change())
+
+        self.stubber.add_response(
+            "describe_change_set",
+            generate_change_set_response(
+                status="CREATE_COMPLETE", execution_status="AVAILABLE",
+                changes=changes,
+            )
+        )
+
+        self.stubber.add_response("set_stack_policy", {})
+
+        self.stubber.add_response("execute_change_set", {})
+
+        with self.stubber:
+            self.provider.noninteractive_changeset_update(
+                fqn=stack_name,
+                template=Template(url="http://fake.template.url.com/"),
+                old_parameters=[],
+                parameters=[], stack_policy=Template(body="{}"), tags=[],
+            )
+
 
 class TestProviderInteractiveMode(unittest.TestCase):
     def setUp(self):
@@ -516,7 +574,8 @@ class TestProviderInteractiveMode(unittest.TestCase):
         self.assertEqual(p.replacements_only, replacements)
 
     @patch("stacker.providers.aws.default.ask_for_approval")
-    def test_update_stack_execute_success(self, patched_approval):
+    def test_update_stack_execute_success_no_stack_policy(self,
+                                                          patched_approval):
         stack_name = "my-fake-stack"
 
         self.stubber.add_response(
@@ -542,6 +601,45 @@ class TestProviderInteractiveMode(unittest.TestCase):
                 template=Template(url="http://fake.template.url.com/"),
                 old_parameters=[],
                 parameters=[], tags=[]
+            )
+
+        patched_approval.assert_called_with(full_changeset=changes,
+                                            params_diff=[],
+                                            include_verbose=True)
+
+        self.assertEqual(patched_approval.call_count, 1)
+
+    @patch("stacker.providers.aws.default.ask_for_approval")
+    def test_update_stack_execute_success_with_stack_policy(self,
+                                                            patched_approval):
+        stack_name = "my-fake-stack"
+
+        self.stubber.add_response(
+            "create_change_set",
+            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+        )
+        changes = []
+        changes.append(generate_change())
+
+        self.stubber.add_response(
+            "describe_change_set",
+            generate_change_set_response(
+                status="CREATE_COMPLETE", execution_status="AVAILABLE",
+                changes=changes,
+            )
+        )
+
+        self.stubber.add_response("set_stack_policy", {})
+
+        self.stubber.add_response("execute_change_set", {})
+
+        with self.stubber:
+            self.provider.update_stack(
+                fqn=stack_name,
+                template=Template(url="http://fake.template.url.com/"),
+                old_parameters=[],
+                parameters=[], tags=[],
+                stack_policy=Template(body="{}"),
             )
 
         patched_approval.assert_called_with(full_changeset=changes,

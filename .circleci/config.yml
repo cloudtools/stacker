@@ -17,12 +17,15 @@ workflows:
       - functional-test-35:
           requires:
             - unit-test-35
+            - functional-test-27
       - unit-test-36:
           requires:
             - lint
       - functional-test-36:
           requires:
             - unit-test-36
+            - functional-test-27
+            - functional-test-35
       - cleanup-functional-buckets:
           requires:
             - functional-test-27

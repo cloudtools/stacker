@@ -39,6 +39,8 @@ class Context(object):
             the environment. Useful for templating.
         stack_names (list): A list of stack_names to operate on. If not passed,
             usually all stacks defined in the config will be operated on.
+        only_specified (bool): When true, all stacks, other than those
+            specified in `stack_names` will be locked.
         config (:class:`stacker.config.Config`): The stacker configuration
             being operated on.
         force_stacks (list): A list of stacks to force work on. Used to work
@@ -48,9 +50,11 @@ class Context(object):
 
     def __init__(self, environment=None,
                  stack_names=None,
+                 only_specified=False,
                  config=None,
                  force_stacks=None):
         self.environment = environment
+        self.only_specified = only_specified
         self.stack_names = stack_names or []
         self.config = config or Config()
         self.force_stacks = force_stacks or []
@@ -137,12 +141,18 @@ class Context(object):
             stacks = []
             definitions = self._get_stack_definitions()
             for stack_def in definitions:
+                locked = stack_def.locked
+
+                if self.only_specified:
+                    if stack_def.name not in self.stack_names:
+                        locked = True
+
                 stack = Stack(
                     definition=stack_def,
                     context=self,
                     mappings=self.mappings,
                     force=stack_def.name in self.force_stacks,
-                    locked=stack_def.locked,
+                    locked=locked,
                     enabled=stack_def.enabled,
                     protected=stack_def.protected,
                 )

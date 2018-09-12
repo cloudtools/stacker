@@ -84,6 +84,12 @@ class Stack(object):
 
     @property
     def requires(self):
+        # By definition, a locked stack has no dependencies, because we won't
+        # be performing an update operation on the stack. This means, resolving
+        # outputs from dependencies is unnecessary.
+        if self.locked:
+            return []
+
         requires = set(self.definition.requires or [])
 
         # Add any dependencies based on output lookups

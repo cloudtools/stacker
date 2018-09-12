@@ -35,6 +35,14 @@ class TestContext(unittest.TestCase):
         self.assertEqual(stack_names[0], "namespace-stack1")
         self.assertEqual(stack_names[1], "namespace-stack2")
 
+    def test_context_get_stacks_only_specified(self):
+        context = Context(config=self.config,
+                          stack_names=["stack1"],
+                          only_specified=True)
+        stacks = context.get_stacks_dict()
+        self.assertFalse(stacks["namespace-stack1"].locked)
+        self.assertTrue(stacks["namespace-stack2"].locked)
+
     def test_context_get_fqn(self):
         context = Context(config=self.config)
         fqn = context.get_fqn()

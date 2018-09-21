@@ -28,7 +28,7 @@ class Build(BaseCommand):
                             help="If a stackname is provided to --force, it "
                                  "will be updated, even if it is locked in "
                                  "the config.")
-        parser.add_argument("--stacks", action="append",
+        parser.add_argument("--targets", "--stacks", action="append",
                             metavar="STACKNAME", type=str,
                             help="Only work on the stacks given, and their "
                                  "dependencies. Can be specified more than "
@@ -58,4 +58,4 @@ class Build(BaseCommand):
                        dump=options.dump)
 
     def get_context_kwargs(self, options, **kwargs):
-        return {"stack_names": options.stacks, "force_stacks": options.force}
+        return {"stack_names": options.targets, "force_stacks": options.force}

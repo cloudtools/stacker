@@ -371,6 +371,9 @@ A stack has the following keys:
   (optional) a list of other stacks this stack requires. This is for explicit
   dependencies - you do not need to set this if you refer to another stack in
   a Parameter, so this is rarely necessary.
+**required_by:**
+  (optional) a list of other stacks or targets that require this stack. It's an
+  inverse to ``requires``.
 **tags:**
   (optional) a dictionary of CloudFormation tags to apply to this stack. This
   will be combined with the global tags, but these tags will take precendence.
@@ -422,6 +425,37 @@ Here's an example from stacker_blueprints_, used to create a VPC::
           - 10.128.16.0/22
           - 10.128.20.0/22
         CidrBlock: 10.128.0.0/16
+
+Targets
+-------
+
+In stacker, **targets** can be used as a lightweight method to group a number
+of stacks together, as a named "target" in the graph. Internally, this adds a
+node to the underlying DAG, which can then be used alongside the `--targets`
+flag. If you're familiar with the concept of "targets" in systemd, the concept
+is the same.
+
+**name:**
+  The logical name for this target.
+**requires:**
+  (optional) a list of stacks or other targets this target requires.
+**required_by:**
+  (optional) a list of stacks or other targets that require this target.
+
+Here's an example of a target that will execute all "database" stacks::
+
+  targets:
+    - name: databases
+
+  stacks:
+    - name: dbA
+      class_path: blueprints.DB
+      required_by:
+        - databases
+    - name: dbB
+      class_path: blueprints.DB
+      required_by:
+        - databases
 
 Variables
 ==========

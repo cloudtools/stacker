@@ -6,6 +6,7 @@ standard_library.install_aliases()
 from builtins import object
 import collections
 import logging
+import asyncio
 from threading import Thread
 from copy import copy, deepcopy
 from collections import deque
@@ -423,7 +424,10 @@ class ThreadedWalker(object):
     def __init__(self, semaphore=None):
         self.semaphore = semaphore or UnlimitedSemaphore()
 
-    def walk(self, dag, walk_func):
+    def walk(self, *args, **kwargs):
+        asyncio.run(self.walk_async(*args, **kwargs))
+
+    async def walk_async(self, dag, walk_func):
         """ Walks each node of the graph, in parallel if it can.
         The walk_func is only called when the nodes dependencies have been
         satisfied
@@ -443,17 +447,15 @@ class ThreadedWalker(object):
 
         # Blocks until all of the given nodes have completed execution (whether
         # successfully, or errored). Returns True if all nodes returned True.
-        def wait_for(nodes):
+        async def wait_for(nodes):
             for node in nodes:
-                thread = threads[node]
-                while thread.is_alive():
-                    threads[node].join(0.5)
+                await threads[node]
 
         # For each node in the graph, we're going to allocate a thread to
         # execute. The thread will block executing walk_func, until all of the
         # nodes dependencies have executed.
         for node in nodes:
-            def fn(n, deps):
+            async def fn(n, deps):
                 if deps:
                     logger.debug(
                         "%s waiting for %s to complete",
@@ -461,7 +463,7 @@ class ThreadedWalker(object):
                         ", ".join(deps))
 
                 # Wait for all dependencies to complete.
-                wait_for(deps)
+                await wait_for(deps)
 
                 logger.debug("%s starting", n)
 
@@ -472,11 +474,7 @@ class ThreadedWalker(object):
                     self.semaphore.release()
 
             deps = dag.all_downstreams(node)
-            threads[node] = Thread(target=fn, args=(node, deps), name=node)
+            threads[node] = asyncio.create_task(fn(node, deps))
 
-        # Start up all of the threads.
         for node in nodes:
-            threads[node].start()
-
-        # Wait for all threads to complete executing.
-        wait_for(nodes)
+            await threads[node]

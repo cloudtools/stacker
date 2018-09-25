@@ -1,15 +1,20 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
+
+import re
+
 from past.builtins import basestring
 from builtins import object
 from string import Template
 
-from .exceptions import InvalidLookupCombination
+from .exceptions import InvalidLookupCombination, UnresolvedVariable, \
+    UnknownLookupType, FailedVariableLookup, FailedLookup, \
+    UnresolvedVariableValue, InvalidLookupConcatenation
 from .lookups import (
     extract_lookups,
-    resolve_lookups,
 )
+from .lookups.registry import LOOKUP_HANDLERS
 
 
 class LookupTemplate(Template):
@@ -81,54 +86,37 @@ def resolve_variables(variables, context, provider):
 
 
 class Variable(object):
-
     """Represents a variable passed to a stack.
 
     Args:
         name (str): Name of the variable
-        value (str): Initial value of the variable from the config
-
+        value (any): Initial value of the variable from the config (str, list,
+                     dict)
     """
 
     def __init__(self, name, value):
         self.name = name
-        self._value = value
-        self._resolved_value = None
-
-    @property
-    def lookups(self):
-        """Return any lookups within the value"""
-        return extract_lookups(self.value)
-
-    @property
-    def needs_resolution(self):
-        """Return True if the value has any lookups that need resolving."""
-        if self.lookups:
-            return True
-        return False
+        self._raw_value = value
+        self._value = VariableValue.parse(value)
 
     @property
     def value(self):
         """Return the current value of the Variable.
-
-        `_resolved_value` takes precedence over `_value`.
-
         """
-        if self._resolved_value is not None:
-            return self._resolved_value
-        else:
-            return self._value
+        try:
+            return self._value.value()
+        except UnresolvedVariableValue as e:
+            raise UnresolvedVariable("<unknown>", self)
+        except InvalidLookupConcatenation as e:
+            raise InvalidLookupCombination(e.lookup, e.lookups, self)
 
     @property
     def resolved(self):
         """Boolean for whether the Variable has been resolved.
 
         Variables only need to be resolved if they contain lookups.
-
         """
-        if self.needs_resolution:
-            return self._resolved_value is not None
-        return True
+        return self._value.resolved()
 
     def resolve(self, context, provider):
         """Recursively resolve any lookups with the Variable.
@@ -140,21 +128,371 @@ class Variable(object):
                 the base provider
 
         """
+        try:
+            self._value.resolve(context, provider)
+        except FailedLookup as e:
+            raise FailedVariableLookup(self.name, e.lookup, e.error)
 
-        while self.lookups:
-            resolved_lookups = resolve_lookups(self, context, provider)
-            self.replace(resolved_lookups)
-
-    def replace(self, resolved_lookups):
-        """Replace lookups in the Variable with their resolved values.
-
-        Args:
-            resolved_lookups (dict): dict of :class:`stacker.lookups.Lookup` ->
-                resolved value.
-
+    def dependencies(self):
         """
-        replacements = {}
-        for lookup, value in resolved_lookups.items():
-            replacements[lookup.raw] = value
+        :return: list of stack names that this variable depends on
+        :rtype: Set[str]
+        """
+        return self._value.dependencies()
 
-        self._resolved_value = resolve(self.value, replacements)
+
+class VariableValue(object):
+    """
+    Abstract Syntax Tree base object to parse the value for a variable
+    """
+    def value(self):
+        return NotImplementedError()
+
+    def __iter__(self):
+        return NotImplementedError()
+
+    def resolved(self):
+        """
+        :return: Whether value() will not raise an error
+        :rtype: bool
+        """
+        return NotImplementedError()
+
+    def resolve(self, context, provider):
+        pass
+
+    def dependencies(self):
+        return set()
+
+    def simplified(self):
+        """
+        Return a simplified version of the Value.
+        This can be used to e.g. concatenate two literals in to one literal, or
+        to flatten nested Concatenations
+        :rtype: VariableValue
+        """
+        return self
+
+    @classmethod
+    def parse(cls, input_object):
+        if isinstance(input_object, list):
+            return VariableValueList.parse(input_object)
+        elif isinstance(input_object, dict):
+            return VariableValueDict.parse(input_object)
+        elif not isinstance(input_object, basestring):
+            return VariableValueLiteral(input_object)
+        # else:  # str
+
+        tokens = VariableValueConcatenation([
+            VariableValueLiteral(t)
+            for t in re.split(r'(\$\{|\}|\s+)', input_object)
+        ])
+
+        while True:
+            last_open = None
+            next_close = None
+            for i, t in enumerate(tokens):
+                if not isinstance(t, VariableValueLiteral):
+                    continue
+
+                if t.value() == '${':
+                    last_open = i
+                    next_close = None
+                if last_open is not None and \
+                        t.value() == '}' and \
+                        next_close is None:
+                    next_close = i
+
+            if next_close is not None:
+                lookup_data = VariableValueConcatenation(
+                    tokens[(last_open + 3):next_close]
+                )
+                lookup = VariableValueLookup(
+                    lookup_name=tokens[last_open + 1],
+                    lookup_data=lookup_data,
+                )
+                tokens[last_open:(next_close + 1)] = [lookup]
+            else:
+                break
+
+        tokens = tokens.simplified()
+
+        return tokens
+
+
+class VariableValueLiteral(VariableValue):
+    def __init__(self, value):
+        self._value = value
+
+    def value(self):
+        return self._value
+
+    def __iter__(self):
+        yield self
+
+    def resolved(self):
+        return True
+
+    def __repr__(self):
+        return "Literal<{}>".format(repr(self._value))
+
+
+class VariableValueList(VariableValue, list):
+    @classmethod
+    def parse(cls, input_object):
+        acc = [
+            VariableValue.parse(obj)
+            for obj in input_object
+        ]
+        return cls(acc)
+
+    def value(self):
+        return [
+            item.value()
+            for item in self
+        ]
+
+    def resolved(self):
+        accumulator = True
+        for item in self:
+            accumulator = accumulator and item.resolved()
+        return accumulator
+
+    def __repr__(self):
+        return "List[{}]".format(', '.join([repr(value) for value in self]))
+
+    def __iter__(self):
+        return list.__iter__(self)
+
+    def resolve(self, context, provider):
+        for item in self:
+            item.resolve(context, provider)
+
+    def dependencies(self):
+        deps = set()
+        for item in self:
+            deps.update(item.dependencies())
+        return deps
+
+    def simplified(self):
+        return [
+            item.simplified()
+            for item in self
+        ]
+
+
+class VariableValueDict(VariableValue, dict):
+    @classmethod
+    def parse(cls, input_object):
+        acc = {
+            k: VariableValue.parse(v)
+            for k, v in input_object.items()
+        }
+        return cls(acc)
+
+    def value(self):
+        return {
+            k: v.value()
+            for k, v in self.items()
+        }
+
+    def resolved(self):
+        accumulator = True
+        for item in self.values():
+            accumulator = accumulator and item.resolved()
+        return accumulator
+
+    def __repr__(self):
+        return "Dict[{}]".format(', '.join([
+            "{}={}".format(k, repr(v)) for k, v in self.items()
+        ]))
+
+    def __iter__(self):
+        return dict.__iter__(self)
+
+    def resolve(self, context, provider):
+        for item in self.values():
+            item.resolve(context, provider)
+
+    def dependencies(self):
+        deps = set()
+        for item in self.values():
+            deps.update(item.dependencies())
+        return deps
+
+    def simplified(self):
+        return {
+            k: v.simplified()
+            for k, v in self.items()
+        }
+
+
+class VariableValueConcatenation(VariableValue, list):
+    def value(self):
+        if len(self) == 1:
+            return self[0].value()
+
+        values = []
+        for value in self:
+            resolved_value = value.value()
+            if not isinstance(resolved_value, basestring):
+                raise InvalidLookupConcatenation(value, self)
+            values.append(resolved_value)
+        return ''.join(values)
+
+    def __iter__(self):
+        return list.__iter__(self)
+
+    def resolved(self):
+        accumulator = True
+        for item in self:
+            accumulator = accumulator and item.resolved()
+        return accumulator
+
+    def __repr__(self):
+        return "Concat[{}]".format(', '.join([repr(value) for value in self]))
+
+    def resolve(self, context, provider):
+        for value in self:
+            value.resolve(context, provider)
+
+    def dependencies(self):
+        deps = set()
+        for item in self:
+            deps.update(item.dependencies())
+        return deps
+
+    def simplified(self):
+        concat = []
+        for item in self:
+            if isinstance(item, VariableValueLiteral) and \
+                    item.value() == '':
+                pass
+
+            elif isinstance(item, VariableValueLiteral) and \
+                    len(concat) > 0 and \
+                    isinstance(concat[-1], VariableValueLiteral):
+                # Join the literals together
+                concat[-1] = VariableValueLiteral(
+                    concat[-1].value() + item.value()
+                )
+
+            elif isinstance(item, VariableValueConcatenation):
+                # Flatten concatenations
+                concat.extend(item.simplified())
+
+            else:
+                concat.append(item.simplified())
+
+        if len(concat) == 0:
+            return VariableValueLiteral('')
+        elif len(concat) == 1:
+            return concat[0]
+        else:
+            return VariableValueConcatenation(concat)
+
+
+class VariableValueLookup(VariableValue):
+    def __init__(self, lookup_name, lookup_data, handler=None):
+        """
+        :param lookup_name: Name of the invoked lookup
+        :type lookup_name: basestring
+        :param lookup_data: Data portion of the lookup
+        :type lookup_data: VariableValue
+        """
+        self._resolved = False
+        self._value = None
+
+        self.lookup_name = lookup_name
+
+        if isinstance(lookup_data, basestring):
+            lookup_data = VariableValueLiteral(lookup_data)
+        self.lookup_data = lookup_data
+
+        if handler is None:
+            lookup_name_resolved = lookup_name.value()
+            try:
+                handler = LOOKUP_HANDLERS[lookup_name_resolved]
+            except KeyError as e:
+                raise UnknownLookupType(lookup_name_resolved)
+        self.handler = handler
+
+    def resolve(self, context, provider):
+        self.lookup_data.resolve(context, provider)
+        try:
+            self._resolve(self.handler(
+                value=self.lookup_data.value(),
+                context=context,
+                provider=provider
+            ))
+        except Exception as e:
+            raise FailedLookup(self, e)
+
+    def _resolve(self, value):
+        self._value = value
+        self._resolved = True
+
+    def dependencies(self):
+        if self.lookup_name.resolved() and \
+                self.lookup_name.value() == 'output':
+            # TODO: move this code in to the Output-lookup itself,
+            # in order to make it generic
+
+            # try to get the stack name
+            stack_name = ''
+            for data_item in self.lookup_data:
+                if not data_item.resolved():
+                    # We encountered an unresolved substitution.
+                    # StackName is calculated dynamically based on context:
+                    #  e.g. ${output ${default var::source}::name}
+                    # Stop here
+                    return set()
+                stack_name = stack_name + data_item.value()
+                match = re.search(r'::', stack_name)
+                if match:
+                    stack_name = stack_name[0:match.start()]
+                    return set([stack_name])
+                # else: try to append the next item
+
+            # We added all lookup_data, and still couldn't find a `::`...
+            # Probably an error...
+            return set()
+
+        return set()
+
+    def value(self):
+        if self._resolved:
+            return self._value
+        else:
+            raise UnresolvedVariableValue(self)
+
+    def __iter__(self):
+        yield self
+
+    def resolved(self):
+        return self._resolved
+
+    def __repr__(self):
+        if self._resolved:
+            return "Lookup<{r} ({t} {d})>".format(
+                r=self._value,
+                t=self.lookup_name,
+                d=repr(self.lookup_data),
+            )
+        else:
+            return "Lookup<{t} {d}>".format(
+                t=self.lookup_name,
+                d=repr(self.lookup_data),
+            )
+
+    def __str__(self):
+        return "${{{type} {data}}}".format(
+            type=self.lookup_name.value(),
+            data=self.lookup_data.value(),
+        )
+
+    def simplified(self):
+        return VariableValueLookup(
+            lookup_name=self.lookup_name,
+            lookup_data=self.lookup_data.simplified(),
+        )

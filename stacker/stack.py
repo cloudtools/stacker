@@ -9,13 +9,8 @@ from .variables import (
     Variable,
     resolve_variables,
 )
-from .lookups.handlers.output import (
-    TYPE_NAME as OUTPUT_LOOKUP_TYPE_NAME,
-    deconstruct,
-)
 
 from .blueprints.raw import RawTemplateBlueprint
-from .exceptions import FailedVariableLookup
 
 
 def _gather_variables(stack_def):
@@ -93,22 +88,13 @@ class Stack(object):
 
         # Add any dependencies based on output lookups
         for variable in self.variables:
-            for lookup in variable.lookups:
-                if lookup.type == OUTPUT_LOOKUP_TYPE_NAME:
-
-                    try:
-                        d = deconstruct(lookup.input)
-                    except ValueError as e:
-                        raise FailedVariableLookup(self.name, lookup, e)
-
-                    if d.stack_name == self.name:
-                        message = (
-                            "Variable %s in stack %s has a ciruclar reference "
-                            "within lookup: %s"
-                        ) % (variable.name, self.name, lookup.raw)
-                        raise ValueError(message)
-                    requires.add(d.stack_name)
-
+            deps = variable.dependencies()
+            if self.name in deps:
+                message = (
+                    "Variable %s in stack %s has a ciruclar reference"
+                ) % (variable.name, self.name)
+                raise ValueError(message)
+            requires.update(deps)
         return requires
 
     @property

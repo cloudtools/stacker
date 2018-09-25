@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from mock import MagicMock
 import unittest
 
+from stacker.lookups import register_lookup_handler
 from stacker.context import Context
 from stacker.config import Config
 from stacker.stack import Stack
@@ -20,6 +21,7 @@ class TestStack(unittest.TestCase):
             definition=generate_definition("vpc", 1),
             context=self.context,
         )
+        register_lookup_handler("noop", lambda **kwargs: "test")
 
     def test_stack_requires(self):
         definition = generate_definition(

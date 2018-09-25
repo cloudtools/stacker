@@ -41,7 +41,7 @@ from stacker.exceptions import (
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
 
-from ..factories import mock_lookup, mock_context
+from ..factories import mock_context
 
 
 def mock_lookup_handler(value, provider=None, context=None, fqn=False,
@@ -424,11 +424,8 @@ class TestVariables(unittest.TestCase):
             Variable("Param2", "${output other-stack::Output}"),
             Variable("Param3", 3),
         ]
-        resolved_lookups = {
-            mock_lookup("other-stack::Output", "output"): "Test Output",
-        }
-        for var in variables:
-            var.replace(resolved_lookups)
+
+        variables[1]._value._resolve("Test Output")
 
         blueprint.resolve_variables(variables)
         self.assertEqual(blueprint.resolved_variables["Param1"], 1)
@@ -441,15 +438,14 @@ class TestVariables(unittest.TestCase):
                 "Param1": {"type": list},
             }
 
+        def return_list_something(*_args, **_kwargs):
+            return ["something"]
+
+        register_lookup_handler("custom", return_list_something)
         blueprint = TestBlueprint(name="test", context=MagicMock())
         variables = [Variable("Param1", "${custom non-string-return-val}")]
-        lookup = mock_lookup("non-string-return-val", "custom",
-                             "custom non-string-return-val")
-        resolved_lookups = {
-            lookup: ["something"],
-        }
         for var in variables:
-            var.replace(resolved_lookups)
+            var._value.resolve({}, {})
 
         blueprint.resolve_variables(variables)
         self.assertEqual(blueprint.resolved_variables["Param1"], ["something"])
@@ -460,15 +456,14 @@ class TestVariables(unittest.TestCase):
                 "Param1": {"type": Base64},
             }
 
+        def return_obj(*_args, **_kwargs):
+            return Base64("test")
+
+        register_lookup_handler("custom", return_obj)
         blueprint = TestBlueprint(name="test", context=MagicMock())
         variables = [Variable("Param1", "${custom non-string-return-val}")]
-        lookup = mock_lookup("non-string-return-val", "custom",
-                             "custom non-string-return-val")
-        resolved_lookups = {
-            lookup: Base64("test"),
-        }
         for var in variables:
-            var.replace(resolved_lookups)
+            var._value.resolve({}, {})
 
         blueprint.resolve_variables(variables)
         self.assertEqual(blueprint.resolved_variables["Param1"].data,
@@ -480,20 +475,17 @@ class TestVariables(unittest.TestCase):
                 "Param1": {"type": list},
             }
 
-        variables = [
-            Variable(
-                "Param1",
-                "${custom non-string-return-val},${output some-stack::Output}",
-            )
-        ]
-        lookup = mock_lookup("non-string-return-val", "custom",
-                             "custom non-string-return-val")
-        resolved_lookups = {
-            lookup: ["something"],
-        }
+        def return_list_something(*_args, **_kwargs):
+            return ["something"]
+
+        register_lookup_handler("custom", return_list_something)
+        variable = Variable(
+            "Param1",
+            "${custom non-string-return-val},${output some-stack::Output}",
+        )
+        variable._value[0].resolve({}, {})
         with self.assertRaises(InvalidLookupCombination):
-            for var in variables:
-                var.replace(resolved_lookups)
+            variable.value()
 
     def test_get_variables(self):
         class TestBlueprint(Blueprint):

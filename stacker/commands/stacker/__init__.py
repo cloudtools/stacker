@@ -30,12 +30,12 @@ class Stacker(BaseCommand):
         else:
             logger.info("Using default AWS provider mode")
 
+        session_cache.default_profile = options.profile
+
         config = load_config(
             options.config.read(),
             environment=options.environment,
             validate=True)
-
-        session_cache.default_profile = options.profile
 
         options.provider_builder = default.ProviderBuilder(
             region=options.region,

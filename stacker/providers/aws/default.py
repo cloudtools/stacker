@@ -48,7 +48,13 @@ logger = logging.getLogger(__name__)
 # https://github.com/boto/botocore/blob/1.6.1/botocore/data/_retry.json#L97-L121
 MAX_ATTEMPTS = 10
 
-MAX_TAIL_RETRIES = 5
+# Updated this to 15 retries with a 1 second sleep between retries. This is
+# only used when a call to `get_events` fails due to the stack not being
+# found. This is often the case because Cloudformation is taking too long
+# to create the stack. 15 seconds should, hopefully, be plenty of time for
+# the stack to start showing up in the API.
+MAX_TAIL_RETRIES = 15
+TAIL_RETRY_SLEEP = 1
 DEFAULT_CAPABILITIES = ["CAPABILITY_NAMED_IAM", ]
 
 
@@ -581,7 +587,7 @@ class Provider(BaseProvider):
     def is_stack_failed(self, stack, **kwargs):
         return self.get_stack_status(stack) in self.FAILED_STATUSES
 
-    def tail_stack(self, stack, cancel, retries=0, **kwargs):
+    def tail_stack(self, stack, cancel, **kwargs):
         def log_func(e):
             event_args = [e['ResourceStatus'], e['ResourceType'],
                           e.get('ResourceStatusReason', None)]
@@ -590,22 +596,23 @@ class Provider(BaseProvider):
             template = " ".join(["[%s]"] + ["%s" for _ in event_args])
             logger.info(template, *([stack.fqn] + event_args))
 
-        if not retries:
-            logger.info("Tailing stack: %s", stack.fqn)
+        logger.info("Tailing stack: %s", stack.fqn)
 
-        try:
-            self.tail(stack.fqn,
-                      cancel=cancel,
-                      log_func=log_func,
-                      include_initial=False)
-        except botocore.exceptions.ClientError as e:
-            if "does not exist" in str(e) and retries < MAX_TAIL_RETRIES:
-                # stack might be in the process of launching, wait for a second
-                # and try again
-                time.sleep(1)
-                self.tail_stack(stack, cancel, retries=retries + 1, **kwargs)
-            else:
-                raise
+        attempts = 0
+        while True:
+            attempts += 1
+            try:
+                self.tail(stack.fqn, cancel=cancel, log_func=log_func,
+                          include_initial=False)
+                break
+            except botocore.exceptions.ClientError as e:
+                if "does not exist" in str(e) and attempts < MAX_TAIL_RETRIES:
+                    # stack might be in the process of launching, wait for a
+                    # second and try again
+                    time.sleep(TAIL_RETRY_SLEEP)
+                    continue
+                else:
+                    raise
 
     @staticmethod
     def _tail_print(e):
@@ -646,7 +653,7 @@ class Provider(BaseProvider):
             seen.add(e['EventId'])
 
         # Now keep looping through and dump the new events
-        while 1:
+        while True:
             events = self.get_events(stack_name)
             for e in events:
                 if e['EventId'] not in seen:

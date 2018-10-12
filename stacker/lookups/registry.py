@@ -80,7 +80,7 @@ def resolve_lookups(variable, context, provider):
     return resolved_lookups
 
 
-register_lookup_handler(output.TYPE_NAME, output.handler)
+register_lookup_handler(output.TYPE_NAME, output.OutputLookup)
 register_lookup_handler(kms.TYPE_NAME, kms.handler)
 register_lookup_handler(ssmstore.TYPE_NAME, ssmstore.handler)
 register_lookup_handler(envvar.TYPE_NAME, envvar.handler)

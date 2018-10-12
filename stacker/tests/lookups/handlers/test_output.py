@@ -6,7 +6,7 @@ import unittest
 
 from stacker.stack import Stack
 from ...factories import generate_definition
-from stacker.lookups.handlers.output import handler
+from stacker.lookups.handlers.output import OutputLookup
 
 
 class TestOutputHandler(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestOutputHandler(unittest.TestCase):
         stack.set_outputs({
             "SomeOutput": "Test Output"})
         self.context.get_stack.return_value = stack
-        value = handler("stack-name::SomeOutput", context=self.context)
+        value = OutputLookup.handle("stack-name::SomeOutput", context=self.context)
         self.assertEqual(value, "Test Output")
         self.assertEqual(self.context.get_stack.call_count, 1)
         args = self.context.get_stack.call_args

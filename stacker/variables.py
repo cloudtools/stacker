@@ -420,11 +420,20 @@ class VariableValueLookup(VariableValue):
     def resolve(self, context, provider):
         self.lookup_data.resolve(context, provider)
         try:
-            self._resolve(self.handler(
-                value=self.lookup_data.value(),
-                context=context,
-                provider=provider
-            ))
+            if type(self.handler) == type:
+                # Hander is a new-style handler
+                result = self.handler.handle(
+                    value=self.lookup_data.value(),
+                    context=context,
+                    provider=provider
+                )
+            else:
+                result = self.handler(
+                    value=self.lookup_data.value(),
+                    context=context,
+                    provider=provider
+                )
+            self._resolve(result)
         except Exception as e:
             raise FailedLookup(self, e)
 
@@ -433,32 +442,10 @@ class VariableValueLookup(VariableValue):
         self._resolved = True
 
     def dependencies(self):
-        if self.lookup_name.resolved() and \
-                self.lookup_name.value() == 'output':
-            # TODO: move this code in to the Output-lookup itself,
-            # in order to make it generic
-
-            # try to get the stack name
-            stack_name = ''
-            for data_item in self.lookup_data:
-                if not data_item.resolved():
-                    # We encountered an unresolved substitution.
-                    # StackName is calculated dynamically based on context:
-                    #  e.g. ${output ${default var::source}::name}
-                    # Stop here
-                    return set()
-                stack_name = stack_name + data_item.value()
-                match = re.search(r'::', stack_name)
-                if match:
-                    stack_name = stack_name[0:match.start()]
-                    return set([stack_name])
-                # else: try to append the next item
-
-            # We added all lookup_data, and still couldn't find a `::`...
-            # Probably an error...
+        if type(self.handler) == type:
+            return self.handler.dependencies(self.lookup_data)
+        else:
             return set()
-
-        return set()
 
     def value(self):
         if self._resolved:

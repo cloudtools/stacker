@@ -55,6 +55,7 @@ MAX_ATTEMPTS = 10
 # the stack to start showing up in the API.
 MAX_TAIL_RETRIES = 15
 TAIL_RETRY_SLEEP = 1
+GET_EVENTS_SLEEP = 1
 DEFAULT_CAPABILITIES = ["CAPABILITY_NAMED_IAM", ]
 
 
@@ -587,14 +588,16 @@ class Provider(BaseProvider):
     def is_stack_failed(self, stack, **kwargs):
         return self.get_stack_status(stack) in self.FAILED_STATUSES
 
-    def tail_stack(self, stack, cancel, **kwargs):
-        def log_func(e):
+    def tail_stack(self, stack, cancel, log_func=None, **kwargs):
+        def _log_func(e):
             event_args = [e['ResourceStatus'], e['ResourceType'],
                           e.get('ResourceStatusReason', None)]
             # filter out any values that are empty
             event_args = [arg for arg in event_args if arg]
             template = " ".join(["[%s]"] + ["%s" for _ in event_args])
             logger.info(template, *([stack.fqn] + event_args))
+
+        log_func = log_func or _log_func
 
         logger.info("Tailing stack: %s", stack.fqn)
 
@@ -609,7 +612,8 @@ class Provider(BaseProvider):
                 if "does not exist" in str(e) and attempts < MAX_TAIL_RETRIES:
                     # stack might be in the process of launching, wait for a
                     # second and try again
-                    time.sleep(TAIL_RETRY_SLEEP)
+                    if cancel.wait(TAIL_RETRY_SLEEP):
+                        return
                     continue
                 else:
                     raise
@@ -620,24 +624,24 @@ class Provider(BaseProvider):
                             e['ResourceType'],
                             e['EventId']))
 
-    def get_events(self, stackname):
+    def get_events(self, stack_name):
         """Get the events in batches and return in chronological order"""
         next_token = None
         event_list = []
-        while 1:
+        while True:
             if next_token is not None:
                 events = self.cloudformation.describe_stack_events(
-                    StackName=stackname, NextToken=next_token
+                    StackName=stack_name, NextToken=next_token
                 )
             else:
                 events = self.cloudformation.describe_stack_events(
-                    StackName=stackname
+                    StackName=stack_name
                 )
             event_list.append(events['StackEvents'])
             next_token = events.get('NextToken', None)
             if next_token is None:
                 break
-            time.sleep(1)
+            time.sleep(GET_EVENTS_SLEEP)
         return reversed(sum(event_list, []))
 
     def tail(self, stack_name, cancel, log_func=_tail_print, sleep_time=5,

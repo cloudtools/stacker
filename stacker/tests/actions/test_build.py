@@ -13,12 +13,14 @@ from stacker.actions.build import (
     _handle_missing_parameters,
     UsePreviousParameterValue,
 )
+from stacker.blueprints.base import Blueprint
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context, Config
 from stacker.exceptions import StackDidNotChange, StackDoesNotExist
 from stacker.providers.base import BaseProvider
 from stacker.providers.aws.default import Provider
 from stacker.session_cache import get_session
+from stacker.stack import Stack
 from stacker.status import (
     NotSubmittedStatus,
     COMPLETE,
@@ -28,7 +30,11 @@ from stacker.status import (
     FAILED
 )
 
-from ..factories import MockThreadingEvent, MockProviderBuilder
+from ..factories import (
+    MockThreadingEvent,
+    MockProviderBuilder,
+    generate_definition
+)
 
 
 def mock_stack_parameters(parameters):
@@ -155,22 +161,6 @@ class TestBuildAction(unittest.TestCase):
             build_action.run(outline=False)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
 
-    def test_should_update(self):
-        test_scenarios = (
-            dict(blueprint=None, locked=False, force=False, result=False),
-            dict(blueprint="BLUEPRINT", locked=False, force=False,
-                 result=True),
-            dict(blueprint="BLUEPRINT", locked=False, force=True, result=True),
-            dict(blueprint="BLUEPRINT", locked=True, force=False,
-                 result=False),
-            dict(blueprint="BLUEPRINT", locked=True, force=True, result=True)
-        )
-        for t in test_scenarios:
-            mock_stack = mock.MagicMock(
-                ["blueprint", "locked", "force", "name"],
-                name='test-stack', **t)
-            self.assertEqual(build.should_update(mock_stack), t['result'])
-
     def test_should_ensure_cfn_bucket(self):
         test_scenarios = [
             dict(outline=False, dump=False, result=True),
@@ -191,21 +181,18 @@ class TestBuildAction(unittest.TestCase):
                 e.args += ("scenario", str(scenario))
                 raise
 
-    def test_should_submit(self):
-        test_scenarios = (
-            dict(blueprint=None, enabled=False, result=True),
-            dict(blueprint="BLUEPRINT", enabled=False,  result=False),
-            dict(blueprint="BLUEPRINT", enabled=True, result=True),
-        )
-
-        for t in test_scenarios:
-            mock_stack = mock.MagicMock(
-                ["blueprint", "enabled", "name"],
-                name='test-stack', **t)
-            self.assertEqual(build.should_submit(mock_stack), t['result'])
-
 
 class TestLaunchStack(TestBuildAction):
+    def _get_stack(self):
+        stack = Stack(definition=generate_definition("vpc", 1),
+                      context=self.context,)
+
+        blueprint_mock = mock.patch.object(type(stack), 'blueprint',
+                                           spec=Blueprint, rendered='{}')
+        self.addCleanup(blueprint_mock.stop)
+        blueprint_mock.start()
+        return stack
+
     def setUp(self):
         self.context = self._get_context()
         self.session = get_session(region=None)
@@ -215,13 +202,7 @@ class TestLaunchStack(TestBuildAction):
         self.build_action = build.Action(self.context,
                                          provider_builder=provider_builder,
                                          cancel=MockThreadingEvent())
-
-        self.stack = mock.MagicMock()
-        self.stack.region = None
-        self.stack.name = 'vpc'
-        self.stack.fqn = 'vpc'
-        self.stack.blueprint.rendered = '{}'
-        self.stack.locked = False
+        self.stack = self._get_stack()
         self.stack_status = None
 
         plan = self.build_action._generate_plan()
@@ -233,14 +214,16 @@ class TestLaunchStack(TestBuildAction):
             self.addCleanup(m.stop)
             m.start()
 
-        def get_stack(name, *args, **kwargs):
-            if name != self.stack.name or not self.stack_status:
-                raise StackDoesNotExist(name)
+        def get_stack(fqn, *args, **kwargs):
+            if fqn != self.stack.fqn or not self.stack_status:
+                raise StackDoesNotExist(fqn)
 
+            tags = [{'Key': key, 'Value': value}
+                    for (key, value) in self.stack.tags.items()]
             return {'StackName': self.stack.name,
                     'StackStatus': self.stack_status,
-                    'Outputs': [],
-                    'Tags': []}
+                    'Outputs': {},
+                    'Tags': tags}
 
         def get_events(name, *args, **kwargs):
             return [{'ResourceStatus': 'ROLLBACK_IN_PROGRESS',

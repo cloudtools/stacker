@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from builtins import str
 import unittest
 import mock
 from botocore.stub import Stubber
@@ -47,6 +48,7 @@ class TestSSMStoreHandler(unittest.TestCase):
         with self.stubber:
             value = handler(self.ssmkey)
             self.assertEqual(value, self.ssmvalue)
+            self.assertIsInstance(value, str)
 
     @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
                 return_value=SessionStub(client))

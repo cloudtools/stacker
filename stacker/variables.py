@@ -11,9 +11,6 @@ from string import Template
 from .exceptions import InvalidLookupCombination, UnresolvedVariable, \
     UnknownLookupType, FailedVariableLookup, FailedLookup, \
     UnresolvedVariableValue, InvalidLookupConcatenation
-from .lookups import (
-    extract_lookups,
-)
 from .lookups.registry import LOOKUP_HANDLERS
 
 
@@ -21,53 +18,6 @@ class LookupTemplate(Template):
 
     """A custom string template we use to replace lookup values"""
     idpattern = r'[_a-z][^\$\{\}]*'
-
-
-def resolve_string(value, replacements):
-    """Resolve any lookups within a string.
-
-    Args:
-        value (str): string value we're resolving lookups within
-        replacements (dict): resolved lookup values
-
-    Returns:
-        str: value with any lookups resolved
-
-    """
-    lookups = extract_lookups(value)
-    for lookup in lookups:
-        lookup_value = replacements.get(lookup.raw)
-        if not isinstance(lookup_value, basestring):
-            if len(lookups) > 1:
-                raise InvalidLookupCombination(lookup, lookups, value)
-            return lookup_value
-    # we use safe_substitute to support resolving nested lookups
-    return LookupTemplate(value).safe_substitute(replacements)
-
-
-def resolve(value, replacements):
-    """Recursively resolve any lookups within the data structure.
-
-    Args:
-        value (Union[str, list, dict]): a structure that contains lookups
-        replacements: resolved lookup values
-
-    Returns:
-        Union[str, list, dict]: value passed in with lookup values resolved
-
-    """
-    if isinstance(value, basestring):
-        return resolve_string(value, replacements)
-    elif isinstance(value, list):
-        resolved = []
-        for v in value:
-            resolved.append(resolve(v, replacements))
-        return resolved
-    elif isinstance(value, dict):
-        for key, v in value.items():
-            value[key] = resolve(v, replacements)
-        return value
-    return value
 
 
 def resolve_variables(variables, context, provider):

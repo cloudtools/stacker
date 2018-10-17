@@ -21,7 +21,8 @@ class TestOutputHandler(unittest.TestCase):
         stack.set_outputs({
             "SomeOutput": "Test Output"})
         self.context.get_stack.return_value = stack
-        value = OutputLookup.handle("stack-name::SomeOutput", context=self.context)
+        value = OutputLookup.handle("stack-name::SomeOutput",
+                                    context=self.context)
         self.assertEqual(value, "Test Output")
         self.assertEqual(self.context.get_stack.call_count, 1)
         args = self.context.get_stack.call_args

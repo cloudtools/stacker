@@ -135,8 +135,8 @@ class Variable(object):
 
     def dependencies(self):
         """
-        :return: list of stack names that this variable depends on
-        :rtype: Set[str]
+        Returns:
+            Set[str]: Stack names that this variable depends on
         """
         return self._value.dependencies()
 
@@ -153,8 +153,8 @@ class VariableValue(object):
 
     def resolved(self):
         """
-        :return: Whether value() will not raise an error
-        :rtype: bool
+        Returns:
+            bool: Whether value() will not raise an error
         """
         return NotImplementedError()
 
@@ -169,7 +169,9 @@ class VariableValue(object):
         Return a simplified version of the Value.
         This can be used to e.g. concatenate two literals in to one literal, or
         to flatten nested Concatenations
-        :rtype: VariableValue
+
+        Returns:
+            VariableValue
         """
         return self
 
@@ -188,6 +190,9 @@ class VariableValue(object):
             for t in re.split(r'(\$\{|\}|\s+)', input_object)
         ])
 
+        opener = '${'
+        closer = '}'
+
         while True:
             last_open = None
             next_close = None
@@ -195,17 +200,17 @@ class VariableValue(object):
                 if not isinstance(t, VariableValueLiteral):
                     continue
 
-                if t.value() == '${':
+                if t.value() == opener:
                     last_open = i
                     next_close = None
                 if last_open is not None and \
-                        t.value() == '}' and \
+                        t.value() == closer and \
                         next_close is None:
                     next_close = i
 
             if next_close is not None:
                 lookup_data = VariableValueConcatenation(
-                    tokens[(last_open + 3):next_close]
+                    tokens[(last_open + len(opener) + 1):next_close]
                 )
                 lookup = VariableValueLookup(
                     lookup_name=tokens[last_open + 1],
@@ -395,10 +400,9 @@ class VariableValueConcatenation(VariableValue, list):
 class VariableValueLookup(VariableValue):
     def __init__(self, lookup_name, lookup_data, handler=None):
         """
-        :param lookup_name: Name of the invoked lookup
-        :type lookup_name: basestring
-        :param lookup_data: Data portion of the lookup
-        :type lookup_data: VariableValue
+        Args:
+            lookup_name (basestring): Name of the invoked lookup
+            lookup_data (VariableValue): Data portion of the lookup
         """
         self._resolved = False
         self._value = None

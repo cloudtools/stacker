@@ -189,7 +189,8 @@ class BaseAction(object):
         self.s3_conn.put_object(Bucket=self.bucket_name,
                                 Key=key_name,
                                 Body=blueprint.rendered,
-                                ServerSideEncryption='AES256')
+                                ServerSideEncryption='AES256',
+                                ACL='bucket-owner-full-control')
         logger.debug("Blueprint %s pushed to %s.", blueprint.name,
                      template_url)
         return template_url

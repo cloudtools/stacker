@@ -340,7 +340,8 @@ class Action(BaseAction):
             return SubmittedStatus("creating new stack")
 
         try:
-            if provider.prepare_stack_for_update(provider_stack, tags):
+            wait = stack.in_progress == "wait"
+            if provider.prepare_stack_for_update(provider_stack, tags, wait=wait):
                 existing_params = provider_stack.get('Parameters', [])
                 provider.update_stack(
                     stack.fqn,

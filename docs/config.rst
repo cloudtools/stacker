@@ -404,6 +404,12 @@ A stack has the following keys:
   that will be applied when the CloudFormation stack is created and updated.
   You can use stack policies to prevent CloudFormation from making updates to
   protected resources (e.g. databases). See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html
+**in_progress**:
+  (optional): If provided, specifies the behavior for when a stack is in
+  `CREATE_IN_PROGRESS` or `UPDATE_IN_PROGRESS`. By default, stacker will raise
+  an exception if the stack is in an `IN_PROGRESS` state. You can set this
+  option to `wait` and stacker will wait for the previous update to complete
+  before attempting to update the stack.
 
 Stacks Example
 ~~~~~~~~~~~~~~

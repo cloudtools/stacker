@@ -74,6 +74,7 @@ class Stack(object):
         self.protected = protected
         self.context = context
         self.outputs = None
+        self.in_progress = definition.in_progress
 
     def __repr__(self):
         return self.fqn

@@ -156,8 +156,14 @@ For ``.tar.gz`` & ``zip`` archives on s3, specify a ``bucket`` & ``key``::
           # last modified date on S3 changes
           use_latest: false
 
-Use the ``paths`` option when subdirectories of the repo/archive should be
-added to Stacker's ``sys.path``.
+Local directories can also be specified::
+
+    package_sources:
+      local:
+        - source: ../vpc
+
+Use the ``paths`` option when subdirectories of the repo/archive/directory
+should be added to Stacker's ``sys.path``.
 
 Cloned repos/archives will be cached between builds; the cache location defaults
 to ~/.stacker but can be manually specified via the **stacker_cache_dir** top

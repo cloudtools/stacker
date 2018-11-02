@@ -39,6 +39,28 @@ assert_has_line() {
   echo "$output" | grep "$@" 1>/dev/null
 }
 
+# run runs the command and captures it's output.
+#
+# See https://github.com/sstephenson/bats/blob/03608115df2071fff4eaaff1605768c275e5f81f/libexec/bats-exec-test#L50-L66
+run() {
+  local e E T oldIFS
+  [[ ! "$-" =~ e ]] || e=1
+  [[ ! "$-" =~ E ]] || E=1
+  [[ ! "$-" =~ T ]] || T=1
+  set +e
+  set +E
+  set +T
+  output="$("$@" 2>&1)"
+  status="$?"
+  oldIFS=$IFS
+  IFS=$'\n' lines=($output)
+  [ -z "$e" ] || set -e
+  [ -z "$E" ] || set -E
+  [ -z "$T" ] || set -T
+  IFS=$oldIFS
+}
+
+
 # This helper wraps "stacker" with bats' "run" and also outputs debug
 # information. If you need to execute the stacker binary _without_ calling
 # "run", you can use "command stacker".

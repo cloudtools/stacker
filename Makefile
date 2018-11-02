@@ -17,7 +17,7 @@ clean:
 	rm -rf .egg stacker.egg-info
 
 test-functional:
-	cd tests && bats test_suite
+	$(MAKE) -C tests/test_suite test
 
 # General testing target for most development.
 test: lint test-unit test-unit3

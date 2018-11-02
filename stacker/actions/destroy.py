@@ -10,6 +10,7 @@ from .. import util
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
+    PENDING,
     SUBMITTED,
     INTERRUPTED
 )
@@ -45,7 +46,7 @@ class Action(BaseAction):
 
     def _destroy_stack(self, stack, **kwargs):
         old_status = kwargs.get("status")
-        wait_time = STACK_POLL_TIME if old_status == SUBMITTED else 0
+        wait_time = 0 if old_status is PENDING else STACK_POLL_TIME
         if self.cancel.wait(wait_time):
             return INTERRUPTED
 

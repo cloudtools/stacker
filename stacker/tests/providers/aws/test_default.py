@@ -451,42 +451,6 @@ class TestProviderDefaultMode(unittest.TestCase):
 
             self.assertIn('in-progress', str(raised.exception))
 
-    def test_prepare_stack_for_update_in_progress_with_wait(self):
-        stack_name = "MockStack"
-        stack = generate_describe_stacks_stack(
-            stack_name, stack_status="UPDATE_IN_PROGRESS")
-
-        self.stubber.add_response(
-            "describe_stacks",
-            {"Stacks": [
-                {
-                    "StackName": stack_name,
-                    "CreationTime": "2010-07-27T22:28:28Z",
-                    "StackStatus": "UPDATE_COMPLETE"}]},
-            expected_params={"StackName": stack_name}
-        )
-
-        with self.stubber:
-            self.provider.prepare_stack_for_update(stack, [], wait=True)
-
-    def test_prepare_stack_for_create_in_progress_with_wait(self):
-        stack_name = "MockStack"
-        stack = generate_describe_stacks_stack(
-            stack_name, stack_status="CREATE_IN_PROGRESS")
-
-        self.stubber.add_response(
-            "describe_stacks",
-            {"Stacks": [
-                {
-                    "StackName": stack_name,
-                    "CreationTime": "2010-07-27T22:28:28Z",
-                    "StackStatus": "CREATE_COMPLETE"}]},
-            expected_params={"StackName": stack_name}
-        )
-
-        with self.stubber:
-            self.provider.prepare_stack_for_update(stack, [], wait=True)
-
     def test_prepare_stack_for_update_non_recreatable(self):
         stack_name = "MockStack"
         stack = generate_describe_stacks_stack(

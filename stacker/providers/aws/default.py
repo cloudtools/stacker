@@ -58,14 +58,6 @@ TAIL_RETRY_SLEEP = 1
 GET_EVENTS_SLEEP = 1
 DEFAULT_CAPABILITIES = ["CAPABILITY_NAMED_IAM", ]
 
-# Maps a CloudFormation StackStatus to a boto3 waiter.
-#
-# See https://goo.gl/VbhUZ3
-WAITERS = {
-    "UPDATE_IN_PROGRESS": "stack_update_complete",
-    "CREATE_IN_PROGRESS": "stack_create_complete",
-}
-
 
 def get_cloudformation_client(session):
     config = Config(
@@ -758,7 +750,7 @@ class Provider(BaseProvider):
         else:
             return self.default_update_stack
 
-    def prepare_stack_for_update(self, stack, tags, wait=False):
+    def prepare_stack_for_update(self, stack, tags):
         """Prepare a stack for updating
 
         It may involve deleting the stack if is has failed it's initial
@@ -772,8 +764,6 @@ class Provider(BaseProvider):
             stack (dict): a stack object returned from get_stack
             tags (list): list of expected tags that must be present in the
                 stack if it must be re-created
-            wait (bool): when True, this will wait for a previous
-                UpdateStack/CreateStack to complete.
 
         Returns:
             bool: True if the stack can be updated, False if it must be
@@ -789,16 +779,6 @@ class Provider(BaseProvider):
         stack_status = self.get_stack_status(stack)
 
         if self.is_stack_in_progress(stack):
-            waitfunc = WAITERS.get(self.get_stack_status(stack))
-
-            # Wait for the stack to transition from
-            # UPDATE_IN_PROGRESS/CREATE_IN_PROGRESS to
-            # UPDATE_COMPLETE/CREATE_COMPLETE
-            if wait and waitfunc:
-                waiter = self.cloudformation.get_waiter(waitfunc)
-                waiter.wait(StackName=stack_name)
-                return True
-
             raise exceptions.StackUpdateBadStatus(
                 stack_name, stack_status,
                 'Update already in-progress')

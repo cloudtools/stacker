@@ -342,7 +342,7 @@ class Action(BaseAction):
             return SubmittedStatus("creating new stack")
 
         try:
-            wait = stack.in_progress == "wait"
+            wait = stack.in_progress_behavior == "wait"
             if wait and provider.is_stack_in_progress(provider_stack):
                 return WAITING
             if provider.prepare_stack_for_update(provider_stack, tags):

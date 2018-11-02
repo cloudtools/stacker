@@ -332,7 +332,7 @@ class Stack(Model):
 
     stack_policy_path = StringType(serialize_when_none=False)
 
-    in_progress = StringType(serialize_when_none=False)
+    in_progress_behavior = StringType(serialize_when_none=False)
 
     def validate_class_path(self, data, value):
         if value and data["template_path"]:

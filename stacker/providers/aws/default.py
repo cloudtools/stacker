@@ -162,7 +162,7 @@ def ask_for_approval(full_changeset=None, params_diff=None,
         approval_options.append('v')
 
     approve = ui.ask("Execute the above changes? [{}] ".format(
-        '/'.join(approval_options)))
+        '/'.join(approval_options))).lower()
 
     if include_verbose and approve == "v":
         if params_diff:

@@ -367,7 +367,7 @@ class VariableValueLookup(VariableValue):
             lookup_name_resolved = lookup_name.value()
             try:
                 handler = LOOKUP_HANDLERS[lookup_name_resolved]
-            except KeyError as e:
+            except KeyError:
                 raise UnknownLookupType(lookup_name_resolved)
         self.handler = handler
 

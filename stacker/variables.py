@@ -55,7 +55,7 @@ class Variable(object):
         """
         try:
             return self._value.value()
-        except UnresolvedVariableValue as e:
+        except UnresolvedVariableValue:
             raise UnresolvedVariable("<unknown>", self)
         except InvalidLookupConcatenation as e:
             raise InvalidLookupCombination(e.lookup, e.lookups, self)

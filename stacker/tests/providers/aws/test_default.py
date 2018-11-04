@@ -6,19 +6,24 @@ import copy
 from datetime import datetime
 import random
 import string
+import threading
 import unittest
 
-from mock import patch
+from mock import patch, MagicMock
 from botocore.stub import Stubber
+from botocore.exceptions import ClientError, UnStubbedResponseError
 import boto3
 
-from ....actions.diff import DictValue
+from stacker.actions.diff import DictValue
 
-from ....providers.base import Template
-from ....session_cache import get_session
+from stacker.providers.base import Template
+from stacker.session_cache import get_session
 
-from ....providers.aws.default import (
+from stacker.providers.aws import default
+
+from stacker.providers.aws.default import (
     DEFAULT_CAPABILITIES,
+    MAX_TAIL_RETRIES,
     Provider,
     requires_replacement,
     ask_for_approval,
@@ -28,7 +33,9 @@ from ....providers.aws.default import (
     generate_cloudformation_args,
 )
 
-from .... import exceptions
+from stacker import exceptions
+
+from stacker.stack import Stack
 
 
 def random_string(length=12):
@@ -557,6 +564,91 @@ class TestProviderDefaultMode(unittest.TestCase):
                 old_parameters=[],
                 parameters=[], stack_policy=Template(body="{}"), tags=[],
             )
+
+    def test_tail_stack_retry_on_missing_stack(self):
+        stack_name = "SlowToCreateStack"
+        stack = MagicMock(spec=Stack)
+        stack.fqn = "my-namespace-{}".format(stack_name)
+
+        default.TAIL_RETRY_SLEEP = .01
+
+        # Ensure the stack never appears before we run out of retries
+        for i in range(MAX_TAIL_RETRIES + 5):
+            self.stubber.add_client_error(
+                "describe_stack_events",
+                service_error_code="ValidationError",
+                service_message="Stack [{}] does not exist".format(stack_name),
+                http_status_code=400,
+                response_meta={"attempt": i + 1},
+            )
+
+        with self.stubber:
+            try:
+                self.provider.tail_stack(stack, threading.Event())
+            except ClientError as exc:
+                self.assertEqual(
+                    exc.response["ResponseMetadata"]["attempt"],
+                    MAX_TAIL_RETRIES
+                )
+
+    def test_tail_stack_retry_on_missing_stack_eventual_success(self):
+        stack_name = "SlowToCreateStack"
+        stack = MagicMock(spec=Stack)
+        stack.fqn = "my-namespace-{}".format(stack_name)
+
+        default.TAIL_RETRY_SLEEP = .01
+        default.GET_EVENTS_SLEEP = .01
+
+        rcvd_events = []
+
+        def mock_log_func(e):
+            rcvd_events.append(e)
+
+        def valid_event_response(stack, event_id):
+            return {
+                "StackEvents": [
+                    {
+                        "StackId": stack.fqn + "12345",
+                        "EventId": event_id,
+                        "StackName": stack.fqn,
+                        "Timestamp": datetime.now()
+                    },
+                ]
+            }
+
+        # Ensure the stack never appears before we run out of retries
+        for i in range(3):
+            self.stubber.add_client_error(
+                "describe_stack_events",
+                service_error_code="ValidationError",
+                service_message="Stack [{}] does not exist".format(stack_name),
+                http_status_code=400,
+                response_meta={"attempt": i + 1},
+            )
+
+        self.stubber.add_response(
+            "describe_stack_events",
+            valid_event_response(stack, "InitialEvents")
+        )
+
+        self.stubber.add_response(
+            "describe_stack_events",
+            valid_event_response(stack, "Event1")
+        )
+
+        with self.stubber:
+            try:
+                self.provider.tail_stack(stack, threading.Event(),
+                                         log_func=mock_log_func)
+            except UnStubbedResponseError:
+                # Eventually we run out of responses - could not happen in
+                # regular execution
+                # normally this would just be dealt with when the threads were
+                # shutdown, but doing so here is a little difficult because
+                # we can't control the `tail_stack` loop
+                pass
+
+        self.assertEqual(rcvd_events[0]["EventId"], "Event1")
 
 
 class TestProviderInteractiveMode(unittest.TestCase):

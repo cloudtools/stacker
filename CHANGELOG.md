@@ -1,5 +1,19 @@
 ## Upcoming release
 
+## 1.5.0 (2018-10-14)
+
+The big feature in this release is the introduction of "targets" which act as
+sort of "virtual nodes" in the graph. It provides a nice way to logically group
+stacks.
+
+- Add support for "targets" [GH-572]
+- Fix non-interactive changeset updates w/ stack policies [GH-657]
+- Fix interactive_update_stack calls with empty string parameters [GH-658]
+- Fix KMS unicode lookup in python 2 [GH-659]
+- Locked stacks have no dependencies [GH-661]
+- Set default profile earlier [GH-662]
+- Get rid of recursion for tail retries and extend retry/timeout [GH-663]
+
 ## 1.4.1 (2018-08-28)
 
 This is a minor bugfix release for 1.4.0, no major feature updates.

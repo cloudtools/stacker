@@ -628,12 +628,27 @@ class SourceProcessor(object):
 
     def get_package_sources(self):
         """Make remote python packages available for local use."""
+        # Checkout local modules
+        for config in self.sources.get('local', []):
+            self.fetch_local_package(config=config)
         # Checkout S3 repositories specified in config
         for config in self.sources.get('s3', []):
             self.fetch_s3_package(config=config)
         # Checkout git repositories specified in config
         for config in self.sources.get('git', []):
             self.fetch_git_package(config=config)
+
+    def fetch_local_package(self, config):
+        """Make a local path available to current stacker config.
+
+        Args:
+            config (dict): 'local' path config dictionary
+
+        """
+        # Update sys.path & merge in remote configs (if necessary)
+        self.update_paths_and_config(config=config,
+                                     pkg_dir_name=config['source'],
+                                     pkg_cache_dir=os.getcwd())
 
     def fetch_s3_package(self, config):
         """Make a remote S3 archive available for local use.
@@ -773,21 +788,25 @@ class SourceProcessor(object):
         self.update_paths_and_config(config=config,
                                      pkg_dir_name=dir_name)
 
-    def update_paths_and_config(self, config, pkg_dir_name):
+    def update_paths_and_config(self, config, pkg_dir_name,
+                                pkg_cache_dir=None):
         """Handle remote source defined sys.paths & configs.
 
         Args:
             config (dict): git config dictionary
             pkg_dir_name (string): directory name of the stacker archive
+            pkg_cache_dir (string): fully qualified path to stacker cache
+                                    cache directory
 
         """
-        cached_dir_path = os.path.join(self.package_cache_dir, pkg_dir_name)
+        if pkg_cache_dir is None:
+            pkg_cache_dir = self.package_cache_dir
+        cached_dir_path = os.path.join(pkg_cache_dir, pkg_dir_name)
 
         # Add the appropriate directory (or directories) to sys.path
         if config.get('paths'):
             for path in config['paths']:
-                path_to_append = os.path.join(self.package_cache_dir,
-                                              pkg_dir_name,
+                path_to_append = os.path.join(cached_dir_path,
                                               path)
                 logger.debug("Appending \"%s\" to python sys.path",
                              path_to_append)

@@ -842,7 +842,7 @@ class SourceProcessor(object):
             logger.debug("Matching commit id found: %s", commit_id)
             return commit_id
         else:
-            raise ValueError("Ref \"%s\" not found for repo %d." % (ref, uri))
+            raise ValueError("Ref \"%s\" not found for repo %s." % (ref, uri))
 
     def determine_git_ls_remote_ref(self, config):
         """Determine the ref to be used with the "git ls-remote" command.

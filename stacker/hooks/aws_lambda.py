@@ -228,8 +228,7 @@ def _upload_code(s3_conn, bucket, prefix, name, contents, content_hash):
     else:
         logger.info('lambda: uploading object %s', key)
         s3_conn.put_object(Bucket=bucket, Key=key, Body=contents,
-                           ContentType='application/zip',
-                           ACL='authenticated-read')
+                           ContentType='application/zip')
 
     return Code(S3Bucket=bucket, S3Key=key)
 

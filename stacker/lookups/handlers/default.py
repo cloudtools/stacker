@@ -22,9 +22,9 @@ class DefaultLookup(LookupHandler):
 
             Groups: ${default app_security_groups::sg-12345,sg-67890}
 
-        If `app_security_groups` is defined in the environment, its defined value
-        will be returned. Otherwise, `sg-12345,sg-67890` will be the returned
-        value.
+        If `app_security_groups` is defined in the environment, its defined
+        value will be returned. Otherwise, `sg-12345,sg-67890` will be the
+        returned value.
 
         This allows defaults to be set at the config file level.
         """

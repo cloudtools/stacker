@@ -24,8 +24,8 @@ class EnvvarLookup(LookupHandler):
             $ cat envvar_value.txt
             ENV_VAR_NAME
 
-            and reference it within stacker (NOTE: the path should be relative to
-            the stacker config file):
+            and reference it within stacker (NOTE: the path should be relative
+            to the stacker config file):
 
             conf_key: ${envvar file://envvar_value.txt}
 

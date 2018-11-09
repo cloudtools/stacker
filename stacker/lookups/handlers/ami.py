@@ -33,7 +33,8 @@ class AmiLookup(LookupHandler):
             account or amazon and the ami name matches the regex described,
             the architecture will be either x64 or i386
     
-            You can also optionally specify the region in which to perform the AMI lookup.
+            You can also optionally specify the region in which to perform the
+            AMI lookup.
     
             Valid arguments:
     
@@ -88,7 +89,8 @@ class AmiLookup(LookupHandler):
 
         result = ec2.describe_images(**describe_args)
 
-        images = sorted(result['Images'], key=operator.itemgetter('CreationDate'),
+        images = sorted(result['Images'],
+                        key=operator.itemgetter('CreationDate'),
                         reverse=True)
         for image in images:
             if re.match("^%s$" % name_regex, image['Name']):

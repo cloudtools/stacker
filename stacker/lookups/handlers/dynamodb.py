@@ -39,7 +39,8 @@ class DynamodbLookup(LookupHandler):
             raise ValueError('Please make sure to include a tablename')
 
         if not table_name:
-            raise ValueError('Please make sure to include a dynamodb table name')
+            raise ValueError('Please make sure to include a dynamodb table '
+                             'name')
 
         table_lookup, table_keys = table_keys.split(':', 1)
 

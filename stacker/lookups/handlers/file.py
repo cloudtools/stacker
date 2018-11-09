@@ -61,13 +61,14 @@ class FileLookup(LookupHandler):
             - parameterized - the same as plain, but additionally supports
               referencing template parameters to create userdata that's
               supplemented with information from the template, as is commonly
-              needed in EC2 UserData. For example, given a template parameter of
-              BucketName, the file could contain the following text::
+              needed in EC2 UserData. For example, given a template parameter
+              of BucketName, the file could contain the following text::
 
                 #!/bin/sh
                 aws s3 sync s3://{{BucketName}}/somepath /somepath
 
-              and then you could use something like this in the YAML config file::
+              and then you could use something like this in the YAML config
+              file::
 
                 UserData: ${file parameterized:/path/to/file}
 
@@ -80,8 +81,8 @@ class FileLookup(LookupHandler):
                   ]] }
 
             - parameterized-b64 - the same as parameterized, with the results
-              additionally wrapped in *{ "Fn::Base64": ... }* , which is what you
-              actually need for EC2 UserData
+              additionally wrapped in *{ "Fn::Base64": ... }* , which is what
+              you actually need for EC2 UserData
 
         When using parameterized-b64 for UserData, you should use a variable
         defined as such:

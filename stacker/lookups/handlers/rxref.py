@@ -28,8 +28,8 @@ class RxrefLookup(LookupHandler):
         Args:
             value (str): string with the following format:
                 <stack_name>::<output_name>, ie. some-stack::SomeOutput
-            provider (:class:`stacker.provider.base.BaseProvider`): subclass of the
-                base provider
+            provider (:class:`stacker.provider.base.BaseProvider`): subclass of
+                the base provider
             context (:class:`stacker.context.Context`): stacker context
 
         Returns:

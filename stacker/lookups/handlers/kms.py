@@ -25,7 +25,8 @@ class KmsLookup(LookupHandler):
         For example:
 
             # We use the aws cli to get the encrypted value for the string
-            # "PASSWORD" using the master key called "myStackerKey" in us-east-1
+            # "PASSWORD" using the master key called "myStackerKey" in
+            # us-east-1
             $ aws --region us-east-1 kms encrypt --key-id alias/myStackerKey \
                     --plaintext "PASSWORD" --output text --query CiphertextBlob
 
@@ -39,8 +40,8 @@ class KmsLookup(LookupHandler):
             kms_value.txt
             us-east-1@CiD6bC8t2Y<...encrypted blob...>
 
-            and reference it within stacker (NOTE: the path should be relative to
-            the stacker config file):
+            and reference it within stacker (NOTE: the path should be relative
+            to the stacker config file):
 
             conf_key: ${kms file://kms_value.txt}
 

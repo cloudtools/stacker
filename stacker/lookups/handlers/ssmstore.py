@@ -33,8 +33,8 @@ class SsmstoreLookup(LookupHandler):
             ssmstore_value.txt
             us-east-1@ssmkey
 
-            and reference it within stacker (NOTE: the path should be relative to
-            the stacker config file):
+            and reference it within stacker (NOTE: the path should be relative
+            to the stacker config file):
 
             conf_key: ${ssmstore file://ssmstore_value.txt}
 
@@ -58,5 +58,5 @@ class SsmstoreLookup(LookupHandler):
         if 'Parameters' in response:
             return str(response['Parameters'][0]['Value'])
 
-        raise ValueError('SSMKey "{}" does not exist in region {}'.format(value,
-                                                                          region))
+        raise ValueError('SSMKey "{}" does not exist in region {}'.format(
+            value, region))

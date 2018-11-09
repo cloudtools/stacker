@@ -41,8 +41,8 @@ def register_lookup_handler(lookup_type, handler_or_path):
     if type(handler) != type:
         # Hander is a not a new-style handler
         logger = logging.getLogger(__name__)
-        logger.warning("Registering lookup `%s`: Please upgrade to use the new "
-                       "style of Lookups." % lookup_type)
+        logger.warning("Registering lookup `%s`: Please upgrade to use the "
+                       "new style of Lookups." % lookup_type)
         warnings.warn(
             # For some reason, this does not show up...
             # Leaving it in anyway

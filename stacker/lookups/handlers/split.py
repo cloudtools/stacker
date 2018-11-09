@@ -22,10 +22,11 @@ class SplitLookup(LookupHandler):
 
             ["subnet-1", "subnet-2", "subnet-3"]
 
-        This is particularly useful when getting an output from another stack that
-        contains a list. For example, the standard vpc blueprint outputs the list
-        of Subnets it creates as a pair of Outputs (PublicSubnets, PrivateSubnets)
-        that are comma separated, so you could use this in your config:
+        This is particularly useful when getting an output from another stack
+        that contains a list. For example, the standard vpc blueprint outputs
+        the list of Subnets it creates as a pair of Outputs (PublicSubnets,
+        PrivateSubnets) that are comma separated, so you could use this in your
+        config:
 
             Subnets: ${split ,::${output vpc::PrivateSubnets}}
         """

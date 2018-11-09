@@ -8,7 +8,7 @@ from moto import mock_kms
 
 import boto3
 
-from stacker.lookups.handlers.kms import handler
+from stacker.lookups.handlers.kms import KmsLookup
 
 
 class TestKMSHandler(unittest.TestCase):
@@ -25,12 +25,12 @@ class TestKMSHandler(unittest.TestCase):
 
     def test_kms_handler(self):
         with mock_kms():
-            decrypted = handler(self.secret)
+            decrypted = KmsLookup.handle(self.secret)
             self.assertEqual(decrypted, self.plain)
 
     def test_kms_handler_with_region(self):
         region = "us-east-1"
         value = "%s@%s" % (region, self.secret)
         with mock_kms():
-            decrypted = handler(value)
+            decrypted = KmsLookup.handle(value)
             self.assertEqual(decrypted, self.plain)

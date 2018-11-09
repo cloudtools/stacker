@@ -15,6 +15,7 @@ import yaml
 
 from troposphere import GenericHelperFn, Base64
 
+from . import LookupHandler
 from ...util import read_value_from_path
 
 
@@ -23,93 +24,95 @@ TYPE_NAME = "file"
 _PARAMETER_PATTERN = re.compile(r'{{([::|\w]+)}}')
 
 
-def handler(value, **kwargs):
-    """Translate a filename into the file contents.
+class FileLookup(LookupHandler):
+    @classmethod
+    def handle(cls, value, **kwargs):
+        """Translate a filename into the file contents.
 
-    Fields should use the following format::
+        Fields should use the following format::
 
-        <codec>:<path>
+            <codec>:<path>
 
-    For example::
+        For example::
 
-        # We've written a file to /some/path:
-        $ echo "hello there" > /some/path
+            # We've written a file to /some/path:
+            $ echo "hello there" > /some/path
 
-        # In stacker we would reference the contents of this file with the
-        # following
-        conf_key: ${file plain:file://some/path}
+            # In stacker we would reference the contents of this file with the
+            # following
+            conf_key: ${file plain:file://some/path}
 
-        # The above would resolve to
-        conf_key: hello there
+            # The above would resolve to
+            conf_key: hello there
 
-        # Or, if we used wanted a base64 encoded copy of the file data
-        conf_key: ${file base64:file://some/path}
+            # Or, if we used wanted a base64 encoded copy of the file data
+            conf_key: ${file base64:file://some/path}
 
-        # The above would resolve to
-        conf_key: aGVsbG8gdGhlcmUK
+            # The above would resolve to
+            conf_key: aGVsbG8gdGhlcmUK
 
-    Supported codecs:
+        Supported codecs:
 
-        - plain
+            - plain
 
-        - base64 - encode the plain text file at the given path with base64
-          prior to returning it
+            - base64 - encode the plain text file at the given path with base64
+              prior to returning it
 
-        - parameterized - the same as plain, but additionally supports
-          referencing template parameters to create userdata that's
-          supplemented with information from the template, as is commonly
-          needed in EC2 UserData. For example, given a template parameter of
-          BucketName, the file could contain the following text::
+            - parameterized - the same as plain, but additionally supports
+              referencing template parameters to create userdata that's
+              supplemented with information from the template, as is commonly
+              needed in EC2 UserData. For example, given a template parameter of
+              BucketName, the file could contain the following text::
 
-            #!/bin/sh
-            aws s3 sync s3://{{BucketName}}/somepath /somepath
+                #!/bin/sh
+                aws s3 sync s3://{{BucketName}}/somepath /somepath
 
-          and then you could use something like this in the YAML config file::
+              and then you could use something like this in the YAML config file::
 
-            UserData: ${file parameterized:/path/to/file}
+                UserData: ${file parameterized:/path/to/file}
 
-          resulting in the UserData parameter being defined as::
+              resulting in the UserData parameter being defined as::
 
-              { "Fn::Join" : ["", [
-                  "#!/bin/sh\\naws s3 sync s3://",
-                  {"Ref" : "BucketName"},
-                  "/somepath /somepath"
-              ]] }
+                  { "Fn::Join" : ["", [
+                      "#!/bin/sh\\naws s3 sync s3://",
+                      {"Ref" : "BucketName"},
+                      "/somepath /somepath"
+                  ]] }
 
-        - parameterized-b64 - the same as parameterized, with the results
-          additionally wrapped in *{ "Fn::Base64": ... }* , which is what you
-          actually need for EC2 UserData
+            - parameterized-b64 - the same as parameterized, with the results
+              additionally wrapped in *{ "Fn::Base64": ... }* , which is what you
+              actually need for EC2 UserData
 
-    When using parameterized-b64 for UserData, you should use a variable
-    defined as such:
+        When using parameterized-b64 for UserData, you should use a variable
+        defined as such:
 
-    .. code-block:: python
+        .. code-block:: python
 
-        from troposphere import AWSHelperFn
+            from troposphere import AWSHelperFn
 
-          "UserData": {
-              "type": AWSHelperFn,
-              "description": "Instance user data",
-              "default": Ref("AWS::NoValue")
-          }
+              "UserData": {
+                  "type": AWSHelperFn,
+                  "description": "Instance user data",
+                  "default": Ref("AWS::NoValue")
+              }
 
-    and then assign UserData in a LaunchConfiguration or Instance to
-    *self.get_variables()["UserData"]*. Note that we use AWSHelperFn as the
-    type because the parameterized-b64 codec returns either a Base64 or a
-    GenericHelperFn troposphere object
-    """
+        and then assign UserData in a LaunchConfiguration or Instance to
+        *self.get_variables()["UserData"]*. Note that we use AWSHelperFn as the
+        type because the parameterized-b64 codec returns either a Base64 or a
+        GenericHelperFn troposphere object
+        """
 
-    try:
-        codec, path = value.split(":", 1)
-    except ValueError:
-        raise TypeError(
-            "File value must be of the format"
-            " \"<codec>:<path>\" (got %s)" % (value)
-        )
+        try:
+            codec, path = value.split(":", 1)
+        except ValueError:
+            raise TypeError(
+                "File value must be of the format"
+                " \"<codec>:<path>\" (got %s)" % (value)
+            )
 
-    value = read_value_from_path(path)
+        value = read_value_from_path(path)
 
-    return CODECS[codec](value)
+        return CODECS[codec](value)
 
 
 def _parameterize_string(raw):

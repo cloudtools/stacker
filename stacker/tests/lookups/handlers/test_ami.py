@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import unittest
 import mock
 from botocore.stub import Stubber
-from stacker.lookups.handlers.ami import handler, ImageNotFound
+from stacker.lookups.handlers.ami import AmiLookup, ImageNotFound
 import boto3
 from stacker.tests.factories import SessionStub, mock_provider
 
@@ -40,7 +40,7 @@ class TestAMILookup(unittest.TestCase):
         )
 
         with self.stubber:
-            value = handler(
+            value = AmiLookup.handle(
                 value="owners:self name_regex:Fake\sImage\s\d",
                 provider=self.provider
             )
@@ -68,7 +68,7 @@ class TestAMILookup(unittest.TestCase):
         )
 
         with self.stubber:
-            value = handler(
+            value = AmiLookup.handle(
                 value="us-west-1@owners:self name_regex:Fake\sImage\s\d",
                 provider=self.provider
             )
@@ -105,7 +105,7 @@ class TestAMILookup(unittest.TestCase):
         )
 
         with self.stubber:
-            value = handler(
+            value = AmiLookup.handle(
                 value="owners:self name_regex:Fake\sImage\s\d",
                 provider=self.provider
             )
@@ -142,7 +142,7 @@ class TestAMILookup(unittest.TestCase):
         )
 
         with self.stubber:
-            value = handler(
+            value = AmiLookup.handle(
                 value="owners:self name_regex:Fake\sImage\s\d",
                 provider=self.provider
             )
@@ -160,7 +160,7 @@ class TestAMILookup(unittest.TestCase):
 
         with self.stubber:
             with self.assertRaises(ImageNotFound):
-                handler(
+                AmiLookup.handle(
                     value="owners:self name_regex:Fake\sImage\s\d",
                     provider=self.provider
                 )
@@ -188,7 +188,7 @@ class TestAMILookup(unittest.TestCase):
 
         with self.stubber:
             with self.assertRaises(ImageNotFound):
-                handler(
+                AmiLookup.handle(
                     value="owners:self name_regex:MyImage\s\d",
                     provider=self.provider
                 )

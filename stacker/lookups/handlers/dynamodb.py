@@ -6,76 +6,79 @@ from botocore.exceptions import ClientError
 import re
 from stacker.session_cache import get_session
 
+from . import LookupHandler
 from ...util import read_value_from_path
 
 TYPE_NAME = 'dynamodb'
 
 
-def handler(value, **kwargs):
-    """Get a value from a dynamodb table
+class DynamodbLookup(LookupHandler):
+    @classmethod
+    def handle(cls, value, **kwargs):
+        """Get a value from a dynamodb table
 
-    dynamodb field types should be in the following format:
+        dynamodb field types should be in the following format:
 
-        [<region>:]<tablename>@<primarypartionkey>:<keyvalue>.<keyvalue>...
+            [<region>:]<tablename>@<primarypartionkey>:<keyvalue>.<keyvalue>...
 
-    Note: The region is optional, and defaults to the environment's
-    `AWS_DEFAULT_REGION` if not specified.
-    """
-    value = read_value_from_path(value)
-    table_info = None
-    table_keys = None
-    region = None
-    table_name = None
-    if '@' in value:
-        table_info, table_keys = value.split('@', 1)
-        if ':' in table_info:
-            region, table_name = table_info.split(':', 1)
+        Note: The region is optional, and defaults to the environment's
+        `AWS_DEFAULT_REGION` if not specified.
+        """
+        value = read_value_from_path(value)
+        table_info = None
+        table_keys = None
+        region = None
+        table_name = None
+        if '@' in value:
+            table_info, table_keys = value.split('@', 1)
+            if ':' in table_info:
+                region, table_name = table_info.split(':', 1)
+            else:
+                table_name = table_info
         else:
-            table_name = table_info
-    else:
-        raise ValueError('Please make sure to include a tablename')
+            raise ValueError('Please make sure to include a tablename')
 
-    if not table_name:
-        raise ValueError('Please make sure to include a dynamodb table name')
+        if not table_name:
+            raise ValueError('Please make sure to include a dynamodb table name')
 
-    table_lookup, table_keys = table_keys.split(':', 1)
+        table_lookup, table_keys = table_keys.split(':', 1)
 
-    table_keys = table_keys.split('.')
+        table_keys = table_keys.split('.')
 
-    key_dict = _lookup_key_parse(table_keys)
-    new_keys = key_dict['new_keys']
-    clean_table_keys = key_dict['clean_table_keys']
+        key_dict = _lookup_key_parse(table_keys)
+        new_keys = key_dict['new_keys']
+        clean_table_keys = key_dict['clean_table_keys']
 
-    projection_expression = _build_projection_expression(clean_table_keys)
+        projection_expression = _build_projection_expression(clean_table_keys)
 
-    # lookup the data from dynamodb
-    dynamodb = get_session(region).client('dynamodb')
-    try:
-        response = dynamodb.get_item(
-            TableName=table_name,
-            Key={
-                table_lookup: new_keys[0]
-            },
-            ProjectionExpression=projection_expression
-        )
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            raise ValueError(
-                'Cannot find the dynamodb table: {}'.format(table_name))
-        elif e.response['Error']['Code'] == 'ValidationException':
-            raise ValueError(
-                'No dynamodb record matched the partition key: '
-                '{}'.format(table_lookup))
+        # lookup the data from dynamodb
+        dynamodb = get_session(region).client('dynamodb')
+        try:
+            response = dynamodb.get_item(
+                TableName=table_name,
+                Key={
+                    table_lookup: new_keys[0]
+                },
+                ProjectionExpression=projection_expression
+            )
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                raise ValueError(
+                    'Cannot find the dynamodb table: {}'.format(table_name))
+            elif e.response['Error']['Code'] == 'ValidationException':
+                raise ValueError(
+                    'No dynamodb record matched the partition key: '
+                    '{}'.format(table_lookup))
+            else:
+                raise ValueError('The dynamodb lookup {} had an error: '
+                                 '{}'.format(value, e))
+        # find and return the key from the dynamo data returned
+        if 'Item' in response:
+            return (_get_val_from_ddb_data(response['Item'], new_keys[1:]))
         else:
-            raise ValueError('The dynamodb lookup {} had an error: '
-                             '{}'.format(value, e))
-    # find and return the key from the dynamo data returned
-    if 'Item' in response:
-        return (_get_val_from_ddb_data(response['Item'], new_keys[1:]))
-    else:
-        raise ValueError(
-            'The dynamodb record could not be found using the following '
-            'key: {}'.format(new_keys[0]))
+            raise ValueError(
+                'The dynamodb record could not be found using the following '
+                'key: {}'.format(new_keys[0]))
 
 
 def _lookup_key_parse(table_keys):

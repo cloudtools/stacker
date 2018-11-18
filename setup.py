@@ -11,7 +11,7 @@ install_requires = [
     "troposphere>=1.9.0",
     "botocore>=1.6.0",
     "boto3>=1.3.1",
-    "PyYAML>=3.12",
+    "PyYAML==3.13",
     "awacs>=0.6.0",
     "gitpython>=2.0,<3.0",
     "schematics>=2.0.1,<2.1.0",

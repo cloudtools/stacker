@@ -3,19 +3,16 @@ from __future__ import division
 from __future__ import absolute_import
 import unittest
 
-from mock import patch, MagicMock
+from mock import MagicMock
 
 from stacker.exceptions import (
     UnknownLookupType,
     FailedVariableLookup,
 )
 
-from stacker.lookups.registry import (
-    LOOKUP_HANDLERS,
-    resolve_lookups,
-)
+from stacker.lookups.registry import LOOKUP_HANDLERS
 
-from stacker.variables import Variable
+from stacker.variables import Variable, VariableValueLookup
 
 from ..factories import (
     mock_context,
@@ -43,31 +40,32 @@ class TestRegistry(unittest.TestCase):
                 )
 
     def test_resolve_lookups_string_unknown_lookup(self):
-        variable = Variable("MyVar", "${bad_lookup foo}")
-
         with self.assertRaises(UnknownLookupType):
-            resolve_lookups(variable, self.ctx, self.provider)
+            Variable("MyVar", "${bad_lookup foo}")
 
     def test_resolve_lookups_list_unknown_lookup(self):
-        variable = Variable(
-            "MyVar", [
-                "${bad_lookup foo}", "random string",
-            ]
-        )
-
         with self.assertRaises(UnknownLookupType):
-            resolve_lookups(variable, self.ctx, self.provider)
+            Variable(
+                "MyVar", [
+                    "${bad_lookup foo}", "random string",
+                ]
+            )
 
     def resolve_lookups_with_output_handler_raise_valueerror(self, variable):
         """Mock output handler to throw ValueError, then run resolve_lookups
         on the given variable.
         """
         mock_handler = MagicMock(side_effect=ValueError("Error"))
-        with patch.dict(LOOKUP_HANDLERS, {"output": mock_handler}):
-            with self.assertRaises(FailedVariableLookup) as cm:
-                resolve_lookups(variable, self.ctx, self.provider)
 
-            self.assertIsInstance(cm.exception.error, ValueError)
+        # find the only lookup in the variable
+        for value in variable._value:
+            if isinstance(value, VariableValueLookup):
+                value.handler = mock_handler
+
+        with self.assertRaises(FailedVariableLookup) as cm:
+            variable.resolve(self.ctx, self.provider)
+
+        self.assertIsInstance(cm.exception.error, ValueError)
 
     def test_resolve_lookups_string_failed_variable_lookup(self):
         variable = Variable("MyVar", "${output foo::bar}")

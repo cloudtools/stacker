@@ -5,7 +5,7 @@ from builtins import str
 import unittest
 import mock
 from botocore.stub import Stubber
-from stacker.lookups.handlers.ssmstore import handler
+from stacker.lookups.handlers.ssmstore import SsmstoreLookup
 import boto3
 from stacker.tests.factories import SessionStub
 
@@ -46,7 +46,7 @@ class TestSSMStoreHandler(unittest.TestCase):
                                   self.get_parameters_response,
                                   self.expected_params)
         with self.stubber:
-            value = handler(self.ssmkey)
+            value = SsmstoreLookup.handle(self.ssmkey)
             self.assertEqual(value, self.ssmvalue)
             self.assertIsInstance(value, str)
 
@@ -58,7 +58,7 @@ class TestSSMStoreHandler(unittest.TestCase):
                                   self.expected_params)
         with self.stubber:
             try:
-                handler(self.ssmkey)
+                SsmstoreLookup.handle(self.ssmkey)
             except ValueError:
                 assert True
 
@@ -71,5 +71,5 @@ class TestSSMStoreHandler(unittest.TestCase):
         region = "us-east-1"
         temp_value = "%s@%s" % (region, self.ssmkey)
         with self.stubber:
-            value = handler(temp_value)
+            value = SsmstoreLookup.handle(temp_value)
             self.assertEqual(value, self.ssmvalue)

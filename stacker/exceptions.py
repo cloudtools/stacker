@@ -15,17 +15,27 @@ class InvalidLookupCombination(Exception):
         message = (
             "Lookup: \"{}\" has non-string return value, must be only lookup "
             "present (not {}) in \"{}\""
-        ).format(lookup.raw, len(lookups), value)
+        ).format(str(lookup), len(lookups), value)
         super(InvalidLookupCombination, self).__init__(message,
                                                        *args,
                                                        **kwargs)
 
 
+class InvalidLookupConcatenation(Exception):
+    """
+    Intermediary Exception to be converted to InvalidLookupCombination once it
+    bubbles up there
+    """
+    def __init__(self, lookup, lookups, *args, **kwargs):
+        self.lookup = lookup
+        self.lookups = lookups
+        super(InvalidLookupConcatenation, self).__init__("", *args, **kwargs)
+
+
 class UnknownLookupType(Exception):
 
-    def __init__(self, lookup, *args, **kwargs):
-        self.lookup = lookup
-        message = "Unknown lookup type: \"{}\"".format(lookup.type)
+    def __init__(self, lookup_type, *args, **kwargs):
+        message = "Unknown lookup type: \"{}\"".format(lookup_type)
         super(UnknownLookupType, self).__init__(message, *args, **kwargs)
 
 
@@ -35,9 +45,20 @@ class FailedVariableLookup(Exception):
         self.lookup = lookup
         self.error = error
         message = "Couldn't resolve lookup in variable `%s`, " % variable_name
-        message += "lookup: ${%s}: " % lookup.raw
+        message += "lookup: ${%s}: " % repr(lookup)
         message += "(%s) %s" % (error.__class__, error)
         super(FailedVariableLookup, self).__init__(message, *args, **kwargs)
+
+
+class FailedLookup(Exception):
+    """
+    Intermediary Exception to be converted to FailedVariableLookup once it
+    bubbles up there
+    """
+    def __init__(self, lookup, error, *args, **kwargs):
+        self.lookup = lookup
+        self.error = error
+        super(FailedLookup, self).__init__("Failed lookup", *args, **kwargs)
 
 
 class InvalidUserdataPlaceholder(Exception):
@@ -68,6 +89,17 @@ class UnresolvedVariable(Exception):
             )
         )
         super(UnresolvedVariable, self).__init__(message, *args, **kwargs)
+
+
+class UnresolvedVariableValue(Exception):
+    """
+    Intermediary Exception to be converted to UnresolvedVariable once it
+    bubbles up there
+    """
+    def __init__(self, lookup, *args, **kwargs):
+        self.lookup = lookup
+        super(UnresolvedVariableValue, self).__init__(
+            "Unresolved lookup", *args, **kwargs)
 
 
 class MissingVariable(Exception):

@@ -234,6 +234,7 @@ def not_empty_list(value):
 class AnyType(BaseType):
     pass
 
+
 class LocalPackageSource(Model):
     source = StringType(required=True)
 

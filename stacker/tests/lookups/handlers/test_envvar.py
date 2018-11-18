@@ -2,7 +2,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 import unittest
-from stacker.lookups.handlers.envvar import handler
+from stacker.lookups.handlers.envvar import EnvvarLookup
 import os
 
 
@@ -15,9 +15,9 @@ class TestEnvVarHandler(unittest.TestCase):
         os.environ[self.testkey] = self.testval
 
     def test_valid_envvar(self):
-        value = handler(self.testkey)
+        value = EnvvarLookup.handle(self.testkey)
         self.assertEqual(value, self.testval)
 
     def test_invalid_envvar(self):
         with self.assertRaises(ValueError):
-            handler(self.invalidtestkey)
+            EnvvarLookup.handle(self.invalidtestkey)

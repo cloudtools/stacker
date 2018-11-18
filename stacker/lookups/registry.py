@@ -1,6 +1,10 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+
+import logging
+import warnings
+
 from past.builtins import basestring
 
 from ..exceptions import UnknownLookupType, FailedVariableLookup
@@ -34,6 +38,19 @@ def register_lookup_handler(lookup_type, handler_or_path):
     if isinstance(handler_or_path, basestring):
         handler = load_object_from_string(handler_or_path)
     LOOKUP_HANDLERS[lookup_type] = handler
+    if type(handler) != type:
+        # Hander is a not a new-style handler
+        logger = logging.getLogger(__name__)
+        logger.warning("Registering lookup `%s`: Please upgrade to use the "
+                       "new style of Lookups." % lookup_type)
+        warnings.warn(
+            # For some reason, this does not show up...
+            # Leaving it in anyway
+            "Lookup `%s`: Please upgrade to use the new style of Lookups"
+            "." % lookup_type,
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
 
 def unregister_lookup_handler(lookup_type):
@@ -80,15 +97,15 @@ def resolve_lookups(variable, context, provider):
     return resolved_lookups
 
 
-register_lookup_handler(output.TYPE_NAME, output.handler)
-register_lookup_handler(kms.TYPE_NAME, kms.handler)
-register_lookup_handler(ssmstore.TYPE_NAME, ssmstore.handler)
-register_lookup_handler(envvar.TYPE_NAME, envvar.handler)
-register_lookup_handler(xref.TYPE_NAME, xref.handler)
-register_lookup_handler(rxref.TYPE_NAME, rxref.handler)
-register_lookup_handler(ami.TYPE_NAME, ami.handler)
-register_lookup_handler(file_handler.TYPE_NAME, file_handler.handler)
-register_lookup_handler(split.TYPE_NAME, split.handler)
-register_lookup_handler(default.TYPE_NAME, default.handler)
-register_lookup_handler(hook_data.TYPE_NAME, hook_data.handler)
-register_lookup_handler(dynamodb.TYPE_NAME, dynamodb.handler)
+register_lookup_handler(output.TYPE_NAME, output.OutputLookup)
+register_lookup_handler(kms.TYPE_NAME, kms.KmsLookup)
+register_lookup_handler(ssmstore.TYPE_NAME, ssmstore.SsmstoreLookup)
+register_lookup_handler(envvar.TYPE_NAME, envvar.EnvvarLookup)
+register_lookup_handler(xref.TYPE_NAME, xref.XrefLookup)
+register_lookup_handler(rxref.TYPE_NAME, rxref.RxrefLookup)
+register_lookup_handler(ami.TYPE_NAME, ami.AmiLookup)
+register_lookup_handler(file_handler.TYPE_NAME, file_handler.FileLookup)
+register_lookup_handler(split.TYPE_NAME, split.SplitLookup)
+register_lookup_handler(default.TYPE_NAME, default.DefaultLookup)
+register_lookup_handler(hook_data.TYPE_NAME, hook_data.HookDataLookup)
+register_lookup_handler(dynamodb.TYPE_NAME, dynamodb.DynamodbLookup)

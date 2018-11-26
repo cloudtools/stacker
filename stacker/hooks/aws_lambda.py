@@ -194,7 +194,8 @@ def _head_object(s3_conn, bucket, key):
             raise
 
 
-def _upload_code(s3_conn, bucket, prefix, name, contents, content_hash):
+def _upload_code(s3_conn, bucket, prefix, name, contents, content_hash,
+                 payload_acl):
     """Upload a ZIP file to S3 for use by Lambda.
 
     The key used for the upload will be unique based on the checksum of the
@@ -210,6 +211,8 @@ def _upload_code(s3_conn, bucket, prefix, name, contents, content_hash):
             construct a key name for the uploaded file.
         contents (str): byte string with the content of the file upload.
         content_hash (str): md5 hash of the contents to be uploaded.
+        payload_acl (str): The canned S3 object ACL to be applied to the
+            uploaded payload
 
     Returns:
         troposphere.awslambda.Code: CloudFormation Lambda Code object,
@@ -228,7 +231,8 @@ def _upload_code(s3_conn, bucket, prefix, name, contents, content_hash):
     else:
         logger.info('lambda: uploading object %s', key)
         s3_conn.put_object(Bucket=bucket, Key=key, Body=contents,
-                           ContentType='application/zip')
+                           ContentType='application/zip',
+                           ACL=payload_acl)
 
     return Code(S3Bucket=bucket, S3Key=key)
 
@@ -268,7 +272,8 @@ def _check_pattern_list(patterns, key, default=None):
                      'list of strings'.format(key))
 
 
-def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks):
+def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks,
+                     payload_acl):
     """Builds a Lambda payload from user configuration and uploads it to S3.
 
     Args:
@@ -291,6 +296,8 @@ def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks):
                     file patterns to exclude from the payload (optional).
         follow_symlinks  (bool): If true, symlinks will be included in the
             resulting zip file
+        payload_acl (str): The canned S3 object ACL to be applied to the
+            uploaded payload
 
     Returns:
         troposphere.awslambda.Code: CloudFormation AWS Lambda Code object,
@@ -325,7 +332,7 @@ def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks):
                                                          follow_symlinks)
 
     return _upload_code(s3_conn, bucket, prefix, name, zip_contents,
-                        content_hash)
+                        content_hash, payload_acl)
 
 
 def select_bucket_region(custom_bucket, hook_region, stacker_bucket_region,
@@ -384,6 +391,8 @@ def upload_lambda_functions(context, provider, **kwargs):
             zip name.
         follow_symlinks (bool, optional): Will determine if symlinks should
             be followed and included with the zip artifact. Default: False
+        payload_acl (str, optional): The canned S3 object ACL to be applied to
+            the uploaded payload. Default: private
         functions (dict):
             Configurations of desired payloads to build. Keys correspond to
             function names, used to derive key names for the payload. Each
@@ -437,6 +446,7 @@ def upload_lambda_functions(context, provider, **kwargs):
                   bucket: custom-bucket
                   follow_symlinks: true
                   prefix: cloudformation-custom-resources/
+                  payload_acl: authenticated-read
                   functions:
                     MyFunction:
                       path: ./lambda_functions
@@ -493,6 +503,10 @@ def upload_lambda_functions(context, provider, **kwargs):
     if not isinstance(follow_symlinks, bool):
         raise ValueError('follow_symlinks option must be a boolean')
 
+    # Check for S3 object acl. Valid values from:
+    # https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl
+    payload_acl = kwargs.get('payload_acl', 'private')
+
     # Always use the global client for s3
     session = get_session(bucket_region)
     s3_client = session.client('s3')
@@ -504,6 +518,6 @@ def upload_lambda_functions(context, provider, **kwargs):
     results = {}
     for name, options in kwargs['functions'].items():
         results[name] = _upload_function(s3_client, bucket_name, prefix, name,
-                                         options, follow_symlinks)
+                                         options, follow_symlinks, payload_acl)
 
     return results

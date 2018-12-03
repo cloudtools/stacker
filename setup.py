@@ -9,9 +9,11 @@ src_dir = os.path.dirname(__file__)
 install_requires = [
     "future",
     "troposphere>=1.9.0",
-    "botocore>=1.6.0",
-    "boto3>=1.3.1",
-    "PyYAML>=3.12",
+    # pinning needed till https://github.com/spulec/moto/issues/1924 is
+    # resolved
+    "botocore<1.11.0",
+    "boto3>=1.7.0,<1.8.0",
+    "PyYAML>=3.13b1",
     "awacs>=0.6.0",
     "gitpython>=2.0,<3.0",
     "schematics>=2.0.1,<2.1.0",
@@ -20,6 +22,9 @@ install_requires = [
 ]
 
 tests_require = [
+    # pinning needed till https://github.com/spulec/moto/issues/1924 is
+    # resolved
+    "aws-xray-sdk==1.1.2",
     "mock~=2.0.0",
     "moto~=1.1.24",
     "testfixtures~=4.10.0",

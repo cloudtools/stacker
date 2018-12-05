@@ -77,6 +77,7 @@ class StackDoesNotExist(SkippedStatus):
 
 
 PENDING = PendingStatus()
+WAITING = PendingStatus(reason="waiting")
 SUBMITTED = SubmittedStatus()
 COMPLETE = CompleteStatus()
 SKIPPED = SkippedStatus()

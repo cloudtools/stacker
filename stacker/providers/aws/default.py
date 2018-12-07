@@ -624,7 +624,7 @@ class Provider(BaseProvider):
                             e['ResourceType'],
                             e['EventId']))
 
-    def get_events(self, stack_name):
+    def get_events(self, stack_name, chronological=True):
         """Get the events in batches and return in chronological order"""
         next_token = None
         event_list = []
@@ -642,7 +642,25 @@ class Provider(BaseProvider):
             if next_token is None:
                 break
             time.sleep(GET_EVENTS_SLEEP)
-        return reversed(sum(event_list, []))
+        if chronological:
+            return reversed(sum(event_list, []))
+        else:
+            return sum(event_list, [])
+
+    def get_rollback_status_reason(self, stack_name):
+        """Process events and returns latest roll back reason"""
+        event = next((item for item in self.get_events(stack_name,
+                      False) if item["ResourceStatus"] ==
+                      "UPDATE_ROLLBACK_IN_PROGRESS"), None)
+        if event:
+            reason = event["ResourceStatusReason"]
+            return reason
+        else:
+            event = next((item for item in self.get_events(stack_name)
+                          if item["ResourceStatus"] ==
+                          "ROLLBACK_IN_PROGRESS"), None)
+            reason = event["ResourceStatusReason"]
+            return reason
 
     def tail(self, stack_name, cancel, log_func=_tail_print, sleep_time=5,
              include_initial=True):

@@ -405,7 +405,7 @@ Example::
   $ export DATABASE_USER=root
 
   # In the stacker config we could reference the value:
-  DBUser: ${envvar DATABASE_UER}
+  DBUser: ${envvar DATABASE_USER}
 
   # Which would resolve to:
   DBUser: root

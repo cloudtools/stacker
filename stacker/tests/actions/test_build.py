@@ -244,10 +244,15 @@ class TestLaunchStack(TestBuildAction):
                     'Outputs': [],
                     'Tags': []}
 
+        def get_events(name, *args, **kwargs):
+            return [{'ResourceStatus': 'ROLLBACK_IN_PROGRESS',
+                    'ResourceStatusReason': 'CFN fail'}]
+
         patch_object(self.provider, 'get_stack', side_effect=get_stack)
         patch_object(self.provider, 'update_stack')
         patch_object(self.provider, 'create_stack')
         patch_object(self.provider, 'destroy_stack')
+        patch_object(self.provider, 'get_events', side_effect=get_events)
 
         patch_object(self.build_action, "s3_stack_push")
 

@@ -310,8 +310,11 @@ class Action(BaseAction):
                 reason = old_status.reason
                 if 'rolling' in reason:
                     reason = reason.replace('rolling', 'rolled')
-
+                status_reason = provider.get_rollback_status_reason(stack.fqn)
+                logger.info(
+                    "%s Stack Roll Back Reason: " + status_reason, stack.fqn)
                 return FailedStatus(reason)
+
             elif provider.is_stack_completed(provider_stack):
                 stack.set_outputs(
                     provider.get_output_dict(provider_stack))

@@ -98,7 +98,7 @@ class Stack(object):
             deps = variable.dependencies()
             if self.name in deps:
                 message = (
-                    "Variable %s in stack %s has a ciruclar reference"
+                    "Variable %s in stack %s has a circular reference"
                 ) % (variable.name, self.name)
                 raise ValueError(message)
             requires.update(deps)

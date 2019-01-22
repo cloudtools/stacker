@@ -1,5 +1,15 @@
 ## Upcoming release
 
+## 1.6.0 (2019-01-21)
+
+- New lookup format/syntax, making it more generic [GH-665]
+- Allow lowercase y/Y when prompted [GH-674]
+- Local package sources [GH-677]
+- Add `in_progress` option to stack config [GH-678]
+- Use default ACL for uploaded lambda code [GH-682]
+- Display rollback reason after error [GH-687]
+- ssm parameter types [GH-692]
+
 ## 1.5.0 (2018-10-14)
 
 The big feature in this release is the introduction of "targets" which act as

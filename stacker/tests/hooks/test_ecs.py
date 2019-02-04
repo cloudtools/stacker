@@ -89,7 +89,7 @@ class TestECSHooks(unittest.TestCase):
             with LogCapture(logger) as logs:
                 create_clusters(
                     provider=self.provider,
-                    context=self.context  # missing clusters
+                    context=self.context
                 )
 
                 logs.check(

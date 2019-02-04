@@ -78,3 +78,27 @@ class TestECSHooks(unittest.TestCase):
 
             response = client.list_clusters()
             self.assertEqual(len(response["clusterArns"]), 2)
+
+    def test_fail_create_cluster(self):
+        with mock_ecs():
+            logger = "stacker.hooks.ecs"
+            client = boto3.client("ecs", region_name=REGION)
+            response = client.list_clusters()
+
+            self.assertEqual(len(response["clusterArns"]), 0)
+            with LogCapture(logger) as logs:
+                create_clusters(
+                    provider=self.provider,
+                    context=self.context  # missing clusters
+                )
+
+                logs.check(
+                    (
+                        logger,
+                        "ERROR",
+                        "setup_clusters hook missing \"clusters\" argument"
+                    )
+                )
+
+            response = client.list_clusters()
+            self.assertEqual(len(response["clusterArns"]), 0)

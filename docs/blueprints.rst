@@ -289,7 +289,7 @@ Below is an annotated example:
             t = self.template
 
             # `get_variables` returns a dictionary of <variable name>: <variable
-            value>. For the sublcasses of `CFNType`, the values are
+            value>. For the subclasses of `CFNType`, the values are
             instances of `CFNParameter` which have a `ref` helper property
             which will return a troposphere `Ref` to the parameter name.
             variables = self.get_variables()

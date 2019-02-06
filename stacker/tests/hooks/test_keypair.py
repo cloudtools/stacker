@@ -41,7 +41,12 @@ class TestKeypairHooks(unittest.TestCase):
                 logs.check(
                     (
                         logger,
-                        "info",
-                        "keypair: \"%s\" not found", KEY_PAIR_NAME
+                        "INFO",
+                        "keypair: \"%s\" not found" % KEY_PAIR_NAME
+                    ),
+                    (
+                        logger,
+                        "WARNING",
+                        "no action to find keypair, failing"
                     )
                 )

@@ -37,7 +37,7 @@ class TestKeypairHooks(unittest.TestCase):
             # initially no key pairs created
             self.assertEqual(len(response["KeyPairs"]), 0)
             with LogCapture(logger) as logs:
-                self.assertFalse(ensure_keypair_exists(provider=self.provider, context=self.context, keypair="FakeKey"))
+                self.assertFalse(ensure_keypair_exists(provider=self.provider, context=self.context, keypair=KEY_PAIR_NAME))
                 logs.check(
                     (
                         logger,

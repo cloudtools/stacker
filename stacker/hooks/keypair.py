@@ -34,6 +34,7 @@ def ensure_keypair_exists(provider, context, **kwargs):
     """
     session = get_session(provider.region)
     client = session.client("ec2")
+    print(kwargs.get("keypair"))
     keypair_name = kwargs.get("keypair")
     resp = client.describe_key_pairs()
     keypair = find(resp["KeyPairs"], "KeyName", keypair_name)

@@ -64,8 +64,8 @@ class TestKeypairHooks(unittest.TestCase):
             keypair = find(response["KeyPairs"], "KeyName", KEY_PAIR_NAME)
             with LogCapture(logger) as logs:
                 value = ensure_keypair_exists(provider=self.provider,
-                                                context=self.context,
-                                                keypair=KEY_PAIR_NAME)
+                                              context=self.context,
+                                              keypair=KEY_PAIR_NAME)
                 logs.check(
                     (
                         logger,

@@ -34,10 +34,13 @@ def ensure_keypair_exists(provider, context, **kwargs):
     """
     session = get_session(provider.region)
     client = session.client("ec2")
-    print(kwargs.get("keypair"))
     keypair_name = kwargs.get("keypair")
     resp = client.describe_key_pairs()
+    print("here0")
+    print(resp)
+    print("here1")
     keypair = find(resp["KeyPairs"], "KeyName", keypair_name)
+    print(keypair)
     message = "keypair: %s (%s) %s"
     if keypair:
         logger.info(message,
@@ -49,7 +52,6 @@ def ensure_keypair_exists(provider, context, **kwargs):
             "key_name": keypair["KeyName"],
             "fingerprint": keypair["KeyFingerprint"],
         }
-
     logger.info("keypair: \"%s\" not found", keypair_name)
     create_or_upload = input(
         "import or create keypair \"%s\"? (import/create/Cancel) " % (

@@ -30,7 +30,7 @@ class TestKeypairHooks(unittest.TestCase):
     def test_keypair_missing_cancel_input(self, mocked_input):
         mocked_input.side_effect = ["Cancel"]
         with mock_ec2():
-            logger = "stacker.hooks.ec2"
+            logger = "stacker.hooks.keypair"
             client = boto3.client("ec2", region_name=REGION)
             response = client.describe_key_pairs()
 

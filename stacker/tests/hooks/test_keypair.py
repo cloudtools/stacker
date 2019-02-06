@@ -3,8 +3,6 @@ from __future__ import division
 from __future__ import absolute_import
 import unittest
 from mock import patch
-from builtins import object
-from builtins import input
 
 import boto3
 from moto import mock_ec2
@@ -37,7 +35,9 @@ class TestKeypairHooks(unittest.TestCase):
             # initially no key pairs created
             self.assertEqual(len(response["KeyPairs"]), 0)
             with LogCapture(logger) as logs:
-                self.assertFalse(ensure_keypair_exists(provider=self.provider, context=self.context, keypair=KEY_PAIR_NAME))
+                self.assertFalse(ensure_keypair_exists(provider=self.provider,
+                                                       context=self.context,
+                                                       keypair=KEY_PAIR_NAME))
                 logs.check(
                     (
                         logger,

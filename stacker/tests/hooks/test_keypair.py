@@ -8,7 +8,7 @@ import boto3
 from moto import mock_ec2
 from testfixtures import LogCapture
 
-from stacker.hooks.keypair import ensure_keypair_exists
+from stacker.hooks.keypair import ensure_keypair_exists, find
 from ..factories import (
     mock_context,
     mock_provider,
@@ -50,3 +50,27 @@ class TestKeypairHooks(unittest.TestCase):
                         "no action to find keypair, failing"
                     )
                 )
+
+    @patch("stacker.hooks.keypair.input", create=True)
+    def test_keypair_exists(self, mocked_input):
+        mocked_input.side_effect = ["Cancel", "create", "./"]
+        with mock_ec2():
+            logger = "stacker.hooks.keypair"
+            client = boto3.client("ec2", region_name=REGION)
+            response = client.create_key_pair(KeyName=KEY_PAIR_NAME)
+
+            # check that one keypair was created
+            self.assertEqual(len(response["KeyPairs"]), 1)
+            keypair = find(response["KeyPairs"], "KeyName", KEY_PAIR_NAME)
+            with LogCapture(logger) as logs:
+                value = ensure_keypair_exists(provider=self.provider,
+                                                       context=self.context,
+                                                       keypair=KEY_PAIR_NAME)
+                logs.check(
+                    (
+                        logger,
+                        "INFO",
+                        "keypair: %s (%s) %s" % KEY_PAIR_NAME, keypair["KeyFingerprint"], "exists"
+                    )
+                )
+                print(value)

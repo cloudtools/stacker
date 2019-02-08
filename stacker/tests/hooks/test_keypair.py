@@ -146,7 +146,7 @@ class TestKeypairHooks(unittest.TestCase):
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
                 er_message = "Failed to find keypair at path: " + \
-                          "/home/circleci/project/$"
+                             "/home/circleci/project/$"
                 logs.check(
                     (
                         logger,

@@ -85,28 +85,30 @@ class TestKeypairHooks(unittest.TestCase):
         with mock_ec2():
             logger = "stacker.hooks.keypair"
             client = boto3.client("ec2", region_name=REGION)
+            response = client.describe_key_pairs()
+            keypair = find(response["KeyPairs"], "KeyName", KEY_PAIR_NAME)
             value = ensure_keypair_exists(provider=self.provider,
                                           context=self.context,
                                           keypair=KEY_PAIR_NAME)
-            # with LogCapture(logger) as logs:
+            with LogCapture(logger) as logs:
                 
-                # logs.check(
-                #     (
-                #         logger,
-                #         "INFO",
-                #         "keypair: " + \
-                #         KEY_PAIR_NAME
-                #     )
-                # )
-            
+                logs.check(
+                    (
+                        logger,
+                        "INFO",
+                        "keypair: " + \
+                        KEY_PAIR_NAME + " (" + \
+                        keypair["KeyFingerprint"] + \
+                        ") exists"
+                    )
+                )
             self.assertEqual(value["status"], "created")
             self.assertEqual(value["key_name"], KEY_PAIR_NAME)
             self.assertEqual(value["file_path"], "/home/circleci/project/" + KEY_PAIR_NAME + ".pem")
 
-
     # @patch("stacker.hooks.keypair.input", create=True)
     # def test_keypair_missing_create_invalid_path(self, mocked_input):
-    #     mocked_input.side_effect = ["create", "$"]  # TODO: check invalid path
+    #     mocked_input.side_effect = ["create", "$"]
     #     with mock_ec2():
     #         logger = "stacker.hooks.keypair"
     #         with LogCapture(logger) as logs:

@@ -121,6 +121,7 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
+                message = "\"/home/circleci/project/" + "$" + "\" is not a valid directory"
                 logs.check(
                     (
                         logger,
@@ -130,8 +131,7 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "ERROR",
-                        "\"/home/circleci/project/"
-                        + "$" + "\" is not a valid directory"
+                        message
                     )
                 )
                 self.assertFalse(value)
@@ -145,6 +145,7 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
+                message = "Failed to find keypair at path: " + "/home/circleci/project/$"
                 logs.check(
                     (
                         logger,
@@ -154,8 +155,7 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "ERROR",
-                        "Failed to find keypair at path: "
-                        + "/home/circleci/project/$"
+                        message
                     )
                 )
                 self.assertFalse(value)

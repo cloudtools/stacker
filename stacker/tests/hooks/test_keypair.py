@@ -133,3 +133,26 @@ class TestKeypairHooks(unittest.TestCase):
                     )
                 )
                 self.assertFalse(value)
+
+    @patch("stacker.hooks.keypair.input", create=True)
+    def test_keypair_missing_import_invalid_path(self, mocked_input):
+        mocked_input.side_effect = ["import", "$"]
+        with mock_ec2():
+            logger = "stacker.hooks.keypair"
+            with LogCapture(logger) as logs:
+                value = ensure_keypair_exists(provider=self.provider,
+                                            context=self.context,
+                                            keypair=KEY_PAIR_NAME)
+                logs.check(
+                    (
+                        logger,
+                        "INFO",
+                        "keypair: \"%s\" not found" % KEY_PAIR_NAME
+                    ),
+                    (
+                        logger,
+                        "ERROR",
+                        "Failed to find keypair at path: $"
+                    )
+                )
+                self.assertFalse(value)

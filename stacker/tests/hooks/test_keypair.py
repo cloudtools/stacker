@@ -77,7 +77,7 @@ class TestKeypairHooks(unittest.TestCase):
                 )
                 self.assertEqual(value["status"], "exists")
                 self.assertEqual(value["key_name"], KEY_PAIR_NAME)
-                self.assertEqual(value["fingerprint"], response[""])
+                self.assertEqual(value["fingerprint"], response["KeyFingerprint"])
 
     @patch("stacker.hooks.keypair.input", create=True)
     def test_keypair_missing_create(self, mocked_input):
@@ -94,3 +94,20 @@ class TestKeypairHooks(unittest.TestCase):
             self.assertEqual(value["file_path"], "./" + KEY_PAIR_NAME + ".pem")
 
 
+    # @patch("stacker.hooks.keypair.input", create=True)
+    # def test_keypair_missing_create_invalid_path(self, mocked_input):
+    #     mocked_input.side_effect = ["create", "$"]  # TODO: check invalid path
+    #     with mock_ec2():
+    #         logger = "stacker.hooks.keypair"
+    #         with LogCapture(logger) as logs:
+    #             value = ensure_keypair_exists(provider=self.provider,
+    #                                         context=self.context,
+    #                                         keypair=KEY_PAIR_NAME)
+    #             logs.check(
+    #                 (
+    #                     logger,
+    #                     "ERROR",
+    #                     "\"" + "$" + "\" is not a valid directory"
+    #                 )
+    #             )
+    #             self.assertFalse(value)

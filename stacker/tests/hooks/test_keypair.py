@@ -51,7 +51,7 @@ class TestKeypairHooks(unittest.TestCase):
                     )
                 )
 
-    def test_keypair_exists(self, mocked_input):
+    def test_keypair_exists(self):
         with mock_ec2():
             logger = "stacker.hooks.keypair"
             client = boto3.client("ec2", region_name=REGION)

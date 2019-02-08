@@ -58,6 +58,7 @@ class TestKeypairHooks(unittest.TestCase):
             logger = "stacker.hooks.keypair"
             client = boto3.client("ec2", region_name=REGION)
             response = client.create_key_pair(KeyName=KEY_PAIR_NAME)
+            response = client.describe_key_pairs()
 
             # check that one keypair was created
             self.assertEqual(len(response["KeyPairs"]), 1)

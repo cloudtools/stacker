@@ -90,15 +90,21 @@ class TestKeypairHooks(unittest.TestCase):
                                           context=self.context,
                                           keypair=KEY_PAIR_NAME)
                 response = client.describe_key_pairs()
+                print(response)
                 keypair = find(response["KeyPairs"], "KeyName", KEY_PAIR_NAME)
                 logs.check(
+                    (
+                        logger,
+                        "INFO",
+                        "keypair: \"%s\" not found" % KEY_PAIR_NAME
+                    )
                     (
                         logger,
                         "INFO",
                         "keypair: " + \
                         KEY_PAIR_NAME + " (" + \
                         keypair["KeyFingerprint"] + \
-                        ") exists"
+                        ") created"
                     )
                 )
             self.assertEqual(value["status"], "created")

@@ -49,6 +49,7 @@ def ensure_keypair_exists(provider, context, **kwargs):
             "fingerprint": keypair["KeyFingerprint"],
         }
     logger.info("keypair: \"%s\" not found", keypair_name)
+
     create_or_upload = input(
         "import or create keypair \"%s\"? (import/create/Cancel) " % (
             keypair_name,

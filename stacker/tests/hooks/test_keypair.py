@@ -51,9 +51,7 @@ class TestKeypairHooks(unittest.TestCase):
                     )
                 )
 
-    @patch("stacker.hooks.keypair.input", create=True)
     def test_keypair_exists(self, mocked_input):
-        mocked_input.side_effect = ["Cancel", "create", "./"]
         with mock_ec2():
             logger = "stacker.hooks.keypair"
             client = boto3.client("ec2", region_name=REGION)
@@ -71,10 +69,10 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "INFO",
-                        "keypair: %s (%s) %s" %
-                        KEY_PAIR_NAME,
-                        keypair["KeyFingerprint"],
-                        "exists"
+                        "keypair: " + \
+                        KEY_PAIR_NAME + " (" + \
+                        keypair["KeyFingerprint"] + \
+                        ") exists"
                     )
                 )
                 print(value)

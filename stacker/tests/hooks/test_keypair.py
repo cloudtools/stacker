@@ -92,6 +92,8 @@ class TestKeypairHooks(unittest.TestCase):
                 response = client.describe_key_pairs()
                 print(response)
                 keypair = find(response["KeyPairs"], "KeyName", KEY_PAIR_NAME)
+                message = "keypair: " + KEY_PAIR_NAME + \
+                          " (" + keypair["KeyFingerprint"] + ") created"
                 logs.check(
                     (
                         logger,
@@ -101,7 +103,7 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "INFO",
-                        "keypair: " + KEY_PAIR_NAME + " (" + keypair["KeyFingerprint"] + ") created"
+                        message
                     )
                 )
             self.assertEqual(value["status"], "created")

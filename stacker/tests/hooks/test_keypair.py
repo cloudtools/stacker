@@ -77,7 +77,7 @@ class TestKeypairHooks(unittest.TestCase):
                 )
                 self.assertEqual(value["status"], "exists")
                 self.assertEqual(value["key_name"], KEY_PAIR_NAME)
-                self.assertEqual(value["fingerprint"], response["KeyFingerprint"])
+                self.assertEqual(value["fingerprint"], keypair["KeyFingerprint"])
 
     @patch("stacker.hooks.keypair.input", create=True)
     def test_keypair_missing_create(self, mocked_input):

@@ -69,9 +69,9 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "INFO",
-                        "keypair: "
-                        + KEY_PAIR_NAME + " ("
-                        + keypair["KeyFingerprint"]
+                        "keypair: " + \
+                        KEY_PAIR_NAME + " (" + 
+                        keypair["KeyFingerprint"]
                         + ") exists"
                     )
                 )

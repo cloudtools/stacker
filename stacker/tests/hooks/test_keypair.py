@@ -145,7 +145,7 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
-                message = "Failed to find keypair at path: " + \
+                er_message = "Failed to find keypair at path: " + \
                           "/home/circleci/project/$"
                 logs.check(
                     (
@@ -156,7 +156,7 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "ERROR",
-                        message
+                        er_message
                     )
                 )
                 self.assertFalse(value)

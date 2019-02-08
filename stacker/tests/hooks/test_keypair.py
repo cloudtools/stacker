@@ -97,7 +97,7 @@ class TestKeypairHooks(unittest.TestCase):
                         logger,
                         "INFO",
                         "keypair: \"%s\" not found" % KEY_PAIR_NAME
-                    )
+                    ),
                     (
                         logger,
                         "INFO",

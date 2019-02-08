@@ -102,10 +102,7 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "INFO",
-                        "keypair: "
-                        + KEY_PAIR_NAME + " ("
-                        + keypair["KeyFingerprint"]
-                        + ") created"
+                        "keypair: " + KEY_PAIR_NAME + " (" + keypair["KeyFingerprint"] + ") created"
                     )
                 )
             self.assertEqual(value["status"], "created")

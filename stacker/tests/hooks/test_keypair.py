@@ -65,14 +65,13 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
+                message = "keypair: " + KEY_PAIR_NAME + \
+                          " (" + keypair["KeyFingerprint"] + ") exists"
                 logs.check(
                     (
                         logger,
                         "INFO",
-                        "keypair: " +
-                        KEY_PAIR_NAME + " (" + 
-                        keypair["KeyFingerprint"]
-                        + ") exists"
+                        message
                     )
                 )
                 self.assertEqual(value["status"], "exists")

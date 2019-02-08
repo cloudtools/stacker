@@ -152,7 +152,7 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "ERROR",
-                        "Failed to find keypair at path: $"
+                        "Failed to find keypair at path: /home/circleci/project/$"
                     )
                 )
                 self.assertFalse(value)

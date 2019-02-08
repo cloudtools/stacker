@@ -41,7 +41,7 @@ jobs:
       - run: sudo pip install flake8 codecov pep8-naming flake8-future-import
       - run: sudo python setup.py install
       - run: flake8 --version
-      - run: sudo make lint
+      # - run: sudo make lint
 
   unit-test-27:
     docker:

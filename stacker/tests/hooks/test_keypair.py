@@ -123,8 +123,13 @@ class TestKeypairHooks(unittest.TestCase):
                 logs.check(
                     (
                         logger,
+                        "INFO",
+                        "keypair: \"%s\" not found" % KEY_PAIR_NAME
+                    ),
+                    (
+                        logger,
                         "ERROR",
-                        "\"" + "$" + "\" is not a valid directory"
+                        "\"/home/circleci/project/" + "$" + "\" is not a valid directory"
                     )
                 )
                 self.assertFalse(value)

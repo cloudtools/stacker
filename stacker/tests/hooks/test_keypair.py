@@ -65,6 +65,7 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
+                print(value)
                 logs.check(
                     (
                         logger,
@@ -75,4 +76,4 @@ class TestKeypairHooks(unittest.TestCase):
                         ") exists"
                     )
                 )
-                print(value)
+

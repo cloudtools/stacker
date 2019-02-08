@@ -69,15 +69,16 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "INFO",
-                        "keypair: " + \
-                        KEY_PAIR_NAME + " (" + \
-                        keypair["KeyFingerprint"] + \
+                        "keypair: " +
+                        KEY_PAIR_NAME + " (" +
+                        keypair["KeyFingerprint"] +
                         ") exists"
                     )
                 )
                 self.assertEqual(value["status"], "exists")
                 self.assertEqual(value["key_name"], KEY_PAIR_NAME)
-                self.assertEqual(value["fingerprint"], keypair["KeyFingerprint"])
+                self.assertEqual(value["fingerprint"],
+                                 keypair["KeyFingerprint"])
 
     @patch("stacker.hooks.keypair.input", create=True)
     def test_keypair_missing_create(self, mocked_input):
@@ -87,8 +88,8 @@ class TestKeypairHooks(unittest.TestCase):
             client = boto3.client("ec2", region_name=REGION)
             with LogCapture(logger) as logs:
                 value = ensure_keypair_exists(provider=self.provider,
-                                          context=self.context,
-                                          keypair=KEY_PAIR_NAME)
+                                              context=self.context,
+                                              keypair=KEY_PAIR_NAME)
                 response = client.describe_key_pairs()
                 print(response)
                 keypair = find(response["KeyPairs"], "KeyName", KEY_PAIR_NAME)
@@ -101,15 +102,17 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "INFO",
-                        "keypair: " + \
-                        KEY_PAIR_NAME + " (" + \
-                        keypair["KeyFingerprint"] + \
+                        "keypair: " +
+                        KEY_PAIR_NAME + " (" +
+                        keypair["KeyFingerprint"] +
                         ") created"
                     )
                 )
             self.assertEqual(value["status"], "created")
             self.assertEqual(value["key_name"], KEY_PAIR_NAME)
-            self.assertEqual(value["file_path"], "/home/circleci/project/" + KEY_PAIR_NAME + ".pem")
+            self.assertEqual(value["file_path"],
+                             "/home/circleci/project/" +
+                             KEY_PAIR_NAME + ".pem")
 
     @patch("stacker.hooks.keypair.input", create=True)
     def test_keypair_missing_create_invalid_path(self, mocked_input):
@@ -118,8 +121,8 @@ class TestKeypairHooks(unittest.TestCase):
             logger = "stacker.hooks.keypair"
             with LogCapture(logger) as logs:
                 value = ensure_keypair_exists(provider=self.provider,
-                                            context=self.context,
-                                            keypair=KEY_PAIR_NAME)
+                                              context=self.context,
+                                              keypair=KEY_PAIR_NAME)
                 logs.check(
                     (
                         logger,
@@ -129,7 +132,8 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "ERROR",
-                        "\"/home/circleci/project/" + "$" + "\" is not a valid directory"
+                        "\"/home/circleci/project/" +
+                            "$" + "\" is not a valid directory"
                     )
                 )
                 self.assertFalse(value)
@@ -152,7 +156,8 @@ class TestKeypairHooks(unittest.TestCase):
                     (
                         logger,
                         "ERROR",
-                        "Failed to find keypair at path: /home/circleci/project/$"
+                        "Failed to find keypair at path: " +
+                        "/home/circleci/project/$"
                     )
                 )
                 self.assertFalse(value)

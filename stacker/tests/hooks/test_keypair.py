@@ -55,7 +55,7 @@ class TestKeypairHooks(unittest.TestCase):
         with mock_ec2():
             logger = "stacker.hooks.keypair"
             client = boto3.client("ec2", region_name=REGION)
-            response = client.create_key_pair(KeyName=KEY_PAIR_NAME)
+            client.create_key_pair(KeyName=KEY_PAIR_NAME)
             response = client.describe_key_pairs()
 
             # check that one keypair was created
@@ -65,7 +65,6 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
-                print(value)
                 logs.check(
                     (
                         logger,
@@ -76,4 +75,22 @@ class TestKeypairHooks(unittest.TestCase):
                         ") exists"
                     )
                 )
+                self.assertEqual(value["status"], "exists")
+                self.assertEqual(value["key_name"], KEY_PAIR_NAME)
+                self.assertEqual(value["fingerprint"], response[""])
+
+    @patch("stacker.hooks.keypair.input", create=True)
+    def test_keypair_missing_create(self, mocked_input):
+        mocked_input.side_effect = ["create", "./"]  # TODO: check invalid path
+        with mock_ec2():
+            logger = "stacker.hooks.keypair"
+            client = boto3.client("ec2", region_name=REGION)
+            value = ensure_keypair_exists(provider=self.provider,
+                                          context=self.context,
+                                          keypair=KEY_PAIR_NAME)
+            
+            self.assertEqual(value["status"], "created")
+            self.assertEqual(value["key_name"], KEY_PAIR_NAME)
+            self.assertEqual(value["file_path"], "./" + KEY_PAIR_NAME + ".pem")
+
 

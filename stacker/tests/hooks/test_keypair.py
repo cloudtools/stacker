@@ -106,11 +106,10 @@ class TestKeypairHooks(unittest.TestCase):
                         message
                     )
                 )
+            tmp_file_path = "/home/circleci/project/" + KEY_PAIR_NAME + ".pem"
             self.assertEqual(value["status"], "created")
             self.assertEqual(value["key_name"], KEY_PAIR_NAME)
-            self.assertEqual(value["file_path"],
-                             "/home/circleci/project/"
-                             + KEY_PAIR_NAME + ".pem")
+            self.assertEqual(value["file_path"], tmp_file_path)
 
     @patch("stacker.hooks.keypair.input", create=True)
     def test_keypair_missing_create_invalid_path(self, mocked_input):
@@ -121,7 +120,8 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
-                message = "\"/home/circleci/project/" + "$" + "\" is not a valid directory"
+                message = "\"/home/circleci/project/" + \
+                          "$" + "\" is not a valid directory"
                 logs.check(
                     (
                         logger,
@@ -145,7 +145,8 @@ class TestKeypairHooks(unittest.TestCase):
                 value = ensure_keypair_exists(provider=self.provider,
                                               context=self.context,
                                               keypair=KEY_PAIR_NAME)
-                message = "Failed to find keypair at path: " + "/home/circleci/project/$"
+                message = "Failed to find keypair at path: " + \
+                          "/home/circleci/project/$"
                 logs.check(
                     (
                         logger,

@@ -8,6 +8,8 @@ import json
 import os
 import sys
 
+from jinja2 import Template
+
 from ..util import parse_cloudformation_template
 from ..exceptions import InvalidConfig, UnresolvedVariable
 from .base import Blueprint
@@ -186,7 +188,22 @@ class RawTemplateBlueprint(Blueprint):
             template_path = get_template_path(self.raw_template_path)
             if template_path:
                 with open(template_path, 'r') as template:
-                    self._rendered = template.read()
+                    if len(os.path.splitext(template_path)) == 2 and (
+                            os.path.splitext(template_path)[1] == '.j2'):
+                        self._rendered = Template(template.read()).render(
+                            context=self.context,
+                            mappings=self.mappings,
+                            name=self.name,
+                            # self.resolved_variables are not available during
+                            # template rendering; config variables are
+                            # provided directly instead
+                            variables=list(
+                                filter(lambda x: x.name == self.name,
+                                       self.context.config.stacks)
+                            )[0].get('variables', {})
+                        )
+                    else:
+                        self._rendered = template.read()
             else:
                 raise InvalidConfig(
                     'Could not find template %s' % self.raw_template_path

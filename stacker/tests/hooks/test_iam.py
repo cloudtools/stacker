@@ -13,6 +13,8 @@ from stacker.hooks.iam import (
     _get_cert_arn_from_response,
 )
 
+from awacs.helpers.trust import get_ecs_assumerole_policy
+
 from ..factories import (
     mock_context,
     mock_provider,
@@ -23,6 +25,7 @@ REGION = "us-east-1"
 
 # No test for stacker.hooks.iam.ensure_server_cert_exists until
 # updated version of moto is imported
+# (https://github.com/spulec/moto/pull/679) merged
 
 
 class TestIAMHooks(unittest.TestCase):

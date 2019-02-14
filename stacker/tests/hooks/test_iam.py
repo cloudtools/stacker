@@ -22,8 +22,7 @@ from ..factories import (
 REGION = "us-east-1"
 
 # No test for stacker.hooks.iam.ensure_server_cert_exists until
-# this PR is accepted in moto:
-# https://github.com/spulec/moto/pull/679
+# updated version of moto is imported
 
 
 class TestIAMHooks(unittest.TestCase):
@@ -55,6 +54,32 @@ class TestIAMHooks(unittest.TestCase):
 
             with self.assertRaises(ClientError):
                 client.get_role(RoleName=role_name)
+
+            self.assertTrue(
+                create_ecs_service_role(
+                    context=self.context,
+                    provider=self.provider,
+                )
+            )
+
+            role = client.get_role(RoleName=role_name)
+
+            self.assertIn("Role", role)
+            self.assertEqual(role_name, role["Role"]["RoleName"])
+            client.get_role_policy(
+                RoleName=role_name,
+                PolicyName=policy_name
+            )
+
+    def test_create_service_role_already_exists(self):
+        role_name = "ecsServiceRole"
+        policy_name = "AmazonEC2ContainerServiceRolePolicy"
+        with mock_iam():
+            client = boto3.client("iam", region_name=REGION)
+            client.create_role(
+                RoleName=role_name,
+                AssumeRolePolicyDocument=get_ecs_assumerole_policy().to_json()
+            )
 
             self.assertTrue(
                 create_ecs_service_role(

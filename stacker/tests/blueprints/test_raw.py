@@ -12,6 +12,7 @@ from mock import MagicMock
 from stacker.blueprints.raw import (
     get_template_params, get_template_path, RawTemplateBlueprint
 )
+from stacker.variables import Variable
 from ..factories import mock_context
 
 RAW_JSON_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.json'
@@ -138,24 +139,29 @@ class TestBlueprintRendering(unittest.TestCase):
                 },
                 "Outputs": {
                     "DummyId": {
-                        "Value": "dummy-bar-foo-1234"
+                        "Value": "dummy-bar-param1val-foo-1234"
                     }
                 }
             },
             sort_keys=True,
             indent=4
         )
+        blueprint = RawTemplateBlueprint(
+            name="stack1",
+            context=mock_context(
+                extra_config_args={'stacks': [{'name': 'stack1',
+                                               'template_path': 'unused',
+                                               'variables': {
+                                                   'Param1': 'param1val',
+                                                   'bar': 'foo'}}]},
+                environment={'foo': 'bar'}),
+            raw_template_path=RAW_J2_TEMPLATE_PATH
+        )
+        blueprint.resolve_variables([Variable("Param1", "param1val"),
+                                     Variable("bar", "foo")])
         self.assertEqual(
-            RawTemplateBlueprint(
-                name="stack1",
-                context=mock_context(
-                    extra_config_args={'stacks': [{'name': 'stack1',
-                                                   'template_path': 'unused',
-                                                   'variables': {
-                                                       'bar': 'foo'}}]},
-                    environment={'foo': 'bar'}),
-                raw_template_path=RAW_J2_TEMPLATE_PATH).to_json(),
-            expected_json
+            expected_json,
+            blueprint.to_json()
         )
 
 

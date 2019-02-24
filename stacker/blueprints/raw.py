@@ -8,6 +8,8 @@ import json
 import os
 import sys
 
+from jinja2 import Template
+
 from ..util import parse_cloudformation_template
 from ..exceptions import InvalidConfig, UnresolvedVariable
 from .base import Blueprint
@@ -52,16 +54,13 @@ def get_template_params(template):
     return params
 
 
-def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
+def resolve_variable(provided_variable, blueprint_name):
     """Resolve a provided variable value against the variable definition.
 
     This acts as a subset of resolve_variable logic in the base module, leaving
     out everything that doesn't apply to CFN parameters.
 
     Args:
-        var_name (str): The name of the defined variable on a blueprint.
-        var_def (dict): A dictionary representing the defined variables
-            attributes.
         provided_variable (:class:`stacker.variables.Variable`): The variable
             value provided to the blueprint.
         blueprint_name (str): The name of the blueprint that the variable is
@@ -71,8 +70,6 @@ def resolve_variable(var_name, var_def, provided_variable, blueprint_name):
         object: The resolved variable string value.
 
     Raises:
-        MissingVariable: Raised when a variable with no default is not
-            provided a value.
         UnresolvedVariable: Raised when the provided variable is not already
             resolved.
 
@@ -143,20 +140,33 @@ class RawTemplateBlueprint(Blueprint):
         """Resolve the values of the blueprint variables.
 
         This will resolve the values of the template parameters with values
-        from the env file, the config, and any lookups resolved.
+        from the env file, the config, and any lookups resolved. The
+        resolution is run twice, in case the blueprint is jinja2 templated
+        and requires provided variables to render.
 
         Args:
             provided_variables (list of :class:`stacker.variables.Variable`):
                 list of provided variables
 
         """
+        # Pass 1 to set resolved_variables to provided variables
         self.resolved_variables = {}
-        defined_variables = self.get_parameter_definitions()
         variable_dict = dict((var.name, var) for var in provided_variables)
-        for var_name, var_def in defined_variables.items():
+        for var_name, _var_def in variable_dict.items():
             value = resolve_variable(
-                var_name,
-                var_def,
+                variable_dict.get(var_name),
+                self.name
+            )
+            if value is not None:
+                self.resolved_variables[var_name] = value
+
+        # Pass 2 to render the blueprint and set resolved_variables according
+        # to defined variables
+        defined_variables = self.get_parameter_definitions()
+        self.resolved_variables = {}
+        variable_dict = dict((var.name, var) for var in provided_variables)
+        for var_name, _var_def in defined_variables.items():
+            value = resolve_variable(
                 variable_dict.get(var_name),
                 self.name
             )
@@ -186,7 +196,16 @@ class RawTemplateBlueprint(Blueprint):
             template_path = get_template_path(self.raw_template_path)
             if template_path:
                 with open(template_path, 'r') as template:
-                    self._rendered = template.read()
+                    if len(os.path.splitext(template_path)) == 2 and (
+                            os.path.splitext(template_path)[1] == '.j2'):
+                        self._rendered = Template(template.read()).render(
+                            context=self.context,
+                            mappings=self.mappings,
+                            name=self.name,
+                            variables=self.resolved_variables
+                        )
+                    else:
+                        self._rendered = template.read()
             else:
                 raise InvalidConfig(
                     'Could not find template %s' % self.raw_template_path

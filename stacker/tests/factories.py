@@ -32,10 +32,13 @@ def mock_context(namespace="default", extra_config_args=None, **kwargs):
     if extra_config_args:
         config_args.update(extra_config_args)
     config = Config(config_args)
-    environment = kwargs.get("environment", {})
+    if kwargs.get("environment"):
+        return Context(
+            config=config,
+            **kwargs)
     return Context(
         config=config,
-        environment=environment,
+        environment={},
         **kwargs)
 
 

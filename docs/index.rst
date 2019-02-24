@@ -56,6 +56,7 @@ Contents:
    lookups
    commands
    blueprints
+   templates
    API Docs <api/modules>
 
 

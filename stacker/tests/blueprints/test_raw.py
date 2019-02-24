@@ -12,10 +12,12 @@ from mock import MagicMock
 from stacker.blueprints.raw import (
     get_template_params, get_template_path, RawTemplateBlueprint
 )
+from stacker.variables import Variable
 from ..factories import mock_context
 
 RAW_JSON_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.json'
 RAW_YAML_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.yaml'
+RAW_J2_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.json.j2'
 
 
 class TestRawBluePrintHelpers(unittest.TestCase):
@@ -113,6 +115,53 @@ class TestBlueprintRendering(unittest.TestCase):
                 context=mock_context(),
                 raw_template_path=RAW_JSON_TEMPLATE_PATH).to_json(),
             expected_json
+        )
+
+    def test_j2_to_json(self):
+        """Verify jinja2 template parsing."""
+        expected_json = json.dumps(
+            {
+                "AWSTemplateFormatVersion": "2010-09-09",
+                "Description": "TestTemplate",
+                "Parameters": {
+                    "Param1": {
+                        "Type": "String"
+                    },
+                    "Param2": {
+                        "Default": "default",
+                        "Type": "CommaDelimitedList"
+                    }
+                },
+                "Resources": {
+                    "Dummy": {
+                        "Type": "AWS::CloudFormation::WaitConditionHandle"
+                    }
+                },
+                "Outputs": {
+                    "DummyId": {
+                        "Value": "dummy-bar-param1val-foo-1234"
+                    }
+                }
+            },
+            sort_keys=True,
+            indent=4
+        )
+        blueprint = RawTemplateBlueprint(
+            name="stack1",
+            context=mock_context(
+                extra_config_args={'stacks': [{'name': 'stack1',
+                                               'template_path': 'unused',
+                                               'variables': {
+                                                   'Param1': 'param1val',
+                                                   'bar': 'foo'}}]},
+                environment={'foo': 'bar'}),
+            raw_template_path=RAW_J2_TEMPLATE_PATH
+        )
+        blueprint.resolve_variables([Variable("Param1", "param1val"),
+                                     Variable("bar", "foo")])
+        self.assertEqual(
+            expected_json,
+            blueprint.to_json()
         )
 
 

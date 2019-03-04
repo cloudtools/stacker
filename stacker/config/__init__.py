@@ -433,6 +433,8 @@ class Config(Model):
     stacks = ListType(
         ModelType(Stack), default=[])
 
+    log_formats = DictType(StringType, serialize_when_none=False)
+
     def _remove_excess_keys(self, data):
         excess_keys = set(data.keys())
         excess_keys -= self._schema.valid_input_keys

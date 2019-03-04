@@ -21,15 +21,29 @@ class ColorFormatter(logging.Formatter):
         return msg
 
 
-def setup_logging(verbosity):
+def setup_logging(verbosity, formats=None):
+    """
+    Configure a proper logger based on verbosity and optional log formats.
+
+    Args:
+        verbosity (int): 0, 1, 2
+        formats (dict): Optional, looks for `info`, `color`, and `debug` keys
+                        which may override the associated default log formats.
+    """
+    if formats is None:
+        formats = {}
+
     log_level = logging.INFO
-    log_format = INFO_FORMAT
+
+    log_format = formats.get("info", INFO_FORMAT)
+
     if sys.stdout.isatty():
-        log_format = COLOR_FORMAT
+        log_format = formats.get("color", COLOR_FORMAT)
 
     if verbosity > 0:
         log_level = logging.DEBUG
-        log_format = DEBUG_FORMAT
+        log_format = formats.get("debug", DEBUG_FORMAT)
+
     if verbosity < 2:
         logging.getLogger("botocore").setLevel(logging.CRITICAL)
 

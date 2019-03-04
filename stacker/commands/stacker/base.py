@@ -107,12 +107,6 @@ class BaseCommand(object):
                 subparser.set_defaults(
                     get_context_kwargs=subcommand.get_context_kwargs)
 
-    @property
-    def logger(self):
-        if not hasattr(self, "_logger"):
-            self._logger = logging.getLogger(self.name)
-        return self._logger
-
     def parse_args(self, *vargs):
         parser = argparse.ArgumentParser(description=self.description)
         self.add_subcommands(parser)
@@ -126,7 +120,7 @@ class BaseCommand(object):
 
     def configure(self, options, **kwargs):
         if self.setup_logging:
-            self.setup_logging(options.verbose)
+            self.setup_logging(options.verbose, self.config.log_formats)
 
     def get_context_kwargs(self, options, **kwargs):
         """Return a dictionary of kwargs that will be used with the Context.

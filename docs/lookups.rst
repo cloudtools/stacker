@@ -250,7 +250,8 @@ Basic examples::
   conf_key: aGVsbG8gdGhlcmUK
 
 Supported codecs:
- - plain
+ - plain - load the contents of the file untouched. This is the only codec that should be used
+   with raw Cloudformation templates (the other codecs are intended for blueprints).
  - base64 - encode the plain text file at the given path with base64 prior
    to returning it
  - parameterized - the same as plain, but additionally supports

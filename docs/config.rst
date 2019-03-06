@@ -482,7 +482,7 @@ By default, stacker uses the following `log_formats`::
 You may optionally provide custom `log_formats`.
 
 You may use any of the standard Python
-[logging module format attributes](https://docs.python.org/2.7/library/logging.html#logrecord-attributes)
+`logging module format attributes <https://docs.python.org/2.7/library/logging.html#logrecord-attributes>`_
 when building your `log_formats`.
 
 In this example, we add the environment name to each log line::

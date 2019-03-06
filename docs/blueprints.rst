@@ -2,8 +2,11 @@
 Blueprints
 ==========
 
-Blueprints are python classes that build CloudFormation templates.
-Traditionally these are built using troposphere_, but that is not absolutely
+Blueprints are python classes that dynamically build CloudFormation templates. Where
+you would specify a raw Cloudformation template in a stack using the ``template_path`` key,
+you instead specify a blueprint python file using the ``class_path`` key.
+
+Traditionally blueprints are built using troposphere_, but that is not absolutely
 necessary. You are encouraged to check out the library of publicly shared
 Blueprints in the stacker_blueprints_ package.
 

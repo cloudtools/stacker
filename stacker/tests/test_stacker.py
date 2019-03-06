@@ -92,6 +92,27 @@ class TestStacker(unittest.TestCase):
         with self.assertRaises(InvalidConfig):
             stacker.configure(args)
 
+    def test_stacker_build_custom_info_log_format(self):
+        stacker = Stacker()
+        args = stacker.parse_args(
+            [
+                "build", "-r", "us-west-2",
+                "stacker/tests/fixtures/not-basic.env",
+                "stacker/tests/fixtures/vpc-custom-log-format-info.yaml"
+            ]
+        )
+        stacker.configure(args)
+        self.assertEqual(
+            stacker.config.log_formats["info"],
+            '[%(asctime)s] test custom log format - %(message)s'
+        )
+        self.assertIsNone(
+            stacker.config.log_formats.get("color")
+        )
+        self.assertIsNone(
+            stacker.config.log_formats.get("debug")
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

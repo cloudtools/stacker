@@ -24,34 +24,36 @@ class Stacker(BaseCommand):
     subcommands = (Build, Destroy, Info, Diff, Graph)
 
     def configure(self, options, **kwargs):
-        super(Stacker, self).configure(options, **kwargs)
-        if options.interactive:
-            logger.info("Using interactive AWS provider mode.")
-        else:
-            logger.info("Using default AWS provider mode")
 
         session_cache.default_profile = options.profile
 
-        config = load_config(
+        self.config = load_config(
             options.config.read(),
             environment=options.environment,
-            validate=True)
+            validate=True,
+        )
 
         options.provider_builder = default.ProviderBuilder(
             region=options.region,
             interactive=options.interactive,
             replacements_only=options.replacements_only,
             recreate_failed=options.recreate_failed,
-            service_role=config.service_role,
+            service_role=self.config.service_role,
         )
 
         options.context = Context(
             environment=options.environment,
-            config=config,
+            config=self.config,
             # Allow subcommands to provide any specific kwargs to the Context
             # that it wants.
             **options.get_context_kwargs(options)
         )
+
+        super(Stacker, self).configure(options, **kwargs)
+        if options.interactive:
+            logger.info("Using interactive AWS provider mode.")
+        else:
+            logger.info("Using default AWS provider mode")
 
     def add_arguments(self, parser):
         parser.add_argument("--version", action="version",

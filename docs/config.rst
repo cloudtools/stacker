@@ -469,6 +469,28 @@ Here's an example of a target that will execute all "database" stacks::
       required_by:
         - databases
 
+Custom Log Formats
+------------------
+
+By default, stacker uses the following `log_formats`::
+
+  log_formats:
+    info: "[%(asctime)s] %(message)s"
+    color: "[%(asctime)s] \033[%(color)sm%(message)s\033[39m"
+    debug: "[%(asctime)s] %(levelname)s %(threadName)s %(name)s:%(lineno)d(%(funcName)s): %(message)s"
+
+You may optionally provide custom `log_formats`.
+
+You may use any of the standard Python
+[logging module format attributes](https://docs.python.org/2.7/library/logging.html#logrecord-attributes)
+when building your `log_formats`.
+
+In this example, we add the environment name to each log line::
+
+  log_formats:
+    info: "[%(asctime)s] ${environment} %(message)s"
+    color: "[%(asctime)s] ${environment} \033[%(color)sm%(message)s\033[39m"
+
 Variables
 ==========
 

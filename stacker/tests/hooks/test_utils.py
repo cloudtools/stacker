@@ -40,6 +40,10 @@ def result_hook(*args, **kwargs):
     return {"foo": "bar"}
 
 
+def kwargs_hook(*args, **kwargs):
+    return kwargs
+
+
 class TestHooks(unittest.TestCase):
 
     def setUp(self):
@@ -156,3 +160,20 @@ class TestHooks(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             handle_hooks("result", hooks, "us-east-1", self.context)
+
+    def test_resolve_lookups_in_args(self):
+        hooks = [
+            Hook({
+                "path": "stacker.tests.hooks.test_utils.kwargs_hook",
+                "data_key": "my_hook_results",
+                "args": {
+                    "default_lookup": "${default env_var::default_value}"
+                }
+            })
+        ]
+        handle_hooks("lookups", hooks, "us-east-1", self.context)
+
+        self.assertEqual(
+            self.context.hook_data["my_hook_results"]["default_lookup"],
+            "default_value"
+        )

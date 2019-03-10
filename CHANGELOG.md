@@ -1,5 +1,7 @@
 ## Upcoming release
 
+- add the ability to resolve native lookups in hook args
+
 ## 1.6.0 (2019-01-21)
 
 - New lookup format/syntax, making it more generic [GH-665]

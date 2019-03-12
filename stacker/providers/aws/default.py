@@ -698,7 +698,7 @@ class Provider(BaseProvider):
 
     def create_stack(self, fqn, template, parameters, tags,
                      force_change_set=False, stack_policy=None,
-                     notification_arns=[],**kwargs):
+                     notification_arns=[], **kwargs):
         """Create a new Cloudformation stack.
 
         Args:
@@ -987,7 +987,8 @@ class Provider(BaseProvider):
         )
 
     def default_update_stack(self, fqn, template, old_parameters, parameters,
-                             tags, stack_policy=None, notification_arns=[], **kwargs):
+                             tags, stack_policy=None,
+                             notification_arns=[], **kwargs):
         """Update a Cloudformation stack in default mode.
 
         Args:

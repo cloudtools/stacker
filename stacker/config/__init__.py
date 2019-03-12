@@ -334,7 +334,8 @@ class Stack(Model):
 
     in_progress_behavior = StringType(serialize_when_none=False)
 
-    notification_arns = ListType(StringType, serialize_when_none=False, default=[])
+    notification_arns = ListType(
+        StringType, serialize_when_none=False, default=[])
 
     def validate_class_path(self, data, value):
         if value and data["template_path"]:

@@ -59,7 +59,7 @@ class Stack(object):
     """
 
     def __init__(self, definition, context, variables=None, mappings=None,
-                 locked=False, force=False, enabled=True, protected=False):
+                 locked=False, force=False, enabled=True, protected=False, notification_arns=[]):
         self.logging = True
         self.name = definition.name
         self.fqn = context.get_fqn(definition.stack_name or self.name)
@@ -75,6 +75,7 @@ class Stack(object):
         self.context = context
         self.outputs = None
         self.in_progress_behavior = definition.in_progress_behavior
+        self.notification_arns = notification_arns
 
     def __repr__(self):
         return self.fqn

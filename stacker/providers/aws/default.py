@@ -301,7 +301,7 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
 
 def create_change_set(cfn_client, fqn, template, parameters, tags,
                       change_set_type='UPDATE', replacements_only=False,
-                      service_role=None):
+                      service_role=None, notification_arns=[]):
     logger.debug("Attempting to create change set of type %s for stack: %s.",
                  change_set_type,
                  fqn)
@@ -309,7 +309,8 @@ def create_change_set(cfn_client, fqn, template, parameters, tags,
         fqn, parameters, tags, template,
         change_set_type=change_set_type,
         service_role=service_role,
-        change_set_name=get_change_set_name()
+        change_set_name=get_change_set_name(),
+        notification_arns=notification_arns
     )
     try:
         response = cfn_client.create_change_set(**args)
@@ -384,7 +385,8 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
                                  change_set_type=None,
                                  service_role=None,
                                  stack_policy=None,
-                                 change_set_name=None):
+                                 change_set_name=None,
+                                 notification_arns=[]):
     """Used to generate the args for common cloudformation API interactions.
 
     This is used for create_stack/update_stack/create_change_set calls in
@@ -418,6 +420,7 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
         "Parameters": parameters,
         "Tags": tags,
         "Capabilities": capabilities,
+        "NotificationARNs": notification_arns
     }
 
     if service_role:
@@ -695,7 +698,7 @@ class Provider(BaseProvider):
 
     def create_stack(self, fqn, template, parameters, tags,
                      force_change_set=False, stack_policy=None,
-                     **kwargs):
+                     notification_arns=[],**kwargs):
         """Create a new Cloudformation stack.
 
         Args:
@@ -735,6 +738,7 @@ class Provider(BaseProvider):
                 fqn, parameters, tags, template,
                 service_role=self.service_role,
                 stack_policy=stack_policy,
+                notification_arns=notification_arns
             )
 
             try:
@@ -983,7 +987,7 @@ class Provider(BaseProvider):
         )
 
     def default_update_stack(self, fqn, template, old_parameters, parameters,
-                             tags, stack_policy=None, **kwargs):
+                             tags, stack_policy=None, notification_arns=[], **kwargs):
         """Update a Cloudformation stack in default mode.
 
         Args:
@@ -1005,6 +1009,7 @@ class Provider(BaseProvider):
             fqn, parameters, tags, template,
             service_role=self.service_role,
             stack_policy=stack_policy,
+            notification_arns=notification_arns
         )
 
         try:

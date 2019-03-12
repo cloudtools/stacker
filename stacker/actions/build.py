@@ -341,7 +341,8 @@ class Action(BaseAction):
             logger.debug("Creating new stack: %s", stack.fqn)
             provider.create_stack(stack.fqn, template, parameters, tags,
                                   force_change_set,
-                                  stack_policy=stack_policy)
+                                  stack_policy=stack_policy,
+                                  notification_arns=stack.notification_arns)
             return SubmittedStatus("creating new stack")
 
         try:
@@ -359,6 +360,7 @@ class Action(BaseAction):
                     force_interactive=stack.protected,
                     force_change_set=force_change_set,
                     stack_policy=stack_policy,
+                    notification_arns=stack.notification_arns
                 )
 
                 logger.debug("Updating existing stack: %s", stack.fqn)

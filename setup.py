@@ -59,6 +59,7 @@ if __name__ == "__main__":
         install_requires=install_requires,
         tests_require=tests_require,
         setup_requires=setup_requires,
+        extras_require=dict(testing=tests_require),
         test_suite="nose.collector",
         classifiers=[
             "Development Status :: 5 - Production/Stable",

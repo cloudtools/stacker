@@ -9,10 +9,8 @@ src_dir = os.path.dirname(__file__)
 install_requires = [
     "future",
     "troposphere>=1.9.0",
-    # pinning needed till https://github.com/spulec/moto/issues/1924 is
-    # resolved
-    "botocore<1.11.0",
-    "boto3>=1.7.0,<1.8.0",
+    "botocore",
+    "boto3>=1.9.111<2.0",
     "PyYAML>=3.13b1",
     "awacs>=0.6.0",
     "gitpython>=2.0,<3.0",
@@ -23,11 +21,8 @@ install_requires = [
 ]
 
 tests_require = [
-    # pinning needed till https://github.com/spulec/moto/issues/1924 is
-    # resolved
-    "aws-xray-sdk==1.1.2",
     "mock~=2.0.0",
-    "moto~=1.1.24",
+    "moto~=1.3.7",
     "testfixtures~=4.10.0",
     "coverage~=4.3.4",
     "flake8-future-import",
@@ -64,6 +59,7 @@ if __name__ == "__main__":
         install_requires=install_requires,
         tests_require=tests_require,
         setup_requires=setup_requires,
+        extras_require=dict(testing=tests_require),
         test_suite="nose.collector",
         classifiers=[
             "Development Status :: 5 - Production/Stable",

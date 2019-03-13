@@ -30,10 +30,11 @@ def get_template_path(filename):
 
     """
     if os.path.isfile(filename):
-        return filename
+        return os.path.abspath(filename)
     for i in sys.path:
         if os.path.isfile(os.path.join(i, filename)):
-            return os.path.join(i, filename)
+            return os.path.abspath(os.path.join(i, filename))
+
     return None
 
 

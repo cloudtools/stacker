@@ -4,10 +4,12 @@ from __future__ import absolute_import
 from builtins import object
 import collections
 import logging
+import threading
 
 from stacker.config import Config
 from .stack import Stack
 from .target import Target
+from .hooks import ActionHooks
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,8 @@ class Context(object):
         self.config = config or Config()
         self.force_stacks = force_stacks or []
         self.hook_data = {}
+
+        self._hook_lock = threading.RLock()
 
     @property
     def namespace(self):
@@ -136,6 +140,7 @@ class Context(object):
             for target_def in self.config.targets or []:
                 target = Target(target_def)
                 targets.append(target)
+
             self._targets = targets
         return self._targets
 
@@ -183,6 +188,9 @@ class Context(object):
         """
         return get_fqn(self._base_fqn, self.namespace_delimiter, name)
 
+    def get_hooks_for_action(self, action_name):
+        return ActionHooks.from_config(self.config, action_name)
+
     def set_hook_data(self, key, data):
         """Set hook data for the given key.
 
@@ -201,4 +209,5 @@ class Context(object):
             raise KeyError("Hook data for key %s already exists, each hook "
                            "must have a unique data_key.", key)
 
-        self.hook_data[key] = data
+        with self._hook_lock:
+            self.hook_data[key] = data

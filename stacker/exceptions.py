@@ -273,3 +273,20 @@ class GraphError(Exception):
             "as a dependency of '%s': %s"
         ) % (dependency, stack, str(exception))
         super(GraphError, self).__init__(message)
+
+
+class HookExecutionFailed(Exception):
+    """Raised when running a required hook fails"""
+
+    def __init__(self, hook, result=None, exception=None):
+        self.hook = hook
+        self.result = result
+        self.exception = exception
+
+        if self.exception:
+            message = ("Hook '{}' threw exception: {}".format(
+                hook.name, exception))
+        else:
+            message = ("Hook '{}' failed (result: {})".format(
+                hook.name, result))
+        super(HookExecutionFailed, self).__init__(message)

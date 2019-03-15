@@ -3,23 +3,21 @@ from __future__ import division
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
+import os
+import string
 
 import unittest
-
-import string
-import os
-import queue
-
 import mock
 
 import boto3
 
-from stacker.config import Hook, GitPackageSource
+from stacker.config import GitPackageSource
+from stacker.exceptions import HookExecutionFailed
+from stacker.hooks import Hook
 from stacker.util import (
     cf_safe_name,
     load_object_from_string,
     camel_to_snake,
-    handle_hooks,
     merge_map,
     yaml_to_ordered_dict,
     get_client_region,
@@ -274,28 +272,7 @@ Outputs:
             )
 
 
-hook_queue = queue.Queue()
-
-
-def mock_hook(*args, **kwargs):
-    hook_queue.put(kwargs)
-    return True
-
-
-def fail_hook(*args, **kwargs):
-    return None
-
-
-def exception_hook(*args, **kwargs):
-    raise Exception
-
-
-def context_hook(*args, **kwargs):
-    return "context" in kwargs
-
-
-def result_hook(*args, **kwargs):
-    return {"foo": "bar"}
+mock_hook = mock.Mock()
 
 
 class TestHooks(unittest.TestCase):
@@ -304,116 +281,103 @@ class TestHooks(unittest.TestCase):
         self.context = mock_context(namespace="namespace")
         self.provider = mock_provider(region="us-east-1")
 
-    def test_empty_hook_stage(self):
-        hooks = []
-        handle_hooks("fake", hooks, self.provider, self.context)
-        self.assertTrue(hook_queue.empty())
+        global mock_hook
+        mock_hook = mock.Mock()
 
     def test_missing_required_hook(self):
-        hooks = [Hook({"path": "not.a.real.path", "required": True})]
-        with self.assertRaises(ImportError):
-            handle_hooks("missing", hooks, self.provider, self.context)
+        hook = Hook("test", path="not.a.real.path", required=True)
+
+        with self.assertRaises(HookExecutionFailed) as raised:
+            hook.run(self.provider, self.context)
+            self.assertIsInstance(ImportError, raised.exception.exception)
 
     def test_missing_required_hook_method(self):
-        hooks = [{"path": "stacker.hooks.blah", "required": True}]
-        with self.assertRaises(AttributeError):
-            handle_hooks("missing", hooks, self.provider, self.context)
+        hook = Hook("test", path="stacker.hooks.blah", required=True)
+
+        with self.assertRaises(HookExecutionFailed) as raised:
+            hook.run(self.provider, self.context)
+            self.assertIsInstance(AttributeError, raised.exception.exception)
 
     def test_missing_non_required_hook_method(self):
-        hooks = [Hook({"path": "stacker.hooks.blah", "required": False})]
-        handle_hooks("missing", hooks, self.provider, self.context)
-        self.assertTrue(hook_queue.empty())
+        hook = Hook("test", path="stacker.hooks.blah", required=False)
+
+        result = hook.run(self.provider, self.context)
+        self.assertIsNone(result)
 
     def test_default_required_hook(self):
-        hooks = [Hook({"path": "stacker.hooks.blah"})]
-        with self.assertRaises(AttributeError):
-            handle_hooks("missing", hooks, self.provider, self.context)
+        hook = Hook("test", path="stacker.hooks.blah")
 
-    def test_valid_hook(self):
-        hooks = [
-            Hook({"path": "stacker.tests.test_util.mock_hook",
-                  "required": True})]
-        handle_hooks("missing", hooks, self.provider, self.context)
-        good = hook_queue.get_nowait()
-        self.assertEqual(good["provider"].region, "us-east-1")
-        with self.assertRaises(queue.Empty):
-            hook_queue.get_nowait()
+        with self.assertRaises(HookExecutionFailed) as raised:
+            hook.run(self.provider, self.context)
+            self.assertIsInstance(AttributeError, raised.exception.exception)
 
     def test_valid_enabled_hook(self):
-        hooks = [
-            Hook({"path": "stacker.tests.test_util.mock_hook",
-                  "required": True, "enabled": True})]
-        handle_hooks("missing", hooks, self.provider, self.context)
-        good = hook_queue.get_nowait()
-        self.assertEqual(good["provider"].region, "us-east-1")
-        with self.assertRaises(queue.Empty):
-            hook_queue.get_nowait()
+        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
+                    required=True, enabled=True)
 
-    def test_valid_enabled_false_hook(self):
-        hooks = [
-            Hook({"path": "stacker.tests.test_util.mock_hook",
-                  "required": True, "enabled": False})]
-        handle_hooks("missing", hooks, self.provider, self.context)
-        self.assertTrue(hook_queue.empty())
+        result = mock_hook.return_value = mock.Mock()
+        self.assertIs(result, hook.run(self.provider, self.context))
+        mock_hook.assert_called_once()
+
+    def test_valid_disabled_hook(self):
+        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
+                    required=True, enabled=False)
+
+        self.assertIsNone(hook.run(self.provider, self.context))
+        mock_hook.assert_not_called()
 
     def test_context_provided_to_hook(self):
-        hooks = [
-            Hook({"path": "stacker.tests.test_util.context_hook",
-                  "required": True})]
-        handle_hooks("missing", hooks, "us-east-1", self.context)
+        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
+                    required=True)
+
+        def return_context(*args, **kwargs):
+            return kwargs['context']
+
+        mock_hook.side_effect = return_context
+        result = hook.run(self.provider, self.context)
+        self.assertIs(result, self.context)
 
     def test_hook_failure(self):
-        hooks = [
-            Hook({"path": "stacker.tests.test_util.fail_hook",
-                  "required": True})]
-        with self.assertRaises(SystemExit):
-            handle_hooks("fail", hooks, self.provider, self.context)
-        hooks = [{"path": "stacker.tests.test_util.exception_hook",
-                  "required": True}]
-        with self.assertRaises(Exception):
-            handle_hooks("fail", hooks, self.provider, self.context)
-        hooks = [
-            Hook({"path": "stacker.tests.test_util.exception_hook",
-                  "required": False})]
-        # Should pass
-        handle_hooks("ignore_exception", hooks, self.provider, self.context)
+        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
+                    required=True)
+
+        err = Exception()
+        mock_hook.side_effect = err
+
+        with self.assertRaises(HookExecutionFailed) as raised:
+            hook.run(self.provider, self.context)
+            self.assertIs(hook, raised.exception.hook)
+            self.assertIs(err, raised.exception.exception)
+
+    def test_hook_failure_skip(self):
+        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
+                    required=False)
+
+        mock_hook.side_effect = Exception()
+        result = hook.run(self.provider, self.context)
+        self.assertIsNone(result)
 
     def test_return_data_hook(self):
-        hooks = [
-            Hook({
-                "path": "stacker.tests.test_util.result_hook",
-                "data_key": "my_hook_results"
-            }),
-            # Shouldn't return data
-            Hook({
-                "path": "stacker.tests.test_util.context_hook"
-            })
-        ]
-        handle_hooks("result", hooks, "us-east-1", self.context)
+        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
+                    data_key='test')
+        hook_data = {'hello': 'world'}
+        mock_hook.return_value = hook_data
 
-        self.assertEqual(
-            self.context.hook_data["my_hook_results"]["foo"],
-            "bar"
-        )
-        # Verify only the first hook resulted in stored data
-        self.assertEqual(
-            list(self.context.hook_data.keys()), ["my_hook_results"]
-        )
+        result = hook.run(self.provider, self.context)
+        self.assertEqual(hook_data, result)
+        self.assertEqual(hook_data, self.context.hook_data.get('test'))
 
     def test_return_data_hook_duplicate_key(self):
-        hooks = [
-            Hook({
-                "path": "stacker.tests.test_util.result_hook",
-                "data_key": "my_hook_results"
-            }),
-            Hook({
-                "path": "stacker.tests.test_util.result_hook",
-                "data_key": "my_hook_results"
-            })
-        ]
+        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
+                    data_key='test')
+        mock_hook.return_value = {'foo': 'bar'}
 
+        hook_data = {'hello': 'world'}
+        self.context.set_hook_data('test', hook_data)
         with self.assertRaises(KeyError):
-            handle_hooks("result", hooks, "us-east-1", self.context)
+            hook.run(self.provider, self.context)
+
+        self.assertEqual(hook_data, self.context.hook_data['test'])
 
 
 class TestException1(Exception):

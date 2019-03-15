@@ -138,7 +138,7 @@ class Context(object):
         if not hasattr(self, "_targets"):
             targets = []
             for target_def in self.config.targets or []:
-                target = Target(target_def)
+                target = Target.from_definition(target_def)
                 targets.append(target)
 
             self._targets = targets

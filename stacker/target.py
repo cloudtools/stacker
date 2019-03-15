@@ -9,8 +9,15 @@ class Target(object):
     a set of stacks together that can be targeted with the `--targets` flag.
     """
 
-    def __init__(self, definition):
-        self.name = definition.name
-        self.requires = definition.requires or []
-        self.required_by = definition.required_by or []
-        self.logging = False
+    @classmethod
+    def from_definition(cls, definition):
+        return cls(name=definition.name,
+                   requires=definition.requires,
+                   required_by=definition.required_by,
+                   logging=False)
+
+    def __init__(self, name, requires=None, required_by=None, logging=False):
+        self.name = name
+        self.requires = list(requires or [])
+        self.required_by = list(required_by or [])
+        self.logging = logging

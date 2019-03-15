@@ -8,6 +8,7 @@ import time
 import uuid
 import threading
 
+from .stack import Stack
 from .util import stack_template_key_name
 from .exceptions import (
     GraphError,
@@ -44,26 +45,51 @@ def log_step(step):
 class Step(object):
     """State machine for executing generic actions related to stacks.
     Args:
-        stack (:class:`stacker.stack.Stack`): the stack associated
-            with this step
+        subject (Union[Stack, Target, Hook]): the subject associated with this
+            step. Usually a Stack, Target or Hook.
         fn (func): the function to run to execute the step. This function will
             be ran multiple times until the step is "done".
         watch_func (func): an optional function that will be called to "tail"
             the step action.
     """
 
-    def __init__(self, stack, fn, watch_func=None):
-        self.stack = stack
+    @classmethod
+    def from_stack(cls, stack, fn, **kwargs):
+        kwargs.setdefault('logging', stack.logging)
+        return cls(stack.name, subject=stack, fn=fn, **kwargs)
+
+    @classmethod
+    def from_target(cls, target, fn, **kwargs):
+        kwargs.setdefault('logging', True)
+        return cls(target.name, subject=target, fn=fn, **kwargs)
+
+    @classmethod
+    def from_hook(cls, hook, fn, **kwargs):
+        kwargs.setdefault('logging', True)
+        return cls(hook.name, subject=hook, fn=fn, **kwargs)
+
+    def __init__(self, name, fn, subject=None, watch_func=None, requires=None,
+                 required_by=None, logging=False):
+        self.name = name
+        self.subject = subject
+        self.fn = fn
+
+        self.watch_func = watch_func
+        self.requires = set(requires or [])
+        self.required_by = set(required_by or [])
+        if subject is not None:
+            self.requires.update(subject.requires or [])
+            self.required_by.update(subject.required_by or [])
+        self.logging = logging
+
         self.status = PENDING
         self.last_updated = time.time()
-        self.fn = fn
-        self.watch_func = watch_func
 
     def __repr__(self):
-        return "<stacker.plan.Step:%s>" % (self.stack.name,)
+        return "<stacker.plan.Step:%s>" % (self.name,)
 
     def __str__(self):
-        return self.stack.name
+        return self.name
 
     def run(self):
         """Runs this step until it has completed successfully, or been
@@ -75,7 +101,7 @@ class Step(object):
         if self.watch_func:
             watcher = threading.Thread(
                 target=self.watch_func,
-                args=(self.stack, stop_watcher)
+                args=(self.subject, stop_watcher)
             )
             watcher.start()
 
@@ -90,24 +116,12 @@ class Step(object):
 
     def _run_once(self):
         try:
-            status = self.fn(self.stack, status=self.status)
+            status = self.fn(self.subject, status=self.status)
         except Exception as e:
             logger.exception(e)
             status = FailedStatus(reason=str(e))
         self.set_status(status)
         return status
-
-    @property
-    def name(self):
-        return self.stack.name
-
-    @property
-    def requires(self):
-        return self.stack.requires
-
-    @property
-    def required_by(self):
-        return self.stack.required_by
 
     @property
     def completed(self):
@@ -147,11 +161,10 @@ class Step(object):
                 step to.
         """
         if status is not self.status:
-            logger.debug("Setting %s state to %s.", self.stack.name,
-                         status.name)
+            logger.debug("Setting %s state to %s.", self.name, status.name)
             self.status = status
             self.last_updated = time.time()
-            if self.stack.logging:
+            if self.logging:
                 log_step(self)
 
     def complete(self):
@@ -231,6 +244,7 @@ class Graph(object):
     Example:
 
     >>> dag = DAG()
+    >>> def build(*args, **kwargs): return COMPLETE
     >>> a = Step("a", fn=build)
     >>> b = Step("b", fn=build)
     >>> dag.add_step(a)
@@ -335,11 +349,14 @@ class Plan(object):
             os.makedirs(directory)
 
         def walk_func(step):
-            step.stack.resolve(
+            if not isinstance(step.subject, Stack):
+                return True
+
+            step.subject.resolve(
                 context=context,
                 provider=provider,
             )
-            blueprint = step.stack.blueprint
+            blueprint = step.subject.blueprint
             filename = stack_template_key_name(blueprint)
             path = os.path.join(directory, filename)
 

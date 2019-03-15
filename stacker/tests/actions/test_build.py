@@ -228,7 +228,7 @@ class TestLaunchStack(TestBuildAction):
 
         plan = self.build_action._generate_plan()
         self.step = plan.steps[0]
-        self.step.stack = self.stack
+        self.step.subject = self.stack
 
         def patch_object(*args, **kwargs):
             m = mock.patch.object(*args, **kwargs)

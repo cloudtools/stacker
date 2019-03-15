@@ -81,12 +81,11 @@ def plan(description, stack_action, context,
     def target_fn(*args, **kwargs):
         return COMPLETE
 
-    steps = [
-        Step(stack, fn=stack_action, watch_func=tail)
-        for stack in context.get_stacks()]
+    steps = [Step.from_stack(stack, fn=stack_action, watch_func=tail)
+             for stack in context.get_stacks()]
 
-    steps += [
-        Step(target, fn=target_fn) for target in context.get_targets()]
+    steps += [Step.from_target(target, fn=target_fn)
+              for target in context.get_targets()]
 
     graph = build_graph(steps)
 

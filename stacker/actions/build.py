@@ -3,11 +3,10 @@ from __future__ import division
 from __future__ import absolute_import
 import logging
 
-from .base import BaseAction, plan, build_walker
+from .base import BaseAction, build_walker
 from .base import STACK_POLL_TIME
 
 from ..providers.base import Template
-from .. import util
 from ..exceptions import (
     MissingParameterException,
     StackDidNotChange,
@@ -179,29 +178,6 @@ def _handle_missing_parameters(parameter_values, all_params, required_params,
         raise MissingParameterException(final_missing)
 
     return list(parameter_values.items())
-
-
-def handle_hooks(stage, hooks, provider, context, dump, outline):
-    """Handle pre/post hooks.
-
-    Args:
-        stage (str): The name of the hook stage - pre_build/post_build.
-        hooks (list): A list of dictionaries containing the hooks to execute.
-        provider (:class:`stacker.provider.base.BaseProvider`): The provider
-            the current stack is using.
-        context (:class:`stacker.context.Context`): The current stacker
-            context.
-        dump (bool): Whether running with dump set or not.
-        outline (bool): Whether running with outline set or not.
-
-    """
-    if not outline and not dump and hooks:
-        util.handle_hooks(
-            stage=stage,
-            hooks=hooks,
-            provider=provider,
-            context=context
-        )
 
 
 class Action(BaseAction):
@@ -391,26 +367,19 @@ class Action(BaseAction):
         if stack.stack_policy:
             return Template(body=stack.stack_policy)
 
-    def _generate_plan(self, tail=False):
-        return plan(
+    def _generate_plan(self, tail=False, outline=False, dump=False):
+        return self.plan(
             description="Create/Update stacks",
-            stack_action=self._launch_stack,
+            action_name="build",
+            action=self._launch_stack,
             tail=self._tail_stack if tail else None,
-            context=self.context)
+            context=self.context,
+            run_hooks=not outline and not dump)
 
     def pre_run(self, outline=False, dump=False, *args, **kwargs):
         """Any steps that need to be taken prior to running the action."""
         if should_ensure_cfn_bucket(outline, dump):
             self.ensure_cfn_bucket()
-        hooks = self.context.config.pre_build
-        handle_hooks(
-            "pre_build",
-            hooks,
-            self.provider,
-            self.context,
-            dump,
-            outline
-        )
 
     def run(self, concurrency=0, outline=False,
             tail=False, dump=False, *args, **kwargs):
@@ -419,7 +388,7 @@ class Action(BaseAction):
         This is the main entry point for the Builder.
 
         """
-        plan = self._generate_plan(tail=tail)
+        plan = self._generate_plan(tail=tail, outline=outline, dump=dump)
         if not plan.keys():
             logger.warn('WARNING: No stacks detected (error in config?)')
         if not outline and not dump:
@@ -433,15 +402,3 @@ class Action(BaseAction):
             if dump:
                 plan.dump(directory=dump, context=self.context,
                           provider=self.provider)
-
-    def post_run(self, outline=False, dump=False, *args, **kwargs):
-        """Any steps that need to be taken after running the action."""
-        hooks = self.context.config.post_build
-        handle_hooks(
-            "post_build",
-            hooks,
-            self.provider,
-            self.context,
-            dump,
-            outline
-        )

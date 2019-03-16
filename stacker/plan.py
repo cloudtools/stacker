@@ -44,13 +44,15 @@ def log_step(step):
 
 class Step(object):
     """State machine for executing generic actions related to stacks.
+
     Args:
-        subject (Union[Stack, Target, Hook]): the subject associated with this
-            step. Usually a Stack, Target or Hook.
-        fn (func): the function to run to execute the step. This function will
-            be ran multiple times until the step is "done".
-        watch_func (func): an optional function that will be called to "tail"
-            the step action.
+        subject: the subject associated with this
+            step. Usually a :class:`stacker.stack.Stack`,
+                :class:`stacker.target.Target` or :class:`stacker.hooks.Hook`
+        fn (funcb): the function to run to execute the step. This function
+            will be ran multiple times until the step is "done".
+        watch_func (func): an optional function that will be called to
+            monitor the step action.
     """
 
     @classmethod
@@ -140,18 +142,20 @@ class Step(object):
 
     @property
     def done(self):
-        """Returns True if the step is finished (either COMPLETE, SKIPPED or FAILED)
+        """Whether this step is finished (either COMPLETE, SKIPPED or FAILED)
         """
         return self.completed or self.skipped or self.failed
 
     @property
     def ok(self):
-        """Returns True if the step is finished (either COMPLETE or SKIPPED)"""
+        """Whether this step is finished (either COMPLETE or SKIPPED)"""
         return self.completed or self.skipped
 
     @property
     def submitted(self):
-        """Returns True if the step is SUBMITTED, COMPLETE, or SKIPPED."""
+        """Whether this step is has been submitted (SUBMITTED, COMPLETE, or
+           SKIPPED).
+        """
         return self.status >= SUBMITTED
 
     def set_status(self, status):
@@ -179,58 +183,15 @@ class Step(object):
         """A shortcut for set_status(SUBMITTED)"""
         self.set_status(SUBMITTED)
 
+    def reverse_requirements(self):
+        """
+        Change this step so it is suitable for use in operations in reverse
+        dependency order.
 
-def build_plan(description, graph,
-               targets=None, reverse=False):
-    """Builds a plan from a list of steps.
-    Args:
-        description (str): an arbitrary string to
-            describe the plan.
-        graph (:class:`Graph`): a list of :class:`Graph` to execute.
-        targets (list): an optional list of step names to filter the graph to.
-            If provided, only these steps, and their transitive dependencies
-            will be executed. If no targets are specified, every node in the
-            graph will be executed.
-        reverse (bool): If provided, the graph will be walked in reverse order
-            (dependencies last).
-    """
-
-    # If we want to execute the plan in reverse (e.g. Destroy), transpose the
-    # graph.
-    if reverse:
-        graph = graph.transposed()
-
-    # If we only want to build a specific target, filter the graph.
-    if targets:
-        nodes = []
-        for target in targets:
-            for k, step in graph.steps.items():
-                if step.name == target:
-                    nodes.append(step.name)
-        graph = graph.filtered(nodes)
-
-    return Plan(description=description, graph=graph)
-
-
-def build_graph(steps):
-    """Builds a graph of steps.
-    Args:
-        steps (list): a list of :class:`Step` objects to execute.
-    """
-
-    graph = Graph()
-
-    for step in steps:
-        graph.add_step(step)
-
-    for step in steps:
-        for dep in step.requires:
-            graph.connect(step.name, dep)
-
-        for parent in step.required_by:
-            graph.connect(parent, step.name)
-
-    return graph
+        This can be used to correctly generate an action graph when destroying
+        stacks.
+        """
+        self.required_by, self.requires = self.requires, self.required_by
 
 
 class Graph(object):
@@ -252,10 +213,33 @@ class Graph(object):
     >>> dag.connect(a, b)
 
     Args:
-        steps (list): an optional list of :class:`Step` objects to execute.
+        steps (dict): an optional list of :class:`Step` objects to execute.
         dag (:class:`stacker.dag.DAG`): an optional :class:`stacker.dag.DAG`
             object. If one is not provided, a new one will be initialized.
     """
+
+    @classmethod
+    def from_steps(cls, steps):
+        """Builds a graph of steps respecting dependencies
+
+        Args:
+            steps (List[Step]): steps to include in the graph
+        Returns: :class:`Graph`: the resulting graph
+        """
+
+        graph = Graph()
+
+        for step in steps:
+            graph.add_step(step)
+
+        for step in steps:
+            for dep in step.requires:
+                graph.connect(step.name, dep)
+
+            for parent in step.required_by:
+                graph.connect(parent, step.name)
+
+        return graph
 
     def __init__(self, steps=None, dag=None):
         self.steps = steps or {}
@@ -301,6 +285,9 @@ class Graph(object):
         nodes = self.dag.topological_sort()
         return [self.steps[step_name] for step_name in nodes]
 
+    def get(self, name, default=None):
+        return self.steps.get(name, default)
+
     def to_dict(self):
         return self.dag.graph
 
@@ -311,6 +298,26 @@ class Plan(object):
         description (str): description of the plan.
         graph (:class:`Graph`): a graph of steps.
     """
+
+    @classmethod
+    def from_graph(cls, description, graph, targets=None):
+        """Builds a plan from a list of steps.
+
+        Args:
+            description (str): an arbitrary string to describe the plan.
+            graph (Graph): a :class:`Graph` to base the plan on
+            targets (list, optional): names of steps to include in the graph.
+                If provided, only these steps, and their transitive
+                dependencies will be executed. Otherwise, every node in the
+                graph will be executed.
+        Returns: Plan: the resulting plan
+        """
+
+        # If we only want to build a specific target, filter the graph.
+        if targets:
+            graph = graph.filtered(targets)
+
+        return Plan(description=description, graph=graph)
 
     def __init__(self, description, graph):
         self.id = uuid.uuid4()
@@ -418,3 +425,10 @@ class Plan(object):
 
     def keys(self):
         return self.step_names
+
+    def get(self, name, default=None):
+        for step in self.steps:
+            if step.name == name:
+                return step
+
+        return default

@@ -5,7 +5,7 @@ import logging
 import sys
 import json
 
-from .base import BaseAction, plan
+from .base import BaseAction
 
 
 logger = logging.getLogger(__name__)
@@ -55,9 +55,10 @@ FORMATTERS = {
 class Action(BaseAction):
 
     def _generate_plan(self):
-        return plan(
+        return self.plan(
             description="Print graph",
-            stack_action=None,
+            action_name='graph',
+            action=None,
             context=self.context)
 
     def run(self, format=None, reduce=False, *args, **kwargs):

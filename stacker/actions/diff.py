@@ -8,7 +8,7 @@ import json
 import logging
 from operator import attrgetter
 
-from .base import plan, build_walker
+from .base import build_walker
 from . import build
 from ..ui import ui
 from .. import exceptions
@@ -278,9 +278,10 @@ class Action(build.Action):
         return COMPLETE
 
     def _generate_plan(self):
-        return plan(
+        return self.plan(
             description="Diff stacks",
-            stack_action=self._diff_stack,
+            action_name="diff",
+            action=self._diff_stack,
             context=self.context)
 
     def run(self, concurrency=0, *args, **kwargs):

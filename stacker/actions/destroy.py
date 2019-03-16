@@ -3,10 +3,9 @@ from __future__ import division
 from __future__ import absolute_import
 import logging
 
-from .base import BaseAction, plan, build_walker
+from .base import BaseAction, build_walker
 from .base import STACK_POLL_TIME
 from ..exceptions import StackDoesNotExist
-from .. import util
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
@@ -37,12 +36,14 @@ class Action(BaseAction):
     """
 
     def _generate_plan(self, tail=False):
-        return plan(
+        return self.plan(
             description="Destroy stacks",
-            stack_action=self._destroy_stack,
+            action_name='destroy',
+            action=self._destroy_stack,
             tail=self._tail_stack if tail else None,
             context=self.context,
-            reverse=True)
+            reverse=True,
+            run_hooks=True)
 
     def _destroy_stack(self, stack, **kwargs):
         old_status = kwargs.get("status")
@@ -78,16 +79,6 @@ class Action(BaseAction):
             provider.destroy_stack(provider_stack)
         return DestroyingStatus
 
-    def pre_run(self, outline=False, *args, **kwargs):
-        """Any steps that need to be taken prior to running the action."""
-        pre_destroy = self.context.config.pre_destroy
-        if not outline and pre_destroy:
-            util.handle_hooks(
-                stage="pre_destroy",
-                hooks=pre_destroy,
-                provider=self.provider,
-                context=self.context)
-
     def run(self, force, concurrency=0, tail=False, *args, **kwargs):
         plan = self._generate_plan(tail=tail)
         if not plan.keys():
@@ -101,13 +92,3 @@ class Action(BaseAction):
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "
                                  "flag.")
-
-    def post_run(self, outline=False, *args, **kwargs):
-        """Any steps that need to be taken after running the action."""
-        post_destroy = self.context.config.post_destroy
-        if not outline and post_destroy:
-            util.handle_hooks(
-                stage="post_destroy",
-                hooks=post_destroy,
-                provider=self.provider,
-                context=self.context)

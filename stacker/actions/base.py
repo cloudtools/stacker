@@ -8,20 +8,14 @@ import logging
 import threading
 
 from ..dag import walk, ThreadedWalker, UnlimitedSemaphore
-from ..plan import Step, build_plan, build_graph
+from ..plan import Graph, Plan, Step
+from ..target import Target
 
 import botocore.exceptions
 from stacker.session_cache import get_session
-from stacker.exceptions import PlanFailed
-
-from ..status import (
-    COMPLETE
-)
-
-from stacker.util import (
-    ensure_s3_bucket,
-    get_s3_endpoint,
-)
+from stacker.exceptions import HookExecutionFailed, PlanFailed
+from stacker.status import COMPLETE, SKIPPED, FailedStatus
+from stacker.util import ensure_s3_bucket, get_s3_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -59,41 +53,6 @@ def build_walker(concurrency):
         semaphore = threading.Semaphore(concurrency)
 
     return ThreadedWalker(semaphore).walk
-
-
-def plan(description, stack_action, context,
-         tail=None, reverse=False):
-    """A simple helper that builds a graph based plan from a set of stacks.
-
-    Args:
-        description (str): a description of the plan.
-        action (func): a function to call for each stack.
-        context (:class:`stacker.context.Context`): a
-            :class:`stacker.context.Context` to build the plan from.
-        tail (func): an optional function to call to tail the stack progress.
-        reverse (bool): if True, execute the graph in reverse (useful for
-            destroy actions).
-
-    Returns:
-        :class:`plan.Plan`: The resulting plan object
-    """
-
-    def target_fn(*args, **kwargs):
-        return COMPLETE
-
-    steps = [Step.from_stack(stack, fn=stack_action, watch_func=tail)
-             for stack in context.get_stacks()]
-
-    steps += [Step.from_target(target, fn=target_fn)
-              for target in context.get_targets()]
-
-    graph = build_graph(steps)
-
-    return build_plan(
-        description=description,
-        graph=graph,
-        targets=context.stack_names,
-        reverse=reverse)
 
 
 def stack_template_key_name(blueprint):
@@ -154,6 +113,124 @@ class BaseAction(object):
         if not self.bucket_region and provider_builder:
             self.bucket_region = provider_builder.region
         self.s3_conn = get_session(self.bucket_region).client('s3')
+
+    def plan(self, description, action_name, action, context, tail=None,
+             reverse=False, run_hooks=True):
+        """A simple helper that builds a graph based plan from a set of stacks.
+
+        Args:
+            description (str): a description of the plan.
+            action_name (str): name of the action being run. Used to generate
+                target names and filter out which hooks to run.
+            action (func): a function to call for each stack.
+            context (stacker.context.Context): a context to build the plan
+                from.
+            tail (func): an optional function to call to tail the stack
+                progress.
+            reverse (bool): whether to flip the direction of stack and target
+                dependencies. Use it when planning an action destroying
+                resources, which usually must happen in the reverse order
+                of creation.
+                Note: this does not change the order of execution of hooks, or
+                their dependencies, as the build and destroy hooks are
+                currently configured in separate.
+            run_hooks (bool): whether to run hooks configured for this action
+
+        Returns: stacker.plan.Plan: the resulting plan for this action
+        """
+
+        def target_fn(*args, **kwargs):
+            return COMPLETE
+
+        def hook_fn(hook, *args, **kwargs):
+            provider = self.provider_builder.build(profile=hook.profile,
+                                                   region=hook.region)
+
+            try:
+                result = hook.run(provider, self.context)
+            except HookExecutionFailed as e:
+                return FailedStatus(reason=str(e))
+
+            if result is None:
+                return SKIPPED
+
+            return COMPLETE
+
+        pre_hooks_target = Target(
+            name="pre_{}_run_hooks".format(action_name))
+        pre_action_target = Target(
+            name="pre_{}".format(action_name),
+            requires=[pre_hooks_target.name])
+        action_target = Target(
+            name=action_name,
+            requires=[pre_action_target.name])
+        post_action_target = Target(
+            name="post_{}".format(action_name),
+            requires=[action_target.name])
+        post_hooks_target = Target(
+            name="post_{}_run_hooks".format(action_name),
+            requires=[post_action_target.name])
+
+        def steps():
+            yield Step.from_target(pre_hooks_target, fn=target_fn)
+            yield Step.from_target(pre_action_target, fn=target_fn)
+            yield Step.from_target(action_target, fn=target_fn)
+            yield Step.from_target(post_action_target, fn=target_fn)
+            yield Step.from_target(post_hooks_target, fn=target_fn)
+
+            if run_hooks:
+                # Since we need to maintain compatibility with legacy hooks,
+                # we separate them completely from the new hooks.
+                # The legacy hooks will run in two separate phases, completely
+                # isolated from regular stacks and targets, and any of the new
+                # hooks.
+                # Hence, all legacy pre-hooks will finish before any of the
+                # new hooks, and all legacy post-hooks will only start after
+                # the new hooks.
+
+                hooks = self.context.get_hooks_for_action(action_name)
+
+                for hook in hooks.pre:
+                    yield Step.from_hook(
+                        hook, fn=hook_fn,
+                        required_by=[pre_hooks_target.name])
+
+                for hook in hooks.custom:
+                    yield Step.from_hook(
+                        hook, fn=hook_fn,
+                        requires=[pre_action_target.name],
+                        required_by=[post_action_target.name])
+
+                for hook in hooks.post:
+                    yield Step.from_hook(
+                        hook, fn=hook_fn,
+                        requires=[post_hooks_target.name])
+
+            for target in context.get_targets():
+                step = Step.from_target(target, fn=target_fn)
+                if reverse:
+                    step.reverse_requirements()
+
+                yield step
+
+            for stack in context.get_stacks():
+                step = Step.from_stack(stack, fn=action, watch_func=tail)
+                if reverse:
+                    step.reverse_requirements()
+
+                # Contain stack execution in the boundaries of the pre_action
+                # and post_action targets.
+                step.requires.add(pre_action_target.name)
+                step.required_by.add(action_target.name)
+
+                yield step
+
+        graph = Graph.from_steps(list(steps()))
+
+        return Plan.from_graph(
+            description=description,
+            graph=graph,
+            targets=context.stack_names)
 
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""

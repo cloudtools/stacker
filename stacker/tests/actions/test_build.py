@@ -80,6 +80,22 @@ class TestBuildAction(unittest.TestCase):
                         "else": "${output bastion::something}"}},
                 {"name": "other", "variables": {}}
             ],
+            "build_hooks": [
+                {"name": "before-db-hook",
+                 "path": "stacker.hooks.no_op",
+                 "required_by": ["db"]},
+                {"name": "after-db-hook",
+                 "path": "stacker.hooks.no_op",
+                 "requires": ["db"]}
+            ],
+            "pre_build": [
+                {"name": "pre-build-hook",
+                 "path": "stacker.hooks.no_op"}
+            ],
+            "post_build": [
+                {"name": "post-build-hook",
+                 "path": "stacker.hooks.no_op"}
+            ]
         })
         return Context(config=config, **kwargs)
 
@@ -130,14 +146,28 @@ class TestBuildAction(unittest.TestCase):
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context, cancel=MockThreadingEvent())
+
         plan = build_action._generate_plan()
+        plan.graph.transitive_reduction()
+
         self.assertEqual(
-            {
-                'db': set(['bastion', 'vpc']),
-                'bastion': set(['vpc']),
-                'other': set([]),
-                'vpc': set([])},
-            plan.graph.to_dict()
+            sorted({
+                'pre-build-hook': set(),
+                'pre_build_run_hooks': {'pre-build-hook'},
+                'pre_build': {'pre_build_run_hooks'},
+                'build': {'other', 'db'},
+                'post_build': {'build', 'after-db-hook'},
+                'post_build_run_hooks': {'post_build'},
+                'post-build-hook': {'post_build_run_hooks'},
+
+                'other': {'pre_build'},
+                'vpc': {'pre_build'},
+                'bastion': {'vpc'},
+                'before-db-hook': {'pre_build'},
+                'db': {'before-db-hook', 'bastion'},
+                'after-db-hook': {'db'},
+            }.items()),
+            sorted(plan.graph.to_dict().items())
         )
 
     def test_dont_execute_plan_when_outline_specified(self):
@@ -227,7 +257,8 @@ class TestLaunchStack(TestBuildAction):
         self.stack_status = None
 
         plan = self.build_action._generate_plan()
-        self.step = plan.steps[0]
+        self.step = next(step for step in plan.steps
+                         if step.name == self.stack.name)
         self.step.subject = self.stack
 
         def patch_object(*args, **kwargs):
@@ -244,9 +275,9 @@ class TestLaunchStack(TestBuildAction):
                     'Outputs': [],
                     'Tags': []}
 
-        def get_events(name, *args, **kwargs):
+        def get_events(*args, **kwargs):
             return [{'ResourceStatus': 'ROLLBACK_IN_PROGRESS',
-                    'ResourceStatusReason': 'CFN fail'}]
+                     'ResourceStatusReason': 'CFN fail'}]
 
         patch_object(self.provider, 'get_stack', side_effect=get_stack)
         patch_object(self.provider, 'update_stack')

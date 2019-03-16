@@ -16,11 +16,7 @@ from stacker.lookups.registry import (
     register_lookup_handler,
     unregister_lookup_handler,
 )
-from stacker.plan import (
-    Step,
-    build_plan,
-    build_graph,
-)
+from stacker.plan import Graph, Step, Plan
 from stacker.exceptions import (
     CancelExecution,
     GraphError,
@@ -86,11 +82,11 @@ class TestPlan(unittest.TestCase):
             definition=generate_definition('bastion', 1, requires=[vpc.name]),
             context=self.context)
 
-        graph = build_graph([
+        graph = Graph.from_steps([
             Step.from_stack(vpc, fn=None),
             Step.from_stack(bastion, fn=None)
         ])
-        plan = build_plan(description="Test", graph=graph)
+        plan = Plan.from_graph(description="Test", graph=graph)
 
         self.assertEqual(plan.graph.to_dict(), {
             'bastion.1': set(['vpc.1']),
@@ -110,11 +106,11 @@ class TestPlan(unittest.TestCase):
             calls.append(stack.fqn)
             return COMPLETE
 
-        graph = build_graph([
+        graph = Graph.from_steps([
             Step.from_stack(vpc, fn),
             Step.from_stack(bastion, fn)
         ])
-        plan = build_plan(
+        plan = Plan.from_graph(
             description="Test", graph=graph)
         plan.execute(walk)
 
@@ -137,12 +133,12 @@ class TestPlan(unittest.TestCase):
             calls.append(stack.fqn)
             return COMPLETE
 
-        graph = build_graph([
+        graph = Graph.from_steps([
             Step.from_stack(vpc, fn),
             Step.from_stack(db, fn),
             Step.from_stack(app, fn)
         ])
-        plan = build_plan(
+        plan = Plan.from_graph(
             description="Test",
             graph=graph,
             targets=['db.1'])
@@ -170,8 +166,8 @@ class TestPlan(unittest.TestCase):
         vpc_step = Step.from_stack(vpc, fn)
         bastion_step = Step.from_stack(bastion, fn)
 
-        graph = build_graph([vpc_step, bastion_step])
-        plan = build_plan(description="Test", graph=graph)
+        graph = Graph.from_steps([vpc_step, bastion_step])
+        plan = Plan.from_graph(description="Test", graph=graph)
 
         with self.assertRaises(PlanFailed):
             plan.execute(walk)
@@ -198,8 +194,8 @@ class TestPlan(unittest.TestCase):
         vpc_step = Step.from_stack(vpc, fn)
         bastion_step = Step.from_stack(bastion, fn)
 
-        graph = build_graph([vpc_step, bastion_step])
-        plan = build_plan(description="Test", graph=graph)
+        graph = Graph.from_steps([vpc_step, bastion_step])
+        plan = Plan.from_graph(description="Test", graph=graph)
         plan.execute(walk)
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
@@ -227,9 +223,9 @@ class TestPlan(unittest.TestCase):
         bastion_step = Step.from_stack(bastion, fn)
         db_step = Step.from_stack(db, fn)
 
-        graph = build_graph([
+        graph = Graph.from_steps([
             vpc_step, bastion_step, db_step])
-        plan = build_plan(description="Test", graph=graph)
+        plan = Plan.from_graph(description="Test", graph=graph)
         with self.assertRaises(PlanFailed):
             plan.execute(walk)
 
@@ -256,8 +252,8 @@ class TestPlan(unittest.TestCase):
         vpc_step = Step.from_stack(vpc, fn)
         bastion_step = Step.from_stack(bastion, fn)
 
-        graph = build_graph([vpc_step, bastion_step])
-        plan = build_plan(description="Test", graph=graph)
+        graph = Graph.from_steps([vpc_step, bastion_step])
+        plan = Plan.from_graph(description="Test", graph=graph)
         plan.execute(walk)
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
@@ -269,7 +265,7 @@ class TestPlan(unittest.TestCase):
             context=self.context)
 
         with self.assertRaises(GraphError) as expected:
-            build_graph([Step.from_stack(bastion, None)])
+            Graph.from_steps([Step.from_stack(bastion, None)])
         message_starts = (
             "Error detected when adding 'vpc.1' "
             "as a dependency of 'bastion.1':"
@@ -293,7 +289,7 @@ class TestPlan(unittest.TestCase):
             context=self.context)
 
         with self.assertRaises(GraphError) as expected:
-            build_graph([
+            Graph.from_steps([
                 Step.from_stack(vpc, None),
                 Step.from_stack(db, None),
                 Step.from_stack(app, None)
@@ -325,8 +321,8 @@ class TestPlan(unittest.TestCase):
 
             steps += [Step.from_stack(stack, None)]
 
-        graph = build_graph(steps)
-        plan = build_plan(description="Test", graph=graph)
+        graph = Graph.from_steps(steps)
+        plan = Plan.from_graph(description="Test", graph=graph)
 
         tmp_dir = tempfile.mkdtemp()
         try:

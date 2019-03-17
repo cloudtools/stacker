@@ -7,7 +7,7 @@ from collections import Mapping, namedtuple
 
 from stacker.exceptions import HookExecutionFailed
 from stacker.util import load_object_from_string
-
+from stacker.variables import Variable
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +47,23 @@ class Hook(object):
         self.required = required
         self.enabled = enabled
         self.data_key = data_key
-        self.args = args or {}
+        self.args = args
         self.required_by = set(required_by or [])
         self.requires = set(requires or [])
         self.profile = profile
         self.region = region
+
+        self._args = {}
+        if args:
+            for key, value in args.items():
+                var = self._args[key] = \
+                    Variable('{}.args.{}'.format(self.name, key), value)
+                self.requires.update(var.dependencies())
+
+    def resolve_args(self, provider, context):
+        for key, value in self._args.items():
+            value.resolve(context, provider)
+            yield key, value.value
 
     def run(self, provider, context):
         """Run a Hook and capture its result
@@ -74,12 +86,7 @@ class Hook(object):
 
         logger.info("Executing hook %s", self)
 
-        data_key = self.data_key
-        required = self.required
-        kwargs = self.args or {}
-        enabled = self.enabled
-
-        if not enabled:
+        if not self.enabled:
             logger.debug("Hook %s is disabled, skipping", self.name)
             return
 
@@ -88,21 +95,22 @@ class Hook(object):
         except (AttributeError, ImportError) as e:
             logger.exception("Unable to load method at %s for hook %s:",
                              self.path, self.name)
-            if required:
+            if self.required:
                 raise HookExecutionFailed(self, exception=e)
 
             return
 
+        kwargs = dict(self.resolve_args(provider, context))
         try:
             result = method(context=context, provider=provider, **kwargs)
         except Exception as e:
-            if required:
+            if self.required:
                 raise HookExecutionFailed(self, exception=e)
 
             return
 
         if not result:
-            if required:
+            if self.required:
                 raise HookExecutionFailed(self, result=result)
 
             logger.warning("Non-required hook %s failed. Return value: %s",
@@ -110,12 +118,16 @@ class Hook(object):
             return result
 
         if isinstance(result, Mapping):
-            if data_key:
+            if self.data_key:
                 logger.debug("Adding result for hook %s to context in "
-                             "data_key %s.", self.name, data_key)
-                context.set_hook_data(data_key, result)
+                             "data_key %s.", self.name, self.data_key)
+                context.set_hook_data(self.data_key, result)
 
         return result
+
+    def __str__(self):
+        return 'Hook(name={}, path={}, profile={}, region={})'.format(
+            self.name, self.path, self.profile, self.region)
 
 
 class ActionHooks(namedtuple('ActionHooks', 'action_name pre post custom')):

@@ -157,7 +157,7 @@ class BaseAction(object):
             return COMPLETE
 
         pre_hooks_target = Target(
-            name="pre_{}_run_hooks".format(action_name))
+            name="pre_{}_hooks".format(action_name))
         pre_action_target = Target(
             name="pre_{}".format(action_name),
             requires=[pre_hooks_target.name])
@@ -168,7 +168,7 @@ class BaseAction(object):
             name="post_{}".format(action_name),
             requires=[action_target.name])
         post_hooks_target = Target(
-            name="post_{}_run_hooks".format(action_name),
+            name="post_{}_hooks".format(action_name),
             requires=[post_action_target.name])
 
         def steps():

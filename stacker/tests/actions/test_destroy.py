@@ -70,12 +70,12 @@ class TestDestroyAction(unittest.TestCase):
         self.assertEqual(
             {
                 'pre-destroy-hook': set(),
-                'pre_destroy_run_hooks': {'pre-destroy-hook'},
-                'pre_destroy': {'pre_destroy_run_hooks'},
+                'pre_destroy_hooks': {'pre-destroy-hook'},
+                'pre_destroy': {'pre_destroy_hooks'},
                 'destroy': {'vpc', 'other'},
                 'post_destroy': {'destroy'},
-                'post_destroy_run_hooks': {'post_destroy'},
-                'post-destroy-hook': {'post_destroy_run_hooks'},
+                'post_destroy_hooks': {'post_destroy'},
+                'post-destroy-hook': {'post_destroy_hooks'},
 
                 'instance': {'pre_destroy'},
                 'db': {'instance'},

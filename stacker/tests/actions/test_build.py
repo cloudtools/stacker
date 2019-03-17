@@ -153,12 +153,12 @@ class TestBuildAction(unittest.TestCase):
         self.assertEqual(
             sorted({
                 'pre-build-hook': set(),
-                'pre_build_run_hooks': {'pre-build-hook'},
-                'pre_build': {'pre_build_run_hooks'},
+                'pre_build_hooks': {'pre-build-hook'},
+                'pre_build': {'pre_build_hooks'},
                 'build': {'other', 'db'},
                 'post_build': {'build', 'after-db-hook'},
-                'post_build_run_hooks': {'post_build'},
-                'post-build-hook': {'post_build_run_hooks'},
+                'post_build_hooks': {'post_build'},
+                'post-build-hook': {'post_build_hooks'},
 
                 'other': {'pre_build'},
                 'vpc': {'pre_build'},

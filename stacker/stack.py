@@ -73,7 +73,6 @@ class Stack(object):
         self.enabled = enabled
         self.protected = protected
         self.context = context
-        self.outputs = None
         self.in_progress_behavior = definition.in_progress_behavior
 
     def __repr__(self):
@@ -192,6 +191,3 @@ class Stack(object):
         """
         resolve_variables(self.variables, context, provider)
         self.blueprint.resolve_variables(self.variables)
-
-    def set_outputs(self, outputs):
-        self.outputs = outputs

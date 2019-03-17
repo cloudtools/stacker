@@ -249,8 +249,6 @@ class Action(BaseAction):
             provider_stack = None
 
         if provider_stack and not should_update(stack):
-            stack.set_outputs(
-                self.provider.get_output_dict(provider_stack))
             return NotUpdatedStatus()
 
         recreate = False
@@ -292,8 +290,6 @@ class Action(BaseAction):
                 return FailedStatus(reason)
 
             elif provider.is_stack_completed(provider_stack):
-                stack.set_outputs(
-                    provider.get_output_dict(provider_stack))
                 return CompleteStatus(old_status.reason)
             else:
                 return old_status
@@ -342,10 +338,8 @@ class Action(BaseAction):
             else:
                 return SubmittedStatus("destroying stack for re-creation")
         except CancelExecution:
-            stack.set_outputs(provider.get_output_dict(provider_stack))
             return SkippedStatus(reason="canceled execution")
         except StackDidNotChange:
-            stack.set_outputs(provider.get_output_dict(provider_stack))
             return DidNotChangeStatus()
 
     def _template(self, blueprint):

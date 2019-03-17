@@ -272,9 +272,6 @@ class Action(build.Action):
                                               new_params, old_params))
         ui.info('\n' + '\n'.join(output))
 
-        stack.set_outputs(
-            provider.get_output_dict(provider_stack))
-
         return COMPLETE
 
     def _generate_plan(self):

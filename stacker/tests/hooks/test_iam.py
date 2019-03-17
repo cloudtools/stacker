@@ -3,22 +3,15 @@ from __future__ import division
 from __future__ import absolute_import
 import unittest
 
-import boto3
+from awacs.helpers.trust import get_ecs_assumerole_policy
 from botocore.exceptions import ClientError
-
 from moto import mock_iam
 
 from stacker.hooks.iam import (
     create_ecs_service_role,
     _get_cert_arn_from_response,
 )
-
-from awacs.helpers.trust import get_ecs_assumerole_policy
-
-from ..factories import (
-    mock_context,
-    mock_provider,
-)
+from ..factories import mock_boto3_client, mock_context, mock_provider
 
 
 REGION = "us-east-1"
@@ -33,6 +26,15 @@ class TestIAMHooks(unittest.TestCase):
     def setUp(self):
         self.context = mock_context(namespace="fake")
         self.provider = mock_provider(region=REGION)
+
+        self.mock_iam = mock_iam()
+        self.mock_iam.start()
+        self.iam, self.client_mock = mock_boto3_client("iam", region=REGION)
+        self.client_mock.start()
+
+    def tearDown(self):
+        self.client_mock.stop()
+        self.mock_iam.stop()
 
     def test_get_cert_arn_from_response(self):
         arn = "fake-arn"
@@ -52,50 +54,48 @@ class TestIAMHooks(unittest.TestCase):
     def test_create_service_role(self):
         role_name = "ecsServiceRole"
         policy_name = "AmazonEC2ContainerServiceRolePolicy"
-        with mock_iam():
-            client = boto3.client("iam", region_name=REGION)
 
-            with self.assertRaises(ClientError):
-                client.get_role(RoleName=role_name)
+        with self.assertRaises(ClientError):
+            self.iam.get_role(RoleName=role_name)
 
-            self.assertTrue(
-                create_ecs_service_role(
-                    context=self.context,
-                    provider=self.provider,
-                )
+        self.assertTrue(
+            create_ecs_service_role(
+                context=self.context,
+                provider=self.provider,
             )
+        )
 
-            role = client.get_role(RoleName=role_name)
+        role = self.iam.get_role(RoleName=role_name)
 
-            self.assertIn("Role", role)
-            self.assertEqual(role_name, role["Role"]["RoleName"])
-            client.get_role_policy(
-                RoleName=role_name,
-                PolicyName=policy_name
-            )
+        self.assertIn("Role", role)
+        self.assertEqual(role_name, role["Role"]["RoleName"])
+
+        self.iam.get_role_policy(
+            RoleName=role_name,
+            PolicyName=policy_name
+        )
 
     def test_create_service_role_already_exists(self):
         role_name = "ecsServiceRole"
         policy_name = "AmazonEC2ContainerServiceRolePolicy"
-        with mock_iam():
-            client = boto3.client("iam", region_name=REGION)
-            client.create_role(
-                RoleName=role_name,
-                AssumeRolePolicyDocument=get_ecs_assumerole_policy().to_json()
-            )
 
-            self.assertTrue(
-                create_ecs_service_role(
-                    context=self.context,
-                    provider=self.provider,
-                )
-            )
+        self.iam.create_role(
+            RoleName=role_name,
+            AssumeRolePolicyDocument=get_ecs_assumerole_policy().to_json()
+        )
 
-            role = client.get_role(RoleName=role_name)
-
-            self.assertIn("Role", role)
-            self.assertEqual(role_name, role["Role"]["RoleName"])
-            client.get_role_policy(
-                RoleName=role_name,
-                PolicyName=policy_name
+        self.assertTrue(
+            create_ecs_service_role(
+                context=self.context,
+                provider=self.provider,
             )
+        )
+
+        role = self.iam.get_role(RoleName=role_name)
+
+        self.assertIn("Role", role)
+        self.assertEqual(role_name, role["Role"]["RoleName"])
+        self.iam.get_role_policy(
+            RoleName=role_name,
+            PolicyName=policy_name
+        )

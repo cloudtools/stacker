@@ -22,7 +22,7 @@ TYPE_NAME = "rxref"
 
 class RxrefLookup(LookupHandler):
     @classmethod
-    def handle(cls, value, provider=None, context=None, **kwargs):
+    def handle(cls, value, context, provider):
         """Fetch an output from the designated stack.
 
         Args:

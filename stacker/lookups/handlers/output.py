@@ -17,7 +17,7 @@ Output = namedtuple("Output", ("stack_name", "output_name"))
 
 class OutputLookup(LookupHandler):
     @classmethod
-    def handle(cls, value, context, provider, **kwargs):
+    def handle(cls, value, context, provider):
         """Fetch an output from the designated stack."""
 
         d = deconstruct(value)

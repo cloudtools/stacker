@@ -43,6 +43,10 @@ class BaseProvider(object):
         # pylint: disable=unused-argument
         return self.get_outputs(stack_name)[output]
 
+    def get_session(self, region=None, profile=None):
+        # pylint: disable=unused-argument
+        not_implemented("get_session")
+
 
 class Template(object):
     """A value object that represents a CloudFormation stack template, which

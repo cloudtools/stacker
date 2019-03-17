@@ -4,7 +4,6 @@ from __future__ import absolute_import
 from builtins import str
 from botocore.exceptions import ClientError
 import re
-from stacker.session_cache import get_session
 
 from . import LookupHandler
 from ...util import read_value_from_path
@@ -14,7 +13,7 @@ TYPE_NAME = 'dynamodb'
 
 class DynamodbLookup(LookupHandler):
     @classmethod
-    def handle(cls, value, **kwargs):
+    def handle(cls, value, context, provider):
         """Get a value from a dynamodb table
 
         dynamodb field types should be in the following format:
@@ -53,7 +52,7 @@ class DynamodbLookup(LookupHandler):
         projection_expression = _build_projection_expression(clean_table_keys)
 
         # lookup the data from dynamodb
-        dynamodb = get_session(region).client('dynamodb')
+        dynamodb = provider.get_session(region=region).client('dynamodb')
         try:
             response = dynamodb.get_item(
                 TableName=table_name,

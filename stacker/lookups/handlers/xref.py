@@ -21,7 +21,7 @@ TYPE_NAME = "xref"
 
 class XrefLookup(LookupHandler):
     @classmethod
-    def handle(cls, value, provider=None, **kwargs):
+    def handle(cls, value, context, provider):
         """Fetch an output from the designated stack.
 
         Args:
@@ -33,9 +33,6 @@ class XrefLookup(LookupHandler):
         Returns:
             str: output from the specified stack
         """
-
-        if provider is None:
-            raise ValueError('Provider is required')
 
         d = deconstruct(value)
         stack_fqn = d.stack_name

@@ -7,7 +7,6 @@ from __future__ import absolute_import
 from past.builtins import basestring
 import logging
 
-from stacker.session_cache import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ def create_clusters(provider, context, **kwargs):
     Returns: boolean for whether or not the hook succeeded.
 
     """
-    conn = get_session(provider.region).client('ecs')
+    conn = provider.get_session().client('ecs')
 
     try:
         clusters = kwargs["clusters"]

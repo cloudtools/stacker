@@ -116,7 +116,7 @@ class BaseAction(object):
 
     def plan(self, description, action_name, action, context, tail=None,
              reverse=False, run_hooks=True):
-        """A simple helper that builds a graph based plan from a set of stacks.
+        """A helper that builds a graph based plan from a set of stacks.
 
         Args:
             description (str): a description of the plan.
@@ -127,13 +127,12 @@ class BaseAction(object):
                 from.
             tail (func): an optional function to call to tail the stack
                 progress.
-            reverse (bool): whether to flip the direction of stack and target
-                dependencies. Use it when planning an action destroying
-                resources, which usually must happen in the reverse order
-                of creation.
-                Note: this does not change the order of execution of hooks, or
-                their dependencies, as the build and destroy hooks are
-                currently configured in separate.
+            reverse (bool): whether to flip the direction of dependencies.
+                Use it when planning an action for destroying resources,
+                which usually must happen in the reverse order of creation.
+                Note: this does not change the order of execution of pre/post
+                action hooks,  as the build and destroy hooks are currently
+                configured in separate.
             run_hooks (bool): whether to run hooks configured for this action
 
         Returns: stacker.plan.Plan: the resulting plan for this action
@@ -189,6 +188,8 @@ class BaseAction(object):
                 # the new hooks.
 
                 hooks = self.context.get_hooks_for_action(action_name)
+                logger.debug("Found hooks for action {}: {}".format(
+                    action_name, hooks))
 
                 for hook in hooks.pre:
                     yield Step.from_hook(
@@ -196,10 +197,14 @@ class BaseAction(object):
                         required_by=[pre_hooks_target.name])
 
                 for hook in hooks.custom:
-                    yield Step.from_hook(
-                        hook, fn=hook_fn,
-                        requires=[pre_action_target.name],
-                        required_by=[post_action_target.name])
+                    step = Step.from_hook(
+                        hook, fn=hook_fn)
+                    if reverse:
+                        step.reverse_requirements()
+
+                    step.requires.add(pre_action_target.name)
+                    step.required_by.add(post_action_target.name)
+                    yield step
 
                 for hook in hooks.post:
                     yield Step.from_hook(

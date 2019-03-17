@@ -42,13 +42,16 @@ class TestDestroyAction(unittest.TestCase):
                 {"name": "instance", "requires": ["db", "vpc", "bastion"]},
                 {"name": "other", "requires": []},
             ],
-            "hooks": [
-                {"name": "before-db-hook",
+            "destroy_hooks": [
+                {"name": "before-db-hook-1",
                  "path": "stacker.hooks.no_op",
-                 "required_by": ["db"]},
+                 "args": {"x": "${output db::whatever}"}},
+                {"name": "before-db-hook-2",
+                 "path": "stacker.hooks.no_op",
+                 "requires": ["db"]},
                 {"name": "after-db-hook",
                  "path": "stacker.hooks.no_op",
-                 "requires": ["db"]}
+                 "required_by": ["db"]}
             ],
             "pre_destroy": [
                 {"name": "pre-destroy-hook",
@@ -73,12 +76,16 @@ class TestDestroyAction(unittest.TestCase):
                 'pre_destroy_hooks': {'pre-destroy-hook'},
                 'pre_destroy': {'pre_destroy_hooks'},
                 'destroy': {'vpc', 'other'},
-                'post_destroy': {'destroy'},
+                'post_destroy': {'destroy', 'after-db-hook'},
                 'post_destroy_hooks': {'post_destroy'},
                 'post-destroy-hook': {'post_destroy_hooks'},
 
+                'before-db-hook-1': {'pre_destroy'},
+                'before-db-hook-2': {'pre_destroy'},
+                'after-db-hook': {'db'},
+
                 'instance': {'pre_destroy'},
-                'db': {'instance'},
+                'db': {'instance', 'before-db-hook-1', 'before-db-hook-2'},
                 'bastion': {'db'},
                 'vpc': {'bastion'},
                 'other': {'pre_destroy'},

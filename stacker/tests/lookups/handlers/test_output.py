@@ -5,25 +5,22 @@ from mock import MagicMock
 import unittest
 
 from stacker.stack import Stack
-from ...factories import generate_definition
 from stacker.lookups.handlers.output import OutputLookup
+
+from ...factories import generate_definition, mock_context, mock_provider
 
 
 class TestOutputHandler(unittest.TestCase):
-
     def setUp(self):
-        self.context = MagicMock()
+        stack_def = generate_definition("vpc", 1)
+        self.context = mock_context()
+        self.stack = Stack(definition=stack_def, context=self.context)
+        self.context.get_stacks = MagicMock(return_value=[self.stack])
+        self.provider = mock_provider(
+            outputs={self.stack.fqn: {"SomeOutput": "Test Output"}})
 
     def test_output_handler(self):
-        stack = Stack(
-            definition=generate_definition("vpc", 1),
-            context=self.context)
-        stack.set_outputs({
-            "SomeOutput": "Test Output"})
-        self.context.get_stack.return_value = stack
-        value = OutputLookup.handle("stack-name::SomeOutput",
-                                    context=self.context)
+        value = OutputLookup.handle("{}::SomeOutput".format(self.stack.name),
+                                    context=self.context,
+                                    provider=self.provider)
         self.assertEqual(value, "Test Output")
-        self.assertEqual(self.context.get_stack.call_count, 1)
-        args = self.context.get_stack.call_args
-        self.assertEqual(args[0][0], "stack-name")

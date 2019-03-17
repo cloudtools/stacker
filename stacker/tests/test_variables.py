@@ -4,85 +4,49 @@ from __future__ import absolute_import
 
 import unittest
 
-from mock import MagicMock
-
 from troposphere import s3
+
 from stacker.blueprints.variables.types import TroposphereType
+from stacker.lookups.handlers import LookupHandler
 from stacker.variables import Variable
 from stacker.lookups import register_lookup_handler
-from stacker.stack import Stack
+
+from .factories import mock_context, mock_provider
 
 
-from .factories import generate_definition
+class MockLookup(LookupHandler):
+    @classmethod
+    def handle(cls, value, context, provider):
+        return str(value)
 
 
 class TestVariables(unittest.TestCase):
 
     def setUp(self):
-        self.provider = MagicMock()
-        self.context = MagicMock()
+        self.provider = mock_provider()
+        self.context = mock_context()
+
+        register_lookup_handler("test", MockLookup)
 
     def test_variable_replace_no_lookups(self):
         var = Variable("Param1", "2")
         self.assertEqual(var.value, "2")
 
-    def test_variable_replace_simple_lookup(self):
-        var = Variable("Param1", "${output fakeStack::FakeOutput}")
-        var._value._resolve("resolved")
-        self.assertEqual(var.value, "resolved")
-
     def test_variable_resolve_simple_lookup(self):
-        stack = Stack(
-            definition=generate_definition("vpc", 1),
-            context=self.context)
-        stack.set_outputs({
-            "FakeOutput": "resolved",
-            "FakeOutput2": "resolved2",
-        })
-
-        self.context.get_stack.return_value = stack
-
-        var = Variable("Param1", "${output fakeStack::FakeOutput}")
+        var = Variable("Param1", "${noop test}")
         var.resolve(self.context, self.provider)
         self.assertTrue(var.resolved)
-        self.assertEqual(var.value, "resolved")
-
-    def test_variable_resolve_default_lookup_empty(self):
-        var = Variable("Param1", "${default fakeStack::}")
-        var.resolve(self.context, self.provider)
-        self.assertTrue(var.resolved)
-        self.assertEqual(var.value, "")
+        self.assertEqual(var.value, "test")
 
     def test_variable_replace_multiple_lookups_string(self):
         var = Variable(
             "Param1",
             "url://"  # 0
-            "${output fakeStack::FakeOutput}"  # 1
+            "${test resolved}"  # 1
             "@"  # 2
-            "${output fakeStack::FakeOutput2}",  # 3
+            "${test resolved2}",  # 3
         )
-        var._value[1]._resolve("resolved")
-        var._value[3]._resolve("resolved2")
-        self.assertEqual(var.value, "url://resolved@resolved2")
-
-    def test_variable_resolve_multiple_lookups_string(self):
-        var = Variable(
-            "Param1",
-            "url://${output fakeStack::FakeOutput}@"
-            "${output fakeStack::FakeOutput2}",
-        )
-
-        stack = Stack(
-            definition=generate_definition("vpc", 1),
-            context=self.context)
-        stack.set_outputs({
-            "FakeOutput": "resolved",
-            "FakeOutput2": "resolved2",
-        })
-
-        self.context.get_stack.return_value = stack
         var.resolve(self.context, self.provider)
-        self.assertTrue(var.resolved)
         self.assertEqual(var.value, "url://resolved@resolved2")
 
     def test_variable_replace_no_lookups_list(self):
@@ -90,77 +54,52 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(var.value, ["something", "here"])
 
     def test_variable_replace_lookups_list(self):
-        value = ["something",  # 0
-                 "${output fakeStack::FakeOutput}",  # 1
-                 "${output fakeStack::FakeOutput2}"  # 2
-                 ]
+        value = ["something", "${test resolved}", "${test resolved2}"]
         var = Variable("Param1", value)
-
-        var._value[1]._resolve("resolved")
-        var._value[2]._resolve("resolved2")
+        var.resolve(self.context, self.provider)
         self.assertEqual(var.value, ["something", "resolved", "resolved2"])
 
     def test_variable_replace_lookups_dict(self):
         value = {
-            "something": "${output fakeStack::FakeOutput}",
-            "other": "${output fakeStack::FakeOutput2}",
+            "something": "${test resolved}",
+            "other": "${test resolved2}",
         }
         var = Variable("Param1", value)
-        var._value["something"]._resolve("resolved")
-        var._value["other"]._resolve("resolved2")
-        self.assertEqual(var.value, {"something": "resolved", "other":
-                                     "resolved2"})
+        var.resolve(self.context, self.provider)
+        self.assertEqual(var.value, {"something": "resolved",
+                                     "other": "resolved2"})
 
     def test_variable_replace_lookups_mixed(self):
         value = {
-            "something": [
-                "${output fakeStack::FakeOutput}",
-                "other",
+            "list": [
+                "${test 1}",
+                "2",
             ],
-            "here": {
-                "other": "${output fakeStack::FakeOutput2}",
-                "same": "${output fakeStack::FakeOutput}",
-                "mixed": "something:${output fakeStack::FakeOutput3}",
+            "dict": {
+                "1": "${test a}",
+                "2": "${test b}",
+                "3": "c:${test d}",
             },
         }
         var = Variable("Param1", value)
-        var._value["something"][0]._resolve("resolved")
-        var._value["here"]["other"]._resolve("resolved2")
-        var._value["here"]["same"]._resolve("resolved")
-        var._value["here"]["mixed"][1]._resolve("resolved3")
+        var.resolve(self.context, self.provider)
         self.assertEqual(var.value, {
-            "something": [
-                "resolved",
-                "other",
-            ],
-            "here": {
-                "other": "resolved2",
-                "same": "resolved",
-                "mixed": "something:resolved3",
+            "list": ["1", "2"],
+            "dict": {
+                "1": "a",
+                "2": "b",
+                "3": "c:d",
             },
         })
 
     def test_variable_resolve_nested_lookup(self):
-        stack = Stack(
-            definition=generate_definition("vpc", 1),
-            context=self.context)
-        stack.set_outputs({
-            "FakeOutput": "resolved",
-            "FakeOutput2": "resolved2",
-        })
-
-        def mock_handler(value, context, provider, **kwargs):
-            return "looked up: {}".format(value)
-
-        register_lookup_handler("lookup", mock_handler)
-        self.context.get_stack.return_value = stack
         var = Variable(
             "Param1",
-            "${lookup ${lookup ${output fakeStack::FakeOutput}}}",
+            "${test a:${test b:${test c}}}",
         )
         var.resolve(self.context, self.provider)
         self.assertTrue(var.resolved)
-        self.assertEqual(var.value, "looked up: looked up: resolved")
+        self.assertEqual(var.value, "a:b:c")
 
     def test_troposphere_type_no_from_dict(self):
         with self.assertRaises(ValueError):

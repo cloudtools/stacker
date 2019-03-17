@@ -2,9 +2,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from builtins import str
-import unittest
 from collections import namedtuple
-
+import unittest
 import mock
 
 from stacker import exceptions
@@ -18,7 +17,6 @@ from stacker.actions.build import (
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context, Config
 from stacker.exceptions import StackDidNotChange, StackDoesNotExist
-from stacker.providers.base import BaseProvider
 from stacker.providers.aws.default import Provider
 from stacker.status import (
     NotSubmittedStatus,
@@ -29,7 +27,7 @@ from stacker.status import (
     FAILED
 )
 
-from ..factories import MockThreadingEvent, MockProviderBuilder
+from ..factories import MockThreadingEvent, MockProviderBuilder, mock_provider
 
 
 def mock_stack_parameters(parameters):
@@ -41,27 +39,10 @@ def mock_stack_parameters(parameters):
     }
 
 
-class TestProvider(BaseProvider):
-    def __init__(self, outputs=None, *args, **kwargs):
-        self._outputs = outputs or {}
-
-    def set_outputs(self, outputs):
-        self._outputs = outputs
-
-    def get_stack(self, stack_name, **kwargs):
-        if stack_name not in self._outputs:
-            raise exceptions.StackDoesNotExist(stack_name)
-        return {"name": stack_name, "outputs": self._outputs[stack_name]}
-
-    def get_outputs(self, stack_name, *args, **kwargs):
-        stack = self.get_stack(stack_name)
-        return stack["outputs"]
-
-
 class TestBuildAction(unittest.TestCase):
     def setUp(self):
         self.context = Context(config=Config({"namespace": "namespace"}))
-        self.provider = TestProvider()
+        self.provider = mock_provider()
         self.build_action = build.Action(
             self.context,
             provider_builder=MockProviderBuilder(self.provider))

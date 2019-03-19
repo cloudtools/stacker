@@ -5,8 +5,11 @@ from __future__ import print_function
 import logging
 from collections import Mapping, namedtuple
 
-from stacker.exceptions import HookExecutionFailed
+from stacker.exceptions import HookExecutionFailed, StackDoesNotExist
 from stacker.util import load_object_from_string
+from stacker.status import (
+    COMPLETE, SKIPPED, FailedStatus, NotSubmittedStatus, SkippedStatus
+)
 from stacker.variables import Variable
 
 logger = logging.getLogger(__name__)
@@ -54,11 +57,55 @@ class Hook(object):
         self.region = region
 
         self._args = {}
+        self._args, deps = self.parse_args(args)
+        self.requires.update(deps)
+
+        self._callable = self.resolve_path()
+
+    def parse_args(self, args):
+        arg_vars = {}
+        deps = set()
+
         if args:
             for key, value in args.items():
-                var = self._args[key] = \
+                var = arg_vars[key] = \
                     Variable('{}.args.{}'.format(self.name, key), value)
-                self.requires.update(var.dependencies())
+                deps.update(var.dependencies())
+
+        return arg_vars, deps
+
+    def resolve_path(self):
+        try:
+            return load_object_from_string(self.path)
+        except (AttributeError, ImportError) as e:
+            raise ValueError("Unable to load method at %s for hook %s: %s",
+                             self.path, self.name, str(e))
+
+    def check_args_dependencies(self, provider, context):
+        # When running hooks for destruction, we might rely on outputs of
+        # stacks that we assume have been deployed. Unfortunately, since
+        # destruction must happen in the reverse order of creation, those stack
+        # dependencies will not be present on `requires`, but in `required_by`,
+        # meaning the execution engine won't stop the hook from running early.
+
+        # To deal with that, manually find the dependencies coming from
+        # lookups in the hook arguments, select those that represent stacks,
+        # and check if they are actually available.
+
+        dependencies = set()
+        for value in self._args.values():
+            dependencies.update(value.dependencies())
+
+        for dep in dependencies:
+            # We assume all dependency names are valid here. Hence, if we can't
+            # find a stack with that same name, it must be a target or a hook,
+            # and hence we don't need to check it
+            stack = context.get_stack(dep)
+            if stack is None:
+                continue
+
+            # This will raise if the stack is missing
+            provider.get_stack(stack.fqn)
 
     def resolve_args(self, provider, context):
         for key, value in self._args.items():
@@ -85,29 +132,15 @@ class Hook(object):
         """
 
         logger.info("Executing hook %s", self)
-
-        if not self.enabled:
-            logger.debug("Hook %s is disabled, skipping", self.name)
-            return
-
-        try:
-            method = load_object_from_string(self.path)
-        except (AttributeError, ImportError) as e:
-            logger.exception("Unable to load method at %s for hook %s:",
-                             self.path, self.name)
-            if self.required:
-                raise HookExecutionFailed(self, exception=e)
-
-            return
-
         kwargs = dict(self.resolve_args(provider, context))
         try:
-            result = method(context=context, provider=provider, **kwargs)
+            result = self._callable(context=context, provider=provider,
+                                    **kwargs)
         except Exception as e:
             if self.required:
-                raise HookExecutionFailed(self, exception=e)
+                raise HookExecutionFailed(self, cause=e)
 
-            return
+            return None
 
         if not result:
             if self.required:
@@ -124,6 +157,29 @@ class Hook(object):
                 context.set_hook_data(self.data_key, result)
 
         return result
+
+    def run_step(self, provider_builder, context):
+        if not self.enabled:
+            return NotSubmittedStatus()
+
+        provider = provider_builder.build(profile=self.profile,
+                                          region=self.region)
+
+        try:
+            self.check_args_dependencies(provider, context)
+        except StackDoesNotExist as e:
+            reason = "required stack not deployed: {}".format(e.stack_name)
+            return SkippedStatus(reason=reason)
+
+        try:
+            result = self.run(provider, context)
+        except HookExecutionFailed as e:
+            return FailedStatus(reason=str(e))
+
+        if not result:
+            return SKIPPED
+
+        return COMPLETE
 
     def __str__(self):
         return 'Hook(name={}, path={}, profile={}, region={})'.format(

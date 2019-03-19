@@ -13,9 +13,10 @@ from ..target import Target
 
 import botocore.exceptions
 from stacker.session_cache import get_session
-from stacker.exceptions import HookExecutionFailed, PlanFailed
-from stacker.status import COMPLETE, SKIPPED, FailedStatus
+from stacker.exceptions import PlanFailed
+from stacker.status import COMPLETE
 from stacker.util import ensure_s3_bucket, get_s3_endpoint
+
 
 logger = logging.getLogger(__name__)
 
@@ -142,18 +143,8 @@ class BaseAction(object):
             return COMPLETE
 
         def hook_fn(hook, *args, **kwargs):
-            provider = self.provider_builder.build(profile=hook.profile,
-                                                   region=hook.region)
-
-            try:
-                result = hook.run(provider, self.context)
-            except HookExecutionFailed as e:
-                return FailedStatus(reason=str(e))
-
-            if result is None:
-                return SKIPPED
-
-            return COMPLETE
+            return hook.run_step(provider_builder=self.provider_builder,
+                                 context=self.context)
 
         pre_hooks_target = Target(
             name="pre_{}_hooks".format(action_name))

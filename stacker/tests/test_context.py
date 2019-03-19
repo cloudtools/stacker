@@ -9,6 +9,9 @@ from stacker.context import Context, get_fqn
 from stacker.config import load, Config
 
 
+FAKE_HOOK_PATH = "stacker.tests.fixtures.mock_hooks.mock_hook"
+
+
 class TestContext(unittest.TestCase):
 
     def setUp(self):
@@ -119,7 +122,7 @@ class TestContext(unittest.TestCase):
             "pre_build": [
                 {
                     "data_key": "myHook",
-                    "path": "fixtures.mock_hooks.mock_hook",
+                    "path": FAKE_HOOK_PATH.replace('stacker.tests.', ''),
                     "required": True,
                     "args": {
                         "value": "mockResult"}}]})
@@ -134,43 +137,46 @@ class TestContext(unittest.TestCase):
         self.assertEqual("mockResult", context.hook_data["myHook"]["result"])
 
     def test_get_hooks_for_action(self):
+
         config = Config({
             "pre_build": [
-                {"path": "fake.hook"},
-                {"name": "pre_build_test", "path": "fake.hook"},
-                {"path": "fake.hook"}
+                {"path": FAKE_HOOK_PATH},
+                {"name": "pre_build_test", "path": FAKE_HOOK_PATH},
+                {"path": FAKE_HOOK_PATH}
             ],
             "post_build": [
-                {"path": "fake.hook"},
-                {"name": "post_build_test", "path": "fake.hook"},
-                {"path": "fake.hook"}
+                {"path": FAKE_HOOK_PATH},
+                {"name": "post_build_test", "path": FAKE_HOOK_PATH},
+                {"path": FAKE_HOOK_PATH}
             ],
             "build_hooks": [
-                {"path": "fake.hook"},
-                {"name": "build_test", "path": "fake.hook"},
-                {"path": "fake.hook"}
+                {"path": FAKE_HOOK_PATH},
+                {"name": "build_test", "path": FAKE_HOOK_PATH},
+                {"path": FAKE_HOOK_PATH}
             ]
         })
 
         context = Context(config=config)
         hooks = context.get_hooks_for_action('build')
 
-        assert hooks.pre[0].name == "pre_build_1_fake.hook"
+        assert hooks.pre[0].name == "pre_build_1_{}".format(FAKE_HOOK_PATH)
         assert hooks.pre[1].name == "pre_build_test"
-        assert hooks.pre[2].name == "pre_build_3_fake.hook"
+        assert hooks.pre[2].name == "pre_build_3_{}".format(FAKE_HOOK_PATH)
 
-        assert hooks.post[0].name == "post_build_1_fake.hook"
+        assert hooks.post[0].name == "post_build_1_{}".format(FAKE_HOOK_PATH)
         assert hooks.post[1].name == "post_build_test"
-        assert hooks.post[2].name == "post_build_3_fake.hook"
+        assert hooks.post[2].name == "post_build_3_{}".format(FAKE_HOOK_PATH)
 
-        assert hooks.custom[0].name == "build_hooks_1_fake.hook"
+        assert hooks.custom[0].name == \
+            "build_hooks_1_{}".format(FAKE_HOOK_PATH)
         assert hooks.custom[1].name == "build_test"
-        assert hooks.custom[2].name == "build_hooks_3_fake.hook"
+        assert hooks.custom[2].name == \
+            "build_hooks_3_{}".format(FAKE_HOOK_PATH)
 
     def test_hook_data_key_fallback(self):
         config = Config({
             "build_hooks": [
-                {"name": "my-hook", "path": "fake.hook"}
+                {"name": "my-hook", "path": FAKE_HOOK_PATH}
             ]
         })
         context = Context(config=config)

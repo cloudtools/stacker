@@ -12,8 +12,6 @@ import mock
 import boto3
 
 from stacker.config import GitPackageSource
-from stacker.exceptions import HookExecutionFailed
-from stacker.hooks import Hook
 from stacker.util import (
     cf_safe_name,
     load_object_from_string,
@@ -31,10 +29,6 @@ from stacker.util import (
     SourceProcessor
 )
 
-from .factories import (
-    mock_context,
-    mock_provider,
-)
 
 regions = ["us-east-1", "cn-north-1", "ap-northeast-1", "eu-west-1",
            "ap-southeast-1", "ap-southeast-2", "us-west-2", "us-gov-west-1",
@@ -270,114 +264,6 @@ Outputs:
                 sp.determine_git_ref({'uri': 'git@foo', 'tag': 'v1.0.0'}),
                 'v1.0.0'
             )
-
-
-mock_hook = mock.Mock()
-
-
-class TestHooks(unittest.TestCase):
-
-    def setUp(self):
-        self.context = mock_context(namespace="namespace")
-        self.provider = mock_provider(region="us-east-1")
-
-        global mock_hook
-        mock_hook = mock.Mock()
-
-    def test_missing_required_hook(self):
-        hook = Hook("test", path="not.a.real.path", required=True)
-
-        with self.assertRaises(HookExecutionFailed) as raised:
-            hook.run(self.provider, self.context)
-            self.assertIsInstance(ImportError, raised.exception.exception)
-
-    def test_missing_required_hook_method(self):
-        hook = Hook("test", path="stacker.hooks.blah", required=True)
-
-        with self.assertRaises(HookExecutionFailed) as raised:
-            hook.run(self.provider, self.context)
-            self.assertIsInstance(AttributeError, raised.exception.exception)
-
-    def test_missing_non_required_hook_method(self):
-        hook = Hook("test", path="stacker.hooks.blah", required=False)
-
-        result = hook.run(self.provider, self.context)
-        self.assertIsNone(result)
-
-    def test_default_required_hook(self):
-        hook = Hook("test", path="stacker.hooks.blah")
-
-        with self.assertRaises(HookExecutionFailed) as raised:
-            hook.run(self.provider, self.context)
-            self.assertIsInstance(AttributeError, raised.exception.exception)
-
-    def test_valid_enabled_hook(self):
-        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
-                    required=True, enabled=True)
-
-        result = mock_hook.return_value = mock.Mock()
-        self.assertIs(result, hook.run(self.provider, self.context))
-        mock_hook.assert_called_once()
-
-    def test_valid_disabled_hook(self):
-        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
-                    required=True, enabled=False)
-
-        self.assertIsNone(hook.run(self.provider, self.context))
-        mock_hook.assert_not_called()
-
-    def test_context_provided_to_hook(self):
-        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
-                    required=True)
-
-        def return_context(*args, **kwargs):
-            return kwargs['context']
-
-        mock_hook.side_effect = return_context
-        result = hook.run(self.provider, self.context)
-        self.assertIs(result, self.context)
-
-    def test_hook_failure(self):
-        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
-                    required=True)
-
-        err = Exception()
-        mock_hook.side_effect = err
-
-        with self.assertRaises(HookExecutionFailed) as raised:
-            hook.run(self.provider, self.context)
-            self.assertIs(hook, raised.exception.hook)
-            self.assertIs(err, raised.exception.exception)
-
-    def test_hook_failure_skip(self):
-        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
-                    required=False)
-
-        mock_hook.side_effect = Exception()
-        result = hook.run(self.provider, self.context)
-        self.assertIsNone(result)
-
-    def test_return_data_hook(self):
-        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
-                    data_key='test')
-        hook_data = {'hello': 'world'}
-        mock_hook.return_value = hook_data
-
-        result = hook.run(self.provider, self.context)
-        self.assertEqual(hook_data, result)
-        self.assertEqual(hook_data, self.context.hook_data.get('test'))
-
-    def test_return_data_hook_duplicate_key(self):
-        hook = Hook("test", path="stacker.tests.test_util.mock_hook",
-                    data_key='test')
-        mock_hook.return_value = {'foo': 'bar'}
-
-        hook_data = {'hello': 'world'}
-        self.context.set_hook_data('test', hook_data)
-        with self.assertRaises(KeyError):
-            hook.run(self.provider, self.context)
-
-        self.assertEqual(hook_data, self.context.hook_data['test'])
 
 
 class TestException1(Exception):

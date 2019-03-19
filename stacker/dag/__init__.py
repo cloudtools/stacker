@@ -6,7 +6,7 @@ standard_library.install_aliases()
 from builtins import object
 import collections
 import logging
-from threading import Thread
+from threading import Semaphore, Thread
 from copy import copy, deepcopy
 from collections import deque
 
@@ -414,14 +414,19 @@ class ThreadedWalker(object):
     allows, using threads.
 
     Args:
-        semaphore (threading.Semaphore, optional): a semaphore object which
-            can be used to control how many steps are executed in parallel.
-            By default, there is not limit to the amount of parallelism,
-            other than what the graph topology allows.
+        concurrency (int): controls maximum number of steps to be executed in
+                           parallel. If concurrency is 0, this will return a
+                           walker that will walk the graph a fast as the graph
+                           topology allows. If concurrency is greater than 0,
+                           it will return a walker that will only execute a
+                           maximum of concurrency steps at any given time.
     """
 
-    def __init__(self, semaphore=None):
-        self.semaphore = semaphore or UnlimitedSemaphore()
+    def __init__(self, concurrency=0):
+        if concurrency > 0:
+            self.semaphore = Semaphore(concurrency)
+        else:
+            self.semaphore = UnlimitedSemaphore()
 
     def walk(self, dag, walk_func):
         """ Walks each node of the graph, in parallel if it can.

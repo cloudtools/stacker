@@ -5,7 +5,12 @@ from __future__ import absolute_import
 
 from nose import with_setup
 from nose.tools import nottest, raises
-from stacker.dag import DAG, DAGValidationError, ThreadedWalker
+from stacker.dag import (
+    DAG,
+    DAGValidationError,
+    ThreadedWalker,
+    UnlimitedSemaphore
+)
 import threading
 
 dag = None
@@ -220,7 +225,7 @@ def test_transitive_deep_reduction():
 @with_setup(blank_setup)
 def test_threaded_walker():
     dag = DAG()
-    walker = ThreadedWalker()
+    walker = ThreadedWalker(UnlimitedSemaphore())
 
     # b and c should be executed at the same time.
     dag.from_dict({'a': ['b', 'c'],

@@ -27,7 +27,7 @@ tests_require = [
     "mock~=2.0",
     "moto~=1.3.7",
     "testfixtures~=4.10.0",
-    "flake8-future-import",
+    "flake8-future-import"
 ]
 
 scripts = [

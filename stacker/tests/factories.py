@@ -39,7 +39,6 @@ class MockProvider(BaseProvider):
                 "Outputs": stack_outputs,
                 "StackStatus": "CREATED"
             }
-        self._sessions = {}
 
     def get_stack(self, stack_name, **kwargs):
         try:

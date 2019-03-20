@@ -61,7 +61,8 @@ def ssm():
 
 @contextmanager
 def mock_input(lines=(), isatty=True):
-    with mock.patch('stacker.hooks.keypair.input', side_effect=lines) as m:
+    with mock.patch('stacker.hooks.keypair.get_raw_input',
+                    side_effect=lines) as m:
         with mock.patch.object(sys.stdin, 'isatty', return_value=isatty):
             yield m
 

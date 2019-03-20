@@ -1,7 +1,6 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from builtins import input
 
 import logging
 import os
@@ -11,6 +10,7 @@ from botocore.exceptions import ClientError
 
 from stacker.session_cache import get_session
 from stacker.hooks import utils
+from stacker.ui import get_raw_input
 
 
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ def interactive_prompt(keypair_name, ):
 
     try:
         while True:
-            action = input(
+            action = get_raw_input(
                 "import or create keypair \"%s\"? (import/create/cancel) " % (
                     keypair_name,
                 )
@@ -169,11 +169,11 @@ def interactive_prompt(keypair_name, ):
                 break
 
             if action.lower() in ("i", "import"):
-                path = input("path to keypair file: ")
+                path = get_raw_input("path to keypair file: ")
                 return "import", path.strip()
 
             if action.lower() == "create":
-                path = input("directory to save keyfile: ")
+                path = get_raw_input("directory to save keyfile: ")
                 return "create", path.strip()
     except (EOFError, KeyboardInterrupt):
         return None, None

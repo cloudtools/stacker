@@ -1,7 +1,6 @@
 import os
 from setuptools import setup, find_packages
 
-
 VERSION = "1.6.0"
 
 src_dir = os.path.dirname(__file__)
@@ -20,15 +19,16 @@ install_requires = [
     "python-dateutil>=2.0,<3.0",
 ]
 
+setup_requires = ['pytest-runner']
+
 tests_require = [
-    "mock~=2.0.0",
+    "pytest~=4.3",
+    "pytest-cov~=2.6",
+    "mock~=2.0",
     "moto~=1.3.7",
     "testfixtures~=4.10.0",
-    "coverage~=4.3.4",
     "flake8-future-import",
 ]
-
-setup_requires = ["nose"]
 
 scripts = [
     "scripts/compare_env",
@@ -60,7 +60,6 @@ if __name__ == "__main__":
         tests_require=tests_require,
         setup_requires=setup_requires,
         extras_require=dict(testing=tests_require),
-        test_suite="nose.collector",
         classifiers=[
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",

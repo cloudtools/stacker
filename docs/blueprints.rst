@@ -427,7 +427,7 @@ structure and execute a test case for it. As an example:
       variables:
         var1: val1
 
-When run from nosetests, this will create a template fixture file called
+When run from tests, this will create a template fixture file called
 test_stack.json containing the output from the `stacker_blueprints.s3.Buckets`
 template.
 

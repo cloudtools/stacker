@@ -4,7 +4,7 @@ import logging
 import os
 
 import pytest
-
+import py.path
 
 logger = logging.getLogger(__name__)
 
@@ -35,3 +35,10 @@ def aws_credentials():
             os.environ[key] = value
 
     saved_env.clear()
+
+
+@pytest.fixture(scope="package")
+def stacker_fixture_dir():
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                        'fixtures')
+    return py.path.local(path)

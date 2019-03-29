@@ -20,7 +20,6 @@ from troposphere.awslambda import Code
 from stacker.hooks.aws_lambda import (
     ZIP_PERMS_MASK,
     _calculate_hash,
-    _calculate_prebuilt_hash,
     select_bucket_region,
     upload_lambda_functions,
 )
@@ -216,7 +215,7 @@ def test_path_relative(tmpdir, s3, run_hook):
     root.join('test/test.py').write(b'', ensure=True)
 
     get_config_directory = 'stacker.hooks.aws_lambda.get_config_directory'
-    with mock.patch(get_config_directory, return_value=str(root)) as m1:
+    with mock.patch(get_config_directory, return_value=str(root)):
         results = run_hook(
             functions={
                 'MyFunction': {
@@ -539,51 +538,3 @@ def test_follow_symlink_false(tmpdir, s3, all_files, run_hook, linked_dir):
     assert isinstance(code, Code)
     assert_s3_zip_file_list(s3, code.S3Bucket, code.S3Key, all_files,
                             root=tmpdir)
-
-
-def test_calculate_prebuilt_hash(prebuilt_zip):
-    with open(prebuilt_zip['path'], 'rb') as f:
-        generated_md5 = _calculate_prebuilt_hash(f)
-
-    assert generated_md5 == prebuilt_zip['md5']
-
-
-def test_upload_prebuilt_zip(s3, run_hook, prebuilt_zip):
-    results = run_hook(functions={
-        'MyFunction': {
-            'path': prebuilt_zip['path']
-        }
-    })
-
-    assert results is not None
-
-    code = results.get('MyFunction')
-    assert isinstance(code, Code)
-
-    assert_s3_zip_contents(s3, code.S3Bucket, code.S3Key,
-                           prebuilt_zip['contents'])
-    expected_basename = \
-        'lambda-MyFunction-{}.zip'.format(prebuilt_zip['md5'])
-    assert os.path.basename(code.S3Key) == expected_basename
-
-
-def test_upload_prebuilt_zip_with_version(s3, run_hook, prebuilt_zip):
-    version = '1.0.0'
-    results = run_hook(
-        functions={
-            'MyFunction': {
-                'path': prebuilt_zip['path'],
-                'version': version
-            }
-        }
-    )
-
-    assert results is not None
-
-    code = results.get('MyFunction')
-    assert isinstance(code, Code)
-    assert_s3_zip_contents(s3, code.S3Bucket, code.S3Key,
-                           prebuilt_zip['contents'])
-
-    expected_basename = 'lambda-MyFunction-1.0.0.zip'
-    assert os.path.basename(code.S3Key) == expected_basename

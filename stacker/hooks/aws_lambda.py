@@ -100,6 +100,18 @@ def _calculate_hash(files, root):
     return file_hash.hexdigest()
 
 
+def _calculate_prebuilt_hash(f):
+    file_hash = hashlib.md5()
+    while True:
+        chunk = f.read(4096)
+        if not chunk:
+            break
+
+        file_hash.update(chunk)
+
+    return file_hash.hexdigest()
+
+
 def _find_files(root, includes, excludes, follow_symlinks):
     """List files inside a directory based on include and exclude rules.
 
@@ -272,6 +284,38 @@ def _check_pattern_list(patterns, key, default=None):
                      'list of strings'.format(key))
 
 
+def _upload_prebuilt_zip(s3_conn, bucket, prefix, name, options, path,
+                         payload_acl):
+    logging.debug('lambda: using prebuilt ZIP %s', path)
+
+    with open(path, 'rb') as zip_file:
+        # Default to the MD5 of the ZIP if no explicit version is provided
+        version = options.get('version')
+        if not version:
+            version = _calculate_prebuilt_hash(zip_file)
+            zip_file.seek(0)
+
+        return _upload_code(s3_conn, bucket, prefix, name, zip_file,
+                            version, payload_acl)
+
+
+def _build_and_upload_zip(s3_conn, bucket, prefix, name, options, path,
+                          follow_symlinks, payload_acl):
+    includes = _check_pattern_list(options.get('include'), 'include',
+                                   default=['**'])
+    excludes = _check_pattern_list(options.get('exclude'), 'exclude',
+                                   default=[])
+
+    # os.path.join will ignore other parameters if the right-most one is an
+    # absolute path, which is exactly what we want.
+    zip_contents, zip_version = _zip_from_file_patterns(
+        path, includes, excludes, follow_symlinks)
+    version = options.get('version') or zip_version
+
+    return _upload_code(s3_conn, bucket, prefix, name, zip_contents, version,
+                        payload_acl)
+
+
 def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks,
                      payload_acl):
     """Builds a Lambda payload from user configuration and uploads it to S3.
@@ -309,30 +353,27 @@ def _upload_function(s3_conn, bucket, prefix, name, options, follow_symlinks,
             through.
     """
     try:
-        root = os.path.expanduser(options['path'])
+        path = os.path.expanduser(options['path'])
     except KeyError as e:
         raise ValueError(
             "missing required property '{}' in function '{}'".format(
                 e.args[0], name))
 
-    includes = _check_pattern_list(options.get('include'), 'include',
-                                   default=['**'])
-    excludes = _check_pattern_list(options.get('exclude'), 'exclude',
-                                   default=[])
+    if not os.path.isabs(path):
+        path = os.path.abspath(os.path.join(get_config_directory(), path))
 
-    logger.debug('lambda: processing function %s', name)
+    if path.endswith('.zip') and os.path.isfile(path):
+        logging.debug('lambda: using prebuilt zip: %s', path)
 
-    # os.path.join will ignore other parameters if the right-most one is an
-    # absolute path, which is exactly what we want.
-    if not os.path.isabs(root):
-        root = os.path.abspath(os.path.join(get_config_directory(), root))
-    zip_contents, content_hash = _zip_from_file_patterns(root,
-                                                         includes,
-                                                         excludes,
-                                                         follow_symlinks)
+        return _upload_prebuilt_zip(s3_conn, bucket, prefix, name, options,
+                                    path, payload_acl)
+    elif os.path.isdir(path):
+        logging.debug('lambda: building from directory: %s', path)
 
-    return _upload_code(s3_conn, bucket, prefix, name, zip_contents,
-                        content_hash, payload_acl)
+        return _build_and_upload_zip(s3_conn, bucket, prefix, name, options,
+                                     path, follow_symlinks, payload_acl)
+    else:
+        raise ValueError('Path must be an existing ZIP file or directory')
 
 
 def select_bucket_region(custom_bucket, hook_region, stacker_bucket_region,
@@ -400,20 +441,28 @@ def upload_lambda_functions(context, provider, **kwargs):
 
                 * path (str):
 
-                    Base directory of the Lambda function payload content.
+                    Base directory or path of a ZIP file of the Lambda function
+                    payload content.
+
                     If it not an absolute path, it will be considered relative
                     to the directory containing the stacker configuration file
                     in use.
 
-                    Files in this directory will be added to the payload ZIP,
-                    according to the include and exclude patterns. If not
-                    patterns are provided, all files in this directory
+                    When a directory, files contained will be added to the
+                    payload ZIP, according to the include and exclude patterns.
+                    If not patterns are provided, all files in the directory
                     (respecting default exclusions) will be used.
 
                     Files are stored in the archive with path names relative to
                     this directory. So, for example, all the files contained
                     directly under this directory will be added to the root of
                     the ZIP file.
+
+                    When a ZIP file, it will be uploaded directly to S3.
+                    The hash of whole ZIP file will be used as the version key
+                    by default, which may cause spurious rebuilds when building
+                    the ZIP in different environments. To avoid that,
+                    explicitly provide a `version` option.
 
                 * include(str or list[str], optional):
 
@@ -432,6 +481,15 @@ def upload_lambda_functions(context, provider, **kwargs):
                     Commonly ignored files are already excluded by default,
                     such as ``.git``, ``.svn``, ``__pycache__``, ``*.pyc``,
                     ``.gitignore``, etc.
+
+                * version(str, optional):
+                    Value to use as the version for the current function, which
+                    will be used to determine if a payload already exists in
+                    S3. The value can be any string, such as a version number
+                    or a git commit.
+
+                    Note that when setting this value, to re-build/re-upload a
+                    payload you must change the version manually.
 
     Examples:
         .. Hook configuration.

@@ -8,10 +8,10 @@ lint:
 	flake8 --require-code --min-version=2.7 --ignore FI50,FI51,FI53,FI14,E402,N802,W605 stacker/tests # ignore setUp naming
 
 test-unit: clean
-	AWS_ACCESS_KEY_ID=x AWS_SECRET_ACCESS_KEY=x AWS_DEFAULT_REGION=us-east-1 python setup.py nosetests
+	python setup.py test
 
 test-unit3: clean
-	AWS_ACCESS_KEY_ID=x AWS_SECRET_ACCESS_KEY=x AWS_DEFAULT_REGION=us-east-1 python3 setup.py nosetests
+	python3 setup.py test
 
 clean:
 	rm -rf .egg stacker.egg-info

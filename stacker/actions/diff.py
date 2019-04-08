@@ -10,6 +10,7 @@ from operator import attrgetter
 
 from .base import plan, build_walker
 from . import build
+from ..ui import ui
 from .. import exceptions
 from ..util import parse_cloudformation_template
 from ..status import (
@@ -167,9 +168,10 @@ def normalize_json(template):
     return result
 
 
-def print_stack_changes(stack_name, new_stack, old_stack, new_params,
+def build_stack_changes(stack_name, new_stack, old_stack, new_params,
                         old_params):
-    """Prints out the parameters (if changed) and stack diff"""
+    """Builds a list of strings to represent the the parameters (if changed)
+     and stack diff"""
     from_file = "old_%s" % (stack_name,)
     to_file = "new_%s" % (stack_name,)
     lines = difflib.context_diff(
@@ -178,13 +180,15 @@ def print_stack_changes(stack_name, new_stack, old_stack, new_params,
         n=7)  # ensure at least a few lines of context are displayed afterward
 
     template_changes = list(lines)
+    log_lines = []
     if not template_changes:
-        print("*** No changes to template ***")
+        log_lines.append("*** No changes to template ***")
     param_diffs = diff_parameters(old_params, new_params)
     if param_diffs:
-        print(format_params_diff(param_diffs))
+        log_lines.append(format_params_diff(param_diffs))
     if template_changes:
-        print("".join(template_changes))
+        log_lines.append("".join(template_changes))
+    return log_lines
 
 
 class Action(build.Action):
@@ -199,15 +203,19 @@ class Action(build.Action):
     config.
     """
 
-    def _print_new_stack(self, stack, parameters):
-        """Prints out the parameters & stack contents of a new stack"""
-        print("New template parameters:")
+    def _build_new_template(self, stack, parameters):
+        """Constructs the parameters & contents of a new stack and returns a
+        list(str) representation to be output to the user
+        """
+        log_lines = ["New template parameters:"]
         for param in sorted(parameters,
                             key=lambda param: param['ParameterKey']):
-            print("%s = %s" % (param['ParameterKey'], param['ParameterValue']))
+            log_lines.append("%s = %s" % (param['ParameterKey'],
+                                          param['ParameterValue']))
 
-        print("\nNew template contents:")
-        print("".join(stack))
+        log_lines.append("\nNew template contents:")
+        log_lines.append("".join(stack))
+        return log_lines
 
     def _diff_stack(self, stack, **kwargs):
         """Handles the diffing a stack in CloudFormation vs our config"""
@@ -241,10 +249,10 @@ class Action(build.Action):
         new_template = stack.blueprint.rendered
         new_stack = normalize_json(new_template)
 
-        print("============== Stack: %s ==============" % (stack.name,))
+        output = ["============== Stack: %s ==============" % (stack.name,)]
         # If this is a completely new template dump our params & stack
         if not old_template:
-            self._print_new_stack(new_stack, parameters)
+            output.extend(self._build_new_template(new_stack, parameters))
         else:
             # Diff our old & new stack/parameters
             old_template = parse_cloudformation_template(old_template)
@@ -260,8 +268,9 @@ class Action(build.Action):
                            indent=4,
                            default=str)
             )
-            print_stack_changes(stack.name, new_stack, old_stack, new_params,
-                                old_params)
+            output.extend(build_stack_changes(stack.name, new_stack, old_stack,
+                                              new_params, old_params))
+        ui.info('\n' + '\n'.join(output))
 
         stack.set_outputs(
             provider.get_output_dict(provider_stack))
@@ -285,6 +294,7 @@ class Action(build.Action):
         plan.execute(walker)
 
     """Don't ever do anything for pre_run or post_run"""
+
     def pre_run(self, *args, **kwargs):
         pass
 

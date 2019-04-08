@@ -414,14 +414,12 @@ class ThreadedWalker(object):
     allows, using threads.
 
     Args:
-        semaphore (threading.Semaphore, optional): a semaphore object which
+        semaphore (threading.Semaphore): a semaphore object which
             can be used to control how many steps are executed in parallel.
-            By default, there is not limit to the amount of parallelism,
-            other than what the graph topology allows.
     """
 
-    def __init__(self, semaphore=None):
-        self.semaphore = semaphore or UnlimitedSemaphore()
+    def __init__(self, semaphore):
+        self.semaphore = semaphore
 
     def walk(self, dag, walk_func):
         """ Walks each node of the graph, in parallel if it can.

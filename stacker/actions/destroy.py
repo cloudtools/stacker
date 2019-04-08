@@ -6,7 +6,8 @@ import logging
 from .base import BaseAction, plan, build_walker
 from .base import STACK_POLL_TIME
 from ..exceptions import StackDoesNotExist
-from ..hooks import utils
+from stacker.hooks.utils import handle_hooks
+
 from ..status import (
     CompleteStatus,
     SubmittedStatus,
@@ -82,7 +83,7 @@ class Action(BaseAction):
         """Any steps that need to be taken prior to running the action."""
         pre_destroy = self.context.config.pre_destroy
         if not outline and pre_destroy:
-            utils.handle_hooks(
+            handle_hooks(
                 stage="pre_destroy",
                 hooks=pre_destroy,
                 provider=self.provider,
@@ -106,7 +107,7 @@ class Action(BaseAction):
         """Any steps that need to be taken after running the action."""
         post_destroy = self.context.config.post_destroy
         if not outline and post_destroy:
-            utils.handle_hooks(
+            handle_hooks(
                 stage="post_destroy",
                 hooks=post_destroy,
                 provider=self.provider,

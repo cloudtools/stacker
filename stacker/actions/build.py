@@ -7,7 +7,8 @@ from .base import BaseAction, plan, build_walker
 from .base import STACK_POLL_TIME
 
 from ..providers.base import Template
-from ..hooks import utils
+from stacker.hooks import utils
+
 from ..exceptions import (
     MissingParameterException,
     StackDidNotChange,

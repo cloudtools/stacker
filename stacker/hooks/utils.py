@@ -7,7 +7,8 @@ import collections
 import logging
 
 from ..variables import Variable, resolve_variables
-from ..util import load_object_from_string
+from stacker.util import load_object_from_string
+
 
 logger = logging.getLogger(__name__)
 

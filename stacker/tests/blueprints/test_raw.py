@@ -3,8 +3,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 import json
-import os
-import sys
 import unittest
 
 from mock import MagicMock
@@ -15,57 +13,51 @@ from stacker.blueprints.raw import (
 from stacker.variables import Variable
 from ..factories import mock_context
 
+
 RAW_JSON_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.json'
 RAW_YAML_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.yaml'
 RAW_J2_TEMPLATE_PATH = 'stacker/tests/fixtures/cfn_template.json.j2'
 
 
-class TestRawBluePrintHelpers(unittest.TestCase):
-    """Test class for functions in module."""
+def test_get_template_path_local_file(tmpdir):
+    """Verify get_template_path finding a file relative to CWD."""
 
-    def test_get_template_path_local_file(self):  # noqa pylint: disable=invalid-name
-        """Verify get_template_path finding a file relative to CWD."""
-        self.assertEqual(get_template_path(RAW_YAML_TEMPLATE_PATH),
-                         RAW_YAML_TEMPLATE_PATH)
+    template_path = tmpdir.join('cfn_template.json')
+    template_path.ensure()
 
-    def test_get_template_path_invalid_file(self):  # noqa pylint: disable=invalid-name
-        """Verify get_template_path with an invalid filename."""
-        self.assertEqual(get_template_path('afilenamethatdoesnotexist.txt'),
-                         None)
+    with tmpdir.as_cwd():
+        result = get_template_path('cfn_template.json')
+        assert template_path.samefile(result)
 
-    def test_get_template_path_file_in_syspath(self):  # noqa pylint: disable=invalid-name
-        """Verify get_template_path with a file in sys.path.
 
-        This ensures templates are able to be retreived from remote packages.
+def test_get_template_path_invalid_file(tmpdir):
+    """Verify get_template_path with an invalid filename."""
 
-        """
-        stacker_tests_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # noqa
-        old_sys_path = list(sys.path)
-        sys.path.append(stacker_tests_dir)
-        try:
-            self.assertEqual(get_template_path('fixtures/cfn_template.yaml'),
-                             os.path.join(stacker_tests_dir,
-                                          'fixtures/cfn_template.yaml'))
-        finally:
-            sys.path = old_sys_path
+    with tmpdir.as_cwd():
+        assert get_template_path('cfn_template.json') is None
 
-    def test_get_template_params(self):
-        """Verify get_template_params function operation."""
-        template_dict = {
-            "AWSTemplateFormatVersion": "2010-09-09",
-            "Description": "TestTemplate",
-            "Parameters": {
-                "Param1": {
-                    "Type": "String"
-                },
-                "Param2": {
-                    "Default": "default",
-                    "Type": "CommaDelimitedList"
-                }
-            },
-            "Resources": {}
-        }
-        template_params = {
+
+def test_get_template_path_file_in_syspath(tmpdir, monkeypatch):
+    """Verify get_template_path with a file in sys.path.
+
+    This ensures templates are able to be retrieved from remote packages.
+
+    """
+
+    template_path = tmpdir.join('cfn_template.json')
+    template_path.ensure()
+
+    monkeypatch.syspath_prepend(tmpdir)
+    result = get_template_path(template_path.basename)
+    assert template_path.samefile(result)
+
+
+def test_get_template_params():
+    """Verify get_template_params function operation."""
+    template_dict = {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "TestTemplate",
+        "Parameters": {
             "Param1": {
                 "Type": "String"
             },
@@ -73,8 +65,20 @@ class TestRawBluePrintHelpers(unittest.TestCase):
                 "Default": "default",
                 "Type": "CommaDelimitedList"
             }
+        },
+        "Resources": {}
+    }
+    template_params = {
+        "Param1": {
+            "Type": "String"
+        },
+        "Param2": {
+            "Default": "default",
+            "Type": "CommaDelimitedList"
         }
-        self.assertEqual(get_template_params(template_dict), template_params)
+    }
+
+    assert get_template_params(template_dict) == template_params
 
 
 class TestBlueprintRendering(unittest.TestCase):

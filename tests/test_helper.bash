@@ -36,7 +36,23 @@ assert() {
 
 # Checks that the given line is in $output.
 assert_has_line() {
-  echo "$output" | grep "$@" 1>/dev/null
+  echo "$output" | grep -q "$@"
+}
+
+assert_has_lines_in_order() {
+  local search_line
+  read -r search_line || return $?
+
+  for line in "${lines[@]}"; do
+    if grep -q "$@" "$search_line" <<< "$line"; then
+      if ! read -r search_line && [ -z "$search_line" ]; then
+        return 0
+      fi
+    fi
+  done
+
+  echo "Error: did not match line in correct order: '$search_line'" >&2
+  return 1
 }
 
 # This helper wraps "stacker" with bats' "run" and also outputs debug

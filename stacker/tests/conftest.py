@@ -3,8 +3,11 @@ from __future__ import absolute_import, division, print_function
 import logging
 import os
 
+import mock
 import pytest
 import py.path
+from boto3 import Session
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,3 +45,13 @@ def stacker_fixture_dir():
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                         'fixtures')
     return py.path.local(path)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def boto3_disable_session_caching():
+    def get_session(**kwargs):
+        return Session(**kwargs)
+
+    with mock.patch('boto3._get_default_session',
+                    side_effect=get_session):
+        yield

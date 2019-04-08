@@ -3,15 +3,12 @@ from __future__ import division
 from __future__ import absolute_import
 import unittest
 
-import boto3
 from moto import mock_ecs
 from testfixtures import LogCapture
 
 from stacker.hooks.ecs import create_clusters
-from ..factories import (
-    mock_context,
-    mock_provider,
-)
+from ..factories import mock_boto3_client, mock_context, mock_provider
+
 
 REGION = "us-east-1"
 
@@ -22,14 +19,48 @@ class TestECSHooks(unittest.TestCase):
         self.provider = mock_provider(region=REGION)
         self.context = mock_context(namespace="fake")
 
-    def test_create_single_cluster(self):
-        with mock_ecs():
-            cluster = "test-cluster"
-            logger = "stacker.hooks.ecs"
-            client = boto3.client("ecs", region_name=REGION)
-            response = client.list_clusters()
+        self.mock_ecs = mock_ecs()
+        self.mock_ecs.start()
+        self.ecs, self.ecs_mock = mock_boto3_client("ecs", region=REGION)
+        self.ecs_mock.start()
 
-            self.assertEqual(len(response["clusterArns"]), 0)
+    def tearDown(self):
+        self.ecs_mock.stop()
+        self.mock_ecs.stop()
+
+    def test_create_single_cluster(self):
+        cluster = "test-cluster"
+        logger = "stacker.hooks.ecs"
+        response = self.ecs.list_clusters()
+
+        self.assertEqual(len(response["clusterArns"]), 0)
+        with LogCapture(logger) as logs:
+            self.assertTrue(
+                create_clusters(
+                    provider=self.provider,
+                    context=self.context,
+                    clusters=cluster,
+                )
+            )
+
+            logs.check(
+                (
+                    logger,
+                    "DEBUG",
+                    "Creating ECS cluster: %s" % cluster
+                )
+            )
+
+        response = self.ecs.list_clusters()
+        self.assertEqual(len(response["clusterArns"]), 1)
+
+    def test_create_multiple_clusters(self):
+        clusters = ("test-cluster0", "test-cluster1")
+        logger = "stacker.hooks.ecs"
+        response = self.ecs.list_clusters()
+
+        self.assertEqual(len(response["clusterArns"]), 0)
+        for cluster in clusters:
             with LogCapture(logger) as logs:
                 self.assertTrue(
                     create_clusters(
@@ -47,58 +78,27 @@ class TestECSHooks(unittest.TestCase):
                     )
                 )
 
-            response = client.list_clusters()
-            self.assertEqual(len(response["clusterArns"]), 1)
-
-    def test_create_multiple_clusters(self):
-        with mock_ecs():
-            clusters = ("test-cluster0", "test-cluster1")
-            logger = "stacker.hooks.ecs"
-            client = boto3.client("ecs", region_name=REGION)
-            response = client.list_clusters()
-
-            self.assertEqual(len(response["clusterArns"]), 0)
-            for cluster in clusters:
-                with LogCapture(logger) as logs:
-                    self.assertTrue(
-                        create_clusters(
-                            provider=self.provider,
-                            context=self.context,
-                            clusters=cluster,
-                        )
-                    )
-
-                    logs.check(
-                        (
-                            logger,
-                            "DEBUG",
-                            "Creating ECS cluster: %s" % cluster
-                        )
-                    )
-
-            response = client.list_clusters()
-            self.assertEqual(len(response["clusterArns"]), 2)
+        response = self.ecs.list_clusters()
+        self.assertEqual(len(response["clusterArns"]), 2)
 
     def test_fail_create_cluster(self):
-        with mock_ecs():
-            logger = "stacker.hooks.ecs"
-            client = boto3.client("ecs", region_name=REGION)
-            response = client.list_clusters()
+        logger = "stacker.hooks.ecs"
+        response = self.ecs.list_clusters()
 
-            self.assertEqual(len(response["clusterArns"]), 0)
-            with LogCapture(logger) as logs:
-                create_clusters(
-                    provider=self.provider,
-                    context=self.context
+        self.assertEqual(len(response["clusterArns"]), 0)
+        with LogCapture(logger) as logs:
+            create_clusters(
+                provider=self.provider,
+                context=self.context
+            )
+
+            logs.check(
+                (
+                    logger,
+                    "ERROR",
+                    "setup_clusters hook missing \"clusters\" argument"
                 )
+            )
 
-                logs.check(
-                    (
-                        logger,
-                        "ERROR",
-                        "setup_clusters hook missing \"clusters\" argument"
-                    )
-                )
-
-            response = client.list_clusters()
-            self.assertEqual(len(response["clusterArns"]), 0)
+        response = self.ecs.list_clusters()
+        self.assertEqual(len(response["clusterArns"]), 0)

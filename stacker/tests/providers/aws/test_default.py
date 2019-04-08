@@ -382,7 +382,7 @@ class TestProviderDefaultMode(unittest.TestCase):
         self.session = get_session(region=region)
         self.provider = Provider(
             self.session, region=region, recreate_failed=False)
-        self.stubber = Stubber(self.provider.cloudformation)
+        self.stubber = Stubber(self.provider._cloudformation)
 
     def test_get_stack_stack_does_not_exist(self):
         stack_name = "MockStack"
@@ -657,7 +657,7 @@ class TestProviderInteractiveMode(unittest.TestCase):
         self.session = get_session(region=region)
         self.provider = Provider(
             self.session, interactive=True, recreate_failed=True)
-        self.stubber = Stubber(self.provider.cloudformation)
+        self.stubber = Stubber(self.provider._cloudformation)
 
     def test_successful_init(self):
         replacements = True

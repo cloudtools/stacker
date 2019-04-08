@@ -126,6 +126,7 @@ class StackDoesNotExist(Exception):
         message = ("Stack: \"%s\" does not exist in outputs or the lookup is "
                    "not available in this stacker run") % (stack_name,)
         super(StackDoesNotExist, self).__init__(message, *args, **kwargs)
+        self.stack_name = stack_name
 
 
 class MissingParameterException(Exception):
@@ -273,3 +274,20 @@ class GraphError(Exception):
             "as a dependency of '%s': %s"
         ) % (dependency, stack, str(exception))
         super(GraphError, self).__init__(message)
+
+
+class HookExecutionFailed(Exception):
+    """Raised when running a required hook fails"""
+
+    def __init__(self, hook, result=None, cause=None):
+        self.hook = hook
+        self.result = result
+        self.cause = cause
+
+        if self.cause:
+            message = ("Hook '{}' threw exception: {}".format(
+                hook.name, cause))
+        else:
+            message = ("Hook '{}' failed (result: {})".format(
+                hook.name, result))
+        super(HookExecutionFailed, self).__init__(message)

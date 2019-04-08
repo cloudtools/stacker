@@ -280,6 +280,8 @@ class PackageSources(Model):
 
 
 class Hook(Model):
+    name = StringType(serialize_when_none=None)
+
     path = StringType(required=True)
 
     required = BooleanType(default=True)
@@ -289,6 +291,14 @@ class Hook(Model):
     data_key = StringType(serialize_when_none=False)
 
     args = DictType(AnyType)
+
+    required_by = ListType(StringType, serialize_when_none=False)
+
+    requires = ListType(StringType, serialize_when_none=False)
+
+    region = StringType(serialize_when_none=False)
+
+    profile = StringType(serialize_when_none=False)
 
 
 class Target(Model):
@@ -414,9 +424,13 @@ class Config(Model):
 
     post_build = ListType(ModelType(Hook), serialize_when_none=False)
 
+    build_hooks = ListType(ModelType(Hook), serialize_when_none=False)
+
     pre_destroy = ListType(ModelType(Hook), serialize_when_none=False)
 
     post_destroy = ListType(ModelType(Hook), serialize_when_none=False)
+
+    destroy_hooks = ListType(ModelType(Hook), serialize_when_none=False)
 
     tags = DictType(StringType, serialize_when_none=False)
 

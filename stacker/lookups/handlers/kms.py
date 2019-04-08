@@ -2,7 +2,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 import codecs
-from stacker.session_cache import get_session
 
 from . import LookupHandler
 from ...util import read_value_from_path
@@ -12,7 +11,7 @@ TYPE_NAME = "kms"
 
 class KmsLookup(LookupHandler):
     @classmethod
-    def handle(cls, value, **kwargs):
+    def handle(cls, value, context, provider):
         """Decrypt the specified value with a master key in KMS.
 
         kmssimple field types should be in the following format:
@@ -55,7 +54,7 @@ class KmsLookup(LookupHandler):
         if "@" in value:
             region, value = value.split("@", 1)
 
-        kms = get_session(region).client('kms')
+        kms = provider.get_session(region=region).client('kms')
 
         # encode str value as an utf-8 bytestring for use with codecs.decode.
         value = value.encode('utf-8')

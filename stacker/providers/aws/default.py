@@ -11,19 +11,16 @@ import logging
 import time
 import urllib.parse
 import sys
-
-# thread safe, memoized, provider builder.
 from threading import Lock
 
 import botocore.exceptions
 from botocore.config import Config
 
-from ..base import BaseProvider
-from ... import exceptions
-from ...ui import ui
+from stacker import exceptions
+from stacker.ui import ui
+from stacker.providers.base import BaseProvider
 from stacker.session_cache import get_session
-
-from ...actions.diff import (
+from stacker.actions.diff import (
     DictValue,
     diff_parameters,
     format_params_diff as format_diff
@@ -550,17 +547,19 @@ class Provider(BaseProvider):
                  replacements_only=False, recreate_failed=False,
                  service_role=None, **kwargs):
         self._outputs = {}
-        self.region = region
-        self.cloudformation = get_cloudformation_client(session)
+        self.region = region or session.region_name
         self.interactive = interactive
         # replacements only is only used in interactive mode
         self.replacements_only = interactive and replacements_only
         self.recreate_failed = interactive or recreate_failed
         self.service_role = service_role
 
+        self._session = session
+        self._cloudformation = get_cloudformation_client(session)
+
     def get_stack(self, stack_name, **kwargs):
         try:
-            return self.cloudformation.describe_stacks(
+            return self._cloudformation.describe_stacks(
                 StackName=stack_name)['Stacks'][0]
         except botocore.exceptions.ClientError as e:
             if "does not exist" not in str(e):
@@ -630,11 +629,11 @@ class Provider(BaseProvider):
         event_list = []
         while True:
             if next_token is not None:
-                events = self.cloudformation.describe_stack_events(
+                events = self._cloudformation.describe_stack_events(
                     StackName=stack_name, NextToken=next_token
                 )
             else:
-                events = self.cloudformation.describe_stack_events(
+                events = self._cloudformation.describe_stack_events(
                     StackName=stack_name
                 )
             event_list.append(events['StackEvents'])
@@ -690,7 +689,7 @@ class Provider(BaseProvider):
         if self.service_role:
             args["RoleARN"] = self.service_role
 
-        self.cloudformation.delete_stack(**args)
+        self._cloudformation.delete_stack(**args)
         return True
 
     def create_stack(self, fqn, template, parameters, tags,
@@ -723,11 +722,11 @@ class Provider(BaseProvider):
             logger.debug("force_change_set set to True, creating stack with "
                          "changeset.")
             _changes, change_set_id = create_change_set(
-                self.cloudformation, fqn, template, parameters, tags,
+                self._cloudformation, fqn, template, parameters, tags,
                 'CREATE', service_role=self.service_role, **kwargs
             )
 
-            self.cloudformation.execute_change_set(
+            self._cloudformation.execute_change_set(
                 ChangeSetName=change_set_id,
             )
         else:
@@ -738,14 +737,14 @@ class Provider(BaseProvider):
             )
 
             try:
-                self.cloudformation.create_stack(**args)
+                self._cloudformation.create_stack(**args)
             except botocore.exceptions.ClientError as e:
                 if e.response['Error']['Message'] == ('TemplateURL must '
                                                       'reference a valid S3 '
                                                       'object to which you '
                                                       'have access.'):
                     s3_fallback(fqn, template, parameters, tags,
-                                self.cloudformation.create_stack,
+                                self._cloudformation.create_stack,
                                 self.service_role)
                 else:
                     raise
@@ -887,7 +886,7 @@ class Provider(BaseProvider):
             kwargs = generate_stack_policy_args(stack_policy)
             kwargs["StackName"] = fqn
             logger.debug("Setting stack policy on %s.", fqn)
-            self.cloudformation.set_stack_policy(**kwargs)
+            self._cloudformation.set_stack_policy(**kwargs)
 
     def interactive_update_stack(self, fqn, template, old_parameters,
                                  parameters, stack_policy, tags,
@@ -909,7 +908,7 @@ class Provider(BaseProvider):
         """
         logger.debug("Using interactive provider mode for %s.", fqn)
         changes, change_set_id = create_change_set(
-            self.cloudformation, fqn, template, parameters, tags,
+            self._cloudformation, fqn, template, parameters, tags,
             'UPDATE', service_role=self.service_role, **kwargs
         )
         old_parameters_as_dict = self.params_as_dict(old_parameters)
@@ -944,7 +943,7 @@ class Provider(BaseProvider):
 
         self.deal_with_changeset_stack_policy(fqn, stack_policy)
 
-        self.cloudformation.execute_change_set(
+        self._cloudformation.execute_change_set(
             ChangeSetName=change_set_id,
         )
 
@@ -972,13 +971,13 @@ class Provider(BaseProvider):
         logger.debug("Using noninterative changeset provider mode "
                      "for %s.", fqn)
         _changes, change_set_id = create_change_set(
-            self.cloudformation, fqn, template, parameters, tags,
+            self._cloudformation, fqn, template, parameters, tags,
             'UPDATE', service_role=self.service_role, **kwargs
         )
 
         self.deal_with_changeset_stack_policy(fqn, stack_policy)
 
-        self.cloudformation.execute_change_set(
+        self._cloudformation.execute_change_set(
             ChangeSetName=change_set_id,
         )
 
@@ -1008,7 +1007,7 @@ class Provider(BaseProvider):
         )
 
         try:
-            self.cloudformation.update_stack(**args)
+            self._cloudformation.update_stack(**args)
         except botocore.exceptions.ClientError as e:
             if "No updates are to be performed." in str(e):
                 logger.debug(
@@ -1021,7 +1020,7 @@ class Provider(BaseProvider):
                                                     'S3 object to which '
                                                     'you have access.'):
                 s3_fallback(fqn, template, parameters, tags,
-                            self.cloudformation.update_stack,
+                            self._cloudformation.update_stack,
                             self.service_role)
             else:
                 raise
@@ -1038,9 +1037,6 @@ class Provider(BaseProvider):
             self._outputs[stack_name] = get_output_dict(stack)
         return self._outputs[stack_name]
 
-    def get_output_dict(self, stack):
-        return get_output_dict(stack)
-
     def get_stack_info(self, stack):
         """ Get the template and parameters of the stack currently in AWS
 
@@ -1049,7 +1045,7 @@ class Provider(BaseProvider):
         stack_name = stack['StackId']
 
         try:
-            template = self.cloudformation.get_template(
+            template = self._cloudformation.get_template(
                 StackName=stack_name)['TemplateBody']
         except botocore.exceptions.ClientError as e:
             if "does not exist" not in str(e):
@@ -1066,3 +1062,9 @@ class Provider(BaseProvider):
         for p in parameters_list:
             parameters[p['ParameterKey']] = p['ParameterValue']
         return parameters
+
+    def get_session(self, **kwargs):
+        kwargs.setdefault('region', self._session.region_name)
+        kwargs.setdefault('profile', self._session.profile_name)
+
+        return get_session(**kwargs)

@@ -2,18 +2,26 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 import unittest
-import mock
+
 from botocore.stub import Stubber
+
 from stacker.lookups.handlers.dynamodb import DynamodbLookup
-import boto3
-from stacker.tests.factories import SessionStub
+from ...factories import mock_context, mock_provider, mock_boto3_client
+
+REGION = 'us-east-1'
 
 
 class TestDynamoDBHandler(unittest.TestCase):
-    client = boto3.client('dynamodb', region_name='us-east-1')
-
     def setUp(self):
-        self.stubber = Stubber(self.client)
+        self.context = mock_context()
+        self.provider = mock_provider(region=REGION)
+
+        self.dynamodb, self.client_mock = \
+            mock_boto3_client("dynamodb", region=REGION)
+        self.client_mock.start()
+        self.stubber = Stubber(self.dynamodb)
+        self.stubber.activate()
+
         self.get_parameters_response = {'Item': {'TestMap': {'M': {
             'String1': {'S': 'StringVal1'},
             'List1': {'L': [
@@ -21,9 +29,11 @@ class TestDynamoDBHandler(unittest.TestCase):
                 {'S': 'ListVal2'}]},
             'Number1': {'N': '12345'}, }}}}
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_handler(self, mock_client):
+    def tearDown(self):
+        self.client_mock.stop()
+        self.stubber.deactivate()
+
+    def test_dynamodb_handler(self):
         expected_params = {
             'TableName': 'TestTable',
             'Key': {
@@ -36,13 +46,11 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.stubber.add_response('get_item',
                                   self.get_parameters_response,
                                   expected_params)
-        with self.stubber:
-            value = DynamodbLookup.handle(base_lookup_key)
-            self.assertEqual(value, base_lookup_key_valid)
+        value = DynamodbLookup.handle(
+            base_lookup_key, self.context, self.provider)
+        self.assertEqual(value, base_lookup_key_valid)
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_number_handler(self, mock_client):
+    def test_dynamodb_number_handler(self):
         expected_params = {
             'TableName': 'TestTable',
             'Key': {
@@ -56,13 +64,12 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.stubber.add_response('get_item',
                                   self.get_parameters_response,
                                   expected_params)
-        with self.stubber:
-            value = DynamodbLookup.handle(base_lookup_key)
-            self.assertEqual(value, base_lookup_key_valid)
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_list_handler(self, mock_client):
+        value = DynamodbLookup.handle(
+            base_lookup_key, self.context, self.provider)
+        self.assertEqual(value, base_lookup_key_valid)
+
+    def test_dynamodb_list_handler(self):
         expected_params = {
             'TableName': 'TestTable',
             'Key': {
@@ -76,13 +83,12 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.stubber.add_response('get_item',
                                   self.get_parameters_response,
                                   expected_params)
-        with self.stubber:
-            value = DynamodbLookup.handle(base_lookup_key)
-            self.assertEqual(value, base_lookup_key_valid)
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_empty_table_handler(self, mock_client):
+        value = DynamodbLookup.handle(
+            base_lookup_key, self.context, self.provider)
+        self.assertEqual(value, base_lookup_key_valid)
+
+    def test_dynamodb_empty_table_handler(self):
         expected_params = {
             'TableName': '',
             'Key': {
@@ -94,17 +100,14 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.stubber.add_response('get_item',
                                   self.get_parameters_response,
                                   expected_params)
-        with self.stubber:
-            try:
-                DynamodbLookup.handle(base_lookup_key)
-            except ValueError as e:
-                self.assertEqual(
-                    'Please make sure to include a dynamodb table name',
-                    str(e))
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_missing_table_handler(self, mock_client):
+        msg = 'Please make sure to include a dynamodb table name'
+        with self.assertRaises(ValueError) as raised:
+            DynamodbLookup.handle(
+                base_lookup_key, self.context, self.provider)
+            self.assertEquals(raised.exception.message, msg)
+
+    def test_dynamodb_missing_table_handler(self):
         expected_params = {
             'Key': {
                 'TestKey': {'S': 'TestVal'}
@@ -115,17 +118,14 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.stubber.add_response('get_item',
                                   self.get_parameters_response,
                                   expected_params)
-        with self.stubber:
-            try:
-                DynamodbLookup.handle(base_lookup_key)
-            except ValueError as e:
-                self.assertEqual(
-                    'Please make sure to include a tablename',
-                    str(e))
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_invalid_table_handler(self, mock_client):
+        msg = 'Please make sure to include a tablename'
+        with self.assertRaises(ValueError) as raised:
+            DynamodbLookup.handle(
+                base_lookup_key, self.context, self.provider)
+            self.assertEquals(raised.exception.message, msg)
+
+    def test_dynamodb_invalid_table_handler(self):
         expected_params = {
             'TableName': 'FakeTable',
             'Key': {
@@ -138,17 +138,14 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.stubber.add_client_error('get_item',
                                       service_error_code=service_error_code,
                                       expected_params=expected_params)
-        with self.stubber:
-            try:
-                DynamodbLookup.handle(base_lookup_key)
-            except ValueError as e:
-                self.assertEqual(
-                    'Cannot find the dynamodb table: FakeTable',
-                    str(e))
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_invalid_partition_key_handler(self, mock_client):
+        msg = 'Cannot find the dynamodb table: FakeTable'
+        with self.assertRaises(ValueError) as raised:
+            DynamodbLookup.handle(
+                base_lookup_key, self.context, self.provider)
+            self.assertEquals(raised.exception.message, msg)
+
+    def test_dynamodb_invalid_partition_key_handler(self):
         expected_params = {
             'TableName': 'TestTable',
             'Key': {
@@ -162,17 +159,13 @@ class TestDynamoDBHandler(unittest.TestCase):
                                       service_error_code=service_error_code,
                                       expected_params=expected_params)
 
-        with self.stubber:
-            try:
-                DynamodbLookup.handle(base_lookup_key)
-            except ValueError as e:
-                self.assertEqual(
-                    'No dynamodb record matched the partition key: FakeKey',
-                    str(e))
+        msg = 'No dynamodb record matched the partition key: FakeKey'
+        with self.assertRaises(ValueError) as raised:
+            DynamodbLookup.handle(
+                base_lookup_key, self.context, self.provider)
+            self.assertEquals(raised.exception.message, msg)
 
-    @mock.patch('stacker.lookups.handlers.dynamodb.get_session',
-                return_value=SessionStub(client))
-    def test_dynamodb_invalid_partition_val_handler(self, mock_client):
+    def test_dynamodb_invalid_partition_val_handler(self):
         expected_params = {
             'TableName': 'TestTable',
             'Key': {
@@ -185,11 +178,10 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.stubber.add_response('get_item',
                                   empty_response,
                                   expected_params)
-        with self.stubber:
-            try:
-                DynamodbLookup.handle(base_lookup_key)
-            except ValueError as e:
-                self.assertEqual(
-                    'The dynamodb record could not be found using '
-                    'the following key: {\'S\': \'FakeVal\'}',
-                    str(e))
+
+        msg = ('The dynamodb record could not be found using the following '
+               'key: {\'S\': \'FakeVal\'}')
+        with self.assertRaises(ValueError) as raised:
+            DynamodbLookup.handle(
+                base_lookup_key, self.context, self.provider)
+            self.assertEquals(raised.exception.message, msg)

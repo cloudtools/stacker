@@ -5,6 +5,9 @@ from __future__ import absolute_import
 import re
 from collections import namedtuple
 
+import yaml
+
+from stacker.exceptions import StackDoesNotExist
 from . import LookupHandler
 
 TYPE_NAME = "output"
@@ -14,25 +17,28 @@ Output = namedtuple("Output", ("stack_name", "output_name"))
 
 class OutputLookup(LookupHandler):
     @classmethod
-    def handle(cls, value, context=None, **kwargs):
-        """Fetch an output from the designated stack.
-
-        Args:
-            value (str): string with the following format:
-                <stack_name>::<output_name>, ie. some-stack::SomeOutput
-            context (:class:`stacker.context.Context`): stacker context
-
-        Returns:
-            str: output from the specified stack
-
-        """
-
-        if context is None:
-            raise ValueError('Context is required')
+    def handle(cls, value, context, provider):
+        """Fetch an output from the designated stack."""
 
         d = deconstruct(value)
-        stack = context.get_stack(d.stack_name)
-        return stack.outputs[d.output_name]
+        try:
+            stack = context.get_stack(d.stack_name)
+            if not stack:
+                raise StackDoesNotExist(d.stack_name)
+            outputs = provider.get_outputs(stack.fqn)
+        except StackDoesNotExist:
+            raise LookupError("Stack is missing from configuration or not "
+                              "deployed: {}".format(d.stack_name))
+
+        try:
+            return outputs[d.output_name]
+        except KeyError:
+            available_lookups = yaml.safe_dump(
+                list(outputs.keys()), default_flow_style=False)
+            msg = ("Lookup missing from stack: {}::{}. "
+                   "Available lookups:\n{}")
+            raise LookupError(msg.format(
+                d.stack_name, d.output_name, available_lookups))
 
     @classmethod
     def dependencies(cls, lookup_data):

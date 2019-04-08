@@ -8,7 +8,6 @@ import sys
 
 from botocore.exceptions import ClientError
 
-from stacker.session_cache import get_session
 from stacker.hooks import utils
 from stacker.ui import get_raw_input
 
@@ -220,8 +219,8 @@ def ensure_keypair_exists(provider, context, **kwargs):
                      "specified at the same time")
         return False
 
-    session = get_session(region=provider.region,
-                          profile=kwargs.get("profile"))
+    session = provider.get_session(
+        profile=kwargs.get("profile"))
     ec2 = session.client("ec2")
 
     keypair = get_existing_key_pair(ec2, keypair_name)

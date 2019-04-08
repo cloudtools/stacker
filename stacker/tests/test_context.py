@@ -1,11 +1,15 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+
 import unittest
+import mock
 
 from stacker.context import Context, get_fqn
 from stacker.config import load, Config
-from stacker.util import handle_hooks
+
+
+FAKE_HOOK_PATH = "stacker.tests.fixtures.mock_hooks.mock_hook"
 
 
 class TestContext(unittest.TestCase):
@@ -118,15 +122,68 @@ class TestContext(unittest.TestCase):
             "pre_build": [
                 {
                     "data_key": "myHook",
-                    "path": "fixtures.mock_hooks.mock_hook",
+                    "path": FAKE_HOOK_PATH.replace('stacker.tests.', ''),
                     "required": True,
                     "args": {
                         "value": "mockResult"}}]})
         load(config)
+
         context = Context(config=config)
-        stage = "pre_build"
-        handle_hooks(stage, context.config[stage], "mock-region-1", context)
+        provider = mock.Mock()
+        hooks = context.get_hooks_for_action('build')
+        hook = hooks.pre[0]
+
+        hook.run(provider, context)
         self.assertEqual("mockResult", context.hook_data["myHook"]["result"])
+
+    def test_get_hooks_for_action(self):
+
+        config = Config({
+            "pre_build": [
+                {"path": FAKE_HOOK_PATH},
+                {"name": "pre_build_test", "path": FAKE_HOOK_PATH},
+                {"path": FAKE_HOOK_PATH}
+            ],
+            "post_build": [
+                {"path": FAKE_HOOK_PATH},
+                {"name": "post_build_test", "path": FAKE_HOOK_PATH},
+                {"path": FAKE_HOOK_PATH}
+            ],
+            "build_hooks": [
+                {"path": FAKE_HOOK_PATH},
+                {"name": "build_test", "path": FAKE_HOOK_PATH},
+                {"path": FAKE_HOOK_PATH}
+            ]
+        })
+
+        context = Context(config=config)
+        hooks = context.get_hooks_for_action('build')
+
+        assert hooks.pre[0].name == "pre_build_1_{}".format(FAKE_HOOK_PATH)
+        assert hooks.pre[1].name == "pre_build_test"
+        assert hooks.pre[2].name == "pre_build_3_{}".format(FAKE_HOOK_PATH)
+
+        assert hooks.post[0].name == "post_build_1_{}".format(FAKE_HOOK_PATH)
+        assert hooks.post[1].name == "post_build_test"
+        assert hooks.post[2].name == "post_build_3_{}".format(FAKE_HOOK_PATH)
+
+        assert hooks.custom[0].name == \
+            "build_hooks_1_{}".format(FAKE_HOOK_PATH)
+        assert hooks.custom[1].name == "build_test"
+        assert hooks.custom[2].name == \
+            "build_hooks_3_{}".format(FAKE_HOOK_PATH)
+
+    def test_hook_data_key_fallback(self):
+        config = Config({
+            "build_hooks": [
+                {"name": "my-hook", "path": FAKE_HOOK_PATH}
+            ]
+        })
+        context = Context(config=config)
+        hooks = context.get_hooks_for_action("build")
+        hook = hooks.custom[0]
+
+        assert hook.data_key == "my-hook"
 
 
 class TestFunctions(unittest.TestCase):

@@ -3,8 +3,6 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import str
 
-from stacker.session_cache import get_session
-
 from . import LookupHandler
 from ...util import read_value_from_path
 
@@ -13,7 +11,7 @@ TYPE_NAME = "ssmstore"
 
 class SsmstoreLookup(LookupHandler):
     @classmethod
-    def handle(cls, value, **kwargs):
+    def handle(cls, value, context, provider):
         """Retrieve (and decrypt if applicable) a parameter from
         AWS SSM Parameter Store.
 
@@ -48,7 +46,7 @@ class SsmstoreLookup(LookupHandler):
         if "@" in value:
             region, value = value.split("@", 1)
 
-        client = get_session(region).client("ssm")
+        client = provider.get_session(region=region).client("ssm")
         response = client.get_parameters(
             Names=[
                 value,

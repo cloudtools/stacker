@@ -2,74 +2,93 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from builtins import str
-import unittest
-import mock
+
+import pytest
 from botocore.stub import Stubber
+
 from stacker.lookups.handlers.ssmstore import SsmstoreLookup
-import boto3
-from stacker.tests.factories import SessionStub
+from ...factories import mock_context, mock_provider, mock_boto3_client
+
+REGION = 'us-east-1'
+ALT_REGION = 'us-east-2'
 
 
-class TestSSMStoreHandler(unittest.TestCase):
-    client = boto3.client('ssm', region_name='us-east-1')
+@pytest.fixture
+def context():
+    return mock_context()
 
-    def setUp(self):
-        self.stubber = Stubber(self.client)
-        self.get_parameters_response = {
-            'Parameters': [
-                {
-                    'Name': 'ssmkey',
-                    'Type': 'String',
-                    'Value': 'ssmvalue'
-                }
-            ],
-            'InvalidParameters': [
-                'invalidssmparam'
-            ]
+
+@pytest.fixture(params=[dict(region=REGION)])
+def provider(request):
+    return mock_provider(**request.param)
+
+
+@pytest.fixture(params=[dict(region=REGION)])
+def ssm(request):
+    client, mock = mock_boto3_client("ssm", **request.param)
+    with mock:
+        yield client
+
+
+@pytest.fixture
+def ssm_stubber(ssm):
+    with Stubber(ssm) as stubber:
+        yield stubber
+
+
+get_parameters_response = {
+    'Parameters': [
+        {
+            'Name': 'ssmkey',
+            'Type': 'String',
+            'Value': 'ssmvalue'
         }
-        self.invalid_get_parameters_response = {
-            'InvalidParameters': [
-                'ssmkey'
-            ]
-        }
-        self.expected_params = {
-            'Names': ['ssmkey'],
-            'WithDecryption': True
-        }
-        self.ssmkey = "ssmkey"
-        self.ssmvalue = "ssmvalue"
+    ],
+    'InvalidParameters': [
+        'invalidssmparam'
+    ]
+}
 
-    @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
-                return_value=SessionStub(client))
-    def test_ssmstore_handler(self, mock_client):
-        self.stubber.add_response('get_parameters',
-                                  self.get_parameters_response,
-                                  self.expected_params)
-        with self.stubber:
-            value = SsmstoreLookup.handle(self.ssmkey)
-            self.assertEqual(value, self.ssmvalue)
-            self.assertIsInstance(value, str)
+invalid_get_parameters_response = {
+    'InvalidParameters': [
+        'ssmkey'
+    ]
+}
 
-    @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
-                return_value=SessionStub(client))
-    def test_ssmstore_invalid_value_handler(self, mock_client):
-        self.stubber.add_response('get_parameters',
-                                  self.invalid_get_parameters_response,
-                                  self.expected_params)
-        with self.stubber:
-            try:
-                SsmstoreLookup.handle(self.ssmkey)
-            except ValueError:
-                assert True
+expected_params = {
+    'Names': ['ssmkey'],
+    'WithDecryption': True
+}
 
-    @mock.patch('stacker.lookups.handlers.ssmstore.get_session',
-                return_value=SessionStub(client))
-    def test_ssmstore_handler_with_region(self, mock_client):
-        self.stubber.add_response('get_parameters',
-                                  self.get_parameters_response,
-                                  self.expected_params)
-        region = "us-east-1"
-        temp_value = "%s@%s" % (region, self.ssmkey)
-        with self.stubber:
-            value = SsmstoreLookup.handle(temp_value)
-            self.assertEqual(value, self.ssmvalue)
+ssmkey = "ssmkey"
+ssmvalue = "ssmvalue"
+
+
+def test_ssmstore_handler(ssm_stubber, context, provider):
+    ssm_stubber.add_response('get_parameters',
+                             get_parameters_response,
+                             expected_params)
+
+    value = SsmstoreLookup.handle(ssmkey, context, provider)
+    assert value == ssmvalue
+    assert isinstance(value, str)
+
+
+def test_ssmstore_invalid_value_handler(ssm_stubber, context, provider):
+    ssm_stubber.add_response('get_parameters',
+                             invalid_get_parameters_response,
+                             expected_params)
+
+    with pytest.raises(ValueError):
+        SsmstoreLookup.handle(ssmkey, context, provider)
+
+
+@pytest.mark.parametrize("ssm", [dict(region=ALT_REGION)], indirect=True)
+def test_ssmstore_handler_with_region(ssm_stubber, context, provider):
+    ssm_stubber.add_response('get_parameters',
+                             get_parameters_response,
+                             expected_params)
+    temp_value = '%s@%s' % (ALT_REGION, ssmkey)
+
+    value = SsmstoreLookup.handle(temp_value, context, provider)
+    assert value == ssmvalue

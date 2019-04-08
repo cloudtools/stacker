@@ -11,10 +11,10 @@ import logging
 import hashlib
 from io import BytesIO as StringIO
 from zipfile import ZipFile, ZIP_DEFLATED
+
 import botocore
 import formic
 from troposphere.awslambda import Code
-from stacker.session_cache import get_session
 
 from stacker.util import (
     get_config_directory,
@@ -508,7 +508,7 @@ def upload_lambda_functions(context, provider, **kwargs):
     payload_acl = kwargs.get('payload_acl', 'private')
 
     # Always use the global client for s3
-    session = get_session(bucket_region)
+    session = provider.get_session(region=bucket_region)
     s3_client = session.client('s3')
 
     ensure_s3_bucket(s3_client, bucket_name, bucket_region)

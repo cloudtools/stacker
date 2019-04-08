@@ -12,22 +12,18 @@ import random
 from io import BytesIO as StringIO
 from zipfile import ZipFile
 
-import boto3
 import botocore
 from troposphere.awslambda import Code
 from moto import mock_s3
 from testfixtures import TempDirectory, ShouldRaise, compare
 
-from stacker.context import Context
-from stacker.config import Config
 from stacker.hooks.aws_lambda import (
     upload_lambda_functions,
     ZIP_PERMS_MASK,
     _calculate_hash,
     select_bucket_region,
 )
-from ..factories import mock_provider
-
+from ..factories import mock_provider, mock_context, mock_boto3_client
 
 REGION = "us-east-1"
 ALL_FILES = (
@@ -51,12 +47,6 @@ class TestLambdaHooks(unittest.TestCase):
         for f in files:
             d.write(f, b'')
         return d
-
-    @property
-    def s3(self):
-        if not hasattr(self, '_s3'):
-            self._s3 = boto3.client('s3', region_name=REGION)
-        return self._s3
 
     def assert_s3_zip_file_list(self, bucket, key, files):
         object_info = self.s3.get_object(Bucket=bucket, Key=key)
@@ -82,11 +72,6 @@ class TestLambdaHooks(unittest.TestCase):
                 if present:
                     self.fail('s3: bucket {} does not exist'.format(bucket))
 
-    def setUp(self):
-        self.context = Context(
-            config=Config({'namespace': 'test', 'stacker_bucket': 'test'}))
-        self.provider = mock_provider(region="us-east-1")
-
     def run_hook(self, **kwargs):
         real_kwargs = {
             'context': self.context,
@@ -96,14 +81,26 @@ class TestLambdaHooks(unittest.TestCase):
 
         return upload_lambda_functions(**real_kwargs)
 
-    @mock_s3
+    def setUp(self):
+        self.context = mock_context(
+            extra_config_args={'stacker_bucket': 'test'})
+        self.provider = mock_provider(region="us-east-1")
+
+        self.mock_s3 = mock_s3()
+        self.mock_s3.start()
+        self.s3, self.client_mock = mock_boto3_client('s3', 'us-east-1')
+        self.client_mock.start()
+
+    def tearDown(self):
+        self.client_mock.stop()
+        self.mock_s3.stop()
+
     def test_bucket_default(self):
         self.assertIsNotNone(
             self.run_hook(functions={}))
 
         self.assert_s3_bucket('test')
 
-    @mock_s3
     def test_bucket_custom(self):
         self.assertIsNotNone(
             self.run_hook(bucket='custom', functions={}))
@@ -111,7 +108,6 @@ class TestLambdaHooks(unittest.TestCase):
         self.assert_s3_bucket('test', present=False)
         self.assert_s3_bucket('custom')
 
-    @mock_s3
     def test_prefix(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(prefix='cloudformation-custom-resources/',
@@ -129,7 +125,6 @@ class TestLambdaHooks(unittest.TestCase):
         self.assertTrue(code.S3Key.startswith(
             'cloudformation-custom-resources/lambda-MyFunction-'))
 
-    @mock_s3
     def test_prefix_missing(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(functions={
@@ -145,7 +140,6 @@ class TestLambdaHooks(unittest.TestCase):
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, F1_FILES)
         self.assertTrue(code.S3Key.startswith('lambda-MyFunction-'))
 
-    @mock_s3
     def test_path_missing(self):
         msg = "missing required property 'path' in function 'MyFunction'"
         with ShouldRaise(ValueError(msg)):
@@ -154,7 +148,6 @@ class TestLambdaHooks(unittest.TestCase):
                 }
             })
 
-    @mock_s3
     def test_path_relative(self):
         get_config_directory = 'stacker.hooks.aws_lambda.get_config_directory'
         with self.temp_directory_with_files(['test/test.py']) as d, \
@@ -173,7 +166,6 @@ class TestLambdaHooks(unittest.TestCase):
         self.assertIsInstance(code, Code)
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, ['test.py'])
 
-    @mock_s3
     def test_path_home_relative(self):
         test_path = '~/test'
 
@@ -195,7 +187,6 @@ class TestLambdaHooks(unittest.TestCase):
         self.assertIsInstance(code, Code)
         self.assert_s3_zip_file_list(code.S3Bucket, code.S3Key, ['test.py'])
 
-    @mock_s3
     def test_multiple_functions(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(functions={
@@ -217,7 +208,6 @@ class TestLambdaHooks(unittest.TestCase):
         self.assertIsInstance(f2_code, Code)
         self.assert_s3_zip_file_list(f2_code.S3Bucket, f2_code.S3Key, F2_FILES)
 
-    @mock_s3
     def test_patterns_invalid(self):
         msg = ("Invalid file patterns in key 'include': must be a string or "
                'list of strings')
@@ -230,7 +220,6 @@ class TestLambdaHooks(unittest.TestCase):
                 }
             })
 
-    @mock_s3
     def test_patterns_include(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(functions={
@@ -252,7 +241,6 @@ class TestLambdaHooks(unittest.TestCase):
             'test2/test.txt'
         ])
 
-    @mock_s3
     def test_patterns_exclude(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(functions={
@@ -272,7 +260,6 @@ class TestLambdaHooks(unittest.TestCase):
             'test2/test.txt'
         ])
 
-    @mock_s3
     def test_patterns_include_exclude(self):
         with self.temp_directory_with_files() as d:
             results = self.run_hook(functions={
@@ -292,7 +279,6 @@ class TestLambdaHooks(unittest.TestCase):
             '__init__.py'
         ])
 
-    @mock_s3
     def test_patterns_exclude_all(self):
         msg = ('Empty list of files for Lambda payload. Check your '
                'include/exclude options for errors.')
@@ -309,7 +295,6 @@ class TestLambdaHooks(unittest.TestCase):
 
             self.assertIsNone(results)
 
-    @mock_s3
     def test_idempotence(self):
         bucket_name = 'test'
 
@@ -396,7 +381,6 @@ class TestLambdaHooks(unittest.TestCase):
         for args, result in tests:
             self.assertEqual(select_bucket_region(*args), result)
 
-    @mock_s3
     def test_follow_symlink_nonbool(self):
         msg = "follow_symlinks option must be a boolean"
         with ShouldRaise(ValueError(msg)):
@@ -405,7 +389,6 @@ class TestLambdaHooks(unittest.TestCase):
                 }
             })
 
-    @mock_s3
     def test_follow_symlink_true(self):
         # Testing if symlinks are followed
         with self.temp_directory_with_files() as d1:
@@ -439,7 +422,6 @@ class TestLambdaHooks(unittest.TestCase):
                 'f3/test2/test.txt'
             ])
 
-    @mock_s3
     def test_follow_symlink_false(self):
         # testing if syminks are present and not folllowed
         with self.temp_directory_with_files() as d1:
@@ -466,7 +448,6 @@ class TestLambdaHooks(unittest.TestCase):
                 'f2/f2.js',
             ])
 
-    @mock_s3
     def test_follow_symlink_omitted(self):
         # same as test_follow_symlink_false, but default behaivor
         with self.temp_directory_with_files() as d1:

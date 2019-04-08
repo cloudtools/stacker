@@ -38,10 +38,29 @@ class TestDestroyAction(unittest.TestCase):
             "stacks": [
                 {"name": "vpc"},
                 {"name": "bastion", "requires": ["vpc"]},
-                {"name": "instance", "requires": ["vpc", "bastion"]},
-                {"name": "db", "requires": ["instance", "vpc", "bastion"]},
-                {"name": "other", "requires": ["db"]},
+                {"name": "db", "requires": ["vpc", "bastion"]},
+                {"name": "instance", "requires": ["db", "vpc", "bastion"]},
+                {"name": "other", "requires": []},
             ],
+            "destroy_hooks": [
+                {"name": "before-db-hook-1",
+                 "path": "stacker.hooks.no_op",
+                 "args": {"x": "${output db::whatever}"}},
+                {"name": "before-db-hook-2",
+                 "path": "stacker.hooks.no_op",
+                 "requires": ["db"]},
+                {"name": "after-db-hook",
+                 "path": "stacker.hooks.no_op",
+                 "required_by": ["db"]}
+            ],
+            "pre_destroy": [
+                {"name": "pre-destroy-hook",
+                 "path": "stacker.hooks.no_op"}
+            ],
+            "post_destroy": [
+                {"name": "post-destroy-hook",
+                 "path": "stacker.hooks.no_op"}
+            ]
         })
         self.context = Context(config=config)
         self.action = destroy.Action(self.context,
@@ -49,18 +68,29 @@ class TestDestroyAction(unittest.TestCase):
 
     def test_generate_plan(self):
         plan = self.action._generate_plan()
+        plan.graph.transitive_reduction()
+
         self.assertEqual(
             {
-                'vpc': set(
-                    ['db', 'instance', 'bastion']),
-                'other': set([]),
-                'bastion': set(
-                    ['instance', 'db']),
-                'instance': set(
-                    ['db']),
-                'db': set(
-                    ['other'])},
-            plan.graph.to_dict()
+                'pre-destroy-hook': set(),
+                'pre_destroy_hooks': {'pre-destroy-hook'},
+                'pre_destroy': {'pre_destroy_hooks'},
+                'destroy': {'vpc', 'other'},
+                'post_destroy': {'destroy', 'after-db-hook'},
+                'post_destroy_hooks': {'post_destroy'},
+                'post-destroy-hook': {'post_destroy_hooks'},
+
+                'before-db-hook-1': {'pre_destroy'},
+                'before-db-hook-2': {'pre_destroy'},
+                'after-db-hook': {'db'},
+
+                'instance': {'pre_destroy'},
+                'db': {'instance', 'before-db-hook-1', 'before-db-hook-2'},
+                'bastion': {'db'},
+                'vpc': {'bastion'},
+                'other': {'pre_destroy'},
+            },
+            dict(plan.graph.to_dict())
         )
 
     def test_only_execute_plan_when_forced(self):
@@ -98,7 +128,7 @@ class TestDestroyAction(unittest.TestCase):
             return stacks_dict.get(stack_name)
 
         plan = self.action._generate_plan()
-        step = plan.steps[0]
+        step = plan.get("vpc")
         # we need the AWS provider to generate the plan, but swap it for
         # the mock one to make the test easier
         self.action.provider_builder = MockProviderBuilder(mock_provider)

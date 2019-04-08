@@ -8,6 +8,7 @@ import time
 import uuid
 import threading
 
+from .stack import Stack
 from .util import stack_template_key_name
 from .exceptions import (
     GraphError,
@@ -43,27 +44,54 @@ def log_step(step):
 
 class Step(object):
     """State machine for executing generic actions related to stacks.
+
     Args:
-        stack (:class:`stacker.stack.Stack`): the stack associated
-            with this step
-        fn (func): the function to run to execute the step. This function will
-            be ran multiple times until the step is "done".
-        watch_func (func): an optional function that will be called to "tail"
-            the step action.
+        subject: the subject associated with this
+            step. Usually a :class:`stacker.stack.Stack`,
+                :class:`stacker.target.Target` or :class:`stacker.hooks.Hook`
+        fn (funcb): the function to run to execute the step. This function
+            will be ran multiple times until the step is "done".
+        watch_func (func): an optional function that will be called to
+            monitor the step action.
     """
 
-    def __init__(self, stack, fn, watch_func=None):
-        self.stack = stack
+    @classmethod
+    def from_stack(cls, stack, fn, **kwargs):
+        kwargs.setdefault('logging', stack.logging)
+        return cls(stack.name, subject=stack, fn=fn, **kwargs)
+
+    @classmethod
+    def from_target(cls, target, fn, **kwargs):
+        kwargs.setdefault('logging', True)
+        return cls(target.name, subject=target, fn=fn, **kwargs)
+
+    @classmethod
+    def from_hook(cls, hook, fn, **kwargs):
+        kwargs.setdefault('logging', True)
+        return cls(hook.name, subject=hook, fn=fn, **kwargs)
+
+    def __init__(self, name, fn, subject=None, watch_func=None, requires=None,
+                 required_by=None, logging=False):
+        self.name = name
+        self.subject = subject
+        self.fn = fn
+
+        self.watch_func = watch_func
+        self.requires = set(requires or [])
+        self.required_by = set(required_by or [])
+        if subject is not None:
+            self.requires.update(subject.requires or [])
+            self.required_by.update(subject.required_by or [])
+        self.logging = logging
+
         self.status = PENDING
         self.last_updated = time.time()
-        self.fn = fn
-        self.watch_func = watch_func
 
     def __repr__(self):
-        return "<stacker.plan.Step:%s>" % (self.stack.name,)
+        return "<stacker.plan.Step:%s>" % (self.name,)
 
     def __str__(self):
-        return self.stack.name
+        return self.name
 
     def run(self):
         """Runs this step until it has completed successfully, or been
@@ -75,7 +103,7 @@ class Step(object):
         if self.watch_func:
             watcher = threading.Thread(
                 target=self.watch_func,
-                args=(self.stack, stop_watcher)
+                args=(self.subject, stop_watcher)
             )
             watcher.start()
 
@@ -90,24 +118,12 @@ class Step(object):
 
     def _run_once(self):
         try:
-            status = self.fn(self.stack, status=self.status)
+            status = self.fn(self.subject, status=self.status)
         except Exception as e:
             logger.exception(e)
             status = FailedStatus(reason=str(e))
         self.set_status(status)
         return status
-
-    @property
-    def name(self):
-        return self.stack.name
-
-    @property
-    def requires(self):
-        return self.stack.requires
-
-    @property
-    def required_by(self):
-        return self.stack.required_by
 
     @property
     def completed(self):
@@ -126,18 +142,20 @@ class Step(object):
 
     @property
     def done(self):
-        """Returns True if the step is finished (either COMPLETE, SKIPPED or FAILED)
+        """Whether this step is finished (either COMPLETE, SKIPPED or FAILED)
         """
         return self.completed or self.skipped or self.failed
 
     @property
     def ok(self):
-        """Returns True if the step is finished (either COMPLETE or SKIPPED)"""
+        """Whether this step is finished (either COMPLETE or SKIPPED)"""
         return self.completed or self.skipped
 
     @property
     def submitted(self):
-        """Returns True if the step is SUBMITTED, COMPLETE, or SKIPPED."""
+        """Whether this step is has been submitted (SUBMITTED, COMPLETE, or
+           SKIPPED).
+        """
         return self.status >= SUBMITTED
 
     def set_status(self, status):
@@ -147,11 +165,10 @@ class Step(object):
                 step to.
         """
         if status is not self.status:
-            logger.debug("Setting %s state to %s.", self.stack.name,
-                         status.name)
+            logger.debug("Setting %s state to %s.", self.name, status.name)
             self.status = status
             self.last_updated = time.time()
-            if self.stack.logging:
+            if self.logging:
                 log_step(self)
 
     def complete(self):
@@ -166,58 +183,15 @@ class Step(object):
         """A shortcut for set_status(SUBMITTED)"""
         self.set_status(SUBMITTED)
 
+    def reverse_requirements(self):
+        """
+        Change this step so it is suitable for use in operations in reverse
+        dependency order.
 
-def build_plan(description, graph,
-               targets=None, reverse=False):
-    """Builds a plan from a list of steps.
-    Args:
-        description (str): an arbitrary string to
-            describe the plan.
-        graph (:class:`Graph`): a list of :class:`Graph` to execute.
-        targets (list): an optional list of step names to filter the graph to.
-            If provided, only these steps, and their transitive dependencies
-            will be executed. If no targets are specified, every node in the
-            graph will be executed.
-        reverse (bool): If provided, the graph will be walked in reverse order
-            (dependencies last).
-    """
-
-    # If we want to execute the plan in reverse (e.g. Destroy), transpose the
-    # graph.
-    if reverse:
-        graph = graph.transposed()
-
-    # If we only want to build a specific target, filter the graph.
-    if targets:
-        nodes = []
-        for target in targets:
-            for k, step in graph.steps.items():
-                if step.name == target:
-                    nodes.append(step.name)
-        graph = graph.filtered(nodes)
-
-    return Plan(description=description, graph=graph)
-
-
-def build_graph(steps):
-    """Builds a graph of steps.
-    Args:
-        steps (list): a list of :class:`Step` objects to execute.
-    """
-
-    graph = Graph()
-
-    for step in steps:
-        graph.add_step(step)
-
-    for step in steps:
-        for dep in step.requires:
-            graph.connect(step.name, dep)
-
-        for parent in step.required_by:
-            graph.connect(parent, step.name)
-
-    return graph
+        This can be used to correctly generate an action graph when destroying
+        stacks.
+        """
+        self.required_by, self.requires = self.requires, self.required_by
 
 
 class Graph(object):
@@ -231,6 +205,7 @@ class Graph(object):
     Example:
 
     >>> dag = DAG()
+    >>> def build(*args, **kwargs): return COMPLETE
     >>> a = Step("a", fn=build)
     >>> b = Step("b", fn=build)
     >>> dag.add_step(a)
@@ -238,10 +213,33 @@ class Graph(object):
     >>> dag.connect(a, b)
 
     Args:
-        steps (list): an optional list of :class:`Step` objects to execute.
+        steps (dict): an optional list of :class:`Step` objects to execute.
         dag (:class:`stacker.dag.DAG`): an optional :class:`stacker.dag.DAG`
             object. If one is not provided, a new one will be initialized.
     """
+
+    @classmethod
+    def from_steps(cls, steps):
+        """Builds a graph of steps respecting dependencies
+
+        Args:
+            steps (List[Step]): steps to include in the graph
+        Returns: :class:`Graph`: the resulting graph
+        """
+
+        graph = Graph()
+
+        for step in steps:
+            graph.add_step(step)
+
+        for step in steps:
+            for dep in step.requires:
+                graph.connect(step.name, dep)
+
+            for parent in step.required_by:
+                graph.connect(parent, step.name)
+
+        return graph
 
     def __init__(self, steps=None, dag=None):
         self.steps = steps or {}
@@ -287,6 +285,9 @@ class Graph(object):
         nodes = self.dag.topological_sort()
         return [self.steps[step_name] for step_name in nodes]
 
+    def get(self, name, default=None):
+        return self.steps.get(name, default)
+
     def to_dict(self):
         return self.dag.graph
 
@@ -297,6 +298,26 @@ class Plan(object):
         description (str): description of the plan.
         graph (:class:`Graph`): a graph of steps.
     """
+
+    @classmethod
+    def from_graph(cls, description, graph, targets=None):
+        """Builds a plan from a list of steps.
+
+        Args:
+            description (str): an arbitrary string to describe the plan.
+            graph (Graph): a :class:`Graph` to base the plan on
+            targets (list, optional): names of steps to include in the graph.
+                If provided, only these steps, and their transitive
+                dependencies will be executed. Otherwise, every node in the
+                graph will be executed.
+        Returns: Plan: the resulting plan
+        """
+
+        # If we only want to build a specific target, filter the graph.
+        if targets:
+            graph = graph.filtered(targets)
+
+        return Plan(description=description, graph=graph)
 
     def __init__(self, description, graph):
         self.id = uuid.uuid4()
@@ -335,11 +356,14 @@ class Plan(object):
             os.makedirs(directory)
 
         def walk_func(step):
-            step.stack.resolve(
+            if not isinstance(step.subject, Stack):
+                return True
+
+            step.subject.resolve(
                 context=context,
                 provider=provider,
             )
-            blueprint = step.stack.blueprint
+            blueprint = step.subject.blueprint
             filename = stack_template_key_name(blueprint)
             path = os.path.join(directory, filename)
 
@@ -401,3 +425,10 @@ class Plan(object):
 
     def keys(self):
         return self.step_names
+
+    def get(self, name, default=None):
+        for step in self.steps:
+            if step.name == name:
+                return step
+
+        return default

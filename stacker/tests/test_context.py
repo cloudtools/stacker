@@ -5,7 +5,7 @@ import unittest
 
 from stacker.context import Context, get_fqn
 from stacker.config import load, Config
-from stacker.util import handle_hooks
+from stacker.hooks.utils import handle_hooks
 
 
 class TestContext(unittest.TestCase):

@@ -7,7 +7,7 @@ from .base import BaseAction, plan, build_walker
 from .base import STACK_POLL_TIME
 
 from ..providers.base import Template
-from .. import util
+from stacker.hooks import utils
 from ..exceptions import (
     MissingParameterException,
     StackDidNotChange,
@@ -196,7 +196,7 @@ def handle_hooks(stage, hooks, provider, context, dump, outline):
 
     """
     if not outline and not dump and hooks:
-        util.handle_hooks(
+        utils.handle_hooks(
             stage=stage,
             hooks=hooks,
             provider=provider,

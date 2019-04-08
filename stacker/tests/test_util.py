@@ -19,7 +19,6 @@ from stacker.util import (
     cf_safe_name,
     load_object_from_string,
     camel_to_snake,
-    handle_hooks,
     merge_map,
     yaml_to_ordered_dict,
     get_client_region,
@@ -32,6 +31,8 @@ from stacker.util import (
     ZipExtractor,
     SourceProcessor
 )
+
+from stacker.hooks.utils import handle_hooks
 
 from .factories import (
     mock_context,

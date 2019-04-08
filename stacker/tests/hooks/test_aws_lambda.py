@@ -81,7 +81,7 @@ def assert_s3_zip_file_list(s3, bucket, key, files, root=None):
 
     expected_files = set()
     for f in files:
-        rel_path = os.path.relpath(str(f), root) if root else str(f)
+        rel_path = os.path.relpath(str(f), str(root)) if root else str(f)
         expected_files.add(rel_path)
 
     found_files = set()

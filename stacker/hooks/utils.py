@@ -56,11 +56,11 @@ def handle_hooks(stage, hooks, provider, context):
                 resolve_variables(args, context, provider)
             except FailedVariableLookup as err:
                 # pylint: disable=no-member
-                if stage == 'pre_build' and \
+                if 'pre' in stage and \
                         "NoneType" in err.message:  # excludes detailed errors
                     logger.error("Lookups that change the order of "
                                  "execution, like 'output', can only be "
-                                 "used in 'post_build' hooks. Please "
+                                 "used in 'post_*' hooks. Please "
                                  "ensure that the hook being used does "
                                  "not rely on a stack, hook_data, or "
                                  "context that does not exist yet.")

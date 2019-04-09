@@ -234,7 +234,9 @@ The keyword is a list of dictionaries with the following keys:
   that grants you the ability to execute a hook per environment when combined
   with a variable pulled from an environment file.
 **args:**
-  a dictionary of arguments to pass to the hook
+  a dictionary of arguments to pass to the hook with support for lookups.
+  Note that lookups that change the order of execution, like ``output``, can
+  only be used in a `post` hook.
 
 An example using the *create_domain* hook for creating a route53 domain before
 the build action::
@@ -257,6 +259,30 @@ should run in the environment stacker is running against::
       enabled: ${create_domain_bool}
       args:
         domain: mydomain.com
+
+An example of a custom hooks using various lookups in it's arguments,
+shown using a dictionary to define the hooks::
+
+  pre_build:
+    custom_hook1:
+      path: path.to.hook1.entry_point
+      args:
+        ami: ${ami [<region>@]owners:self,888888888888,amazon name_regex:server[0-9]+ architecture:i386}
+        user_data: ${file parameterized-64:file://some/path}
+        db_endpoint: ${rxref some-stack::Endpoint}
+        db_creds: ${ssmstore us-east-1@MyDBUser}
+    custom_hook2:
+      path: path.to.hook.entry_point
+      args:
+        bucket_name: ${dynamodb us-east-1:TestTable@TestKey:TestVal.BucketName}
+        files:
+          - ${file plain:file://some/path}
+
+  post_build:
+    custom_hook3:
+      path: path.to.hook3.entry_point
+      args:
+        nlb: ${output nlb-stack::Nlb}
 
 Tags
 ----

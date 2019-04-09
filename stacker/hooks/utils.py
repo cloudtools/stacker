@@ -6,6 +6,7 @@ import sys
 import collections
 import logging
 
+from ..exceptions import FailedVariableLookup
 from ..variables import Variable, resolve_variables
 from stacker.util import load_object_from_string
 
@@ -51,7 +52,19 @@ def handle_hooks(stage, hooks, provider, context):
 
         if isinstance(hook.args, dict):
             args = [Variable(k, v) for k, v in hook.args.items()]
-            resolve_variables(args, context, provider)
+            try:  # handling for output or similar being used in pre_build
+                resolve_variables(args, context, provider)
+            except FailedVariableLookup as err:
+                # pylint: disable=no-member
+                if stage == 'pre_build' and \
+                        "NoneType" in err.message:  # excludes detailed errors
+                    logger.error("Lookups that change the order of "
+                                 "execution, like 'output', can only be "
+                                 "used in 'post_build' hooks. Please "
+                                 "ensure that the hook being used does "
+                                 "not rely on a stack, hook_data, or "
+                                 "context that does not exist yet.")
+                raise err
             kwargs = {v.name: v.value for v in args}
         else:
             kwargs = hook.args or {}

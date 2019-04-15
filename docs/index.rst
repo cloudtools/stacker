@@ -21,7 +21,7 @@ both in development, staging and production without any major issues.
 Main Features
 -------------
 
-- Easily `Create/Update <commands.html#build>`_/`Destroy <commands.html#destroy>`_
+- Easily `Create/Update <commands.rst#build>`_/`Destroy <commands.rst#destroy>`_
   many stacks in parallel (though with an understanding of cross-stack
   dependencies)
 - Makes it easy to manage large environments in a single config, while still
@@ -33,9 +33,9 @@ Main Features
   locked or disabled.
 - Easily pass Outputs from one stack in as Variables on another (which also
   automatically provides an implicit dependency)
-- Use `Environments <environments.html>`_ to manage slightly different
+- Use `Environments <environments.rst>`_ to manage slightly different
   configuration in different environments.
-- Use `Lookups <lookups.html>`_ to allow dynamic fetching or altering of
+- Use `Lookups <lookups.rst>`_ to allow dynamic fetching or altering of
   data used in Variables.
 - A diff command for diffing your config against what is running in a live
   CloudFormation environment.

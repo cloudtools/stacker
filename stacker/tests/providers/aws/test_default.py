@@ -105,6 +105,7 @@ def generate_change_set_response(status, execution_status="AVAILABLE",
         ],
         "Capabilities": [
             "CAPABILITY_NAMED_IAM",
+            "CAPABILITY_AUTO_EXPAND"
         ],
         "Tags": [
             {

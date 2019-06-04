@@ -31,6 +31,10 @@ EOF
     stacker destroy --force <(config1)
   }
 
+  # Test the diff with a stack that doesn't exist
+  stacker diff <(config2)
+  assert "$status" -eq 0
+
   # Create the new stacks.
   stacker build <(config1)
   assert "$status" -eq 0

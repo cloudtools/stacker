@@ -1,4 +1,5 @@
 ## Upcoming release
+- Fixing AMI lookup Key error on 'Name'
 
 ## 1.7.0 (2019-04-07)
 

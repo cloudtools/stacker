@@ -18,16 +18,18 @@ Remind_
 
 .. _Remind: https://www.remind.com/
 
-`Sturdy Networks`_
+`Onica`_
 
-  At Sturdy we design, architect, deploy, support custom SaaS applications, and
-  offer custom solutions for the Internet of Things in AWS. We are an Amazon
-  Web Services Advanced Consulting Partner that migrates new AWS customers from
-  on-prem to the cloud as well as offers guidance and Managed DevOps services
-  to customers already in AWS.
-  
+  Onica is a global technology consulting company at the forefront of 
+  cloud computing. Through collaboration with Amazon Web Services, 
+  we help customers embrace a broad spectrum of innovative solutions. 
+  From migration strategy to operational excellence, cloud native 
+  development, and immersive transformation. Onica is a full spectrum 
+  AWS integrator.
 
-.. _`Sturdy Networks`: https://sturdy.cloud
+  We are an AWS Premier Consulting & Managed Service Partner
+
+.. _`Onica`: https://www.onica.com
 
 AltoStack_
 

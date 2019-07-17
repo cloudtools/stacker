@@ -27,8 +27,6 @@ Remind_
   development, and immersive transformation. Onica is a full spectrum 
   AWS integrator.
 
-  We are an AWS Premier Consulting & Managed Service Partner
-
 .. _`Onica`: https://www.onica.com
 
 AltoStack_

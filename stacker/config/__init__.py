@@ -206,7 +206,6 @@ def substitute_references(root, environment, exp, full_exp):
         # partial substitutions within a string.
         def replace(mo):
             name = mo.groupdict()['braced'] or mo.groupdict()['named']
-            print('yyy', mo.groupdict(), root, name)
             if not name:
                 return root[mo.start():mo.end()]
             val = environment.get(name)

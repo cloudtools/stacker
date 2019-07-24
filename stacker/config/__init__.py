@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
+from past.types import basestring
 from builtins import str
 import copy
 import sys
@@ -95,7 +96,6 @@ def render(raw_config, environment=None):
     """
     if not environment:
         environment = {}
-
     # If we have a naked dict, we got here through the old non-YAML path, so
     # we can't have a YAML config file.
     is_yaml = False
@@ -109,19 +109,29 @@ def render(raw_config, environment=None):
         # Next, we need to walk the yaml structure, and find all things which
         # look like variable references. This regular expression is copied from
         # string.template to match variable references identically as the
-        # simple configuration case below.
-        idpattern = r'(?a:[_a-z][_a-z0-9]*)'
+        # simple configuration case below. We've got two cases of this pattern,
+        # since python 2.7 doesn't support re.fullmatch(), so we have to add
+        # the end of line anchor to the inner patterns.
+        idpattern = r'[_a-z][_a-z0-9]*'
         pattern = r"""
             %(delim)s(?:
-              (?P<named>%(id)s)      |   # delimiter and a Python identifier
-              {(?P<braced>%(bid)s)}  |   # delimiter and a braced identifier
+              (?P<named>%(id)s)         |   # delimiter and a Python identifier
+              {(?P<braced>%(id)s)}         # delimiter and a braced identifier
             )
             """ % {'delim': re.escape('$'),
                    'id': idpattern,
-                   'bid': idpattern,
+                   }
+        full_pattern = r"""
+            %(delim)s(?:
+              (?P<named>%(id)s)$         |  # delimiter and a Python identifier
+              {(?P<braced>%(id)s)}$         # delimiter and a braced identifier
+            )
+            """ % {'delim': re.escape('$'),
+                   'id': idpattern,
                    }
         exp = re.compile(pattern, re.IGNORECASE | re.VERBOSE)
-        new_config = substitute_references(config, environment, exp)
+        full_exp = re.compile(full_pattern, re.IGNORECASE | re.VERBOSE)
+        new_config = substitute_references(config, environment, exp, full_exp)
         # Now, re-encode the whole thing as YAML and return that.
         return yaml.safe_dump(new_config)
     else:
@@ -144,43 +154,65 @@ def render(raw_config, environment=None):
         return buff.read()
 
 
-def substitute_references(root, environment, exp):
-    if type(root) == list:
+def substitute_references(root, environment, exp, full_exp):
+    # We need to check for something being a string in both python 2.7 and
+    # 3+. The aliases in the future package don't work for yaml sourced
+    # strings, so we have to spin our own.
+    def isstr(s):
+        try:
+            return isinstance(s, basestring)
+        except NameError:
+            return isinstance(s, str)
+
+    if isinstance(root, list):
         result = []
         for x in root:
-            result.append(substitute_references(x, environment, exp))
+            result.append(substitute_references(x, environment, exp, full_exp))
         return result
-    elif type(root) == dict:
+    elif isinstance(root, dict):
         result = {}
         for k, v in root.items():
-            result[k] = substitute_references(v, environment, exp)
+            result[k] = substitute_references(v, environment, exp, full_exp)
         return result
-    elif type(root) == str:
+    elif isstr(root):
         # Strings are the special type where all substitutions happen. If we
         # encounter a string object in the expression tree, we need to perform
         # one of two different kinds of matches on it. First, if the entire
         # string is a variable, we can replace it with an arbitrary object;
         # dict, list, primitive. If the string contains variables within it,
         # then we have to do string substitution.
-        match_obj = exp.fullmatch(root.strip())
+        match_obj = full_exp.match(root.strip())
         if match_obj:
             matches = match_obj.groupdict()
             var_name = matches['named'] or matches['braced']
-            value = environment.get(var_name)
-            if value is None:
-                raise exceptions.MissingEnvironment(var_name)
-            return value
+            if var_name is not None:
+                value = environment.get(var_name)
+                if value is None:
+                    raise exceptions.MissingEnvironment(var_name)
+                return value
+
+        # Returns if an object is a basic type. Once again, the future package
+        # overrides don't work for string here, so we have to special case it
+        def is_basic_type(o):
+            if isstr(o):
+                return True
+            basic_types = [int, bool, float]
+            for t in basic_types:
+                if isinstance(o, t):
+                    return True
+            return False
 
         # If we got here, then we didn't have any full matches, now perform
         # partial substitutions within a string.
         def replace(mo):
-            name = mo['braced'] or mo['named']
+            name = mo.groupdict()['braced'] or mo.groupdict()['named']
+            print('yyy', mo.groupdict(), root, name)
             if not name:
                 return root[mo.start():mo.end()]
             val = environment.get(name)
             if val is None:
                 raise exceptions.MissingEnvironment(name)
-            if type(val) not in [str, int, bool, float]:
+            if not is_basic_type(val):
                 raise exceptions.WrongEnvironmentType(name)
             return str(val)
         value = exp.sub(replace, root)

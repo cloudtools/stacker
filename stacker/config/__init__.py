@@ -7,6 +7,7 @@ from builtins import str
 import copy
 import sys
 import logging
+import re
 
 from string import Template
 from io import StringIO
@@ -32,6 +33,7 @@ import yaml
 from ..lookups import register_lookup_handler
 from ..util import merge_map, yaml_to_ordered_dict, SourceProcessor
 from .. import exceptions
+from ..environment import DictWithSourceType
 
 # register translators (yaml constructors)
 from .translators import *  # NOQA
@@ -83,33 +85,109 @@ def render(raw_config, environment=None):
 
     Args:
         raw_config (str): the raw stacker configuration string.
-        environment (dict, optional): any environment values that should be
-            passed to the config
+        environment (DictWithSourceType, optional): any environment values that
+            should be passed to the config
 
     Returns:
         str: the stacker configuration populated with any values passed from
             the environment
 
     """
-
-    t = Template(raw_config)
-    buff = StringIO()
     if not environment:
         environment = {}
-    try:
-        substituted = t.substitute(environment)
-    except KeyError as e:
-        raise exceptions.MissingEnvironment(e.args[0])
-    except ValueError:
-        # Support "invalid" placeholders for lookup placeholders.
-        substituted = t.safe_substitute(environment)
 
-    if not isinstance(substituted, str):
-        substituted = substituted.decode('utf-8')
+    # If we have a naked dict, we got here through the old non-YAML path, so
+    # we can't have a YAML config file.
+    is_yaml = False
+    if type(environment) == DictWithSourceType:
+        is_yaml = environment.source_type == 'yaml'
 
-    buff.write(substituted)
-    buff.seek(0)
-    return buff.read()
+    if is_yaml:
+        # First, read the config as yaml
+        config = yaml.safe_load(raw_config)
+
+        # Next, we need to walk the yaml structure, and find all things which
+        # look like variable references. This regular expression is copied from
+        # string.template to match variable references identically as the
+        # simple configuration case below.
+        idpattern = r'(?a:[_a-z][_a-z0-9]*)'
+        pattern = r"""
+            %(delim)s(?:
+              (?P<named>%(id)s)      |   # delimiter and a Python identifier
+              {(?P<braced>%(bid)s)}  |   # delimiter and a braced identifier
+            )
+            """ % {
+                'delim': re.escape('$'),
+                'id': idpattern,
+                'bid': idpattern,
+            }
+        exp = re.compile(pattern, re.IGNORECASE | re.VERBOSE)
+        new_config = substitute_references(config, environment, exp)
+        # Now, re-encode the whole thing as YAML and return that.
+        return yaml.safe_dump(new_config)
+    else:
+        t = Template(raw_config)
+        buff = StringIO()
+
+        try:
+            substituted = t.substitute(environment)
+        except KeyError as e:
+            raise exceptions.MissingEnvironment(e.args[0])
+        except ValueError:
+            # Support "invalid" placeholders for lookup placeholders.
+            substituted = t.safe_substitute(environment)
+
+        if not isinstance(substituted, str):
+            substituted = substituted.decode('utf-8')
+
+        buff.write(substituted)
+        buff.seek(0)
+        return buff.read()
+
+
+def substitute_references(root, environment, exp):
+    if type(root) == list:
+        result = []
+        for x in root:
+            result.append(substitute_references(x, environment, exp))
+        return result
+    elif type(root) == dict:
+        result = {}
+        for k, v in root.items():
+            result[k] = substitute_references(v, environment, exp)
+        return result
+    elif type(root) == str:
+        # Strings are the special type where all substitutions happen. If we
+        # encounter a string object in the expression tree, we need to perform
+        # one of two different kinds of matches on it. First, if the entire
+        # string is a variable, we can replace it with an arbitrary object;
+        # dict, list, primitive. If the string contains variables within it,
+        # then we have to do string substitution.
+        match_obj = exp.fullmatch(root.strip())
+        if match_obj:
+            matches = match_obj.groupdict()
+            var_name = matches['named'] or matches['braced']
+            value = environment.get(var_name)
+            if value is None:
+                raise exceptions.MissingEnvironment(var_name)
+            return value
+
+        # If we got here, then we didn't have any full matches, now perform
+        # partial substitutions within a string.
+        def replace(mo):
+            name = mo['braced'] or mo['named']
+            if not name:
+                return root[mo.start():mo.end()]
+            val = environment.get(name)
+            if val is None:
+                raise exceptions.MissingEnvironment(name)
+            if type(val) not in [str, int, bool, float]:
+                raise exceptions.WrongEnvironmentType(name)
+            return str(val)
+        value = exp.sub(replace, root)
+        return value
+    # In all other unhandled cases, return a copy of the input
+    return copy.copy(root)
 
 
 def parse(raw_config):

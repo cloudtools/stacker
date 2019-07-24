@@ -88,7 +88,6 @@ class TestConfig(unittest.TestCase):
             str_1: another str
             str_2: hello
             empty_string: ""
-            
         """
         e = parse_yaml_environment(env)
         c = render(conf, e)

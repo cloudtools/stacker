@@ -116,11 +116,10 @@ def render(raw_config, environment=None):
               (?P<named>%(id)s)      |   # delimiter and a Python identifier
               {(?P<braced>%(bid)s)}  |   # delimiter and a braced identifier
             )
-            """ % {
-                'delim': re.escape('$'),
-                'id': idpattern,
-                'bid': idpattern,
-            }
+            """ % {'delim': re.escape('$'),
+                   'id': idpattern,
+                   'bid': idpattern,
+                   }
         exp = re.compile(pattern, re.IGNORECASE | re.VERBOSE)
         new_config = substitute_references(config, environment, exp)
         # Now, re-encode the whole thing as YAML and return that.

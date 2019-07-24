@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from builtins import next
 import sys
 import unittest
+import yaml
 
 from stacker.config import (
     render_parse_load,
@@ -14,7 +15,10 @@ from stacker.config import (
     process_remote_sources
 )
 from stacker.config import Config, Stack
-from stacker.environment import parse_environment
+from stacker.environment import (
+    parse_environment,
+    parse_yaml_environment
+)
 from stacker import exceptions
 from stacker.lookups.registry import LOOKUP_HANDLERS
 
@@ -48,6 +52,85 @@ class TestConfig(unittest.TestCase):
         e = parse_environment("""namespace: !!str""")
         c = render(conf, e)
         self.assertEqual("namespace: !!str", c)
+
+    def test_render_yaml(self):
+        conf = """
+            namespace: ${namespace}
+            list_var: ${env_list}
+            dict_var: ${env_dict}
+            str_var: ${env_str}
+            nested_list:
+              - ${list_1}
+              - ${dict_1}
+              - ${str_1}
+            nested_dict:
+              a: ${list_1}
+              b: ${dict_1}
+              c: ${str_1}
+            empty: ${empty_string}
+            substr: prefix-${str_1}-suffix
+            multiple: ${str_1}-${str_2}
+            dont_match_this: ${output something}
+        """
+        env = """
+            namespace: test
+            env_list: &listAnchor
+              - a
+              - b
+              - c
+            env_dict: &dictAnchor
+              a: 1
+              b: 2
+              c: 3
+            env_str: Hello World!
+            list_1: *listAnchor
+            dict_1: *dictAnchor
+            str_1: another str
+            str_2: hello
+            empty_string: ""
+            
+        """
+        e = parse_yaml_environment(env)
+        c = render(conf, e)
+
+        # Parse the YAML again, so that we can check structure
+        pc = yaml.safe_load(c)
+
+        exp_dict = {'a': 1, 'b': 2, 'c': 3}
+        exp_list = ['a', 'b', 'c']
+
+        self.assertEquals(pc['namespace'], 'test')
+        self.assertEquals(pc['list_var'], exp_list)
+        self.assertEquals(pc['dict_var'], exp_dict)
+        self.assertEquals(pc['str_var'], 'Hello World!')
+        self.assertEquals(pc['nested_list'][0], exp_list)
+        self.assertEquals(pc['nested_list'][1], exp_dict)
+        self.assertEquals(pc['nested_list'][2], 'another str')
+        self.assertEquals(pc['nested_dict']['a'], exp_list)
+        self.assertEquals(pc['nested_dict']['b'], exp_dict)
+        self.assertEquals(pc['nested_dict']['c'], 'another str')
+        self.assertEquals(pc['empty'], '')
+        self.assertEquals(pc['substr'], 'prefix-another str-suffix')
+        self.assertEquals(pc['multiple'], 'another str-hello')
+        self.assertEquals(pc['dont_match_this'], '${output something}')
+
+    def test_render_yaml_errors(self):
+        # We shouldn't be able to substitute an object into a string
+        conf = "something: prefix-${var_name}"
+        env = """
+        var_name:
+            foo: bar
+        """
+        e = parse_yaml_environment(env)
+        with self.assertRaises(exceptions.WrongEnvironmentType):
+            render(conf, e)
+
+        # Missing keys need to raise errors too
+        conf = "something: ${variable}"
+        env = "some_other_variable: 5"
+        e = parse_yaml_environment(env)
+        with self.assertRaises(exceptions.MissingEnvironment):
+            render(conf, e)
 
     def test_config_validate_missing_stack_source(self):
         config = Config({

@@ -158,6 +158,14 @@ class MissingEnvironment(Exception):
         super(MissingEnvironment, self).__init__(message, *args, **kwargs)
 
 
+class WrongEnvironmentType(Exception):
+
+    def __init__(self, key, *args, **kwargs):
+        self.key = key
+        message = "Environment key %s can't be merged into a string" % (key,)
+        super(WrongEnvironmentType, self).__init__(message, *args, **kwargs)
+
+
 class ImproperlyConfigured(Exception):
 
     def __init__(self, cls, error, *args, **kwargs):

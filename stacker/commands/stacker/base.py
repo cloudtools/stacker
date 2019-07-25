@@ -69,7 +69,7 @@ def key_value_arg(string):
 def environment_file(input_file):
     """Reads a stacker environment file and returns the resulting data."""
 
-    is_yaml = os.path.splitext(input_file)[1] in ['.yaml', '.yml']
+    is_yaml = os.path.splitext(input_file)[1].lower() in ['.yaml', '.yml']
 
     with open(input_file) as fd:
         if is_yaml:

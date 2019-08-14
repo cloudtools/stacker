@@ -69,7 +69,7 @@ a little more complex::
 We've defined a stack which expects a list of ingress CIDR's allowed access to
 each port. Our environment files would look like this::
 
-  # in the file: stage.env
+  # in the file: stage.yml
   web_instance_type: m3.medium
   ingress_cidrs_by_port:
     80:

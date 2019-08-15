@@ -218,7 +218,7 @@ def json_codec(raw, parameterized=False):
 
 CODECS = {
     "plain": lambda x: x,
-    "base64": lambda x: base64.b64encode(x.encode('utf8')),
+    "base64": lambda x: base64.b64encode(x.encode('utf8')).decode('utf-8'),
     "parameterized": lambda x: parameterized_codec(x, False),
     "parameterized-b64": lambda x: parameterized_codec(x, True),
     "yaml": lambda x: yaml_codec(x, parameterized=False),

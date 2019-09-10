@@ -144,6 +144,27 @@ def requires_replacement(changeset):
             "Replacement", False) == "True"]
 
 
+def show_full_changeset(full_changeset=None, params_diff=None,
+                        answer=None):
+    if not answer:
+        answer = ui.ask('Show full change set? [y/n] ').lower()
+    if answer == 'n':
+        return
+    if answer in ['y', 'v']:
+        if params_diff:
+            logger.info(
+                "Full changeset:\n\n%s\n%s",
+                format_params_diff(params_diff),
+                yaml.safe_dump(full_changeset),
+            )
+        else:
+            logger.info(
+                "Full changeset:\n%s",
+                yaml.safe_dump(full_changeset),
+            )
+        return
+    raise exceptions.CancelExecution
+
 def ask_for_approval(full_changeset=None, params_diff=None,
                      include_verbose=False):
     """Prompt the user for approval to execute a change set.
@@ -166,17 +187,7 @@ def ask_for_approval(full_changeset=None, params_diff=None,
         '/'.join(approval_options))).lower()
 
     if include_verbose and approve == "v":
-        if params_diff:
-            logger.info(
-                "Full changeset:\n\n%s\n%s",
-                format_params_diff(params_diff),
-                yaml.safe_dump(full_changeset),
-            )
-        else:
-            logger.info(
-                "Full changeset:\n%s",
-                yaml.safe_dump(full_changeset),
-            )
+        show_full_changeset(full_changeset, params_diff, approve)
         return ask_for_approval()
     elif approve != "y":
         raise exceptions.CancelExecution
@@ -1060,6 +1071,58 @@ class Provider(BaseProvider):
         parameters = self.params_as_dict(stack.get('Parameters', []))
 
         return [json.dumps(template), parameters]
+
+    def get_stack_changes(self, fqn, template, old_parameters, parameters,
+                          stack_policy, tags, change_type, **kwargs):
+        """Get the changes from a ChangeSet.
+
+        Args:
+            fqn (str): The fully qualified name of the Cloudformation stack.
+            template (:class:`stacker.providers.base.Template`): A Template
+                object to compaired to.
+            old_parameters (list): A list of dictionaries that defines the
+                parameter list on the existing Cloudformation stack.
+            parameters (list): A list of dictionaries that defines the
+                parameter list to be applied to the Cloudformation stack.
+            stack_policy (:class:`stacker.providers.base.Template`): A template
+                object representing a stack policy.
+            tags (list): A list of dictionaries that defines the tags
+                that should be applied to the Cloudformation stack.
+            change_type (str): UPDATE if stack already exists or CREATE
+                if this is a new stack.
+        """
+        changes, change_set_id = create_change_set(
+            self.cloudformation, fqn, template, parameters, tags,
+            change_type, service_role=self.service_role, **kwargs
+        )
+        old_parameters_as_dict = self.params_as_dict(old_parameters)
+        new_parameters_as_dict = self.params_as_dict(
+            [x
+             if 'ParameterValue' in x
+             else {'ParameterKey': x['ParameterKey'],
+                   'ParameterValue': old_parameters_as_dict[x['ParameterKey']]}
+             for x in parameters]
+        )
+        params_diff = diff_parameters(
+            old_parameters_as_dict,
+            new_parameters_as_dict)
+
+        if changes or params_diff:
+            ui.lock()
+            try:
+                if self.interactive:
+                    output_summary(fqn, 'changes', changes,
+                                   params_diff,
+                                   replacements_only=self.replacements_only)
+                    show_full_changeset(changes, params_diff)
+                else:
+                    show_full_changeset(changes, params_diff, 'y')
+            finally:
+                ui.unlock()
+
+        self.cloudformation.delete_change_set(
+            ChangeSetName=change_set_id
+        )
 
     @staticmethod
     def params_as_dict(parameters_list):

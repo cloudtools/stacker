@@ -1101,7 +1101,7 @@ class Provider(BaseProvider):
         return [json.dumps(template), parameters]
 
     def get_stack_changes(self, fqn, template, old_parameters, parameters,
-                          stack_policy, tags, change_type, **kwargs):
+                          stack_policy, tags, change_type, outputs, **kwargs):
         """Get the changes from a ChangeSet.
 
         Args:
@@ -1118,7 +1118,11 @@ class Provider(BaseProvider):
                 that should be applied to the Cloudformation stack.
             change_type (str): UPDATE if stack already exists or CREATE
                 if this is a new stack.
+            outputs (dict): Output definitions from the stack template.
+
         """
+        # TODO figure out what args should be passed...
+        # TODO outputs should be based on the OLD outputs, not new
         changes, change_set_id = create_change_set(
             self.cloudformation, fqn, template, parameters, tags,
             change_type, service_role=self.service_role, **kwargs
@@ -1154,6 +1158,27 @@ class Provider(BaseProvider):
         self.cloudformation.delete_change_set(
             ChangeSetName=change_set_id
         )
+
+        # ensure that current stack outputs are loaded
+        self.get_outputs(fqn)
+
+        ref_to_invalidate = []
+
+        for change in changes:
+            resc_change = change.get('ResourceChange', {})
+            if resc_change.get('Type') == 'Add':
+                continue  # we don't care about anything new
+            # scope of changes that can invalidate a change
+            if resc_change and (resc_change.get('Replacement') == 'True' or
+                                'Properties' in resc_change['Scope']):
+                logger.debug('%s added to invalidation list for %s',
+                             resc_change['LogicalResourceId'], fqn)
+                ref_to_invalidate.append(resc_change['LogicalResourceId'])
+
+        for output, props in outputs.items():
+            if any(r in str(props['Value']) for r in ref_to_invalidate):
+                self._outputs[fqn].pop(output)
+                logger.debug('Removed %s from the outputs of %s', output, fqn)
 
         # when creating a changeset for a new stack, CFN creates a temporary
         # stack with a status of REVIEW_IN_PROGRESS. this is only removed if

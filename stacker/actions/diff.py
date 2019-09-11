@@ -5,6 +5,7 @@ from builtins import str
 from builtins import object
 import logging
 from operator import attrgetter
+import json  # TODO remove
 
 from .base import plan, build_walker
 from . import build
@@ -168,15 +169,22 @@ class Action(build.Action):
             return NotUpdatedStatus()
 
         provider = self.build_provider(stack)
+        tags = build.build_stack_tags(stack)
 
         try:
             provider_stack = provider.get_stack(stack.fqn)
+            # handling for orphaned changeset temp stacks
+            if provider.get_stack_status(
+                    provider_stack) == provider.REVIEW_STATUS:
+                raise exceptions.StackDoesNotExist(stack.fqn)
             old_params = provider_stack.get('Parameters', [])
             change_type = 'UPDATE'
+            stack_outputs = provider.get_outputs(stack.fqn)
         except exceptions.StackDoesNotExist:
             provider_stack = None
             old_params = {}
             change_type = 'CREATE'
+            stack_outputs = {}
 
         stack.resolve(self.context, provider)
         # generate our own template & params
@@ -185,10 +193,25 @@ class Action(build.Action):
         for p in parameters:
             new_params[p['ParameterKey']] = p['ParameterValue']
 
-        provider.get_stack_changes(
-            stack.fqn, self._template(stack.blueprint), old_params,
-            parameters, None, [], change_type
-        )
+        try:
+            provider.get_stack_changes(
+                stack.fqn, self._template(stack.blueprint), old_params,
+                parameters, None, tags, change_type,
+                outputs=stack.blueprint.get_output_definitions()
+            )
+            for output_name, output_params in \
+                    stack.blueprint.get_output_definitions().items():
+                if output_name not in stack_outputs:
+                    stack_outputs[output_name] = (
+                        '<inferred-change: {}.{}={}>'.format(
+                            stack.fqn, output_name,
+                            str(output_params['Value'])
+                        )
+                    )
+        except exceptions.StackDidNotChange:
+            logger.info('No changes: %s', stack.fqn)
+
+        stack.set_outputs(stack_outputs)
 
         return COMPLETE
 

@@ -144,29 +144,49 @@ def requires_replacement(changeset):
             "Replacement", False) == "True"]
 
 
-def show_full_changeset(full_changeset=None, params_diff=None,
-                        answer=None):
+def output_full_changeset(full_changeset=None, params_diff=None,
+                          answer=None, fqn=None):
+    """Optionally output full changeset.
+
+    Args:
+        full_changeset (list, optional): A list of the full changeset that will
+            be output if the user specifies verbose.
+        params_diff (list, optional): A list of DictValue detailing the
+            differences between two parameters returned by
+            :func:`stacker.actions.diff.diff_dictionaries`
+        answer (str, optional): predetermined answer to the prompt if it has
+            already been answered or inferred.
+        fqn (str): fully qualified name of the stack
+
+    """
     if not answer:
         answer = ui.ask('Show full change set? [y/n] ').lower()
     if answer == 'n':
         return
     if answer in ['y', 'v']:
+        if fqn:
+            msg = '%s full changeset' % (fqn)
+        else:
+            msg = 'Full changeset'
         if params_diff:
             logger.info(
-                "Full changeset:\n\n%s\n%s",
+                "%s:\n\n%s\n%s",
+                msg,
                 format_params_diff(params_diff),
                 yaml.safe_dump(full_changeset),
             )
         else:
             logger.info(
-                "Full changeset:\n%s",
+                "%s:\n%s",
+                msg,
                 yaml.safe_dump(full_changeset),
             )
         return
     raise exceptions.CancelExecution
 
+
 def ask_for_approval(full_changeset=None, params_diff=None,
-                     include_verbose=False):
+                     include_verbose=False, fqn=None):
     """Prompt the user for approval to execute a change set.
 
     Args:
@@ -176,7 +196,8 @@ def ask_for_approval(full_changeset=None, params_diff=None,
             differences between two parameters returned by
             :func:`stacker.actions.diff.diff_dictionaries`
         include_verbose (bool, optional): Boolean for whether or not to include
-            the verbose option
+            the verbose option.
+        fqn (str): fully qualified name of the stack
 
     """
     approval_options = ['y', 'n']
@@ -187,8 +208,9 @@ def ask_for_approval(full_changeset=None, params_diff=None,
         '/'.join(approval_options))).lower()
 
     if include_verbose and approve == "v":
-        show_full_changeset(full_changeset, params_diff, approve)
-        return ask_for_approval()
+        output_full_changeset(full_changeset=full_changeset,
+                              params_diff=params_diff, answer=approve, fqn=fqn)
+        return ask_for_approval(fqn=fqn)
     elif approve != "y":
         raise exceptions.CancelExecution
 
@@ -556,7 +578,10 @@ class Provider(BaseProvider):
         "CREATE_FAILED",
         "ROLLBACK_FAILED",
         "ROLLBACK_COMPLETE",
+        "REVIEW_IN_PROGRESS"
     )
+
+    REVIEW_STATUS = "REVIEW_IN_PROGRESS"
 
     def __init__(self, session, region=None, interactive=False,
                  replacements_only=False, recreate_failed=False,
@@ -599,6 +624,9 @@ class Provider(BaseProvider):
 
     def is_stack_failed(self, stack, **kwargs):
         return self.get_stack_status(stack) in self.FAILED_STATUSES
+
+    def is_stack_in_review(self, stack, **kwargs):
+        return self.get_stack_status(stack) == self.REVIEW_STATUS
 
     def tail_stack(self, stack, cancel, log_func=None, **kwargs):
         def _log_func(e):
@@ -840,7 +868,7 @@ class Provider(BaseProvider):
                 'Proceed carefully!\n\n' % (stack_name, stack_status))
             sys.stdout.flush()
 
-            ask_for_approval(include_verbose=False)
+            ask_for_approval(include_verbose=False, fqn=stack_name)
 
         logger.warn('Destroying stack \"%s\" for re-creation', stack_name)
         self.destroy_stack(stack)
@@ -950,6 +978,7 @@ class Provider(BaseProvider):
                     full_changeset=full_changeset,
                     params_diff=params_diff,
                     include_verbose=True,
+                    fqn=fqn,
                 )
             finally:
                 ui.unlock()
@@ -1114,15 +1143,32 @@ class Provider(BaseProvider):
                     output_summary(fqn, 'changes', changes,
                                    params_diff,
                                    replacements_only=self.replacements_only)
-                    show_full_changeset(changes, params_diff)
+                    output_full_changeset(full_changeset=changes,
+                                          params_diff=params_diff, fqn=fqn)
                 else:
-                    show_full_changeset(changes, params_diff, 'y')
+                    output_full_changeset(full_changeset=changes,
+                                          params_diff=params_diff,
+                                          answer='y', fqn=fqn)
             finally:
                 ui.unlock()
 
         self.cloudformation.delete_change_set(
             ChangeSetName=change_set_id
         )
+
+        # when creating a changeset for a new stack, CFN creates a temporary
+        # stack with a status of REVIEW_IN_PROGRESS. this is only removed if
+        # the changeset is executed or it is manually deleted.
+        if change_type == 'CREATE':
+            try:
+                stack = self.get_stack(fqn)
+                if self.is_stack_in_review(stack):
+                    logger.debug('Removing temporary stack that is created '
+                                 'with a ChangeSet of type "CREATE"')
+                    self.destroy_stack(stack)
+            except exceptions.StackDoesNotExist:
+                # not an issue if the stack was already cleaned up
+                logger.debug('Stack does not exist: %s', fqn)
 
     @staticmethod
     def params_as_dict(parameters_list):

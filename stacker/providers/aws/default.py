@@ -577,8 +577,7 @@ class Provider(BaseProvider):
     RECREATION_STATUSES = (
         "CREATE_FAILED",
         "ROLLBACK_FAILED",
-        "ROLLBACK_COMPLETE",
-        "REVIEW_IN_PROGRESS"
+        "ROLLBACK_COMPLETE"
     )
 
     REVIEW_STATUS = "REVIEW_IN_PROGRESS"

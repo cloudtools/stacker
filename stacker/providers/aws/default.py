@@ -21,6 +21,7 @@ from botocore.config import Config
 from ..base import BaseProvider
 from ... import exceptions
 from ...ui import ui
+from ...util import parse_cloudformation_template
 from stacker.session_cache import get_session
 
 from ...actions.diff import (
@@ -1100,58 +1101,69 @@ class Provider(BaseProvider):
 
         return [json.dumps(template), parameters]
 
-    def get_stack_changes(self, fqn, template, old_parameters, parameters,
-                          stack_policy, tags, change_type, outputs, **kwargs):
+    def get_stack_changes(self, stack, template, parameters,
+                          tags, **kwargs):
         """Get the changes from a ChangeSet.
 
         Args:
-            fqn (str): The fully qualified name of the Cloudformation stack.
+            stack (:class:`stacker.stack.Stack`): the stack to get changes
             template (:class:`stacker.providers.base.Template`): A Template
                 object to compaired to.
-            old_parameters (list): A list of dictionaries that defines the
-                parameter list on the existing Cloudformation stack.
             parameters (list): A list of dictionaries that defines the
                 parameter list to be applied to the Cloudformation stack.
-            stack_policy (:class:`stacker.providers.base.Template`): A template
-                object representing a stack policy.
             tags (list): A list of dictionaries that defines the tags
                 that should be applied to the Cloudformation stack.
-            change_type (str): UPDATE if stack already exists or CREATE
-                if this is a new stack.
-            outputs (dict): Output definitions from the stack template.
+
+        Returns:
+            dict: Stack outputs with inferred changes.
 
         """
-        # TODO figure out what args should be passed...
-        # TODO outputs should be based on the OLD outputs, not new
+        try:
+            stack_details = self.get_stack(stack.fqn)
+            # handling for orphaned changeset temp stacks
+            if self.get_stack_status(
+                    stack_details) == self.REVIEW_STATUS:
+                raise exceptions.StackDoesNotExist(stack.fqn)
+            _old_template, old_params = self.get_stack_info(
+                stack_details
+            )
+            # needs to be loaded from string then parsed
+            old_template = parse_cloudformation_template(json.loads(
+                _old_template
+            ))
+            change_type = 'UPDATE'
+        except exceptions.StackDoesNotExist:
+            old_params = {}
+            old_template = {}
+            change_type = 'CREATE'
+
         changes, change_set_id = create_change_set(
-            self.cloudformation, fqn, template, parameters, tags,
+            self.cloudformation, stack.fqn, template, parameters, tags,
             change_type, service_role=self.service_role, **kwargs
         )
-        old_parameters_as_dict = self.params_as_dict(old_parameters)
         new_parameters_as_dict = self.params_as_dict(
             [x
              if 'ParameterValue' in x
              else {'ParameterKey': x['ParameterKey'],
-                   'ParameterValue': old_parameters_as_dict[x['ParameterKey']]}
+                   'ParameterValue': old_params[x['ParameterKey']]}
              for x in parameters]
         )
-        params_diff = diff_parameters(
-            old_parameters_as_dict,
-            new_parameters_as_dict)
+        params_diff = diff_parameters(old_params, new_parameters_as_dict)
 
         if changes or params_diff:
             ui.lock()
             try:
                 if self.interactive:
-                    output_summary(fqn, 'changes', changes,
+                    output_summary(stack.fqn, 'changes', changes,
                                    params_diff,
                                    replacements_only=self.replacements_only)
                     output_full_changeset(full_changeset=changes,
-                                          params_diff=params_diff, fqn=fqn)
+                                          params_diff=params_diff,
+                                          fqn=stack.fqn)
                 else:
                     output_full_changeset(full_changeset=changes,
                                           params_diff=params_diff,
-                                          answer='y', fqn=fqn)
+                                          answer='y', fqn=stack.fqn)
             finally:
                 ui.unlock()
 
@@ -1159,11 +1171,11 @@ class Provider(BaseProvider):
             ChangeSetName=change_set_id
         )
 
-        # ensure that current stack outputs are loaded
-        self.get_outputs(fqn)
+        # ensure current stack outputs are loaded
+        self.get_outputs(stack.fqn)
 
-        ref_to_invalidate = []
-
+        # infer which outputs may have changed
+        refs_to_invalidate = []
         for change in changes:
             resc_change = change.get('ResourceChange', {})
             if resc_change.get('Type') == 'Add':
@@ -1172,27 +1184,42 @@ class Provider(BaseProvider):
             if resc_change and (resc_change.get('Replacement') == 'True' or
                                 'Properties' in resc_change['Scope']):
                 logger.debug('%s added to invalidation list for %s',
-                             resc_change['LogicalResourceId'], fqn)
-                ref_to_invalidate.append(resc_change['LogicalResourceId'])
+                             resc_change['LogicalResourceId'], stack.fqn)
+                refs_to_invalidate.append(resc_change['LogicalResourceId'])
 
-        for output, props in outputs.items():
-            if any(r in str(props['Value']) for r in ref_to_invalidate):
-                self._outputs[fqn].pop(output)
-                logger.debug('Removed %s from the outputs of %s', output, fqn)
+        # invalidate cached outputs with inferred changes
+        for output, props in old_template.get('Outputs', {}).items():
+            if any(r in str(props['Value']) for r in refs_to_invalidate):
+                self._outputs[stack.fqn].pop(output)
+                logger.debug('Removed %s from the outputs of %s',
+                             output, stack.fqn)
+
+        # push values for new + invalidated outputs to outputs
+        for output_name, output_params in \
+                stack.blueprint.get_output_definitions().items():
+            if output_name not in self._outputs[stack.fqn]:
+                self._outputs[stack.fqn][output_name] = (
+                    '<inferred-change: {}.{}={}>'.format(
+                        stack.fqn, output_name,
+                        str(output_params['Value'])
+                    )
+                )
 
         # when creating a changeset for a new stack, CFN creates a temporary
         # stack with a status of REVIEW_IN_PROGRESS. this is only removed if
         # the changeset is executed or it is manually deleted.
         if change_type == 'CREATE':
             try:
-                stack = self.get_stack(fqn)
-                if self.is_stack_in_review(stack):
+                temp_stack = self.get_stack(stack.fqn)
+                if self.is_stack_in_review(temp_stack):
                     logger.debug('Removing temporary stack that is created '
                                  'with a ChangeSet of type "CREATE"')
-                    self.destroy_stack(stack)
+                    self.destroy_stack(temp_stack)
             except exceptions.StackDoesNotExist:
                 # not an issue if the stack was already cleaned up
-                logger.debug('Stack does not exist: %s', fqn)
+                logger.debug('Stack does not exist: %s', stack.fqn)
+
+        return self.get_outputs(stack.fqn)
 
     @staticmethod
     def params_as_dict(parameters_list):

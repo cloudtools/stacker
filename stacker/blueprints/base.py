@@ -348,7 +348,8 @@ class Blueprint(object):
                 properties.
 
         """
-        return self.template.outputs
+        return {k: output.to_dict() for k, output in
+                self.template.outputs.items()}
 
     def get_required_parameter_definitions(self):
         """Returns all template parameters that do not have a default value.

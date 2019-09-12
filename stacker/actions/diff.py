@@ -151,9 +151,8 @@ class Action(build.Action):
     are determined automatically based on references to output values from
     other stacks).
 
-    The plan is then used to pull the current CloudFormation template from
-    AWS and compare it to the generated templated based on the current
-    config.
+    The plan is then used to create a changeset for a stack using a
+    generated template based on the current config.
     """
 
     def _diff_stack(self, stack, **kwargs):

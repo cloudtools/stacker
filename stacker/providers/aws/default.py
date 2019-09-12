@@ -157,7 +157,7 @@ def output_full_changeset(full_changeset=None, params_diff=None,
             :func:`stacker.actions.diff.diff_dictionaries`
         answer (str, optional): predetermined answer to the prompt if it has
             already been answered or inferred.
-        fqn (str): fully qualified name of the stack
+        fqn (str, optional): fully qualified name of the stack.
 
     """
     if not answer:
@@ -198,7 +198,7 @@ def ask_for_approval(full_changeset=None, params_diff=None,
             :func:`stacker.actions.diff.diff_dictionaries`
         include_verbose (bool, optional): Boolean for whether or not to include
             the verbose option.
-        fqn (str): fully qualified name of the stack
+        fqn (str): fully qualified name of the stack.
 
     """
     approval_options = ['y', 'n']

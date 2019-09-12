@@ -1099,6 +1099,9 @@ class Provider(BaseProvider):
 
         parameters = self.params_as_dict(stack.get('Parameters', []))
 
+        if isinstance(template, str):  # handle yaml templates
+            template = parse_cloudformation_template(template)
+
         return [json.dumps(template), parameters]
 
     def get_stack_changes(self, stack, template, parameters,
@@ -1127,10 +1130,7 @@ class Provider(BaseProvider):
             _old_template, old_params = self.get_stack_info(
                 stack_details
             )
-            # needs to be loaded from string then parsed
-            old_template = parse_cloudformation_template(json.loads(
-                _old_template
-            ))
+            old_template = parse_cloudformation_template(_old_template)
             change_type = 'UPDATE'
         except exceptions.StackDoesNotExist:
             old_params = {}

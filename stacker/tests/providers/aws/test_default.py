@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from builtins import range
 import copy
 from datetime import datetime
+import os.path
 import random
 import string
 import threading
@@ -60,10 +61,38 @@ def generate_describe_stacks_stack(stack_name,
     tags = tags or []
     return {
         "StackName": stack_name,
+        "StackId": stack_name,
         "CreationTime": creation_time or datetime(2015, 1, 1),
         "StackStatus": stack_status,
         "Tags": tags
     }
+
+
+def generate_get_template(file_name='cfn_template.json',
+                          stages_available=['Original']):
+    fixture_dir = os.path.join(os.path.dirname(__file__), '../../fixtures')
+    with open(os.path.join(fixture_dir, file_name), 'r') as f:
+        return {
+            "StagesAvailable": stages_available,
+            "TemplateBody": f.read()
+        }
+
+
+def generate_stack_object(stack_name, outputs=None):
+    mock_stack = MagicMock(['name', 'fqn', 'blueprint'])
+    if not outputs:
+        outputs = {
+            "FakeOutput": {
+                "Value": {"Ref": "FakeResource"}
+            }
+        }
+    mock_stack.name = stack_name
+    mock_stack.fqn = stack_name
+    mock_stack.blueprint = MagicMock(['get_output_definitions'])
+    mock_stack.blueprint.get_output_definitions = MagicMock(
+        return_value=outputs
+    )
+    return mock_stack
 
 
 def generate_resource_change(replacement=True):
@@ -603,10 +632,19 @@ class TestProviderDefaultMode(unittest.TestCase):
     @patch('stacker.providers.aws.default.output_full_changeset')
     def test_get_stack_changes_update(self, mock_output_full_cs):
         stack_name = "MockStack"
+        mock_stack = generate_stack_object(stack_name)
 
         self.stubber.add_response(
+            'describe_stacks',
+            {'Stacks': [generate_describe_stacks_stack(stack_name)]}
+        )
+        self.stubber.add_response(
+            'get_template',
+            generate_get_template('cfn_template.yaml')
+        )
+        self.stubber.add_response(
             "create_change_set",
-            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+            {'Id': 'CHANGESETID', 'StackId': stack_name}
         )
         changes = []
         changes.append(generate_change())
@@ -618,30 +656,45 @@ class TestProviderDefaultMode(unittest.TestCase):
                 changes=changes,
             )
         )
-
         self.stubber.add_response("delete_change_set", {})
+        self.stubber.add_response(
+            'describe_stacks',
+            {'Stacks': [generate_describe_stacks_stack(stack_name)]}
+        )
 
         with self.stubber:
-            self.provider.get_stack_changes(
-                fqn=stack_name,
-                template=Template(url="http://fake.template.url.com/"),
-                old_parameters=[],
-                parameters=[],
-                stack_policy=None, tags=[], change_type='UPDATE'
-            )
+            result = self.provider.get_stack_changes(
+                stack=mock_stack, template=Template(
+                    url="http://fake.template.url.com/"
+                ), parameters=[], tags=[])
 
         mock_output_full_cs.assert_called_with(full_changeset=changes,
                                                params_diff=[],
                                                fqn=stack_name,
                                                answer='y')
+        expected_outputs = {
+            'FakeOutput': '<inferred-change: MockStack.FakeOutput={}>'.format(
+                str({"Ref": "FakeResource"})
+            )
+        }
+        self.assertEqual(self.provider.get_outputs(stack_name),
+                         expected_outputs)
+        self.assertEqual(result, expected_outputs)
 
     @patch('stacker.providers.aws.default.output_full_changeset')
     def test_get_stack_changes_create(self, mock_output_full_cs):
         stack_name = "MockStack"
+        mock_stack = generate_stack_object(stack_name)
 
         self.stubber.add_response(
+            'describe_stacks',
+            {'Stacks': [generate_describe_stacks_stack(
+                stack_name, stack_status='REVIEW_IN_PROGRESS'
+            )]}
+        )
+        self.stubber.add_response(
             "create_change_set",
-            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+            {'Id': 'CHANGESETID', 'StackId': stack_name}
         )
         changes = []
         changes.append(generate_change())
@@ -653,30 +706,27 @@ class TestProviderDefaultMode(unittest.TestCase):
                 changes=changes,
             )
         )
-
         self.stubber.add_response("delete_change_set", {})
-
-        stack_response = {
-            "Stacks": [generate_describe_stacks_stack(
-                stack_name, stack_status='REVIEW_IN_PROGRESS'
-            )]
-        }
         self.stubber.add_response(
-            "describe_stacks",
-            stack_response,
-            expected_params={"StackName": stack_name}
+            'describe_stacks',
+            {'Stacks': [generate_describe_stacks_stack(
+                stack_name, stack_status='REVIEW_IN_PROGRESS'
+            )]}
+        )
+        self.stubber.add_response(
+            'describe_stacks',
+            {'Stacks': [generate_describe_stacks_stack(
+                stack_name, stack_status='REVIEW_IN_PROGRESS'
+            )]}
         )
 
         self.stubber.add_response("delete_stack", {})
 
         with self.stubber:
             self.provider.get_stack_changes(
-                fqn=stack_name,
-                template=Template(url="http://fake.template.url.com/"),
-                old_parameters=[],
-                parameters=[],
-                stack_policy=None, tags=[], change_type='CREATE'
-            )
+                stack=mock_stack, template=Template(
+                    url="http://fake.template.url.com/"
+                ), parameters=[], tags=[])
 
         mock_output_full_cs.assert_called_with(full_changeset=changes,
                                                params_diff=[],
@@ -883,10 +933,19 @@ class TestProviderInteractiveMode(unittest.TestCase):
     def test_get_stack_changes_interactive(self, mock_output_summary,
                                            mock_output_full_cs):
         stack_name = "MockStack"
+        mock_stack = generate_stack_object(stack_name)
 
         self.stubber.add_response(
+            'describe_stacks',
+            {'Stacks': [generate_describe_stacks_stack(stack_name)]}
+        )
+        self.stubber.add_response(
+            'get_template',
+            generate_get_template('cfn_template.yaml')
+        )
+        self.stubber.add_response(
             "create_change_set",
-            {'Id': 'CHANGESETID', 'StackId': 'STACKID'}
+            {'Id': 'CHANGESETID', 'StackId': stack_name}
         )
         changes = []
         changes.append(generate_change())
@@ -898,17 +957,17 @@ class TestProviderInteractiveMode(unittest.TestCase):
                 changes=changes,
             )
         )
-
         self.stubber.add_response("delete_change_set", {})
+        self.stubber.add_response(
+            'describe_stacks',
+            {'Stacks': [generate_describe_stacks_stack(stack_name)]}
+        )
 
         with self.stubber:
             self.provider.get_stack_changes(
-                fqn=stack_name,
-                template=Template(url="http://fake.template.url.com/"),
-                old_parameters=[],
-                parameters=[],
-                stack_policy=None, tags=[], change_type='UPDATE'
-            )
+                stack=mock_stack, template=Template(
+                    url="http://fake.template.url.com/"
+                ), parameters=[], tags=[])
 
         mock_output_summary.assert_called_with(stack_name, 'changes',
                                                changes, [],

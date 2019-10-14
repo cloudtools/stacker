@@ -40,7 +40,7 @@ most templates is to keep them as generic as possible and then use
 configuration to modify them.
 
 At Remind we use stacker to manage all of our Cloudformation stacks -
-both in development, staging and production without any major issues.
+both in development, staging, and production without any major issues.
 
 Requirements
 ============
@@ -51,15 +51,47 @@ Requirements
 Stacker Command
 ===============
 
-The stacker command is built to have sub-commands, much like git. Currently the
-commands are:
+The ``stacker`` command has sub-commands, similar to git.
 
-- ``build`` which handles taking your stack config and then launching or
-  updating stacks as necessary.
-- ``destroy`` which tears down your stacks
-- ``diff`` which compares your currently deployed stack templates to your
-  config files
-- ``info`` which prints information about your currently deployed stacks
+Here are some examples:
+
+  ``build``:
+    handles taking your stack config and then launching or updating stacks as necessary.
+
+  ``destroy``:
+    tears down your stacks
+    
+  ``diff``:
+    compares your currently deployed stack templates to your config files
+
+  ``info``:
+    prints information about your currently deployed stacks
+
+We document these sub-commands in full along with others, in the documentation.
+
+
+Getting Started
+===============
+
+``stacker_cookiecutter``: https://github.com/cloudtools/stacker_cookiecutter
+
+  We recommend creating your base `stacker` project using ``stacker_cookiecutter``.
+  This tool will install all the needed dependencies as well as the directory 
+  structures and files. The files it produces are well documented with comments
+  to help people new to ``stacker``.
+  
+``stacker_blueprints``: https://github.com/cloudtools/stacker_blueprints
+
+  This repository holds working examples of ``stacker`` blueprints.
+  Each blueprint works in isolation and may be referenced, extended, or 
+  copied into your project files. The blueprints are written in Python
+  and use the troposphere_ library.
+  
+``stacker reference documentation``:
+  
+  We document all functionality and features of stacker in our extensive
+  reference documentation located at readthedocs_.
+  
 
 Docker
 ======

@@ -76,9 +76,9 @@ Getting Started
 ``stacker_cookiecutter``: https://github.com/cloudtools/stacker_cookiecutter
 
   We recommend creating your base `stacker` project using ``stacker_cookiecutter``.
-  This tool will install all the needed dependencies as well as the directory 
-  structures and files. The files it produces are well documented with comments
-  to help people new to ``stacker``.
+  This tool will install all the needed dependencies and created the project 
+  directory structure and files. The resulting files are well documented
+  with comments to explain their purpose and examples on how to extend.
   
 ``stacker_blueprints``: https://github.com/cloudtools/stacker_blueprints
 

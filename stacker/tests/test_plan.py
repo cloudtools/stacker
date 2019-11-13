@@ -115,6 +115,30 @@ class TestPlan(unittest.TestCase):
 
         self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
+    def test_execute_plan_locked(self):
+        # Locked stacks still need to have their requires evaluated when
+        # they're being created.
+        vpc = Stack(
+            definition=generate_definition('vpc', 1),
+            context=self.context)
+        bastion = Stack(
+            definition=generate_definition('bastion', 1, requires=[vpc.name]),
+            locked=True,
+            context=self.context)
+
+        calls = []
+
+        def fn(stack, status=None):
+            calls.append(stack.fqn)
+            return COMPLETE
+
+        graph = build_graph([Step(vpc, fn), Step(bastion, fn)])
+        plan = build_plan(
+            description="Test", graph=graph)
+        plan.execute(walk)
+
+        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
+
     def test_execute_plan_filtered(self):
         vpc = Stack(
             definition=generate_definition('vpc', 1),

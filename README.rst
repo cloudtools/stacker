@@ -91,6 +91,10 @@ Getting Started
   
   We document all functionality and features of stacker in our extensive
   reference documentation located at readthedocs_.
+
+``AWS OSS Blog``: https://aws.amazon.com/blogs/opensource/using-aws-codepipeline-and-open-source-tools-for-at-scale-infrastructure-deployment/
+
+  The AWS OSS Blog has a getting started guide using stacker with AWS CodePipeline.
   
 
 Docker

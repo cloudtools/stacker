@@ -49,32 +49,6 @@ class TestStack(unittest.TestCase):
             stack.requires,
         )
 
-    def test_stack_requires_when_locked(self):
-        definition = generate_definition(
-            base_name="vpc",
-            stack_id=1,
-            variables={
-                "Var1": "${noop fakeStack3::FakeOutput}",
-                "Var2": (
-                    "some.template.value:${output fakeStack2::FakeOutput}:"
-                    "${output fakeStack::FakeOutput}"
-                ),
-                "Var3": "${output fakeStack::FakeOutput},"
-                        "${output fakeStack2::FakeOutput}",
-            },
-            requires=["fakeStack"],
-        )
-        stack = Stack(definition=definition, context=self.context)
-
-        stack.locked = True
-        self.assertEqual(len(stack.requires), 0)
-
-        # TODO(ejholmes): When the stack is in `--force`, it's not really
-        # locked. Maybe it would be better if `stack.locked` were false when
-        # the stack is in `--force`.
-        stack.force = True
-        self.assertEqual(len(stack.requires), 2)
-
     def test_stack_requires_circular_ref(self):
         definition = generate_definition(
             base_name="vpc",

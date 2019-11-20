@@ -230,10 +230,9 @@ class Action(build.Action):
 
         provider = self.build_provider(stack)
 
-        provider_stack = provider.get_stack(stack.fqn)
-
         # get the current stack template & params from AWS
         try:
+            provider_stack = provider.get_stack(stack.fqn)
             [old_template, old_params] = provider.get_stack_info(
                 provider_stack)
         except exceptions.StackDoesNotExist:
@@ -270,10 +269,11 @@ class Action(build.Action):
             )
             output.extend(build_stack_changes(stack.name, new_stack, old_stack,
                                               new_params, old_params))
-        ui.info('\n' + '\n'.join(output))
 
-        stack.set_outputs(
-            provider.get_output_dict(provider_stack))
+            stack.set_outputs(
+                provider.get_output_dict(provider_stack))
+
+        ui.info('\n' + '\n'.join(output))
 
         return COMPLETE
 

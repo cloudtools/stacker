@@ -16,7 +16,7 @@ install_requires = [
     "jinja2>=2.7,<3.0",
     "schematics>=2.0.1,<2.1.0",
     "formic2",
-    "python-dateutil>=2.0,<3.0",
+    "python-dateutil>=2.0,<2.8",
 ]
 
 setup_requires = ['pytest-runner']

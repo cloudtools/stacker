@@ -32,7 +32,6 @@ tests_require = [
 
 scripts = [
     "scripts/compare_env",
-    "scripts/docker-stacker",
     "scripts/stacker.cmd",
     "scripts/stacker",
 ]

@@ -8,7 +8,7 @@ import logging
 import threading
 
 from ..dag import walk, ThreadedWalker, UnlimitedSemaphore
-from ..plan import Step, build_plan, build_graph
+from ..plan import Graph, Plan, Step, merge_graphs
 
 import botocore.exceptions
 from stacker.session_cache import get_session
@@ -61,42 +61,6 @@ def build_walker(concurrency):
     return ThreadedWalker(semaphore).walk
 
 
-def plan(description, stack_action, context,
-         tail=None, reverse=False):
-    """A simple helper that builds a graph based plan from a set of stacks.
-
-    Args:
-        description (str): a description of the plan.
-        action (func): a function to call for each stack.
-        context (:class:`stacker.context.Context`): a
-            :class:`stacker.context.Context` to build the plan from.
-        tail (func): an optional function to call to tail the stack progress.
-        reverse (bool): if True, execute the graph in reverse (useful for
-            destroy actions).
-
-    Returns:
-        :class:`plan.Plan`: The resulting plan object
-    """
-
-    def target_fn(*args, **kwargs):
-        return COMPLETE
-
-    steps = [
-        Step(stack, fn=stack_action, watch_func=tail)
-        for stack in context.get_stacks()]
-
-    steps += [
-        Step(target, fn=target_fn) for target in context.get_targets()]
-
-    graph = build_graph(steps)
-
-    return build_plan(
-        description=description,
-        graph=graph,
-        targets=context.stack_names,
-        reverse=reverse)
-
-
 def stack_template_key_name(blueprint):
     """Given a blueprint, produce an appropriate key name.
 
@@ -131,7 +95,6 @@ def stack_template_url(bucket_name, blueprint, endpoint):
 
 
 class BaseAction(object):
-
     """Actions perform the actual work of each Command.
 
     Each action is tied to a :class:`stacker.commands.base.BaseCommand`, and
@@ -144,6 +107,7 @@ class BaseAction(object):
         provider_builder (:class:`stacker.providers.base.BaseProviderBuilder`,
             optional): An object that will build a provider that will be
             interacted with in order to perform the necessary actions.
+
     """
 
     def __init__(self, context, provider_builder=None, cancel=None):
@@ -156,17 +120,104 @@ class BaseAction(object):
             self.bucket_region = provider_builder.region
         self.s3_conn = get_session(self.bucket_region).client('s3')
 
+    @property
+    def _stack_action(self):
+        """The function run against a step."""
+        raise NotImplementedError
+
+    @property
+    def provider(self):
+        """Some actions need a generic provider using the default region (e.g.
+        hooks)."""
+        return self.provider_builder.build()
+
+    def _generate_plan(self, tail=False, reverse=False,
+                       require_unlocked=True,
+                       include_persistent_graph=False):
+        """Create a plan for this action.
+
+        Args:
+            tail (Union[bool, Callable]): An optional function to call
+                to tail the stack progress.
+            reverse (bool): If True, execute the graph in reverse (useful for
+                destroy actions).
+            require_unlocked (bool): If the persistent graph is locked, an
+                error is raised.
+            include_persistent_graph (bool): Include the persistent graph
+                in the :class:`stacker.plan.Plan` (if there is one).
+                This will handle basic merging of the local and persistent
+                graphs if an action does not require more complex logic.
+
+        Returns:
+            :class:`stacker.plan.Plan`: The resulting plan object
+
+        """
+        tail = self._tail_stack if tail else None
+
+        def target_fn(*args, **kwargs):
+            return COMPLETE
+
+        steps = [
+            Step(stack, fn=self._stack_action, watch_func=tail)
+            for stack in self.context.get_stacks()]
+
+        steps += [
+            Step(target, fn=target_fn)
+            for target in self.context.get_targets()]
+
+        graph = Graph.from_steps(steps)
+
+        if include_persistent_graph and self.context.persistent_graph:
+            persist_steps = Step.from_persistent_graph(
+                self.context.persistent_graph.to_dict(),
+                self.context,
+                fn=self._stack_action,
+                watch_func=tail
+            )
+            persist_graph = Graph.from_steps(persist_steps)
+            graph = merge_graphs(graph, persist_graph)
+
+        return Plan(
+            context=self.context,
+            description=self.DESCRIPTION,
+            graph=graph,
+            reverse=reverse,
+            require_unlocked=require_unlocked)
+
+    def _tail_stack(self, stack, cancel, retries=0, **kwargs):
+        provider = self.build_provider(stack)
+        return provider.tail_stack(stack, cancel, retries, **kwargs)
+
+    def build_provider(self, stack):
+        """Builds a :class:`stacker.providers.base.Provider` suitable for
+        operating on the given :class:`stacker.Stack`."""
+        return self.provider_builder.build(region=stack.region,
+                                           profile=stack.profile)
+
     def ensure_cfn_bucket(self):
         """The CloudFormation bucket where templates will be stored."""
-        if self.bucket_name:
+        if not self.context.s3_bucket_verified and self.bucket_name:
             ensure_s3_bucket(self.s3_conn,
                              self.bucket_name,
                              self.bucket_region)
 
-    def stack_template_url(self, blueprint):
-        return stack_template_url(
-            self.bucket_name, blueprint, get_s3_endpoint(self.s3_conn)
-        )
+    def execute(self, *args, **kwargs):
+        try:
+            self.pre_run(*args, **kwargs)
+            self.run(*args, **kwargs)
+            self.post_run(*args, **kwargs)
+        except PlanFailed as e:
+            logger.error(str(e))
+            sys.exit(1)
+
+    def post_run(self, *args, **kwargs):
+        pass
+
+    def pre_run(self, *args, **kwargs):
+        pass
+
+    def run(self, *args, **kwargs):
+        raise NotImplementedError("Subclass must implement \"run\" method")
 
     def s3_stack_push(self, blueprint, force=False):
         """Pushes the rendered blueprint's template to S3.
@@ -200,36 +251,7 @@ class BaseAction(object):
                      template_url)
         return template_url
 
-    def execute(self, *args, **kwargs):
-        try:
-            self.pre_run(*args, **kwargs)
-            self.run(*args, **kwargs)
-            self.post_run(*args, **kwargs)
-        except PlanFailed as e:
-            logger.error(str(e))
-            sys.exit(1)
-
-    def pre_run(self, *args, **kwargs):
-        pass
-
-    def run(self, *args, **kwargs):
-        raise NotImplementedError("Subclass must implement \"run\" method")
-
-    def post_run(self, *args, **kwargs):
-        pass
-
-    def build_provider(self, stack):
-        """Builds a :class:`stacker.providers.base.Provider` suitable for
-        operating on the given :class:`stacker.Stack`."""
-        return self.provider_builder.build(region=stack.region,
-                                           profile=stack.profile)
-
-    @property
-    def provider(self):
-        """Some actions need a generic provider using the default region (e.g.
-        hooks)."""
-        return self.provider_builder.build()
-
-    def _tail_stack(self, stack, cancel, retries=0, **kwargs):
-        provider = self.build_provider(stack)
-        return provider.tail_stack(stack, cancel, retries, **kwargs)
+    def stack_template_url(self, blueprint):
+        return stack_template_url(
+            self.bucket_name, blueprint, get_s3_endpoint(self.s3_conn)
+        )

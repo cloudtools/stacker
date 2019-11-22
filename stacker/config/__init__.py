@@ -402,6 +402,8 @@ class Config(Model):
 
     stacker_bucket_region = StringType(serialize_when_none=False)
 
+    persistent_graph_key = StringType(serialize_when_none=False)
+
     stacker_cache_dir = StringType(serialize_when_none=False)
 
     sys_path = StringType(serialize_when_none=False)

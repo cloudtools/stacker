@@ -5,7 +5,8 @@ import logging
 import sys
 import json
 
-from .base import BaseAction, plan
+from .base import BaseAction
+from ..plan import merge_graphs
 
 
 logger = logging.getLogger(__name__)
@@ -54,24 +55,26 @@ FORMATTERS = {
 
 class Action(BaseAction):
 
-    def _generate_plan(self):
-        return plan(
-            description="Print graph",
-            stack_action=None,
-            context=self.context)
+    DESCRIPTION = 'Print graph'
+
+    @property
+    def _stack_action(self):
+        """The function run against a step."""
+        return None
 
     def run(self, format=None, reduce=False, *args, **kwargs):
-        """Generates the underlying graph and prints it.
-
-        """
-        plan = self._generate_plan()
+        """Generates the underlying graph and prints it."""
+        graph = self._generate_plan(require_unlocked=False,
+                                    include_persistent_graph=True).graph
+        if self.context.persistent_graph:
+            graph = merge_graphs(self.context.persistent_graph, graph)
         if reduce:
             # This will performa a transitive reduction on the underlying
             # graph, producing less edges. Mostly useful for the "dot" format,
             # when converting to PNG, so it creates a prettier/cleaner
             # dependency graph.
-            plan.graph.transitive_reduction()
+            graph.transitive_reduction()
 
         fn = FORMATTERS[format]
-        fn(sys.stdout, plan.graph)
+        fn(sys.stdout, graph)
         sys.stdout.flush()

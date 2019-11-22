@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 import logging
 
-from .base import BaseAction, plan, build_walker
+from .base import BaseAction, build_walker
 from .base import STACK_POLL_TIME
 from ..exceptions import StackDoesNotExist
 from stacker.hooks.utils import handle_hooks
@@ -14,7 +14,6 @@ from ..status import (
     SUBMITTED,
     INTERRUPTED
 )
-
 from ..status import StackDoesNotExist as StackDoesNotExistStatus
 
 logger = logging.getLogger(__name__)
@@ -36,13 +35,12 @@ class Action(BaseAction):
 
     """
 
-    def _generate_plan(self, tail=False):
-        return plan(
-            description="Destroy stacks",
-            stack_action=self._destroy_stack,
-            tail=self._tail_stack if tail else None,
-            context=self.context,
-            reverse=True)
+    DESCRIPTION = 'Destroy stacks'
+
+    @property
+    def _stack_action(self):
+        """The function run against a step."""
+        return self._destroy_stack
 
     def _destroy_stack(self, stack, **kwargs):
         old_status = kwargs.get("status")
@@ -89,15 +87,20 @@ class Action(BaseAction):
                 context=self.context)
 
     def run(self, force, concurrency=0, tail=False, *args, **kwargs):
-        plan = self._generate_plan(tail=tail)
+        plan = self._generate_plan(tail=tail, reverse=True,
+                                   include_persistent_graph=True)
         if not plan.keys():
             logger.warn('WARNING: No stacks detected (error in config?)')
         if force:
             # need to generate a new plan to log since the outline sets the
             # steps to COMPLETE in order to log them
             plan.outline(logging.DEBUG)
+            self.context.lock_persistent_graph(plan.lock_code)
             walker = build_walker(concurrency)
-            plan.execute(walker)
+            try:
+                plan.execute(walker)
+            finally:
+                self.context.unlock_persistent_graph(plan.lock_code)
         else:
             plan.outline(message="To execute this plan, run with \"--force\" "
                                  "flag.")

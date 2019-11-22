@@ -8,7 +8,7 @@ import json
 import logging
 from operator import attrgetter
 
-from .base import plan, build_walker
+from .base import build_walker
 from . import build
 from ..ui import ui
 from .. import exceptions
@@ -16,9 +16,11 @@ from ..util import parse_cloudformation_template
 from ..status import (
     NotSubmittedStatus,
     NotUpdatedStatus,
+    SkippedStatus,
     COMPLETE,
     INTERRUPTED,
 )
+from ..status import StackDoesNotExist as StackDoesNotExistStatus
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +205,13 @@ class Action(build.Action):
     config.
     """
 
+    DESCRIPTION = 'Diff stacks'
+
+    @property
+    def _stack_action(self):
+        """The function run against a step."""
+        return self._diff_stack
+
     def _build_new_template(self, stack, parameters):
         """Constructs the parameters & contents of a new stack and returns a
         list(str) representation to be output to the user
@@ -221,70 +230,73 @@ class Action(build.Action):
         """Handles the diffing a stack in CloudFormation vs our config"""
         if self.cancel.wait(0):
             return INTERRUPTED
-
         if not build.should_submit(stack):
             return NotSubmittedStatus()
-
         if not build.should_update(stack):
             return NotUpdatedStatus()
 
         provider = self.build_provider(stack)
 
-        provider_stack = provider.get_stack(stack.fqn)
-
-        # get the current stack template & params from AWS
-        try:
-            [old_template, old_params] = provider.get_stack_info(
-                provider_stack)
-        except exceptions.StackDoesNotExist:
-            old_template = None
-            old_params = {}
-
-        stack.resolve(self.context, provider)
-        # generate our own template & params
-        parameters = self.build_parameters(stack)
-        new_params = dict()
-        for p in parameters:
-            new_params[p['ParameterKey']] = p['ParameterValue']
-        new_template = stack.blueprint.rendered
-        new_stack = normalize_json(new_template)
-
         output = ["============== Stack: %s ==============" % (stack.name,)]
-        # If this is a completely new template dump our params & stack
-        if not old_template:
-            output.extend(self._build_new_template(new_stack, parameters))
-        else:
-            # Diff our old & new stack/parameters
-            old_template = parse_cloudformation_template(old_template)
-            if isinstance(old_template, str):
-                # YAML templates returned from CFN need parsing again
-                # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
-                # ->
-                # AWSTemplateFormatVersion: "2010-09-09"
-                old_template = parse_cloudformation_template(old_template)
-            old_stack = normalize_json(
-                json.dumps(old_template,
-                           sort_keys=True,
-                           indent=4,
-                           default=str)
-            )
-            output.extend(build_stack_changes(stack.name, new_stack, old_stack,
-                                              new_params, old_params))
-        ui.info('\n' + '\n'.join(output))
 
-        stack.set_outputs(
-            provider.get_output_dict(provider_stack))
+        try:
+            provider_stack = provider.get_stack(stack.fqn)
+
+            # get the current stack template & params from AWS
+            try:
+                [old_template, old_params] = provider.get_stack_info(
+                    provider_stack)
+            except exceptions.StackDoesNotExist:
+                old_template = None
+                old_params = {}
+
+            stack.resolve(self.context, provider)
+            # generate our own template & params
+            parameters = self.build_parameters(stack)
+            new_params = dict()
+            for p in parameters:
+                new_params[p['ParameterKey']] = p['ParameterValue']
+            new_template = stack.blueprint.rendered
+            new_stack = normalize_json(new_template)
+
+            # If this is a completely new template dump our params & stack
+            if not old_template:
+                output.extend(self._build_new_template(new_stack, parameters))
+            else:
+                # Diff our old & new stack/parameters
+                old_template = parse_cloudformation_template(old_template)
+                if isinstance(old_template, str):
+                    # YAML templates returned from CFN need parsing again
+                    # "AWSTemplateFormatVersion: \"2010-09-09\"\nParam..."
+                    # ->
+                    # AWSTemplateFormatVersion: "2010-09-09"
+                    old_template = parse_cloudformation_template(old_template)
+                old_stack = normalize_json(
+                    json.dumps(old_template, sort_keys=True, indent=4,
+                               default=str)
+                )
+                output.extend(build_stack_changes(stack.name, new_stack,
+                                                  old_stack, new_params,
+                                                  old_params))
+                stack.set_outputs(
+                    provider.get_output_dict(provider_stack))
+        except exceptions.StackDoesNotExist:
+            if self.context.persistent_graph:
+                return SkippedStatus('persistent graph: stack does not '
+                                     'exist, will be removed')
+            return StackDoesNotExistStatus()
+        except AttributeError as err:
+            if (self.context.persistent_graph and
+                    'defined class or template path' in str(err)):
+                return SkippedStatus('persistent graph: will be destroyed')
+            raise
+        ui.info('\n' + '\n'.join(output))
 
         return COMPLETE
 
-    def _generate_plan(self):
-        return plan(
-            description="Diff stacks",
-            stack_action=self._diff_stack,
-            context=self.context)
-
     def run(self, concurrency=0, *args, **kwargs):
-        plan = self._generate_plan()
+        plan = self._generate_plan(require_unlocked=False,
+                                   include_persistent_graph=True)
         plan.outline(logging.DEBUG)
         if plan.keys():
             logger.info("Diffing stacks: %s", ", ".join(plan.keys()))

@@ -273,3 +273,66 @@ class GraphError(Exception):
             "as a dependency of '%s': %s"
         ) % (dependency, stack, str(exception))
         super(GraphError, self).__init__(message)
+
+
+class PersistentGraphCannotLock(Exception):
+    """Raised when the persistent graph in S3 cannot be locked."""
+
+    def __init__(self, reason):
+        """Instantiate class."""
+        message = "Could not lock persistent graph; %s" % reason
+        super(PersistentGraphCannotLock, self).__init__(message)
+
+
+class PersistentGraphCannotUnlock(Exception):
+    """Raised when the persistent graph in S3 cannot be unlocked."""
+
+    def __init__(self, reason):
+        """Instantiate class."""
+        message = "Could not unlock persistent graph; %s" % reason
+        super(PersistentGraphCannotUnlock, self).__init__(message)
+
+
+class PersistentGraphLocked(Exception):
+    """
+    Raised when the persistent graph in S3 is lock and an action requiring
+    it to be unlocked is attempted.
+    """
+
+    def __init__(self, message=None, reason=None):
+        """Instantiate class."""
+        if not message:
+            message = ("Persistant graph is locked. {}".format(
+                reason or ("This action requires the graph to be "
+                           "unlocked to be executed.")
+            ))
+        super(PersistentGraphLocked, self).__init__(message)
+
+
+class PersistentGraphLockCodeMissmatch(Exception):
+    """
+    Raised when the provided persistent graph lock code does not match
+    the s3 object lock code.
+    """
+
+    def __init__(self, provided_code, s3_code):
+        """Instantiate class."""
+        message = ("The provided lock code '%s' does not match the S3 "
+                   "object lock code '%s'" % (provided_code, s3_code))
+        super(PersistentGraphLockCodeMissmatch, self).__init__(message)
+
+
+class PersistentGraphUnlocked(Exception):
+    """
+    Raised when the persistent graph in S3 is unlock and an action
+    requiring it to be locked is attempted.
+    """
+
+    def __init__(self, message=None, reason=None):
+        """Instantiate class."""
+        if not message:
+            message = ("Persistant graph is unlocked. {}".format(
+                reason or ("This action requires the graph to be "
+                           "locked to be executed.")
+            ))
+        super(PersistentGraphLocked, self).__init__(message)

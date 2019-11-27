@@ -5,7 +5,7 @@ from builtins import str
 import unittest
 from collections import namedtuple
 
-import mock
+from mock import MagicMock, PropertyMock, patch
 
 from stacker import exceptions
 from stacker.actions import build
@@ -18,6 +18,7 @@ from stacker.actions.build import (
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context, Config
 from stacker.exceptions import StackDidNotChange, StackDoesNotExist
+from stacker.plan import Graph, Step, Plan
 from stacker.providers.base import BaseProvider
 from stacker.providers.aws.default import Provider
 from stacker.status import (
@@ -66,8 +67,8 @@ class TestBuildAction(unittest.TestCase):
             self.context,
             provider_builder=MockProviderBuilder(self.provider))
 
-    def _get_context(self, **kwargs):
-        config = Config({
+    def _get_context(self, extra_config_args=None, **kwargs):
+        config = {
             "namespace": "namespace",
             "stacks": [
                 {"name": "vpc"},
@@ -80,8 +81,45 @@ class TestBuildAction(unittest.TestCase):
                         "else": "${output bastion::something}"}},
                 {"name": "other", "variables": {}}
             ],
-        })
-        return Context(config=config, **kwargs)
+        }
+        if extra_config_args:
+            config.update(extra_config_args)
+        return Context(config=Config(config), **kwargs)
+
+    @patch('stacker.context.Context._persistent_graph_tags',
+           new_callable=PropertyMock)
+    def test_generate_plan_persist_destroy(self, mock_graph_tags):
+        mock_graph_tags.return_value = {}
+        context = self._get_context(
+            extra_config_args={'persistent_graph_key': 'test.json'}
+        )
+        context._persistent_graph = Graph.from_steps(
+            [Step.from_stack_name('removed', context)]
+        )
+        build_action = build.Action(context=context)
+        plan = build_action._Action__generate_plan()
+
+        self.assertIsInstance(plan, Plan)
+        self.assertEqual(build.Action.DESCRIPTION, plan.description)
+        mock_graph_tags.assert_called_once()
+        # order is different between python2/3 so can't compare dicts
+        result_graph_dict = plan.graph.to_dict()
+        self.assertEqual(5, len(result_graph_dict))
+        self.assertEqual(set(), result_graph_dict['other'])
+        self.assertEqual(set(), result_graph_dict['removed'])
+        self.assertEqual(set(), result_graph_dict['vpc'])
+        self.assertEqual(set(['vpc']), result_graph_dict['bastion'])
+        self.assertEqual(set(['bastion', 'vpc']), result_graph_dict['db'])
+        self.assertEqual(build_action._destroy_stack,
+                         plan.graph.steps['removed'].fn)
+        self.assertEqual(build_action._launch_stack,
+                         plan.graph.steps['vpc'].fn)
+        self.assertEqual(build_action._launch_stack,
+                         plan.graph.steps['bastion'].fn)
+        self.assertEqual(build_action._launch_stack,
+                         plan.graph.steps['db'].fn)
+        self.assertEqual(build_action._launch_stack,
+                         plan.graph.steps['other'].fn)
 
     def test_handle_missing_params(self):
         existing_stack_param_dict = {
@@ -130,7 +168,8 @@ class TestBuildAction(unittest.TestCase):
     def test_generate_plan(self):
         context = self._get_context()
         build_action = build.Action(context, cancel=MockThreadingEvent())
-        plan = build_action._generate_plan()
+        plan = build_action._Action__generate_plan()
+        print(plan.__dict__)
         self.assertEqual(
             {
                 'db': set(['bastion', 'vpc']),
@@ -143,7 +182,7 @@ class TestBuildAction(unittest.TestCase):
     def test_dont_execute_plan_when_outline_specified(self):
         context = self._get_context()
         build_action = build.Action(context, cancel=MockThreadingEvent())
-        with mock.patch.object(build_action, "_generate_plan") as \
+        with patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=True)
             self.assertEqual(mock_generate_plan().execute.call_count, 0)
@@ -151,10 +190,34 @@ class TestBuildAction(unittest.TestCase):
     def test_execute_plan_when_outline_not_specified(self):
         context = self._get_context()
         build_action = build.Action(context, cancel=MockThreadingEvent())
-        with mock.patch.object(build_action, "_generate_plan") as \
+        with patch.object(build_action, "_generate_plan") as \
                 mock_generate_plan:
             build_action.run(outline=False)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
+
+    @patch('stacker.context.Context._persistent_graph_tags',
+           new_callable=PropertyMock)
+    @patch('stacker.context.Context.lock_persistent_graph',
+           new_callable=MagicMock)
+    @patch('stacker.context.Context.unlock_persistent_graph',
+           new_callable=MagicMock)
+    @patch('stacker.plan.Plan.execute', new_callable=MagicMock)
+    def test_run_persist(self, mock_execute, mock_unlock, mock_lock,
+                         mock_graph_tags):
+        mock_graph_tags.return_value = {}
+        context = self._get_context(
+            extra_config_args={'persistent_graph_key': 'test.json'}
+        )
+        context._persistent_graph = Graph.from_steps(
+            [Step.from_stack_name('removed', context)]
+        )
+        build_action = build.Action(context=context)
+        build_action.run()
+
+        mock_graph_tags.assert_called_once()
+        mock_lock.assert_called_once()
+        mock_execute.assert_called_once()
+        mock_unlock.assert_called_once()
 
     def test_should_update(self):
         test_scenario = namedtuple("test_scenario",
@@ -165,7 +228,7 @@ class TestBuildAction(unittest.TestCase):
             test_scenario(locked=True, force=False, result=False),
             test_scenario(locked=True, force=True, result=True)
         )
-        mock_stack = mock.MagicMock(["locked", "force", "name"])
+        mock_stack = MagicMock(["locked", "force", "name"])
         mock_stack.name = "test-stack"
         for t in test_scenarios:
             mock_stack.locked = t.locked
@@ -200,7 +263,7 @@ class TestBuildAction(unittest.TestCase):
             test_scenario(enabled=True, result=True),
         )
 
-        mock_stack = mock.MagicMock(["enabled", "name"])
+        mock_stack = MagicMock(["enabled", "name"])
         mock_stack.name = "test-stack"
         for t in test_scenarios:
             mock_stack.enabled = t.enabled
@@ -218,7 +281,7 @@ class TestLaunchStack(TestBuildAction):
                                          provider_builder=provider_builder,
                                          cancel=MockThreadingEvent())
 
-        self.stack = mock.MagicMock()
+        self.stack = MagicMock()
         self.stack.region = None
         self.stack.name = 'vpc'
         self.stack.fqn = 'vpc'
@@ -226,12 +289,12 @@ class TestLaunchStack(TestBuildAction):
         self.stack.locked = False
         self.stack_status = None
 
-        plan = self.build_action._generate_plan()
+        plan = self.build_action._Action__generate_plan()
         self.step = plan.steps[0]
         self.step.stack = self.stack
 
         def patch_object(*args, **kwargs):
-            m = mock.patch.object(*args, **kwargs)
+            m = patch.object(*args, **kwargs)
             self.addCleanup(m.stop)
             m.start()
 
@@ -381,8 +444,8 @@ class TestFunctions(unittest.TestCase):
 
     def setUp(self):
         self.ctx = Context({"namespace": "test"})
-        self.prov = mock.MagicMock()
-        self.bp = mock.MagicMock()
+        self.prov = MagicMock()
+        self.bp = MagicMock()
 
     def test_resolve_parameters_unused_parameter(self):
         self.bp.get_parameter_definitions.return_value = {

@@ -705,6 +705,10 @@ class Provider(BaseProvider):
         fqn = self.get_stack_name(stack)
         logger.debug("Attempting to delete stack %s", fqn)
 
+        if action == 'build':
+            logger.info('%s was removed from the Stacker config file '
+                        'so it is being destroyed.', fqn)
+
         destroy_method = self.select_destroy_method(force_interactive)
         return destroy_method(fqn=fqn, action=action,
                               approval=approval, **kwargs)
@@ -847,7 +851,7 @@ class Provider(BaseProvider):
             ask_for_approval(include_verbose=False)
 
         logger.warn('Destroying stack \"%s\" for re-creation', stack_name)
-        self.destroy_stack(stack)
+        self.destroy_stack(stack, approval='y')
 
         return False
 
@@ -920,9 +924,6 @@ class Provider(BaseProvider):
 
         approval_options = ['y', 'n']
         try:
-            if action == 'build':
-                logger.warning('WARNING: %s was removed from the '
-                               'Stacker config file.', fqn)
             ui.lock()
             approval = approval or ui.ask("Destroy stack '{}'? [{}] ".format(
                 fqn, '/'.join(approval_options)

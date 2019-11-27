@@ -68,8 +68,8 @@ class Context(object):
         self._persistent_graph_lock_tag = 'stacker_lock_code'
         self._s3_bucket_verified = None
         self._upload_to_s3 = None
-        self.bucket_region = config.stacker_bucket_region or region
         self.config = config or Config()
+        self.bucket_region = self.config.stacker_bucket_region or region
         self.environment = environment
         self.force_stacks = force_stacks or []
         self.hook_data = {}
@@ -91,8 +91,7 @@ class Context(object):
         try:
             return {t['Key']: t['Value'] for t in
                     self.s3_conn.get_object_tagging(
-                    **self.persistent_graph_location
-                    ).get('TagSet', {})}
+                        **self.persistent_graph_location).get('TagSet', {})}
         except self.s3_conn.exceptions.NoSuchKey:
             logger.debug('Persistant graph object does not exist in S3; '
                          'could not get tags')
@@ -140,12 +139,12 @@ class Context(object):
             (:class:`stacker.plan.Graph`)
 
         """
-        if not self.persistent_graph_location:
-            return None
-
-        content = '{}'
-
         if not self._persistent_graph:
+            if not self.persistent_graph_location:
+                return None
+
+            content = '{}'
+
             if self.s3_bucket_verified:
                 try:
                     logger.debug('Getting persistent graph from s3:\n%s',
@@ -203,7 +202,8 @@ class Context(object):
             (Optional[str])
 
         """
-        if not self._persistent_graph_lock_code:
+        if (not self._persistent_graph_lock_code and
+                self.persistent_graph_location):
             self._persistent_graph_lock_code = self._persistent_graph_tags.get(
                 self._persistent_graph_lock_tag
             )

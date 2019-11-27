@@ -1,4 +1,8 @@
-This directory contains the functional testing suite for stacker. It exercises all of stacker against a real AWS account. Make sure you have the AWS credentials loaded into your environment when you run these steps.
+# Functional Tests
+
+This directory contains the functional testing suite for stacker. It exercises all of stacker against a real AWS account.
+
+Make sure you have the AWS credentials loaded into your environment when you run these steps. If you are using temporary credentials, be sure to save them to a credentials file as the presence of an `AWS_SESSION_TOKEN` environment variable will prevent the tests from running properly.
 
 ## Setup
 

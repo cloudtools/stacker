@@ -335,4 +335,4 @@ class PersistentGraphUnlocked(Exception):
                 reason or ("This action requires the graph to be "
                            "locked to be executed.")
             ))
-        super(PersistentGraphLocked, self).__init__(message)
+        super(PersistentGraphUnlocked, self).__init__(message)

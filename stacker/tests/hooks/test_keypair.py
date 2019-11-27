@@ -118,7 +118,7 @@ def test_import_bad_key_data(tmpdir, provider, context):
     assert result is False
 
 
-@pytest.mark.parametrize('ssm_key_id', (None, 'my-key'))
+@pytest.mark.parametrize('ssm_key_id', ('my-key'))
 def test_create_in_ssm(provider, context, ssh_key, ssm_key_id):
     result = ensure_keypair_exists(provider, context, keypair=KEY_PAIR_NAME,
                                    ssm_parameter_name='param',

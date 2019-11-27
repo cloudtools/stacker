@@ -228,11 +228,11 @@ class Step(object):
             (:class:`Step`)
 
         """
-        from stacker.config import Stack as stack_conf
+        from stacker.config import Stack as StackConfig
         from stacker.stack import Stack
 
-        stack_def = stack_conf({'name': stack_name,
-                                'requires': requires or []})
+        stack_def = StackConfig({'name': stack_name,
+                                 'requires': requires or []})
         stack = Stack(stack_def, context)
         return cls(stack, fn=fn, watch_func=watch_func)
 
@@ -476,14 +476,14 @@ class Plan(object):
     def __str__(self):
         return self.graph.dumps()
 
-    def __init__(self, context, description, graph, reverse=False,
-                 require_unlocked=True):
+    def __init__(self, description, graph, context=None,
+                 reverse=False, require_unlocked=True):
         """Initialize class.
 
         Args:
-            context (:class:`stacker.context.Context`): Context object.
             description (str): Description of what the plan is going to do.
             graph (:class:`Graph`): Local graph used for the plan.
+            context (:class:`stacker.context.Context`): Context object.
             reverse (bool): Transpose the graph for walking in reverse.
             require_unlocked (bool): Require the persistent graph to be
                 unlocked before executing steps.
@@ -492,21 +492,24 @@ class Plan(object):
         self.context = context
         self.description = description
         self.id = uuid.uuid4()
-        self.locked = context.persistent_graph_locked
         self.reverse = reverse
         self.require_unlocked = require_unlocked
 
         if self.reverse:
             graph = graph.transposed()
 
-        if self.context.stack_names:
-            nodes = []
-            for target in self.context.stack_names:
-                if graph.steps.get(target):
-                    nodes.append(target)
-            self.graph = graph.filtered(nodes)
+        if self.context:
+            self.locked = self.context.persistent_graph_locked
+
+            if self.context.stack_names:
+                nodes = []
+                for target in self.context.stack_names:
+                    if graph.steps.get(target):
+                        nodes.append(target)
+                graph = graph.filtered(nodes)
         else:
-            self.graph = graph
+            self.locked = False
+        self.graph = graph
 
     def outline(self, level=logging.INFO, message=""):
         """Print an outline of the actions the plan is going to take.
@@ -611,7 +614,7 @@ class Plan(object):
 
             result = step.run()
 
-            if not self.context.persistent_graph:
+            if not self.context or not self.context.persistent_graph:
                 return result
 
             if (step.completed or

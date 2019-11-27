@@ -110,6 +110,8 @@ class BaseAction(object):
 
     """
 
+    DESCRIPTION = 'Base action'
+
     def __init__(self, context, provider_builder=None, cancel=None):
         self.context = context
         self.provider_builder = provider_builder
@@ -118,7 +120,8 @@ class BaseAction(object):
         self.bucket_region = context.config.stacker_bucket_region
         if not self.bucket_region and provider_builder:
             self.bucket_region = provider_builder.region
-        self.s3_conn = get_session(self.bucket_region).client('s3')
+        self.s3_conn = (getattr(self.context, 's3_conn', None) or
+                        get_session(self.bucket_region).client('s3'))
 
     @property
     def _stack_action(self):

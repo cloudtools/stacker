@@ -387,6 +387,11 @@ class Context(object):
         if not self.persistent_graph:
             return
 
+        if not self.persistent_graph.to_dict():
+            self.s3_conn.delete_object(**self.persistent_graph_location)
+            logger.debug('Removed empty persistent graph object from S3')
+            return
+
         if not self.persistent_graph_locked:
             raise PersistentGraphUnlocked(
                 reason='It must be locked by the current session to be '
@@ -397,11 +402,6 @@ class Context(object):
             raise PersistentGraphLockCodeMissmatch(
                 lock_code, self.persistent_graph_lock_code
             )
-
-        if not self.persistent_graph.to_dict():
-            self.s3_conn.delete_object(**self.persistent_graph_location)
-            logger.debug('Removed empty persistent graph object from S3')
-            return
 
         self.s3_conn.put_object(
             Body=self.persistent_graph.dumps(4),
@@ -447,6 +447,17 @@ class Context(object):
         """
         if not self.persistent_graph:
             return
+
+        if not self.persistent_graph.to_dict():
+            try:
+                self.s3_conn.get_object(
+                    ResponseContentType='application/json',
+                    **self.persistent_graph_location
+                )
+            except self.s3_conn.exceptions.NoSuchKey:
+                logger.info('Persistent graph was deleted and does not '
+                            'need to be unlocked.')
+                return
 
         logger.debug('Unlocking persistent graph "%s".',
                      self.persistent_graph_location)

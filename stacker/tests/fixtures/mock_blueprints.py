@@ -70,8 +70,10 @@ class FunctionalTests(Blueprint):
                         Action=[
                             awacs.s3.ListBucket,
                             awacs.s3.GetBucketLocation,
+                            awacs.s3.GetBucketVersioning,
                             awacs.s3.CreateBucket,
                             awacs.s3.DeleteBucket,
+                            awacs.s3.PutBucketVersioning
                         ]
                     ),
                     Statement(
@@ -89,6 +91,9 @@ class FunctionalTests(Blueprint):
                         Resource=[objects_arn],
                         Action=[
                             awacs.s3.DeleteObject,
+                            awacs.s3.DeleteObjectTagging,
+                            awacs.s3.GetObjectTagging,
+                            awacs.s3.PutObjectTagging
                         ]
                     ),
                     Statement(

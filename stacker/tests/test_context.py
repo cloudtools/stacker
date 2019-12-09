@@ -414,7 +414,7 @@ class TestContext(unittest.TestCase):
         """Error raised when trying to update an unlocked object"""
         context = Context(config=self.persist_graph_config)
         context._s3_bucket_verified = True
-        context._persistent_graph = Graph()
+        context._persistent_graph = Graph.from_dict({'stack1': []}, context)
         stubber = Stubber(context.s3_conn)
 
         stubber.add_response('get_object_tagging', {'TagSet': []},
@@ -430,7 +430,7 @@ class TestContext(unittest.TestCase):
         code = '0000'
         context = Context(config=self.persist_graph_config)
         context._s3_bucket_verified = True
-        context._persistent_graph = Graph()
+        context._persistent_graph = Graph.from_dict({'stack1': []}, context)
         stubber = Stubber(context.s3_conn)
 
         stubber.add_response('get_object_tagging',
@@ -452,11 +452,6 @@ class TestContext(unittest.TestCase):
         context._persistent_graph = Graph()
         stubber = Stubber(context.s3_conn)
 
-        stubber.add_response('get_object_tagging',
-                             {'TagSet': gen_tagset(
-                                 {context._persistent_graph_lock_tag: code}
-                             )},
-                             context.persistent_graph_location)
         stubber.add_response('delete_object', {},
                              context.persistent_graph_location)
 
@@ -579,7 +574,7 @@ class TestContext(unittest.TestCase):
         code = '0000'
         context = Context(config=self.persist_graph_config)
         context._s3_bucket_verified = True
-        context._persistent_graph = Graph()
+        context._persistent_graph = Graph.from_dict({'stack1': []}, context)
         stubber = Stubber(context.s3_conn)
 
         stubber.add_response('get_object_tagging',
@@ -599,7 +594,7 @@ class TestContext(unittest.TestCase):
         code = '0000'
         context = Context(config=self.persist_graph_config)
         context._s3_bucket_verified = True
-        context._persistent_graph = Graph()
+        context._persistent_graph = Graph.from_dict({'stack1': []}, context)
         stubber = Stubber(context.s3_conn)
 
         stubber.add_response('get_object_tagging',
@@ -616,7 +611,7 @@ class TestContext(unittest.TestCase):
         code = '0000'
         context = Context(config=self.persist_graph_config)
         context._s3_bucket_verified = True
-        context._persistent_graph = Graph()
+        context._persistent_graph = Graph.from_dict({'stack1': []}, context)
         stubber = Stubber(context.s3_conn)
 
         stubber.add_response('get_object_tagging',
@@ -641,19 +636,16 @@ class TestContext(unittest.TestCase):
         context._s3_bucket_verified = True
         context._persistent_graph = Graph()
         stubber = Stubber(context.s3_conn)
+        expected_params = context.persistent_graph_location.copy()
+        expected_params.update({'ResponseContentType': 'application/json'})
 
-        stubber.add_response('get_object_tagging',
-                             {'TagSet': gen_tagset(
-                                 {context._persistent_graph_lock_tag: code}
-                             )},
-                             context.persistent_graph_location)
         stubber.add_client_error(
-            'delete_object_tagging', 'NoSuchKey',
-            expected_params=context.persistent_graph_location
+            'get_object', 'NoSuchKey',
+            expected_params=expected_params
         )
 
         with stubber:
-            self.assertTrue(context.unlock_persistent_graph(code))
+            self.assertIsNone(context.unlock_persistent_graph(code))
             stubber.assert_no_pending_responses()
 
 

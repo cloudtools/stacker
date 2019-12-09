@@ -371,7 +371,7 @@ class Graph(object):
         """Remove a step from the graph.
 
         Args:
-            step: (:class:`Step`): The step to remove from the graph.
+            step (:class:`Step`): The step to remove from the graph.
             default (Any): Returned if the step could not be popped
 
         Returns:

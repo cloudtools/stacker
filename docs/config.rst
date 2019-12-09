@@ -90,6 +90,105 @@ See the `CloudFormation Limits Reference`_.
 
 .. _`CloudFormation Limits Reference`: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html
 
+Persistent Graph
+----------------
+
+Each time Stacker is run, it creates a dependency graph_ of Stacks_. This is
+used to determine the order in which to execute them. This graph_ can be
+persisted between runs to track the removal of Stacks_ the `config file`_.
+
+When a stack_ is present in the persistent graph but not in the graph_
+constructed from the `config file`_, Stacker will delete the stack_ from
+CloudFormation. This takes effect during both build_ and destroy_ actions.
+
+The persistent graph is also used with the `graph command <commands.html#graph>`_
+where it is merged with the graph_ constructed from the `config file`_.
+
+To enable persistent graph, set **persistent_graph_key** to a unique value
+that will be used to construct the path to the persistent graph object in S3.
+This object is stored in the Stacker `S3 Bucket`_ which is also used for
+CloudFormation templates. The fully qualified path to the object will look
+like the below.
+
+.. code-block::
+
+  s3://${stacker_bucket}/${namespace}/persistent_graphs/${namespace}/${persistent_graph_key}.json
+
+.. note::
+  It is recommended to enable versioning on the Stacker `S3 Bucket`_ when
+  using persistent graph to have a backup version in the event something
+  unintended happens. A warning will be logged if this is not enabled.
+
+  If Stacker creates an `S3 Bucket`_ for you when persistent graph is enabled,
+  it will be created with versioning enabled.
+
+.. important::
+  When choosing a value for **persistent_graph_key**, it is vital to ensure
+  the value is unique for the **namespace** being used. If the key is a
+  duplicate, `stacks <terminology.html#stack>`_ that are not intended to be
+  destroyed will be destroyed.
+
+When executing an action that will be modifying the persistent graph
+(build_ or destroy_), the S3 object is *"locked"*. The lock is a tag applied to
+the object at the start of one of these actions. The tag-key is
+**stacker_lock_code** and the tag-value is UUID generated each time a command
+is run. In order for Stacker to lock a persistent graph object, the tag must
+not be present on the object. For Stacker to act on the graph_ (modify or
+unlock) the value of the tag must match the UUID of the current Stacker
+session. If the object is locked or the code does not match, an error will be
+raised and no action will be taken. This prevents two parties from acting on
+the same persistent graph object concurrently which would create a race
+condition.
+
+.. note::
+  A persistent graph object can be unlocked manually by removing the
+  **stacker_lock_code** tag from it. This should be done with caution as it
+  will cause any active sessions to raise an error.
+
+Persistent Graph Example
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. rubric:: config.yml
+.. code-block:: yaml
+
+  namespace: example
+  stacker_bucket: stacker-bucket
+  persistent_graph_key: my_graph  # .json - will be appended if not provided
+
+  stacks:
+    first_stack:
+      ...
+    new_stack:
+      ...
+
+.. rubric:: s3://stacker-bucket/persistent_graphs/example/my_graph.json
+.. code-block:: json
+
+  {
+    "first_stack": [],
+    "removed_stack": [
+      "first_stack"
+    ]
+  }
+
+.. rubric:: Result
+
+Given the above `config file`_ and persistent graph,
+when running ``stacker build``, the following will occur.
+
+#. The ``{"Key": "stacker_lock_code", "Value": "123456"}`` tag is applied to
+   **s3://stacker-bucket/persistent_graphs/example/my_graph.json** to lock it
+   to the current session.
+#. **removed_stack** is deleted from CloudFormation and deleted from the
+   persistent graph object in S3.
+#. **first_stack** is updated in CloudFormation and updated in the persistent
+   graph object in S3 (incase dependencies change).
+#. **new_stack** is created in CloudFormation and added to the persistent graph
+   object in S3.
+#. The ``{"Key": "stacker_lock_code", "Value": "123456"}`` tag is removed from
+   **s3://stacker-bucket/persistent_graphs/example/my_graph.json** to unlock it
+   for use in other sessions.
+
 Module Paths
 ------------
 When setting the ``classpath`` for blueprints/hooks, it is sometimes desirable to
@@ -210,7 +309,7 @@ Pre & Post Hooks
 ----------------
 
 Many actions allow for pre & post hooks. These are python methods that are
-executed before, and after the action is taken for the entire config. Hooks 
+executed before, and after the action is taken for the entire config. Hooks
 can be enabled or disabled, per hook. Only the following actions allow
 pre/post hooks:
 
@@ -484,7 +583,7 @@ You may optionally provide custom `log_formats`. In this example, we add the env
   log_formats:
     info: "[%(asctime)s] ${environment} %(message)s"
     color: "[%(asctime)s] ${environment} \033[%(color)sm%(message)s\033[39m"
-    
+
 You may use any of the standard Python
 `logging module format attributes <https://docs.python.org/2.7/library/logging.html#logrecord-attributes>`_
 when building your `log_formats`.
@@ -654,7 +753,12 @@ submitting it to CloudFormation. For more information, see the
 `Translators <translators.html>`_ documentation.
 
 .. _`anchors & references`: https://en.wikipedia.org/wiki/YAML#Repeated_nodes
+.. _build: commands.html#build
+.. _config file: terminology.html#config
+.. _destroy: commands.html#destroy
+.. _graph: terminology.html#graph
 .. _Mappings: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html
 .. _Outputs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+.. _stack: terminology.html#stack
 .. _stacker_blueprints: https://github.com/cloudtools/stacker_blueprints
 .. _`AWS profiles`: https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html

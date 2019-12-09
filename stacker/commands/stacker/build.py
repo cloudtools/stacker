@@ -4,6 +4,9 @@ Stacker is smart enough to figure out if anything (the template or parameters)
 have changed for a given stack. If nothing has changed, stacker will correctly
 skip executing anything against the stack.
 
+If using a persistent graph, Stacker will also delete any stacks that exist
+in the persistent graph but are no longer present in the config file.
+
 """
 from __future__ import print_function
 from __future__ import division

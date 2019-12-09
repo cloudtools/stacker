@@ -1,4 +1,5 @@
-"""Destroys CloudFormation stacks based on the given config.
+"""Destroys CloudFormation stacks based on the given config and persistent
+graph (if enabled).
 
 Stacker will determine the order in which stacks should be destroyed based on
 any manual requirements they specify or output values they rely on from other

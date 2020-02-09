@@ -103,7 +103,7 @@ already been destroyed).
     config                The config file where stack configuration is located.
                           Must be in yaml format. If `-` is provided, then the
                           config will be read from stdin.
-                          
+
   optional arguments:
     -h, --help            show this help message and exit
     -e ENV=VALUE, --env ENV=VALUE
@@ -182,10 +182,17 @@ config.
 Diff
 ----
 
-Diff attempts to show the differences between what stacker expects to push up
-into CloudFormation, and what already exists in CloudFormation.  This command
-is not perfect, as following things like *Ref* and *GetAtt* are not currently
-possible, but it should give a good idea if anything has changed.
+Diff creates a CloudFormation Change Set for each stack and displays the
+resulting changes. This works for stacks that already exist and new stacks.
+
+For stacks that are dependent on outputs from other stacks in the same file,
+stacker will infer that an update was made to the "parent" stack and invalidate
+outputs from resources that were changed and replace their value with
+``<inferred-change: stackName.outputName=unresolvedValue>``. This is done to
+illustrate the potential blast radius of a change and assist in tracking down
+why subsequent stacks could change. This inference is not perfect but takes a
+"best effort" approach to showing potential change between stacks that rely on
+each others outputs.
 
 ::
 

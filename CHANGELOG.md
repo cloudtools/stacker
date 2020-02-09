@@ -1,6 +1,7 @@
 ## Upcoming release
 
 - Ensure that base64 lookup codec encodes the bytes object as a string [GH-742]
+- Use CloudFormation Change Sets for `stacker diff`
 
 ## 1.7.0 (2019-04-07)
 

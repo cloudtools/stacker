@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import object
 import copy
+import logging
 
 from . import util
 from .variables import (
@@ -11,6 +12,8 @@ from .variables import (
 )
 
 from .blueprints.raw import RawTemplateBlueprint
+
+logger = logging.getLogger(__name__)
 
 
 def _gather_variables(stack_def):
@@ -28,13 +31,15 @@ def _gather_variables(stack_def):
         - variable defined within the stack definition
 
     Args:
-        stack_def (dict): The stack definition being worked on.
+        stack_def (:class:`stacker.config.Stack`): The stack definition being
+            worked on.
 
     Returns:
-        dict: Contains key/value pairs of the collected variables.
+        :obj:`list` of :class:`stacker.variables.Variable`: Contains key/value
+            pairs of the collected  variables.
 
     Raises:
-        AttributeError: Raised when the stack definitition contains an invalid
+        AttributeError: Raised when the stack definition contains an invalid
             attribute. Currently only when using old parameters, rather than
             variables.
     """
@@ -43,35 +48,31 @@ def _gather_variables(stack_def):
 
 
 class Stack(object):
-
     """Represents gathered information about a stack to be built/updated.
 
     Args:
         definition (:class:`stacker.config.Stack`): A stack definition.
         context (:class:`stacker.context.Context`): Current context for
             building the stack.
-        mappings (dict, optional): Cloudformation mappings passed to the
+        mappings (dict, optional): CloudFormation mappings passed to the
             blueprint.
-        locked (bool, optional): Whether or not the stack is locked.
         force (bool, optional): Whether to force updates on this stack.
-        enabled (bool, optional): Whether this stack is enabled
 
     """
 
-    def __init__(self, definition, context, variables=None, mappings=None,
-                 locked=False, force=False, enabled=True, protected=False):
+    def __init__(self, definition, context, mappings=None, force=False):
         self.logging = True
         self.name = definition.name
         self.fqn = context.get_fqn(definition.stack_name or self.name)
         self.region = definition.region
         self.profile = definition.profile
+        self.locked = definition.locked
+        self.enabled = definition.enabled
+        self.protected = definition.protected
         self.definition = definition
         self.variables = _gather_variables(definition)
         self.mappings = mappings
-        self.locked = locked
         self.force = force
-        self.enabled = enabled
-        self.protected = protected
         self.context = context
         self.outputs = None
         self.in_progress_behavior = definition.in_progress_behavior
@@ -189,3 +190,94 @@ class Stack(object):
 
     def set_outputs(self, outputs):
         self.outputs = outputs
+
+    def should_submit(self):
+        """Tests whether this stack should be submitted to CF
+
+        Returns:
+            bool: If the stack should be submitted, return True.
+
+        """
+
+        if self.enabled:
+            return True
+
+        logger.debug("Stack %s is not enabled.  Skipping.", self.name)
+        return False
+
+    def should_update(self):
+        """Tests whether this stack should be submitted for updates to CF.
+
+        Returns:
+            bool: If the stack should be updated, return True.
+
+        """
+
+        if self.locked:
+            if not self.force:
+                logger.debug("Stack %s locked and not in --force list. "
+                             "Refusing to update.", self.name)
+                return False
+            else:
+                logger.debug("Stack %s locked, but is in --force "
+                             "list.", self.name)
+        return True
+
+
+class ExternalStack(Stack):
+    """Represents gathered information about an existing external stack
+
+    Args:
+        definition (:class:`stacker.config.ExternalStack`): A stack definition.
+        context (:class:`stacker.context.Context`): Current context for
+            building the stack.
+
+    """
+
+    def __init__(self, definition, context):
+        self.name = definition.name
+        stack_name = definition.stack_name or self.name
+        self.fqn = definition.fqn or context.get_fqn(stack_name)
+        self.region = definition.region
+        self.profile = definition.profile
+        self.definition = definition
+        self.context = context
+        self.outputs = None
+
+    @property
+    def requires(self):
+        return set()
+
+    @property
+    def stack_policy(self):
+        return None
+
+    @property
+    def blueprint(self):
+        return None
+
+    @property
+    def tags(self):
+        return dict()
+
+    @property
+    def parameter_values(self):
+        return dict()
+
+    @property
+    def required_parameter_definitions(self):
+        return dict()
+
+    def resolve(self, context, provider):
+        pass
+
+    def set_outputs(self, outputs):
+        self.outputs = outputs
+
+    def should_submit(self):
+        # Always submit this stack to load outputs
+        return True
+
+    def should_update(self):
+        # Never update an external stack
+        return False

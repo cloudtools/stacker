@@ -14,7 +14,7 @@ install_requires = [
     "awacs>=0.6.0",
     "gitpython>=2.0,<3.0",
     "jinja2>=2.7,<3.0",
-    "schematics>=2.0.1,<2.1.0",
+    "schematics>=2.1,<3.0",
     "formic2",
     "python-dateutil>=2.0,<3.0",
 ]

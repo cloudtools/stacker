@@ -334,13 +334,49 @@ stacks that will be deployed in the environment.  The top level keyword
 *stacks* is populated with a list of dictionaries, each representing a single
 stack to be built.
 
-A stack has the following keys:
+Stacks are managed by Stacker by default. They will be created and updated as
+needed using the template file or blueprint class specified. Read-only
+external stacks can also be defined if complex cross-references are needed
+involving multiple accounts or regions.
+
+The following options are available for all stacks:
 
 **name:**
   The logical name for this stack, which can be used in conjuction with the
   ``output`` lookup. The value here must be unique within the config. If no
   ``stack_name`` is provided, the value here will be used for the name of the
   CloudFormation stack.
+**stack_name:**
+  (optional) If provided, this will be used as the name of the CloudFormation
+  stack. Unlike ``name``, the value doesn't need to be unique within the config,
+  since you could have multiple stacks with the same name, but in different
+  regions or accounts. (note: the namespace from the environment will be
+  prepended to this)
+**region**:
+  (optional): If provided, specifies the name of the region that the
+  CloudFormation stack should reside in. If not provided, the default region
+  will be used (``AWS_DEFAULT_REGION``, ``~/.aws/config`` or the ``--region``
+  flag). If both ``region`` and ``profile`` are specified, the value here takes
+  precedence over the value in the profile.
+**profile**:
+  (optional): If provided, specifies the name of a AWS profile to use when
+  performing AWS API calls for this stack. This can be used to provision stacks
+  in multiple accounts or regions.
+**external**:
+  (optional): If set to true, this stack is considered read-only, will not be
+  modified by Stacker, and most of the options related to stack deployment
+  should be omitted.
+
+The following options are available for external stacks:
+
+**fqn**:
+  (optional): Fully-qualified physical name of the stack to be loaded from
+  CloudFormation. Use instead of ``stack_name`` if the stack lies in a
+  different namespace, as this value *does not* get the namespace applied to
+  it.
+
+The following options are available for managed stacks:
+
 **class_path:**
   The python class path to the Blueprint to be used. Specify this or
   ``template_path`` for the stack.
@@ -350,7 +386,6 @@ A stack has the following keys:
   working directory (e.g. templates stored alongside the Config), or relative
   to a directory in the python ``sys.path`` (i.e. for loading templates
   retrieved via ``packages_sources``).
-
 **description:**
   A short description to apply to the stack. This overwrites any description
   provided in the Blueprint. See: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
@@ -363,8 +398,10 @@ A stack has the following keys:
   updated unless the stack is passed to stacker via the *--force* flag.
   This is useful for *risky* stacks that you don't want to take the
   risk of allowing CloudFormation to update, but still want to make
-  sure get launched when the environment is first created. When ``locked``,
-  it's not necessary to specify a ``class_path`` or ``template_path``.
+  sure get launched when the environment is first created.
+  Note: when ``locked``, it's not necessary to specify a ``class_path``
+  or ``template_path``, but this functionality is deprecated in favour of
+  ``external``.
 **enabled:**
   (optional) If set to false, the stack is disabled, and will not be
   built or updated. This can allow you to disable stacks in different
@@ -383,22 +420,6 @@ A stack has the following keys:
 **tags:**
   (optional) a dictionary of CloudFormation tags to apply to this stack. This
   will be combined with the global tags, but these tags will take precendence.
-**stack_name:**
-  (optional) If provided, this will be used as the name of the CloudFormation
-  stack. Unlike ``name``, the value doesn't need to be unique within the config,
-  since you could have multiple stacks with the same name, but in different
-  regions or accounts. (note: the namespace from the environment will be
-  prepended to this)
-**region**:
-  (optional): If provided, specifies the name of the region that the
-  CloudFormation stack should reside in. If not provided, the default region
-  will be used (``AWS_DEFAULT_REGION``, ``~/.aws/config`` or the ``--region``
-  flag). If both ``region`` and ``profile`` are specified, the value here takes
-  precedence over the value in the profile.
-**profile**:
-  (optional): If provided, specifies the name of a AWS profile to use when
-  performing AWS API calls for this stack. This can be used to provision stacks
-  in multiple accounts or regions.
 **stack_policy_path**:
   (optional): If provided, specifies the path to a JSON formatted stack policy
   that will be applied when the CloudFormation stack is created and updated.
@@ -411,13 +432,20 @@ A stack has the following keys:
   option to `wait` and stacker will wait for the previous update to complete
   before attempting to update the stack.
 
-Stacks Example
-~~~~~~~~~~~~~~
+Examples
+~~~~~~~~
 
-Here's an example from stacker_blueprints_, used to create a VPC::
+VPC + Instances
+:::::::::::::::
 
+Here's an example from stacker_blueprints_, used to create a VPC and and two EC2
+Instances::
+
+
+  namespace: example
   stacks:
-    - name: vpc-example
+    - name: vpc
+      stack_name: test-vpc
       class_path: stacker_blueprints.vpc.VPC
       locked: false
       enabled: true
@@ -437,6 +465,47 @@ Here's an example from stacker_blueprints_, used to create a VPC::
           - 10.128.16.0/22
           - 10.128.20.0/22
         CidrBlock: 10.128.0.0/16
+
+    - name: instances
+      stack_name:
+      class_path: stacker_blueprints.ec2.Instances
+      enabled: true
+      variables:
+        SmallInstance:
+          InstanceType: t2.small
+          ImageId: &amazon_linux_ami "${ami owners:amazon name_regex:amzn-ami-hvm-2018.03.*-x86_64-gp2}"
+          AvailabilityZone: ${output vpc::AvailabilityZone0}
+          SubnetId: ${output vpc::PublicSubnet0}
+        LargeInstance:
+          InstanceType: m5.xlarge
+          ImageId: *amazon_linux_ami
+          AvailabilityZone: ${output vpc::AvailabilityZone1}
+          SubnetId: ${output vpc::PublicSubnet1}
+
+
+Referencing External Stacks
+:::::::::::::::::::::::::::
+
+This example creates a security group in VPC from the previous example by
+importing it as an external stack with a custom profile::
+
+  namespace: other-example
+  stacks:
+    - name: vpc
+      fqn: example-test-vpc
+      profile: custom-profile
+      external: yes
+
+    - name: sg
+      class_path: stacker_blueprints.ec2.SecurityGroups
+      variables:
+        SecurityGroups:
+          VpcId: ${output vpc::VpcId}
+          SecurityGroupIngress:
+            - CidrIp: 0.0.0.0/0
+              FromPort: 22
+              ToPort: 22
+              IpProtocol: tcp
 
 Targets
 -------

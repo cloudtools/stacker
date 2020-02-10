@@ -5,11 +5,11 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 import copy
-import sys
 import logging
+import sys
 
-from string import Template
 from io import StringIO
+from string import Template
 
 from schematics import Model
 from schematics.exceptions import ValidationError
@@ -19,12 +19,13 @@ from schematics.exceptions import (
 )
 
 from schematics.types import (
-    ModelType,
-    ListType,
-    StringType,
+    BaseType,
     BooleanType,
     DictType,
-    BaseType
+    ListType,
+    ModelType,
+    PolyModelType,
+    StringType
 )
 
 import yaml
@@ -225,12 +226,6 @@ def process_remote_sources(raw_config, environment=None):
     return raw_config
 
 
-def not_empty_list(value):
-    if not value or len(value) < 1:
-        raise ValidationError("Should have more than one element.")
-    return value
-
-
 class AnyType(BaseType):
     pass
 
@@ -299,7 +294,7 @@ class Target(Model):
     required_by = ListType(StringType, serialize_when_none=False)
 
 
-class Stack(Model):
+class BaseStack(Model):
     name = StringType(required=True)
 
     stack_name = StringType(serialize_when_none=False)
@@ -308,6 +303,28 @@ class Stack(Model):
 
     profile = StringType(serialize_when_none=False)
 
+    external = BooleanType(default=False)
+
+
+class ExternalStack(BaseStack):
+    fqn = StringType(serialize_when_none=False)
+
+    @classmethod
+    def _claim_polymorphic(cls, value):
+        if value.get("external", False) is True:
+            return True
+
+    def __init__(self, *args, **kwargs):
+        super(ExternalStack, self).__init__(*args, **kwargs)
+        self.external = True
+
+    def validate_fqn(self, data, value):
+        if value and data["stack_name"]:
+            raise ValidationError("At most one of `fqn` and `stack_name` must "
+                                  "be provided for external stacks")
+
+
+class Stack(BaseStack):
     class_path = StringType(serialize_when_none=False)
 
     template_path = StringType(serialize_when_none=False)
@@ -368,7 +385,6 @@ class Stack(Model):
                 "dthedocs.io/en/latest/config.html#variables for "
                 "additional information."
                 % stack_name)
-        return value
 
 
 class Config(Model):
@@ -431,7 +447,8 @@ class Config(Model):
         ModelType(Target), serialize_when_none=False)
 
     stacks = ListType(
-        ModelType(Stack), default=[])
+        PolyModelType([ExternalStack, Stack]),
+        default=[], validators=[])
 
     log_formats = DictType(StringType, serialize_when_none=False)
 

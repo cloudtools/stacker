@@ -34,7 +34,7 @@ COLOR_CODES = {
 
 
 def log_step(step):
-    msg = "%s: %s" % (step, step.status.name)
+    msg = "%s: %s" % (step.name, step.status.name)
     if step.status.reason:
         msg += " (%s)" % (step.status.reason)
     color_code = COLOR_CODES.get(step.status.code, 37)

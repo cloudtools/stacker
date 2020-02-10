@@ -3,23 +3,24 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import str
 import unittest
-from collections import namedtuple
 
 import mock
 
 from stacker import exceptions
 from stacker.actions import build
-from stacker.session_cache import get_session
 from stacker.actions.build import (
     _resolve_parameters,
     _handle_missing_parameters,
     UsePreviousParameterValue,
 )
+from stacker.blueprints.base import Blueprint
 from stacker.blueprints.variables.types import CFNString
 from stacker.context import Context, Config
 from stacker.exceptions import StackDidNotChange, StackDoesNotExist
 from stacker.providers.base import BaseProvider
 from stacker.providers.aws.default import Provider
+from stacker.session_cache import get_session
+from stacker.stack import Stack
 from stacker.status import (
     NotSubmittedStatus,
     COMPLETE,
@@ -29,7 +30,11 @@ from stacker.status import (
     FAILED
 )
 
-from ..factories import MockThreadingEvent, MockProviderBuilder
+from ..factories import (
+    MockThreadingEvent,
+    MockProviderBuilder,
+    generate_definition
+)
 
 
 def mock_stack_parameters(parameters):
@@ -156,29 +161,13 @@ class TestBuildAction(unittest.TestCase):
             build_action.run(outline=False)
             self.assertEqual(mock_generate_plan().execute.call_count, 1)
 
-    def test_should_update(self):
-        test_scenario = namedtuple("test_scenario",
-                                   ["locked", "force", "result"])
-        test_scenarios = (
-            test_scenario(locked=False, force=False, result=True),
-            test_scenario(locked=False, force=True, result=True),
-            test_scenario(locked=True, force=False, result=False),
-            test_scenario(locked=True, force=True, result=True)
-        )
-        mock_stack = mock.MagicMock(["locked", "force", "name"])
-        mock_stack.name = "test-stack"
-        for t in test_scenarios:
-            mock_stack.locked = t.locked
-            mock_stack.force = t.force
-            self.assertEqual(build.should_update(mock_stack), t.result)
-
     def test_should_ensure_cfn_bucket(self):
         test_scenarios = [
-            {"outline": False, "dump": False, "result": True},
-            {"outline": True, "dump": False, "result": False},
-            {"outline": False, "dump": True, "result": False},
-            {"outline": True, "dump": True, "result": False},
-            {"outline": True, "dump": "DUMP", "result": False}
+            dict(outline=False, dump=False, result=True),
+            dict(outline=True, dump=False, result=False),
+            dict(outline=False, dump=True, result=False),
+            dict(outline=True, dump=True, result=False),
+            dict(outline=True, dump="DUMP", result=False)
         ]
 
         for scenario in test_scenarios:
@@ -192,22 +181,18 @@ class TestBuildAction(unittest.TestCase):
                 e.args += ("scenario", str(scenario))
                 raise
 
-    def test_should_submit(self):
-        test_scenario = namedtuple("test_scenario",
-                                   ["enabled", "result"])
-        test_scenarios = (
-            test_scenario(enabled=False, result=False),
-            test_scenario(enabled=True, result=True),
-        )
-
-        mock_stack = mock.MagicMock(["enabled", "name"])
-        mock_stack.name = "test-stack"
-        for t in test_scenarios:
-            mock_stack.enabled = t.enabled
-            self.assertEqual(build.should_submit(mock_stack), t.result)
-
 
 class TestLaunchStack(TestBuildAction):
+    def _get_stack(self):
+        stack = Stack(definition=generate_definition("vpc", 1),
+                      context=self.context,)
+
+        blueprint_mock = mock.patch.object(type(stack), 'blueprint',
+                                           spec=Blueprint, rendered='{}')
+        self.addCleanup(blueprint_mock.stop)
+        blueprint_mock.start()
+        return stack
+
     def setUp(self):
         self.context = self._get_context()
         self.session = get_session(region=None)
@@ -217,13 +202,7 @@ class TestLaunchStack(TestBuildAction):
         self.build_action = build.Action(self.context,
                                          provider_builder=provider_builder,
                                          cancel=MockThreadingEvent())
-
-        self.stack = mock.MagicMock()
-        self.stack.region = None
-        self.stack.name = 'vpc'
-        self.stack.fqn = 'vpc'
-        self.stack.blueprint.rendered = '{}'
-        self.stack.locked = False
+        self.stack = self._get_stack()
         self.stack_status = None
 
         plan = self.build_action._generate_plan()
@@ -235,14 +214,16 @@ class TestLaunchStack(TestBuildAction):
             self.addCleanup(m.stop)
             m.start()
 
-        def get_stack(name, *args, **kwargs):
-            if name != self.stack.name or not self.stack_status:
-                raise StackDoesNotExist(name)
+        def get_stack(fqn, *args, **kwargs):
+            if fqn != self.stack.fqn or not self.stack_status:
+                raise StackDoesNotExist(fqn)
 
+            tags = [{'Key': key, 'Value': value}
+                    for (key, value) in self.stack.tags.items()]
             return {'StackName': self.stack.name,
                     'StackStatus': self.stack_status,
-                    'Outputs': [],
-                    'Tags': []}
+                    'Outputs': {},
+                    'Tags': tags}
 
         def get_events(name, *args, **kwargs):
             return [{'ResourceStatus': 'ROLLBACK_IN_PROGRESS',

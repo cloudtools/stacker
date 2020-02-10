@@ -21,8 +21,8 @@ def get_session(region, profile=None):
     """Creates a boto3 session with a cache
 
     Args:
-        region (str): The region for the session
-        profile (str): The profile for the session
+        region (str, optional): The region for the session
+        profile (str, optional): The profile for the session
 
     Returns:
         :class:`boto3.session.Session`: A boto3 session with

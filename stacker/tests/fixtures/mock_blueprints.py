@@ -181,8 +181,10 @@ class Dummy(Blueprint):
     }
 
     def create_template(self):
+        input = self.get_variables()["StringVariable"]
         self.template.add_resource(WaitConditionHandle("Dummy"))
         self.template.add_output(Output("DummyId", Value="dummy-1234"))
+        self.template.add_output(Output("StringOutput", Value=input))
         self.template.add_output(Output("Region", Value=Ref("AWS::Region")))
 
 

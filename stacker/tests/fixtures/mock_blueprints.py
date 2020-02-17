@@ -11,6 +11,7 @@ import awacs.s3
 import awacs.cloudformation
 import awacs.iam
 import awacs.sts
+import awacs.sns
 
 from troposphere.cloudformation import WaitCondition, WaitConditionHandle
 
@@ -51,6 +52,9 @@ class FunctionalTests(Blueprint):
         cloudformation_scope = Sub(
             "arn:aws:cloudformation:*:${AWS::AccountId}:"
             "stack/${StackerNamespace}-*")
+        sns_scope = Sub(
+            "arn:aws:sns:*:${AWS::AccountId}:"
+            "${StackerNamespace}-*")
         changeset_scope = "*"
 
         # This represents the precise IAM permissions that stacker itself
@@ -119,7 +123,17 @@ class FunctionalTests(Blueprint):
                             awacs.cloudformation.DescribeStacks,
                             awacs.cloudformation.DescribeStackEvents
                         ]
+                    ),
+                    Statement(
+                        Effect="Allow",
+                        Resource=[sns_scope],
+                        Action=[
+                            awacs.sns.CreateTopic,
+                            awacs.sns.DeleteTopic,
+                            awacs.sns.GetTopicAttributes
+                        ]
                     )
+
                 ]
             )
         )

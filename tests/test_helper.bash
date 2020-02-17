@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# used to make sure we sleep for 20 seconds between tests to avoid rate limiting
+sleep 20
+
 # To make the tests run faster, we don't wait between calls to DescribeStacks
 # to check on the status of Create/Update.
 export STACKER_STACK_POLL_TIME=0

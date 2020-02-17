@@ -101,7 +101,10 @@ class TestBlueprintRendering(unittest.TestCase):
                 },
                 "Resources": {
                     "Dummy": {
-                        "Type": "AWS::CloudFormation::WaitConditionHandle"
+                        "Type": "AWS::SNS::Topic",
+                        "Properties": {
+                            "DisplayName": {"Ref": "Param1"}
+                        }
                     }
                 },
                 "Outputs": {

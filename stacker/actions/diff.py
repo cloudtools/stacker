@@ -163,10 +163,12 @@ class Action(build.Action):
         if not build.should_submit(stack):
             return NotSubmittedStatus()
 
+        provider = self.build_provider(stack)
+
         if not build.should_update(stack):
+            stack.set_outputs(provider.get_outputs(stack.fqn))
             return NotUpdatedStatus()
 
-        provider = self.build_provider(stack)
         tags = build.build_stack_tags(stack)
 
         stack.resolve(self.context, provider)

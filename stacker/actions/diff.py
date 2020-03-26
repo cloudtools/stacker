@@ -179,6 +179,7 @@ class Action(build.Action):
             stack.set_outputs(outputs)
         except exceptions.StackDidNotChange:
             logger.info('No changes: %s', stack.fqn)
+            stack.set_outputs(provider.get_outputs(stack.fqn))
 
         return COMPLETE
 

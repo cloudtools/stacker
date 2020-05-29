@@ -410,6 +410,9 @@ A stack has the following keys:
   an exception if the stack is in an `IN_PROGRESS` state. You can set this
   option to `wait` and stacker will wait for the previous update to complete
   before attempting to update the stack.
+**notification_arns**:
+  (optional): If provided, accepts a list of None or many AWS SNS Topic ARNs
+  which will be notified of this stack's CloudFormation state changes.
 
 Stacks Example
 ~~~~~~~~~~~~~~

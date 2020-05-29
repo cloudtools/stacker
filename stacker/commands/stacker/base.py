@@ -7,8 +7,13 @@ import threading
 import signal
 from collections import Mapping
 import logging
+import os.path
 
-from ...environment import parse_environment
+from ...environment import (
+    DictWithSourceType,
+    parse_environment,
+    parse_yaml_environment
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +68,14 @@ def key_value_arg(string):
 
 def environment_file(input_file):
     """Reads a stacker environment file and returns the resulting data."""
+
+    is_yaml = os.path.splitext(input_file)[1].lower() in ['.yaml', '.yml']
+
     with open(input_file) as fd:
-        return parse_environment(fd.read())
+        if is_yaml:
+            return parse_yaml_environment(fd.read())
+        else:
+            return parse_environment(fd.read())
 
 
 class BaseCommand(object):
@@ -158,12 +169,17 @@ class BaseCommand(object):
             "-v", "--verbose", action="count", default=0,
             help="Increase output verbosity. May be specified up to twice.")
         parser.add_argument(
-            "environment", type=environment_file, nargs='?', default={},
-            help="Path to a simple `key: value` pair environment file. The "
-                 "values in the environment file can be used in the stack "
-                 "config as if it were a string.Template type: "
+            "environment", type=environment_file, nargs='?',
+            default=DictWithSourceType('simple'),
+            help="Path to an environment file. The file can be a simple "
+                 "`key: value` pair environment file, or a YAML file ending in"
+                 ".yaml or .yml. In the simple key:value case, values in the "
+                 "environment file can be used in the stack config as if it "
+                 "were a string.Template type: "
                  "https://docs.python.org/2/library/"
-                 "string.html#template-strings.")
+                 "string.html#template-strings. In the YAML case, variable"
+                 "references in the stack config are replaced with the objects"
+                 "in the environment after parsing")
         parser.add_argument(
             "config", type=argparse.FileType(),
             help="The config file where stack configuration is located. Must "

@@ -46,6 +46,7 @@ def create_ecs_service_role(provider, context, **kwargs):
             raise
 
     policy = Policy(
+        Version='2012-10-17',
         Statement=[
             Statement(
                 Effect=Allow,

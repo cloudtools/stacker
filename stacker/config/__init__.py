@@ -3,10 +3,12 @@ from __future__ import division
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
+from past.types import basestring
 from builtins import str
 import copy
 import sys
 import logging
+import re
 
 from string import Template
 from io import StringIO
@@ -32,6 +34,7 @@ import yaml
 from ..lookups import register_lookup_handler
 from ..util import merge_map, yaml_to_ordered_dict, SourceProcessor
 from .. import exceptions
+from ..environment import DictWithSourceType
 
 # register translators (yaml constructors)
 from .translators import *  # NOQA
@@ -83,33 +86,138 @@ def render(raw_config, environment=None):
 
     Args:
         raw_config (str): the raw stacker configuration string.
-        environment (dict, optional): any environment values that should be
-            passed to the config
+        environment (DictWithSourceType, optional): any environment values that
+            should be passed to the config
 
     Returns:
         str: the stacker configuration populated with any values passed from
             the environment
 
     """
-
-    t = Template(raw_config)
-    buff = StringIO()
     if not environment:
         environment = {}
-    try:
-        substituted = t.substitute(environment)
-    except KeyError as e:
-        raise exceptions.MissingEnvironment(e.args[0])
-    except ValueError:
-        # Support "invalid" placeholders for lookup placeholders.
-        substituted = t.safe_substitute(environment)
+    # If we have a naked dict, we got here through the old non-YAML path, so
+    # we can't have a YAML config file.
+    is_yaml = False
+    if type(environment) == DictWithSourceType:
+        is_yaml = environment.source_type == 'yaml'
 
-    if not isinstance(substituted, str):
-        substituted = substituted.decode('utf-8')
+    if is_yaml:
+        # First, read the config as yaml
+        config = yaml.safe_load(raw_config)
 
-    buff.write(substituted)
-    buff.seek(0)
-    return buff.read()
+        # Next, we need to walk the yaml structure, and find all things which
+        # look like variable references. This regular expression is copied from
+        # string.template to match variable references identically as the
+        # simple configuration case below. We've got two cases of this pattern,
+        # since python 2.7 doesn't support re.fullmatch(), so we have to add
+        # the end of line anchor to the inner patterns.
+        idpattern = r'[_a-z][_a-z0-9]*'
+        pattern = r"""
+            %(delim)s(?:
+              (?P<named>%(id)s)         |   # delimiter and a Python identifier
+              {(?P<braced>%(id)s)}         # delimiter and a braced identifier
+            )
+            """ % {'delim': re.escape('$'),
+                   'id': idpattern,
+                   }
+        full_pattern = r"""
+            %(delim)s(?:
+              (?P<named>%(id)s)$         |  # delimiter and a Python identifier
+              {(?P<braced>%(id)s)}$         # delimiter and a braced identifier
+            )
+            """ % {'delim': re.escape('$'),
+                   'id': idpattern,
+                   }
+        exp = re.compile(pattern, re.IGNORECASE | re.VERBOSE)
+        full_exp = re.compile(full_pattern, re.IGNORECASE | re.VERBOSE)
+        new_config = substitute_references(config, environment, exp, full_exp)
+        # Now, re-encode the whole thing as YAML and return that.
+        return yaml.safe_dump(new_config)
+    else:
+        t = Template(raw_config)
+        buff = StringIO()
+
+        try:
+            substituted = t.substitute(environment)
+        except KeyError as e:
+            raise exceptions.MissingEnvironment(e.args[0])
+        except ValueError:
+            # Support "invalid" placeholders for lookup placeholders.
+            substituted = t.safe_substitute(environment)
+
+        if not isinstance(substituted, str):
+            substituted = substituted.decode('utf-8')
+
+        buff.write(substituted)
+        buff.seek(0)
+        return buff.read()
+
+
+def substitute_references(root, environment, exp, full_exp):
+    # We need to check for something being a string in both python 2.7 and
+    # 3+. The aliases in the future package don't work for yaml sourced
+    # strings, so we have to spin our own.
+    def isstr(s):
+        try:
+            return isinstance(s, basestring)
+        except NameError:
+            return isinstance(s, str)
+
+    if isinstance(root, list):
+        result = []
+        for x in root:
+            result.append(substitute_references(x, environment, exp, full_exp))
+        return result
+    elif isinstance(root, dict):
+        result = {}
+        for k, v in root.items():
+            result[k] = substitute_references(v, environment, exp, full_exp)
+        return result
+    elif isstr(root):
+        # Strings are the special type where all substitutions happen. If we
+        # encounter a string object in the expression tree, we need to perform
+        # one of two different kinds of matches on it. First, if the entire
+        # string is a variable, we can replace it with an arbitrary object;
+        # dict, list, primitive. If the string contains variables within it,
+        # then we have to do string substitution.
+        match_obj = full_exp.match(root.strip())
+        if match_obj:
+            matches = match_obj.groupdict()
+            var_name = matches['named'] or matches['braced']
+            if var_name is not None:
+                value = environment.get(var_name)
+                if value is None:
+                    raise exceptions.MissingEnvironment(var_name)
+                return value
+
+        # Returns if an object is a basic type. Once again, the future package
+        # overrides don't work for string here, so we have to special case it
+        def is_basic_type(o):
+            if isstr(o):
+                return True
+            basic_types = [int, bool, float]
+            for t in basic_types:
+                if isinstance(o, t):
+                    return True
+            return False
+
+        # If we got here, then we didn't have any full matches, now perform
+        # partial substitutions within a string.
+        def replace(mo):
+            name = mo.groupdict()['braced'] or mo.groupdict()['named']
+            if not name:
+                return root[mo.start():mo.end()]
+            val = environment.get(name)
+            if val is None:
+                raise exceptions.MissingEnvironment(name)
+            if not is_basic_type(val):
+                raise exceptions.WrongEnvironmentType(name)
+            return str(val)
+        value = exp.sub(replace, root)
+        return value
+    # In all other unhandled cases, return a copy of the input
+    return copy.copy(root)
 
 
 def parse(raw_config):

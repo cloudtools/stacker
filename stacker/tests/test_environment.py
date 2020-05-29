@@ -3,7 +3,10 @@ from __future__ import division
 from __future__ import absolute_import
 import unittest
 
-from stacker.environment import parse_environment
+from stacker.environment import (
+    DictWithSourceType,
+    parse_environment
+)
 
 test_env = """key1: value1
 # some: comment
@@ -31,7 +34,7 @@ class TestEnvironment(unittest.TestCase):
 
     def test_simple_key_value_parsing(self):
         parsed_env = parse_environment(test_env)
-        self.assertTrue(isinstance(parsed_env, dict))
+        self.assertTrue(isinstance(parsed_env, DictWithSourceType))
         self.assertEqual(parsed_env["key1"], "value1")
         self.assertEqual(parsed_env["key2"], "value2")
         self.assertEqual(parsed_env["key3"], "some:complex::value")

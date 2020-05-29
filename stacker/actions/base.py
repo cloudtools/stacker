@@ -7,7 +7,7 @@ import sys
 import logging
 import threading
 
-from ..dag import walk, ThreadedWalker
+from ..dag import walk, ThreadedWalker, UnlimitedSemaphore
 from ..plan import Step, build_plan, build_graph
 
 import botocore.exceptions
@@ -53,7 +53,12 @@ def build_walker(concurrency):
     """
     if concurrency == 1:
         return walk
-    return ThreadedWalker(concurrency).walk
+
+    semaphore = UnlimitedSemaphore()
+    if concurrency > 1:
+        semaphore = threading.Semaphore(concurrency)
+
+    return ThreadedWalker(semaphore).walk
 
 
 def plan(description, stack_action, context,
@@ -189,7 +194,8 @@ class BaseAction(object):
         self.s3_conn.put_object(Bucket=self.bucket_name,
                                 Key=key_name,
                                 Body=blueprint.rendered,
-                                ServerSideEncryption='AES256')
+                                ServerSideEncryption='AES256',
+                                ACL='bucket-owner-full-control')
         logger.debug("Blueprint %s pushed to %s.", blueprint.name,
                      template_url)
         return template_url

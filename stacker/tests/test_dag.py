@@ -2,39 +2,43 @@
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-
-from nose import with_setup
-from nose.tools import nottest, raises
-from stacker.dag import DAG, DAGValidationError, ThreadedWalker
 import threading
 
-dag = None
+import pytest
+
+from stacker.dag import (
+    DAG,
+    DAGValidationError,
+    ThreadedWalker,
+    UnlimitedSemaphore
+)
 
 
-@nottest
-def blank_setup():
-    global dag
-    dag = DAG()
+@pytest.fixture
+def empty_dag():
+    return DAG()
 
 
-@nottest
-def start_with_graph():
-    global dag
+@pytest.fixture
+def basic_dag():
     dag = DAG()
     dag.from_dict({'a': ['b', 'c'],
                    'b': ['d'],
                    'c': ['d'],
                    'd': []})
+    return dag
 
 
-@with_setup(blank_setup)
-def test_add_node():
+def test_add_node(empty_dag):
+    dag = empty_dag
+
     dag.add_node('a')
     assert dag.graph == {'a': set()}
 
 
-@with_setup(start_with_graph)
-def test_transpose():
+def test_transpose(basic_dag):
+    dag = basic_dag
+
     transposed = dag.transpose()
     assert transposed.graph == {'d': set(['c', 'b']),
                                 'c': set(['a']),
@@ -42,16 +46,18 @@ def test_transpose():
                                 'a': set([])}
 
 
-@with_setup(blank_setup)
-def test_add_edge():
+def test_add_edge(empty_dag):
+    dag = empty_dag
+
     dag.add_node('a')
     dag.add_node('b')
     dag.add_edge('a', 'b')
     assert dag.graph == {'a': set('b'), 'b': set()}
 
 
-@with_setup(blank_setup)
-def test_from_dict():
+def test_from_dict(empty_dag):
+    dag = empty_dag
+
     dag.from_dict({'a': ['b', 'c'],
                    'b': ['d'],
                    'c': ['d'],
@@ -62,17 +68,17 @@ def test_from_dict():
                          'd': set()}
 
 
-@with_setup(blank_setup)
-def test_reset_graph():
+def test_reset_graph(empty_dag):
+    dag = empty_dag
+
     dag.add_node('a')
     assert dag.graph == {'a': set()}
     dag.reset_graph()
     assert dag.graph == {}
 
 
-@with_setup(blank_setup)
-def test_walk():
-    dag = DAG()
+def test_walk(empty_dag):
+    dag = empty_dag
 
     # b and c should be executed at the same time.
     dag.from_dict({'a': ['b', 'c'],
@@ -90,86 +96,90 @@ def test_walk():
     assert nodes == ['d', 'c', 'b', 'a'] or nodes == ['d', 'b', 'c', 'a']
 
 
-@with_setup(start_with_graph)
-def test_ind_nodes():
+def test_ind_nodes(basic_dag):
+    dag = basic_dag
     assert dag.ind_nodes() == ['a']
 
 
-@with_setup(blank_setup)
-def test_topological_sort():
+def test_topological_sort(empty_dag):
+    dag = empty_dag
     dag.from_dict({'a': [],
                    'b': ['a'],
                    'c': ['b']})
     assert dag.topological_sort() == ['c', 'b', 'a']
 
 
-@with_setup(start_with_graph)
-def test_successful_validation():
+def test_successful_validation(basic_dag):
+    dag = basic_dag
     assert dag.validate()[0] == True  # noqa: E712
 
 
-@raises(DAGValidationError)
-@with_setup(blank_setup)
-def test_failed_validation():
-    dag.from_dict({'a': ['b'],
-                   'b': ['a']})
+def test_failed_validation(empty_dag):
+    dag = empty_dag
+
+    with pytest.raises(DAGValidationError):
+        dag.from_dict({'a': ['b'],
+                       'b': ['a']})
 
 
-@with_setup(start_with_graph)
-def test_downstream():
+def test_downstream(basic_dag):
+    dag = basic_dag
     assert set(dag.downstream('a')) == set(['b', 'c'])
 
 
-@with_setup(start_with_graph)
-def test_all_downstreams():
+def test_all_downstreams(basic_dag):
+    dag = basic_dag
+
     assert dag.all_downstreams('a') == ['b', 'c', 'd']
     assert dag.all_downstreams('b') == ['d']
     assert dag.all_downstreams('d') == []
 
 
-@with_setup(start_with_graph)
-def test_all_downstreams_pass_graph():
-    dag2 = DAG()
-    dag2.from_dict({'a': ['c'],
-                    'b': ['d'],
-                    'c': ['d'],
-                    'd': []})
-    assert dag2.all_downstreams('a') == ['c', 'd']
-    assert dag2.all_downstreams('b') == ['d']
-    assert dag2.all_downstreams('d') == []
+def test_all_downstreams_pass_graph(empty_dag):
+    dag = empty_dag
+    dag.from_dict({'a': ['c'],
+                   'b': ['d'],
+                   'c': ['d'],
+                   'd': []})
+    assert dag.all_downstreams('a') == ['c', 'd']
+    assert dag.all_downstreams('b') == ['d']
+    assert dag.all_downstreams('d') == []
 
 
-@with_setup(start_with_graph)
-def test_predecessors():
+def test_predecessors(basic_dag):
+    dag = basic_dag
+
     assert set(dag.predecessors('a')) == set([])
     assert set(dag.predecessors('b')) == set(['a'])
     assert set(dag.predecessors('c')) == set(['a'])
     assert set(dag.predecessors('d')) == set(['b', 'c'])
 
 
-@with_setup(start_with_graph)
-def test_filter():
+def test_filter(basic_dag):
+    dag = basic_dag
+
     dag2 = dag.filter(['b', 'c'])
     assert dag2.graph == {'b': set('d'),
                           'c': set('d'),
                           'd': set()}
 
 
-@with_setup(start_with_graph)
-def test_all_leaves():
+def test_all_leaves(basic_dag):
+    dag = basic_dag
+
     assert dag.all_leaves() == ['d']
 
 
-@with_setup(start_with_graph)
-def test_size():
+def test_size(basic_dag):
+    dag = basic_dag
+
     assert dag.size() == 4
     dag.delete_node('a')
     assert dag.size() == 3
 
 
-@with_setup(blank_setup)
-def test_transitive_reduction_no_reduction():
-    dag = DAG()
+def test_transitive_reduction_no_reduction(empty_dag):
+    dag = empty_dag
     dag.from_dict({'a': ['b', 'c'],
                    'b': ['d'],
                    'c': ['d'],
@@ -181,9 +191,8 @@ def test_transitive_reduction_no_reduction():
                          'd': set()}
 
 
-@with_setup(blank_setup)
-def test_transitive_reduction():
-    dag = DAG()
+def test_transitive_reduction(empty_dag):
+    dag = empty_dag
     # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-G.svg
     dag.from_dict({'a': ['b', 'c', 'd', 'e'],
                    'b': ['d'],
@@ -199,9 +208,8 @@ def test_transitive_reduction():
                          'e': set()}
 
 
-@with_setup(blank_setup)
-def test_transitive_deep_reduction():
-    dag = DAG()
+def test_transitive_deep_reduction(empty_dag):
+    dag = empty_dag
     # https://en.wikipedia.org/wiki/Transitive_reduction#/media/File:Tred-G.svg
     dag.from_dict({
         'a': ['b', 'd'],
@@ -217,10 +225,10 @@ def test_transitive_deep_reduction():
                          'd': set()}
 
 
-@with_setup(blank_setup)
-def test_threaded_walker():
-    dag = DAG()
-    walker = ThreadedWalker()
+def test_threaded_walker(empty_dag):
+    dag = empty_dag
+
+    walker = ThreadedWalker(UnlimitedSemaphore())
 
     # b and c should be executed at the same time.
     dag.from_dict({'a': ['b', 'c'],

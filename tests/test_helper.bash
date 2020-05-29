@@ -2,7 +2,7 @@
 
 # To make the tests run faster, we don't wait between calls to DescribeStacks
 # to check on the status of Create/Update.
-export STACKER_STACK_POLL_TIME=0
+export STACKER_STACK_POLL_TIME=2
 
 if [ -z "$STACKER_NAMESPACE" ]; then
   >&2 echo "To run these tests, you must set a STACKER_NAMESPACE environment variable"
@@ -43,6 +43,8 @@ assert_has_line() {
 # information. If you need to execute the stacker binary _without_ calling
 # "run", you can use "command stacker".
 stacker() {
+  # Sleep between runs of stacker to try and avoid rate limiting issues.
+  sleep 2
   echo "$ stacker $@"
   run command stacker "$@"
   echo "$output"

@@ -41,6 +41,6 @@ EOF
   assert "$status" -eq 0
   assert_has_line "\-InstanceType = m3.large"
   assert_has_line "+InstanceType = m3.xlarge"
-  assert_has_line "+         \"VPC1\": {"
-  assert_has_line "+             \"Type\": \"AWS::CloudFormation::WaitConditionHandle\""
+  assert_has_line "LogicalResourceId: VPC1"
+  assert_has_line "ResourceType: AWS::CloudFormation::WaitConditionHandle"
 }

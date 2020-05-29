@@ -30,10 +30,11 @@ def get_template_path(filename):
 
     """
     if os.path.isfile(filename):
-        return filename
+        return os.path.abspath(filename)
     for i in sys.path:
         if os.path.isfile(os.path.join(i, filename)):
-            return os.path.join(i, filename)
+            return os.path.abspath(os.path.join(i, filename))
+
     return None
 
 
@@ -135,6 +136,17 @@ class RawTemplateBlueprint(Blueprint):
 
         """
         return get_template_params(self.to_dict())
+
+    def get_output_definitions(self):
+        """Gets the output definitions.
+
+        Returns:
+            dict: output definitions. Keys are output names, the values
+                are dicts containing key/values for various output
+                properties.
+
+        """
+        return self.to_dict().get('Outputs', {})
 
     def resolve_variables(self, provided_variables):
         """Resolve the values of the blueprint variables.

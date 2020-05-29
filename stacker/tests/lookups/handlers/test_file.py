@@ -125,7 +125,7 @@ class TestFileTranslator(unittest.TestCase):
     @mock.patch('stacker.lookups.handlers.file.read_value_from_path')
     def test_handler_b64(self, content_mock):
         plain = u'Hello, world'
-        encoded = base64.b64encode(plain.encode('utf8'))
+        encoded = base64.b64encode(plain.encode('utf8')).decode('utf-8')
 
         content_mock.return_value = plain
         out = FileLookup.handle(u'base64:file://tmp/test')

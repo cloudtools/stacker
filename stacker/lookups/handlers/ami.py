@@ -93,7 +93,7 @@ class AmiLookup(LookupHandler):
                         key=operator.itemgetter('CreationDate'),
                         reverse=True)
         for image in images:
-            if re.match("^%s$" % name_regex, image['Name']):
+            if re.match("^%s$" % name_regex, image.get('Name', '')):
                 return image['ImageId']
 
         raise ImageNotFound(value)

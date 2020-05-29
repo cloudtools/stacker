@@ -1,4 +1,20 @@
 ## Upcoming release
+- Fixing AMI lookup Key error on 'Name'
+
+- Ensure that base64 lookup codec encodes the bytes object as a string [GH-742]
+- Use CloudFormation Change Sets for `stacker diff`
+
+## 1.7.0 (2019-04-07)
+
+- Additional ECS unit tests [GH-696]
+- Keypair unit tests [GH-700]
+- Jinja2 templates in plain cloudformation templates [GH-701]
+- Custom log output formats [GH-705]
+- Python 3.7 unit tests in CircleCI [GH-711]
+- Upload blueprint templates with bucket-owner-full-control ACL [GH-713]
+- Change test runner from nose to py.test [GH-714]
+- support for importing a local public key file with the keypair hook [GH-715]
+- support for storing private keys in SSM parameter store with the keypair hook [GH-715]
 
 ## 1.6.0 (2019-01-21)
 

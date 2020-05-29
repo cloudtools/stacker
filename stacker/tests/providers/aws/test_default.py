@@ -402,14 +402,19 @@ class TestMethods(unittest.TestCase):
         stack_name = "mystack"
         template_url = "http://fake.s3url.com/blah.json"
         template_body = '{"fake_body": "woot"}'
-        notification_arns = []
         std_args = {
-            "stack_name": stack_name, "parameters": [], "tags": [],
-            "template": Template(url=template_url)}
-        std_return = {"StackName": stack_name, "Parameters": [], "Tags": [],
-                      "Capabilities": DEFAULT_CAPABILITIES,
-                      "TemplateURL": template_url,
-                      "NotificationARNs": notification_arns}
+            "stack_name": stack_name,
+            "parameters": [],
+            "tags": [],
+            "template": Template(url=template_url)
+        }
+        std_return = {
+            "StackName": stack_name,
+            "Parameters": [],
+            "Tags": [],
+            "Capabilities": DEFAULT_CAPABILITIES,
+            "TemplateURL": template_url,
+        }
         result = generate_cloudformation_args(**std_args)
         self.assertEqual(result, std_return)
 
@@ -440,6 +445,31 @@ class TestMethods(unittest.TestCase):
         template_body_result["TemplateBody"] = template_body
         result = generate_cloudformation_args(**std_args)
         self.assertEqual(result, template_body_result)
+
+    def test_generate_cloudformation_args_with_notification_arns(self):
+        stack_name = "mystack"
+        template_url = "http://fake.s3url.com/blah.json"
+        std_args = {
+            "stack_name": stack_name,
+            "parameters": [],
+            "tags": [],
+            "template": Template(url=template_url),
+            "notification_arns": [
+                "arn:aws:sns:us-east-1:1234567890:test-cf-deploy-notify-sns-topic-CfDeployNotify" # noqa
+            ]
+        }
+        std_return = {
+            "StackName": stack_name,
+            "Parameters": [],
+            "Tags": [],
+            "Capabilities": DEFAULT_CAPABILITIES,
+            "TemplateURL": template_url,
+            "NotificationARNs": [
+                "arn:aws:sns:us-east-1:1234567890:test-cf-deploy-notify-sns-topic-CfDeployNotify" # noqa
+            ]
+        }
+        result = generate_cloudformation_args(**std_args)
+        self.assertEqual(result, std_return)
 
 
 class TestProviderDefaultMode(unittest.TestCase):

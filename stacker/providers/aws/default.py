@@ -334,9 +334,17 @@ def wait_till_change_set_complete(cfn_client, change_set_id, try_count=25,
     return response
 
 
-def create_change_set(cfn_client, fqn, template, parameters, tags,
-                      change_set_type='UPDATE', replacements_only=False,
-                      service_role=None, notification_arns=[]):
+def create_change_set(
+    cfn_client,
+    fqn,
+    template,
+    parameters,
+    tags,
+    change_set_type='UPDATE',
+    replacements_only=False,
+    service_role=None,
+    notification_arns=None
+):
     logger.debug("Attempting to create change set of type %s for stack: %s.",
                  change_set_type,
                  fqn)
@@ -415,13 +423,18 @@ def check_tags_contain(actual, expected):
     return actual_set >= expected_set
 
 
-def generate_cloudformation_args(stack_name, parameters, tags, template,
-                                 capabilities=DEFAULT_CAPABILITIES,
-                                 change_set_type=None,
-                                 service_role=None,
-                                 stack_policy=None,
-                                 change_set_name=None,
-                                 notification_arns=[]):
+def generate_cloudformation_args(
+    stack_name,
+    parameters,
+    tags,
+    template,
+    capabilities=DEFAULT_CAPABILITIES,
+    change_set_type=None,
+    service_role=None,
+    stack_policy=None,
+    change_set_name=None,
+    notification_arns=None,
+):
     """Used to generate the args for common cloudformation API interactions.
 
     This is used for create_stack/update_stack/create_change_set calls in
@@ -445,6 +458,8 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
             object representing a stack policy.
         change_set_name (str, optional): An optional change set name to use
             with create_change_set.
+        notification_arns (list, optional): An optional list of SNS topic ARNs
+            to send CloudFormation Events to.
 
     Returns:
         dict: A dictionary of arguments to be used in the Cloudformation API
@@ -455,7 +470,6 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
         "Parameters": parameters,
         "Tags": tags,
         "Capabilities": capabilities,
-        "NotificationARNs": notification_arns
     }
 
     if service_role:
@@ -463,6 +477,9 @@ def generate_cloudformation_args(stack_name, parameters, tags, template,
 
     if change_set_name:
         args["ChangeSetName"] = change_set_name
+
+    if notification_arns:
+        args["NotificationARNs"] = notification_arns
 
     if change_set_type:
         args["ChangeSetType"] = change_set_type
@@ -741,9 +758,13 @@ class Provider(BaseProvider):
         self.cloudformation.delete_stack(**args)
         return True
 
-    def create_stack(self, fqn, template, parameters, tags,
-                     force_change_set=False, stack_policy=None,
-                     notification_arns=[], **kwargs):
+    def create_stack(
+        self, fqn, template, parameters, tags,
+        force_change_set=False,
+        stack_policy=None,
+        notification_arns=None,
+        **kwargs
+    ):
         """Create a new Cloudformation stack.
 
         Args:
@@ -757,6 +778,8 @@ class Provider(BaseProvider):
             force_change_set (bool): Whether or not to force change set use.
             stack_policy (:class:`stacker.providers.base.Template`): A template
                 object representing a stack policy.
+            notification_arns (list, optional): An optional list of SNS topic
+                ARNs to send CloudFormation Events to.
         """
 
         logger.debug("Attempting to create stack %s:.", fqn)

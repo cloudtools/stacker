@@ -18,6 +18,7 @@ install_requires = [
     "formic2",
     "python-dateutil>=2.0,<3.0",
     "MarkupSafe<2.0", # 2.0 dropped python 2.7, 3.5 support - temporary
+    "more-itertools<6.0.0", # 6.0.0 dropped python 2.7 support - temporary
 ]
 
 setup_requires = ['pytest-runner']

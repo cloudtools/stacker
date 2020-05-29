@@ -161,6 +161,7 @@ class Context(object):
                     locked=stack_def.locked,
                     enabled=stack_def.enabled,
                     protected=stack_def.protected,
+                    notification_arns=stack_def.notification_arns
                 )
                 stacks.append(stack)
             self._stacks = stacks

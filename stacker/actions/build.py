@@ -8,6 +8,7 @@ from .base import STACK_POLL_TIME
 
 from ..providers.base import Template
 from stacker.hooks import utils
+
 from ..exceptions import (
     MissingParameterException,
     StackDidNotChange,

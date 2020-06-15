@@ -7,6 +7,7 @@ from .base import BaseAction, plan, build_walker
 from .base import STACK_POLL_TIME
 from ..exceptions import StackDoesNotExist
 from stacker.hooks.utils import handle_hooks
+
 from ..status import (
     CompleteStatus,
     SubmittedStatus,

@@ -4,6 +4,8 @@
 - Ensure that base64 lookup codec encodes the bytes object as a string [GH-742]
 - Use CloudFormation Change Sets for `stacker diff`
 
+- add the ability to resolve native lookups in hook args
+
 ## 1.7.0 (2019-04-07)
 
 - Additional ECS unit tests [GH-696]

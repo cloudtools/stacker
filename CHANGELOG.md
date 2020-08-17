@@ -1,8 +1,16 @@
 ## Upcoming release
-- Fixing AMI lookup Key error on 'Name'
 
+## 1.7.1 (2020-08-17)
+- Fixing AMI lookup Key error on 'Name'
+- hooks: lambda: allow uploading pre-built payloads [GH-#564]
 - Ensure that base64 lookup codec encodes the bytes object as a string [GH-742]
 - Use CloudFormation Change Sets for `stacker diff`
+- Locked stacks still have requirements [GH-746]
+- change diff to use CFN change sets instead of comparing template dicts [GH-744]
+- Add YAML environment file support [GH-740]
+- fix `stack.set_outputs` not being called by diff if stack did not change [GH-754]
+- Fix python 2.7/3.5 dependency issue
+- add cf notification arns [GH-756]
 
 ## 1.7.0 (2019-04-07)
 

@@ -20,6 +20,7 @@ install_requires = [
     "MarkupSafe<2.0", # 2.0 dropped python 2.7, 3.5 support - temporary
     "more-itertools<6.0.0", # 6.0.0 dropped python 2.7 support - temporary
     "rsa==4.5", # 4.6 dropped python 2.7 support - temporary
+    "python-jose<3.2.0", # 3.2.0 dropped python 2.7 support - temporary
 ]
 
 setup_requires = ['pytest-runner']

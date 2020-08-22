@@ -9,7 +9,7 @@ install_requires = [
     "future",
     "troposphere>=1.9.0",
     'botocore>=1.12.111',  # matching boto3 requirement
-    "boto3>=1.9.111<2.0",
+    "boto3>=1.9.111,<2.0",
     "PyYAML>=3.13b1",
     "awacs>=0.6.0",
     "gitpython>=2.0,<3.0",

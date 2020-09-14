@@ -29,7 +29,7 @@ tests_require = [
     "pytest~=4.3",
     "pytest-cov~=2.6",
     "mock~=2.0",
-    "moto~=1.3.7",
+    "moto[awslambda]~=1.3.16",
     "testfixtures~=4.10.0",
     "flake8-future-import",
 ]

@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 import codecs
+import sys
 from stacker.session_cache import get_session
 
 from . import LookupHandler
@@ -63,5 +64,12 @@ class KmsLookup(LookupHandler):
         # get raw but still encrypted value from base64 version.
         decoded = codecs.decode(value, 'base64')
 
+        # check python version in your system
+        python3_or_later = sys.version_info[0] >= 3
+
         # decrypt and return the plain text raw value.
-        return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]
+        if python3_or_later:
+            return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]\
+                .decode('utf-8')
+        else:
+            return kms.decrypt(CiphertextBlob=decoded)["Plaintext"]

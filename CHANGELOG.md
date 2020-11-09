@@ -1,8 +1,12 @@
 ## Upcoming release
 
+## 1.7.2 (2020-11-09)
+- address breaking moto change to awslambda [GH-763]
+- Added Python version validation before update kms decrypt output [GH-765]
+
 ## 1.7.1 (2020-08-17)
 - Fixing AMI lookup Key error on 'Name'
-- hooks: lambda: allow uploading pre-built payloads [GH-#564]
+- hooks: lambda: allow uploading pre-built payloads [GH-564]
 - Ensure that base64 lookup codec encodes the bytes object as a string [GH-742]
 - Use CloudFormation Change Sets for `stacker diff`
 - Locked stacks still have requirements [GH-746]

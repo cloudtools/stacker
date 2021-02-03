@@ -1136,7 +1136,7 @@ class Provider(BaseProvider):
         if isinstance(template, str):  # handle yaml templates
             template = parse_cloudformation_template(template)
 
-        return [json.dumps(template), parameters]
+        return [json.dumps(template, default=str), parameters]
 
     def get_stack_changes(self, stack, template, parameters,
                           tags, **kwargs):

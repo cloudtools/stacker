@@ -1,4 +1,5 @@
 ## Upcoming release
+- Fix crash on `stacker diff` when comparing a template with unquoted date strings
 
 ## 1.7.2 (2020-11-09)
 - address breaking moto change to awslambda [GH-763]

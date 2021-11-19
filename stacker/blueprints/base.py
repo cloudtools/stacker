@@ -539,7 +539,7 @@ class Blueprint(object):
                 template.
 
         """
-        self.template.add_description(description)
+        self.template.set_description(description)
 
     def add_output(self, name, value):
         """Simple helper for adding outputs.

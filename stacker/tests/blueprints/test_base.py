@@ -70,8 +70,8 @@ class TestBlueprintRendering(unittest.TestCase):
             }
 
             def create_template(self):
-                self.template.add_version('2010-09-09')
-                self.template.add_description('TestBlueprint')
+                self.template.set_version('2010-09-09')
+                self.template.set_description('TestBlueprint')
 
         expected_json = """{
     "AWSTemplateFormatVersion": "2010-09-09",
@@ -105,8 +105,8 @@ class TestBaseBlueprint(unittest.TestCase):
             VARIABLES = {}
 
             def create_template(self):
-                self.template.add_version('2010-09-09')
-                self.template.add_description('TestBlueprint')
+                self.template.set_version('2010-09-09')
+                self.template.set_description('TestBlueprint')
                 self.add_output(output_name, output_value)
 
         bp = TestBlueprint(name="test", context=mock_context())

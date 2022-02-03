@@ -1,0 +1,6 @@
+pytest~=4.3
+pytest-cov~=2.6
+mock~=2.0
+moto[awslambda,ec2]~=3.0.0
+testfixtures~=4.10.0
+flake8

@@ -1,4 +1,4 @@
-import collections
+import collections.abc
 import logging
 
 from stacker.config import Config
@@ -189,7 +189,7 @@ class Context(object):
                 as returned from a hook.
         """
 
-        if not isinstance(data, collections.Mapping):
+        if not isinstance(data, collections.abc.Mapping):
             raise ValueError("Hook (key: %s) data must be an instance of "
                              "collections.Mapping (a dictionary for "
                              "example)." % key)

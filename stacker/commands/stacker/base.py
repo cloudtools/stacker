@@ -1,7 +1,7 @@
 import argparse
 import threading
 import signal
-from collections import Mapping
+from collections.abc import Mapping
 import logging
 import os.path
 

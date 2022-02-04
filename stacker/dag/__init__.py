@@ -1,15 +1,10 @@
-import collections
 import logging
 from threading import Thread
 from copy import copy, deepcopy
-from collections import deque
+import collections.abc
+from collections import deque, OrderedDict
 
 logger = logging.getLogger(__name__)
-
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
 
 
 class DAGValidationError(Exception):
@@ -310,7 +305,7 @@ class DAG(object):
         for new_node in graph_dict:
             self.add_node(new_node)
         for ind_node, dep_nodes in graph_dict.items():
-            if not isinstance(dep_nodes, collections.Iterable):
+            if not isinstance(dep_nodes, collections.abc.Iterable):
                 raise TypeError('%s: dict values must be lists' % ind_node)
             for dep_node in dep_nodes:
                 self.add_edge(ind_node, dep_node)

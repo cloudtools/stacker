@@ -4,8 +4,8 @@ build:
 	docker build -t remind101/stacker .
 
 lint:
-	flake8 --ignore E402,W503,W504,W605 --exclude stacker/tests/ stacker
-	flake8 --ignore E402,N802,W605 stacker/tests # ignore setUp naming
+	flake8 --ignore E402,W503,W504,W605,N818 --exclude stacker/tests/ stacker
+	flake8 --ignore E402,N802,W605,N818 stacker/tests # ignore setUp naming
 
 test-unit: clean
 	python setup.py test

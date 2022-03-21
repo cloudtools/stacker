@@ -113,7 +113,7 @@ class TestPlan(unittest.TestCase):
             description="Test", graph=graph)
         plan.execute(walk)
 
-        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
+        self.assertEqual(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
     def test_execute_plan_locked(self):
         # Locked stacks still need to have their requires evaluated when
@@ -137,7 +137,7 @@ class TestPlan(unittest.TestCase):
             description="Test", graph=graph)
         plan.execute(walk)
 
-        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
+        self.assertEqual(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
     def test_execute_plan_filtered(self):
         vpc = Stack(
@@ -164,7 +164,7 @@ class TestPlan(unittest.TestCase):
             targets=['db.1'])
         plan.execute(walk)
 
-        self.assertEquals(calls, [
+        self.assertEqual(calls, [
             'namespace-vpc.1', 'namespace-db.1'])
 
     def test_execute_plan_exception(self):
@@ -192,8 +192,8 @@ class TestPlan(unittest.TestCase):
         with self.assertRaises(PlanFailed):
             plan.execute(walk)
 
-        self.assertEquals(calls, ['namespace-vpc.1'])
-        self.assertEquals(vpc_step.status, FAILED)
+        self.assertEqual(calls, ['namespace-vpc.1'])
+        self.assertEqual(vpc_step.status, FAILED)
 
     def test_execute_plan_skipped(self):
         vpc = Stack(
@@ -218,7 +218,7 @@ class TestPlan(unittest.TestCase):
         plan = build_plan(description="Test", graph=graph)
         plan.execute(walk)
 
-        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
+        self.assertEqual(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
     def test_execute_plan_failed(self):
         vpc = Stack(
@@ -251,7 +251,7 @@ class TestPlan(unittest.TestCase):
 
         calls.sort()
 
-        self.assertEquals(calls, ['namespace-db.1', 'namespace-vpc.1'])
+        self.assertEqual(calls, ['namespace-db.1', 'namespace-vpc.1'])
 
     def test_execute_plan_cancelled(self):
         vpc = Stack(
@@ -276,7 +276,7 @@ class TestPlan(unittest.TestCase):
         plan = build_plan(description="Test", graph=graph)
         plan.execute(walk)
 
-        self.assertEquals(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
+        self.assertEqual(calls, ['namespace-vpc.1', 'namespace-bastion.1'])
 
     def test_build_graph_missing_dependency(self):
         bastion = Stack(

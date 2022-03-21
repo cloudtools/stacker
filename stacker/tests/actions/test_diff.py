@@ -83,4 +83,4 @@ class TestDiffParameters(unittest.TestCase):
         }
 
         param_diffs = diff_parameters(old_params, new_params)
-        self.assertEquals(param_diffs, [])
+        self.assertEqual(param_diffs, [])

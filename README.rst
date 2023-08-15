@@ -45,8 +45,7 @@ both in development, staging, and production without any major issues.
 Requirements
 ============
 
-* Python 2.7
-* Python 3.5+
+* Python 3.7+
 
 Stacker Command
 ===============
@@ -60,7 +59,7 @@ Here are some examples:
 
   ``destroy``:
     tears down your stacks
-    
+
   ``diff``:
     compares your currently deployed stack templates to your config files
 
@@ -76,26 +75,26 @@ Getting Started
 ``stacker_cookiecutter``: https://github.com/cloudtools/stacker_cookiecutter
 
   We recommend creating your base `stacker` project using ``stacker_cookiecutter``.
-  This tool will install all the needed dependencies and created the project 
+  This tool will install all the needed dependencies and created the project
   directory structure and files. The resulting files are well documented
   with comments to explain their purpose and examples on how to extend.
-  
+
 ``stacker_blueprints``: https://github.com/cloudtools/stacker_blueprints
 
   This repository holds working examples of ``stacker`` blueprints.
-  Each blueprint works in isolation and may be referenced, extended, or 
+  Each blueprint works in isolation and may be referenced, extended, or
   copied into your project files. The blueprints are written in Python
   and use the troposphere_ library.
-  
+
 ``stacker reference documentation``:
-  
+
   We document all functionality and features of stacker in our extensive
   reference documentation located at readthedocs_.
 
 ``AWS OSS Blog``: https://aws.amazon.com/blogs/opensource/using-aws-codepipeline-and-open-source-tools-for-at-scale-infrastructure-deployment/
 
   The AWS OSS Blog has a getting started guide using stacker with AWS CodePipeline.
-  
+
 
 Docker
 ======

@@ -1,0 +1,15 @@
+troposphere>=3.0.0
+botocore>=1.12.111
+boto3>=1.9.111,<2.0
+PyYAML>=3.13b1
+awacs>=0.6.0
+gitpython>=3.0
+jinja2>=2.7
+schematics>=2.1.0
+formic2
+python-dateutil>=2.0,<3.0
+MarkupSafe>=2
+more-itertools
+rsa>=4.7
+python-jose
+future

@@ -1,9 +1,4 @@
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import str
 from past.builtins import basestring
-from builtins import object
 import copy
 import hashlib
 import logging
@@ -539,7 +534,7 @@ class Blueprint(object):
                 template.
 
         """
-        self.template.add_description(description)
+        self.template.set_description(description)
 
     def add_output(self, name, value):
         """Simple helper for adding outputs.

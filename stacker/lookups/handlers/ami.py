@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
 from stacker.session_cache import get_session
 import re
 import operator

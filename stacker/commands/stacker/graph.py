@@ -1,9 +1,6 @@
 """Prints the the relationships between steps as a graph.
 
 """
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
 
 from .base import BaseCommand
 from ...actions import graph

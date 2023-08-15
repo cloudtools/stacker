@@ -1,15 +1,8 @@
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import bytes, str
 
 import base64
 import json
 import re
-try:
-    from collections.abc import Mapping, Sequence
-except ImportError:
-    from collections import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 import yaml
 

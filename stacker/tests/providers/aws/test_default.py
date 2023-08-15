@@ -437,7 +437,7 @@ class TestMethods(unittest.TestCase):
         # If not TemplateURL is provided, use TemplateBody
         std_args["template"] = Template(body=template_body)
         template_body_result = copy.deepcopy(std_return)
-        del(template_body_result["TemplateURL"])
+        del template_body_result["TemplateURL"]
         template_body_result["TemplateBody"] = template_body
         result = generate_cloudformation_args(**std_args)
         self.assertEqual(result, template_body_result)

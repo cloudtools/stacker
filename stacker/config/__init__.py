@@ -93,7 +93,7 @@ def render(raw_config, environment=None):
     # If we have a naked dict, we got here through the old non-YAML path, so
     # we can't have a YAML config file.
     is_yaml = False
-    if type(environment) == DictWithSourceType:
+    if isinstance(environment, DictWithSourceType):
         is_yaml = environment.source_type == 'yaml'
 
     if is_yaml:

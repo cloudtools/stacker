@@ -35,7 +35,7 @@ def register_lookup_handler(lookup_type, handler_or_path):
     if isinstance(handler_or_path, basestring):
         handler = load_object_from_string(handler_or_path)
     LOOKUP_HANDLERS[lookup_type] = handler
-    if type(handler) != type:
+    if not isinstance(handler, type):
         # Hander is a not a new-style handler
         logger = logging.getLogger(__name__)
         logger.warning("Registering lookup `%s`: Please upgrade to use the "

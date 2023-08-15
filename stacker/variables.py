@@ -370,7 +370,7 @@ class VariableValueLookup(VariableValue):
     def resolve(self, context, provider):
         self.lookup_data.resolve(context, provider)
         try:
-            if type(self.handler) == type:
+            if isinstance(self.handler, type):
                 # Hander is a new-style handler
                 result = self.handler.handle(
                     value=self.lookup_data.value(),
@@ -392,7 +392,7 @@ class VariableValueLookup(VariableValue):
         self._resolved = True
 
     def dependencies(self):
-        if type(self.handler) == type:
+        if isinstance(self.handler, type):
             return self.handler.dependencies(self.lookup_data)
         else:
             return set()

@@ -41,7 +41,7 @@ def parse_yaml_environment(raw_environment):
     environment = DictWithSourceType('yaml')
     parsed_env = yaml.safe_load(raw_environment)
 
-    if type(parsed_env) != dict:
+    if not isinstance(parsed_env, dict):
         raise ValueError('Environment must be valid YAML')
     environment.update(parsed_env)
     return environment

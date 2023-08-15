@@ -122,7 +122,8 @@ class Step(object):
 
     @property
     def done(self):
-        """Returns True if the step is finished (either COMPLETE, SKIPPED or FAILED)
+        """Returns True if the step is finished (either COMPLETE, SKIPPED or
+        FAILED)
         """
         return self.completed or self.skipped or self.failed
 

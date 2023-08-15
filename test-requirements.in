@@ -1,7 +1,9 @@
 pytest~=6.0
 pytest-cov~=2.6
+coverage~=5.2.1
 mock~=2.0
 moto[awslambda,ec2]~=3.0.0
 testfixtures~=6.18.3
 flake8
 pep8-naming
+werkzeug~=2.1

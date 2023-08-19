@@ -54,7 +54,7 @@ class TestBuildParameter(unittest.TestCase):
     def test_base_parameter(self):
         p = build_parameter("BasicParam", {"type": "String"})
         p.validate()
-        self.assertEquals(p.Type, "String")
+        self.assertEqual(p.Type, "String")
 
 
 class TestBlueprintRendering(unittest.TestCase):
@@ -172,7 +172,7 @@ class TestVariables(unittest.TestCase):
         blueprint = TestBlueprint(name="test", context=context,
                                   description=description)
         blueprint.render_template()
-        self.assertEquals(description, blueprint.template.description)
+        self.assertEqual(description, blueprint.template.description)
 
     def test_validate_variable_type_cfntype(self):
         var_name = "testVar"

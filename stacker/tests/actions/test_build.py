@@ -418,5 +418,5 @@ class TestFunctions(unittest.TestCase):
         }
         params = {"a": True, "b": False}
         p = _resolve_parameters(params, self.bp)
-        self.assertEquals("true", p["a"])
-        self.assertEquals("false", p["b"])
+        self.assertEqual("true", p["a"])
+        self.assertEqual("false", p["b"])

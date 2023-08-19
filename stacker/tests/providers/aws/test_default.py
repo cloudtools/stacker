@@ -518,7 +518,7 @@ class TestProviderDefaultMode(unittest.TestCase):
                   [{'force_interactive': True,
                     'force_change_set': True},
                    self.provider.interactive_update_stack]]:
-            self.assertEquals(
+            self.assertEqual(
                 self.provider.select_update_method(**i[0]),
                 i[1]
             )
@@ -951,7 +951,7 @@ class TestProviderInteractiveMode(unittest.TestCase):
                   [{'force_interactive': True,
                     'force_change_set': True},
                    self.provider.interactive_update_stack]]:
-            self.assertEquals(
+            self.assertEqual(
                 self.provider.select_update_method(**i[0]),
                 i[1]
             )

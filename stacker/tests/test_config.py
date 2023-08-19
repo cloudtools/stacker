@@ -94,20 +94,20 @@ class TestConfig(unittest.TestCase):
         exp_dict = {'a': 1, 'b': 2, 'c': 3}
         exp_list = ['a', 'b', 'c']
 
-        self.assertEquals(pc['namespace'], 'test')
-        self.assertEquals(pc['list_var'], exp_list)
-        self.assertEquals(pc['dict_var'], exp_dict)
-        self.assertEquals(pc['str_var'], 'Hello World!')
-        self.assertEquals(pc['nested_list'][0], exp_list)
-        self.assertEquals(pc['nested_list'][1], exp_dict)
-        self.assertEquals(pc['nested_list'][2], 'another str')
-        self.assertEquals(pc['nested_dict']['a'], exp_list)
-        self.assertEquals(pc['nested_dict']['b'], exp_dict)
-        self.assertEquals(pc['nested_dict']['c'], 'another str')
-        self.assertEquals(pc['empty'], '')
-        self.assertEquals(pc['substr'], 'prefix-another str-suffix')
-        self.assertEquals(pc['multiple'], 'another str-hello')
-        self.assertEquals(pc['dont_match_this'], '${output something}')
+        self.assertEqual(pc['namespace'], 'test')
+        self.assertEqual(pc['list_var'], exp_list)
+        self.assertEqual(pc['dict_var'], exp_dict)
+        self.assertEqual(pc['str_var'], 'Hello World!')
+        self.assertEqual(pc['nested_list'][0], exp_list)
+        self.assertEqual(pc['nested_list'][1], exp_dict)
+        self.assertEqual(pc['nested_list'][2], 'another str')
+        self.assertEqual(pc['nested_dict']['a'], exp_list)
+        self.assertEqual(pc['nested_dict']['b'], exp_dict)
+        self.assertEqual(pc['nested_dict']['c'], 'another str')
+        self.assertEqual(pc['empty'], '')
+        self.assertEqual(pc['substr'], 'prefix-another str-suffix')
+        self.assertEqual(pc['multiple'], 'another str-hello')
+        self.assertEqual(pc['dont_match_this'], '${output something}')
 
     def test_render_yaml_errors(self):
         # We shouldn't be able to substitute an object into a string
@@ -137,10 +137,10 @@ class TestConfig(unittest.TestCase):
             config.validate()
 
         stack_errors = ex.exception.errors['stacks'][0]
-        self.assertEquals(
+        self.assertEqual(
             stack_errors['template_path'][0].__str__(),
             "class_path or template_path is required.")
-        self.assertEquals(
+        self.assertEqual(
             stack_errors['class_path'][0].__str__(),
             "class_path or template_path is required.")
 
@@ -165,10 +165,10 @@ class TestConfig(unittest.TestCase):
             config.validate()
 
         stack_errors = ex.exception.errors['stacks'][0]
-        self.assertEquals(
+        self.assertEqual(
             stack_errors['template_path'][0].__str__(),
             "class_path cannot be present when template_path is provided.")
-        self.assertEquals(
+        self.assertEqual(
             stack_errors['class_path'][0].__str__(),
             "template_path cannot be present when class_path is provided.")
 
@@ -182,7 +182,7 @@ class TestConfig(unittest.TestCase):
             config.validate()
 
         error = ex.exception.errors['stacks'][0]['name'].errors[0]
-        self.assertEquals(
+        self.assertEqual(
             error.__str__(),
             "This field is required.")
 
@@ -200,14 +200,14 @@ class TestConfig(unittest.TestCase):
             config.validate()
 
         error = ex.exception.errors['stacks'][0]
-        self.assertEquals(
+        self.assertEqual(
             error.__str__(),
             "Duplicate stack bastion found at index 0.")
 
     def test_dump_unicode(self):
         config = Config()
         config.namespace = "test"
-        self.assertEquals(dump(config), b"""namespace: test
+        self.assertEqual(dump(config), b"""namespace: test
 stacks: []
 """)
 
@@ -216,7 +216,7 @@ stacks: []
         # python specific objects.
         self.assertNotEquals(
             dump(config), b"namespace: !!python/unicode 'test'\n")
-        self.assertEquals(dump(config), b"""namespace: test
+        self.assertEqual(dump(config), b"""namespace: test
 stacks: []
 """)
 
@@ -228,7 +228,7 @@ stacks: []
           "hello": 1
           simple_tag: simple value
         """)
-        self.assertEquals(config.tags, {
+        self.assertEqual(config.tags, {
             "a:b": "c",
             "hello": "1",
             "simple_tag": "simple value"})
@@ -246,7 +246,7 @@ stacks: []
         """)
 
         stack = config.stacks[0]
-        self.assertEquals(stack.variables, {"Foo": "bar"})
+        self.assertEqual(stack.variables, {"Foo": "bar"})
 
     def test_parse_with_deprecated_parameters(self):
         config = parse("""
@@ -261,7 +261,7 @@ stacks: []
             config.validate()
 
         error = ex.exception.errors['stacks'][0]['parameters'][0]
-        self.assertEquals(
+        self.assertEqual(
             error.__str__(),
             "DEPRECATION: Stack definition vpc contains deprecated "
             "'parameters', rather than 'variables'. You are required to update"
@@ -271,9 +271,9 @@ stacks: []
     def test_config_build(self):
         vpc = Stack({"name": "vpc", "class_path": "blueprints.VPC"})
         config = Config({"namespace": "prod", "stacks": [vpc]})
-        self.assertEquals(config.namespace, "prod")
-        self.assertEquals(config.stacks[0].name, "vpc")
-        self.assertEquals(config["namespace"], "prod")
+        self.assertEqual(config.namespace, "prod")
+        self.assertEqual(config.stacks[0].name, "vpc")
+        self.assertEqual(config["namespace"], "prod")
         config.validate()
 
     def test_parse(self):
@@ -562,7 +562,7 @@ stacks:
         config = render_parse_load(
             conf, environment={"namespace": "prod"}, validate=False)
         config.validate()
-        self.assertEquals(config.namespace, "prod")
+        self.assertEqual(config.namespace, "prod")
 
     def test_allow_most_keys_to_be_duplicates_for_overrides(self):
         yaml_config = """

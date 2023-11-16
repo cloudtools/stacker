@@ -55,12 +55,14 @@ def extract_lookups(value):
 
     """
     lookups = set()
+
     if isinstance(value, basestring):
         lookups = lookups.union(extract_lookups_from_string(value))
     elif isinstance(value, list):
         for v in value:
             lookups = lookups.union(extract_lookups(v))
     elif isinstance(value, dict):
-        for v in value.values():
+        for k, v in value.items():
+            lookups = lookups.union(extract_lookups(k))
             lookups = lookups.union(extract_lookups(v))
     return lookups

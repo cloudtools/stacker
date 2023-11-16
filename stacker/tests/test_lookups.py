@@ -35,6 +35,13 @@ class TestLookupExtraction(unittest.TestCase):
         })
         self.assertEqual(len(lookups), 1)
 
+        # Lookups should work in keys as well.
+        lookups = extract_lookups({
+            "${output fakeStack::FakeKeyName}-something": "${output fakeStack::FakeOutput}",
+            "other": "value",
+        })
+        self.assertEqual(len(lookups), 2)
+
     def test_lookups_mixed(self):
         lookups = extract_lookups({
             "something": "${output fakeStack::FakeOutput}",

@@ -166,7 +166,8 @@ def substitute_references(root, environment, exp, full_exp):
     elif isinstance(root, dict):
         result = {}
         for k, v in root.items():
-            result[k] = substitute_references(v, environment, exp, full_exp)
+            new_k = substitute_references(k, environment, exp, full_exp)
+            result[new_k] = substitute_references(v, environment, exp, full_exp)
         return result
     elif isstr(root):
         # Strings are the special type where all substitutions happen. If we

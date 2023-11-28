@@ -189,13 +189,13 @@ class Context(object):
 
         Args:
             key(str): The key to store the hook data in.
-            data(:class:`collections.Mapping`): A dictionary of data to store,
+            data(:class:`collections.abc.Mapping`): A dictionary of data to store,
                 as returned from a hook.
         """
 
-        if not isinstance(data, collections.Mapping):
+        if not isinstance(data, collections.abc.Mapping):
             raise ValueError("Hook (key: %s) data must be an instance of "
-                             "collections.Mapping (a dictionary for "
+                             "collections.abc.Mapping (a dictionary for "
                              "example)." % key)
 
         if key in self.hook_data:

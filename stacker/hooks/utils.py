@@ -73,7 +73,7 @@ def handle_hooks(stage, hooks, provider, context):
             logger.warning("Non-required hook %s failed. Return value: %s",
                            hook.path, result)
         else:
-            if isinstance(result, collections.Mapping):
+            if isinstance(result, collections.abc.Mapping):
                 if data_key:
                     logger.debug("Adding result for hook %s to context in "
                                  "data_key %s.", hook.path, data_key)

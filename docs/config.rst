@@ -56,10 +56,29 @@ config.
 If you want to change this, provide the **stacker_bucket** top level key word
 in the config.
 
-The bucket will be created in the same region that the stacks will be launched
-in.  If you want to change this, or if you already have an existing bucket
-in a different region, you can set the **stacker_bucket_region** to
-the region where you want to create the bucket.
+The bucket will be created in the default region (either from ``AWS_REGION`` or
+the ``--region`` CLI flag).  If you want to change this, or if you already have
+an existing bucket in a different region, you can set the
+**stacker_bucket_region** to the region where you want to create the bucket.
+
+Alternatively, if you'd like to have more control over creation of the stacker
+bucket, you can add a stack to your config to create the bucket, "bootstrap"
+the bucket stack, then set the ``stacker_bucket`` value in your config after
+the bucket has been created. Stacker includes a base blueprint to create a
+stacker bucket with AES encryption by default::
+
+  # Bootstrap the bucket stack:
+  #   stacker build --stacks stacker-bucket -e stacker_bucket='' stacker.yaml
+  # Now that the bucket is created, you can use it for all future builds:
+  #   stacker build -e stacker_bucket='my-bucket-id' stacker.yaml
+  namespace: ''
+  stacker_bucket: ${stacker_bucket}
+
+  stacks:
+    - name: stacker-bucket
+      class_path: stacker.blueprints.StackerBucket
+    - name: vpc
+      class_path: stacker.tests.fixtures.mock_blueprints.Dummy
 
 **S3 Bucket location prior to 1.0.4:**
   There was a "bug" early on in stacker that created the s3 bucket in us-east-1,
